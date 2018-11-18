@@ -18,25 +18,26 @@
 
 package io.undertow.conduits;
 
-import io.undertow.UndertowMessages;
-import io.undertow.server.Connectors;
-import io.undertow.server.HttpServerExchange;
-import org.xnio.IoUtils;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.conduits.AbstractStreamSourceConduit;
-import org.xnio.conduits.StreamSourceConduit;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
-
 import static java.lang.Math.min;
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 import static org.xnio.Bits.longBitMask;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
+
+import org.xnio.IoUtils;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.conduits.AbstractStreamSourceConduit;
+import org.xnio.conduits.StreamSourceConduit;
+
+import io.undertow.UndertowMessages;
+import io.undertow.server.Connectors;
+import io.undertow.server.HttpServerExchange;
 
 /**
  * A channel which reads data of a fixed length and calls a finish listener.  When the finish listener is called,

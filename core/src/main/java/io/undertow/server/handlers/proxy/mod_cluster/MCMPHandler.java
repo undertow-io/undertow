@@ -18,41 +18,6 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.Version;
-import io.undertow.io.Sender;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.form.FormData;
-import io.undertow.server.handlers.form.FormDataParser;
-import io.undertow.server.handlers.form.FormEncodedDataDefinition;
-import io.undertow.server.handlers.form.FormParserFactory;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.StatusCodes;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import org.xnio.ssl.XnioSsl;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.ALIAS;
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.BALANCER;
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.CONTEXT;
@@ -76,6 +41,42 @@ import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.TIMEOU
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.TTL;
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.TYPE;
 import static io.undertow.server.handlers.proxy.mod_cluster.MCMPConstants.WAITWORKER;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.ssl.XnioSsl;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.Version;
+import io.undertow.io.Sender;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.form.FormData;
+import io.undertow.server.handlers.form.FormDataParser;
+import io.undertow.server.handlers.form.FormEncodedDataDefinition;
+import io.undertow.server.handlers.form.FormParserFactory;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
 
 /**
  * The mod cluster management protocol http handler.

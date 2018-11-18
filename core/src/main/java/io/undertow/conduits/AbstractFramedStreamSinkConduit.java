@@ -18,15 +18,8 @@
 
 package io.undertow.conduits;
 
-import io.undertow.UndertowMessages;
-import org.xnio.Buffers;
-import org.xnio.IoUtils;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.AbstractStreamSinkConduit;
-import org.xnio.conduits.ConduitWritableByteChannel;
-import org.xnio.conduits.Conduits;
-import org.xnio.conduits.StreamSinkConduit;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.anyAreSet;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,8 +27,16 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.anyAreSet;
+import org.xnio.Buffers;
+import org.xnio.IoUtils;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.AbstractStreamSinkConduit;
+import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.Conduits;
+import org.xnio.conduits.StreamSinkConduit;
+
+import io.undertow.UndertowMessages;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * Utility class to ease the implementation of framed protocols. This call provides a queue of frames, and a callback

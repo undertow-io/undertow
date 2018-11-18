@@ -18,11 +18,11 @@
 
 package io.undertow.attribute;
 
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HttpString;
-
 import java.util.Arrays;
 import java.util.Collections;
+
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HttpString;
 
 /**
  * Utility class for retrieving exchange attributes

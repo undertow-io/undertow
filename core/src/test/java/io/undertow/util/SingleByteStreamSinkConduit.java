@@ -18,13 +18,13 @@
 
 package io.undertow.util;
 
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.AbstractStreamSinkConduit;
-import org.xnio.conduits.StreamSinkConduit;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.AbstractStreamSinkConduit;
+import org.xnio.conduits.StreamSinkConduit;
 
 /**
  * A channel that will only write a single byte at a time for a set number of calls to write.

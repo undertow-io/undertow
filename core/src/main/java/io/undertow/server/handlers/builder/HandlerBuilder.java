@@ -18,9 +18,10 @@
 
 package io.undertow.server.handlers.builder;
 
-import io.undertow.server.HandlerWrapper;
 import java.util.Map;
 import java.util.Set;
+
+import io.undertow.server.HandlerWrapper;
 
 /**
  * Interface that provides a way of providing a textual representation of a handler.

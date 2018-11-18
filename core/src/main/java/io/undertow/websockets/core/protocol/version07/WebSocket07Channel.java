@@ -17,6 +17,15 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
+import java.nio.ByteBuffer;
+import java.util.Set;
+
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
@@ -28,16 +37,7 @@ import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
-
 import io.undertow.websockets.extensions.ExtensionFunction;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.StreamConnection;
-
-import java.nio.ByteBuffer;
-import java.util.Set;
 
 
 /**

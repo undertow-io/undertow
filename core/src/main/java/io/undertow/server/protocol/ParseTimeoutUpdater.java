@@ -18,16 +18,17 @@
 
 package io.undertow.server.protocol;
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.ServerConnection;
-import io.undertow.util.WorkerUtils;
+import java.io.Closeable;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+
 import org.xnio.IoUtils;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.ConnectedChannel;
 
-import java.io.Closeable;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
+import io.undertow.UndertowLogger;
+import io.undertow.server.ServerConnection;
+import io.undertow.util.WorkerUtils;
 
 /**
  * Wrapper for parse timeout.

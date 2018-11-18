@@ -1,5 +1,8 @@
 package io.undertow.examples.sessionhandling;
 
+import java.util.Deque;
+import java.util.Map;
+
 import io.undertow.Undertow;
 import io.undertow.examples.UndertowExample;
 import io.undertow.server.HttpHandler;
@@ -13,9 +16,6 @@ import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.server.session.SessionManager;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-
-import java.util.Deque;
-import java.util.Map;
 
 @UndertowExample("Session Handling")
 public class SessionServer {

@@ -18,9 +18,10 @@
 
 package io.undertow.client;
 
-import io.undertow.util.Attachable;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+
+import io.undertow.util.Attachable;
 
 /**
  * @author Stuart Douglas

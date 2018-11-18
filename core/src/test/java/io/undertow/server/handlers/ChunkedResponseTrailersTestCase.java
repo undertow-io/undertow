@@ -18,18 +18,11 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.ServerConnection;
-import io.undertow.server.protocol.http.HttpAttachments;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
-import io.undertow.util.StatusCodes;
-import io.undertow.util.StringWriteChannelListener;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -44,10 +37,18 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.concurrent.atomic.AtomicReference;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
+import io.undertow.server.protocol.http.HttpAttachments;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
+import io.undertow.util.StringWriteChannelListener;
 
 /**
  * @author Stuart Douglas

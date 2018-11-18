@@ -22,15 +22,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import io.undertow.server.ConduitWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.ConduitFactory;
-import io.undertow.util.Headers;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpVersion;
 import org.apache.http.client.methods.HttpGet;
@@ -41,6 +32,16 @@ import org.junit.runner.RunWith;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.StreamSinkConduit;
+
+import io.undertow.server.ConduitWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.ConduitFactory;
+import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 
 /**
  * Test that uses a fake channel that returns 0 a lot, to make sure that resume writes works correclty

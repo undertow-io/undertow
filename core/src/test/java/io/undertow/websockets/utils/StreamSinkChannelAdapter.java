@@ -23,8 +23,8 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.concurrent.TimeUnit;
 
-import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListener;
+import org.xnio.ChannelListener.Setter;
 import org.xnio.Option;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;

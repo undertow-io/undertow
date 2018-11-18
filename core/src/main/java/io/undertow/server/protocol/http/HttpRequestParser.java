@@ -18,26 +18,6 @@
 
 package io.undertow.server.protocol.http;
 
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-
-import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
-import io.undertow.annotationprocessor.HttpParserConfig;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
-import io.undertow.util.Protocols;
-import io.undertow.util.URLUtils;
-import io.undertow.util.BadRequestException;
-import org.xnio.OptionMap;
-
 import static io.undertow.util.Headers.ACCEPT_CHARSET_STRING;
 import static io.undertow.util.Headers.ACCEPT_ENCODING_STRING;
 import static io.undertow.util.Headers.ACCEPT_LANGUAGE_STRING;
@@ -90,6 +70,27 @@ import static io.undertow.util.Protocols.HTTP_0_9_STRING;
 import static io.undertow.util.Protocols.HTTP_1_0_STRING;
 import static io.undertow.util.Protocols.HTTP_1_1_STRING;
 import static io.undertow.util.Protocols.HTTP_2_0_STRING;
+
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.xnio.OptionMap;
+
+import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.annotationprocessor.HttpParserConfig;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.BadRequestException;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
+import io.undertow.util.URLUtils;
 
 /**
  * The basic HTTP parser. The actual parser is a sub class of this class that is generated as part of

@@ -18,13 +18,13 @@
 
 package io.undertow.testutils;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
 
 /**
  * @author Stuart Douglas

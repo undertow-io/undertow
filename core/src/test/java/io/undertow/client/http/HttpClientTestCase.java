@@ -18,6 +18,30 @@
 
 package io.undertow.client.http;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.SSLContext;
+
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.Xnio;
+import org.xnio.XnioWorker;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.ssl.XnioSsl;
+
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientExchange;
@@ -38,28 +62,6 @@ import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import org.xnio.Xnio;
-import org.xnio.XnioWorker;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.ssl.XnioSsl;
-
-import javax.net.ssl.SSLContext;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author Emanuel Muckenhuber

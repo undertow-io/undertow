@@ -26,17 +26,19 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.WriteListener;
 
-import io.undertow.UndertowLogger;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
+
+import io.undertow.UndertowLogger;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.io.BufferWritableOutputStream;

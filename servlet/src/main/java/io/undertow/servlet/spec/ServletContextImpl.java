@@ -17,6 +17,56 @@
  */
 package io.undertow.servlet.spec;
 
+import static io.undertow.servlet.core.ApplicationListeners.ListenerState.NO_LISTENER;
+import static io.undertow.servlet.core.ApplicationListeners.ListenerState.PROGRAMATIC_LISTENER;
+
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Enumeration;
+import java.util.EventListener;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+import javax.annotation.security.DeclareRoles;
+import javax.annotation.security.RunAs;
+import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
+import javax.servlet.FilterRegistration;
+import javax.servlet.MultipartConfigElement;
+import javax.servlet.ReadListener;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.Servlet;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletContextListener;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRegistration;
+import javax.servlet.ServletRequest;
+import javax.servlet.SessionTrackingMode;
+import javax.servlet.WriteListener;
+import javax.servlet.annotation.HttpMethodConstraint;
+import javax.servlet.annotation.MultipartConfig;
+import javax.servlet.annotation.ServletSecurity;
+import javax.servlet.descriptor.JspConfigDescriptor;
+
 import io.undertow.Version;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpServerExchange;
@@ -54,55 +104,6 @@ import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.CanonicalPathUtils;
-
-import javax.annotation.security.DeclareRoles;
-import javax.annotation.security.RunAs;
-import javax.servlet.DispatcherType;
-import javax.servlet.Filter;
-import javax.servlet.FilterRegistration;
-import javax.servlet.MultipartConfigElement;
-import javax.servlet.ReadListener;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.Servlet;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletContextListener;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRegistration;
-import javax.servlet.ServletRequest;
-import javax.servlet.SessionTrackingMode;
-import javax.servlet.WriteListener;
-import javax.servlet.annotation.HttpMethodConstraint;
-import javax.servlet.annotation.MultipartConfig;
-import javax.servlet.annotation.ServletSecurity;
-import javax.servlet.descriptor.JspConfigDescriptor;
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.Enumeration;
-import java.util.EventListener;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-
-import static io.undertow.servlet.core.ApplicationListeners.ListenerState.NO_LISTENER;
-import static io.undertow.servlet.core.ApplicationListeners.ListenerState.PROGRAMATIC_LISTENER;
 
 /**
  * @author Stuart Douglas

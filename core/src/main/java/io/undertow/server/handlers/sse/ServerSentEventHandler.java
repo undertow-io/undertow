@@ -18,23 +18,24 @@
 
 package io.undertow.server.handlers.sse;
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.PathTemplateMatch;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import io.undertow.UndertowLogger;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.PathTemplateMatch;
 
 /**
  * @author Stuart Douglas

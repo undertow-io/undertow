@@ -18,6 +18,10 @@
 
 package io.undertow.util;
 
+import static java.lang.Integer.signum;
+import static java.lang.System.arraycopy;
+import static java.util.Arrays.copyOfRange;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.OutputStream;
@@ -25,10 +29,6 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Random;
-
-import static java.lang.Integer.signum;
-import static java.lang.System.arraycopy;
-import static java.util.Arrays.copyOfRange;
 
 import io.undertow.UndertowMessages;
 

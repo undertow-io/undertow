@@ -18,20 +18,14 @@
 
 package io.undertow.server.security;
 
-import io.undertow.predicate.Predicates;
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
-import io.undertow.security.impl.FormAuthenticationMechanism;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.PredicateHandler;
-import io.undertow.server.session.InMemorySessionManager;
-import io.undertow.server.session.SessionAttachmentHandler;
-import io.undertow.server.session.SessionCookieConfig;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.http.Header;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
@@ -47,13 +41,20 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import io.undertow.predicate.Predicates;
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
+import io.undertow.security.impl.FormAuthenticationMechanism;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.PredicateHandler;
+import io.undertow.server.session.InMemorySessionManager;
+import io.undertow.server.session.SessionAttachmentHandler;
+import io.undertow.server.session.SessionCookieConfig;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas

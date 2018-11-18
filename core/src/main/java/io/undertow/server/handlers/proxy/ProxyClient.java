@@ -18,9 +18,9 @@
 
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.server.HttpServerExchange;
-
 import java.util.concurrent.TimeUnit;
+
+import io.undertow.server.HttpServerExchange;
 
 /**
  * A client that provides connections for the proxy handler. The provided connection is valid for the duration of the

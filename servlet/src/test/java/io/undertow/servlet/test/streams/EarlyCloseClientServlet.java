@@ -18,17 +18,19 @@
 
 package io.undertow.servlet.test.streams;
 
-import io.undertow.testutils.DefaultServer;
-import org.junit.runner.RunWith;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
+
+import org.junit.runner.RunWith;
+
+import io.undertow.testutils.DefaultServer;
 
 /**
  * @author Stuart Douglas

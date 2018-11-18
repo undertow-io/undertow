@@ -18,11 +18,12 @@
 
 package io.undertow.websockets.jsr.osgi;
 
-import io.undertow.servlet.ServletExtension;
-import io.undertow.websockets.jsr.Bootstrap;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
+
+import io.undertow.servlet.ServletExtension;
+import io.undertow.websockets.jsr.Bootstrap;
 
 /**
  * OSGi Activator.  This activator will be called when the bundle is started.

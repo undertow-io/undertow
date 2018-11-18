@@ -23,6 +23,13 @@ import java.util.Deque;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
+
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -32,12 +39,6 @@ import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.URLUtils;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
 
 /**
  * Tests that query parameters are handled correctly.

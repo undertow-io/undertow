@@ -17,21 +17,6 @@
  */
 package io.undertow.websockets.core;
 
-import io.undertow.conduits.IdleTimeoutConduit;
-import io.undertow.server.protocol.framed.AbstractFramedChannel;
-import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
-import io.undertow.server.protocol.framed.FrameHeaderData;
-import io.undertow.websockets.extensions.ExtensionFunction;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.StreamConnection;
-import org.xnio.channels.StreamSinkChannel;
-
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
@@ -41,6 +26,22 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+import org.xnio.channels.StreamSinkChannel;
+
+import io.undertow.conduits.IdleTimeoutConduit;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.protocol.framed.AbstractFramedChannel;
+import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
+import io.undertow.server.protocol.framed.FrameHeaderData;
+import io.undertow.websockets.extensions.ExtensionFunction;
 
 /**
  * A {@link org.xnio.channels.ConnectedChannel} which can be used to send and receive WebSocket Frames.

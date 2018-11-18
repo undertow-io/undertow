@@ -18,14 +18,6 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import io.undertow.io.Sender;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
-import io.undertow.util.StatusCodes;
-
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -35,6 +27,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+
+import io.undertow.io.Sender;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.StatusCodes;
 
 /**
  * The mod cluster manager web frontend.

@@ -18,13 +18,14 @@
 
 package io.undertow.servlet.osgi;
 
-import io.undertow.servlet.ServletExtension;
-import io.undertow.servlet.core.ServletExtensionHolder;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.osgi.util.tracker.ServiceTracker;
 import org.osgi.util.tracker.ServiceTrackerCustomizer;
+
+import io.undertow.servlet.ServletExtension;
+import io.undertow.servlet.core.ServletExtensionHolder;
 
 /**
  * OSGi Activator.

@@ -18,13 +18,13 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import io.undertow.util.StatusCodes;
-
 import java.io.IOException;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import io.undertow.util.StatusCodes;
 
 /**
  * Test failover with force sticky session == true; (which is the default)

@@ -26,13 +26,14 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import org.xnio.Buffers;
+import org.xnio.IoUtils;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
-import org.xnio.Buffers;
-import org.xnio.IoUtils;
 
 /**
  * A sender that uses an output stream.

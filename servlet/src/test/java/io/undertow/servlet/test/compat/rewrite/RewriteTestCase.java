@@ -18,6 +18,19 @@
 
 package io.undertow.servlet.test.compat.rewrite;
 
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.servlet.ServletExtension;
@@ -32,17 +45,6 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 
 /**
  * @author Stuart Douglas

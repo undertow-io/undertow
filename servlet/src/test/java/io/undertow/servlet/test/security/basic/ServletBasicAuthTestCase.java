@@ -18,6 +18,26 @@
 
 package io.undertow.servlet.test.security.basic;
 
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.BASIC;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.servlet.ServletException;
+
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.AuthMethodConfig;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -39,24 +59,6 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import javax.servlet.ServletException;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
-
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * @author Stuart Douglas

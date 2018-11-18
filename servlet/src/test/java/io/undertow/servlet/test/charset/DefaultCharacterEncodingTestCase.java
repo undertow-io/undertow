@@ -18,6 +18,19 @@
 
 package io.undertow.servlet.test.charset;
 
+import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -26,17 +39,6 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import java.io.IOException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * @author Artemy Osipov

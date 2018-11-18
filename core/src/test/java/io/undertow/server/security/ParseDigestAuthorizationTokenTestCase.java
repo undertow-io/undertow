@@ -17,17 +17,18 @@
  */
 package io.undertow.server.security;
 
-import io.undertow.testutils.category.UnitTest;
-import io.undertow.security.idm.DigestAlgorithm;
-import io.undertow.security.impl.DigestAuthorizationToken;
-import io.undertow.security.impl.DigestQop;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import static org.junit.Assert.assertEquals;
 
 import java.util.EnumMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import io.undertow.security.idm.DigestAlgorithm;
+import io.undertow.security.impl.DigestAuthorizationToken;
+import io.undertow.security.impl.DigestQop;
+import io.undertow.testutils.category.UnitTest;
 
 /**
  * Test case to test the parsing of the Authorization header for Digest requests.

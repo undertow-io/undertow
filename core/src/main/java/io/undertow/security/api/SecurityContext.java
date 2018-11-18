@@ -17,10 +17,10 @@
  */
 package io.undertow.security.api;
 
+import java.util.List;
+
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
-
-import java.util.List;
 
 /**
  * The security context.

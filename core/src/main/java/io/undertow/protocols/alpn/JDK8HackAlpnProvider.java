@@ -19,6 +19,7 @@
 package io.undertow.protocols.alpn;
 
 import java.util.Arrays;
+
 import javax.net.ssl.SSLEngine;
 
 import io.undertow.protocols.ssl.ALPNHackSSLEngine;

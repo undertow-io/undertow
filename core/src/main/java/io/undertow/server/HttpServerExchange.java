@@ -18,6 +18,42 @@
 
 package io.undertow.server;
 
+import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreClear;
+import static org.xnio.Bits.anyAreSet;
+import static org.xnio.Bits.intBitMask;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
+import java.nio.channels.FileChannel;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+
+import org.jboss.logging.Logger;
+import org.xnio.Buffers;
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.XnioIoThread;
+import org.xnio.channels.Channels;
+import org.xnio.channels.Configurable;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.Conduit;
+import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.conduits.ConduitStreamSourceChannel;
+import org.xnio.conduits.StreamSinkConduit;
+import org.xnio.conduits.StreamSourceConduit;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
@@ -47,41 +83,6 @@ import io.undertow.util.NetworkUtils;
 import io.undertow.util.Protocols;
 import io.undertow.util.Rfc6265CookieSupport;
 import io.undertow.util.StatusCodes;
-import org.jboss.logging.Logger;
-import org.xnio.Buffers;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.XnioIoThread;
-import org.xnio.channels.Channels;
-import org.xnio.channels.Configurable;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.Conduit;
-import org.xnio.conduits.ConduitStreamSinkChannel;
-import org.xnio.conduits.ConduitStreamSourceChannel;
-import org.xnio.conduits.StreamSinkConduit;
-import org.xnio.conduits.StreamSourceConduit;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
-import java.nio.channels.FileChannel;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
-
-import static org.xnio.Bits.allAreSet;
-import static org.xnio.Bits.anyAreClear;
-import static org.xnio.Bits.anyAreSet;
-import static org.xnio.Bits.intBitMask;
 
 /**
  * An HTTP server request/response exchange.  An instance of this class is constructed as soon as the request headers are

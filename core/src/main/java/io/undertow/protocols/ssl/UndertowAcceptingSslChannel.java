@@ -18,9 +18,24 @@
 
 package io.undertow.protocols.ssl;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowOptions;
-import io.undertow.connector.ByteBufferPool;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
+
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -37,22 +52,9 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.SslConnection;
 
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLParameters;
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
+import io.undertow.connector.ByteBufferPool;
 
 /**
  * @author Stuart Douglas

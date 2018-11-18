@@ -18,29 +18,25 @@
 
 package io.undertow.server;
 
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.util.AbstractAttachable;
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.util.concurrent.Executor;
 
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
+import javax.net.ssl.SSLSession;
+
 import org.xnio.Option;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
-import org.xnio.channels.ConnectedChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.util.concurrent.Executor;
-
-import javax.net.ssl.SSLSession;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.util.AbstractAttachable;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 
 /**
  * A server connection.

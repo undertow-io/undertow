@@ -25,11 +25,6 @@ import java.nio.channels.Channel;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.util.Headers;
-import io.undertow.util.StringWriteChannelListener;
-import io.undertow.testutils.TestHttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.AbstractHttpEntity;
 import org.junit.Assert;
@@ -43,6 +38,12 @@ import org.xnio.Options;
 import org.xnio.channels.ReadTimeoutException;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
+
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
+import io.undertow.util.StringWriteChannelListener;
 
 /**
  *

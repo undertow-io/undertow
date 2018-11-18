@@ -1,9 +1,5 @@
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.builder.HandlerBuilder;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -12,6 +8,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 
 /**
  * @author Stuart Douglas

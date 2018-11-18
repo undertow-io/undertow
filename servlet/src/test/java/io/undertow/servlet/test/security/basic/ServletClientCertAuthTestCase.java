@@ -25,6 +25,7 @@ import java.security.Principal;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+
 import javax.net.ssl.SSLContext;
 import javax.servlet.ServletException;
 
@@ -34,6 +35,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.Credential;
 import io.undertow.security.idm.IdentityManager;

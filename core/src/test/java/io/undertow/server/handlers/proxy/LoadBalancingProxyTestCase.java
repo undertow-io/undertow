@@ -18,6 +18,13 @@
 
 package io.undertow.server.handlers.proxy;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.xnio.Options;
+
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.predicate.Predicates;
@@ -25,12 +32,6 @@ import io.undertow.server.handlers.encoding.ContentEncodingRepository;
 import io.undertow.server.handlers.encoding.EncodingHandler;
 import io.undertow.server.handlers.encoding.GzipEncodingProvider;
 import io.undertow.testutils.DefaultServer;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.xnio.Options;
-
-import java.net.URI;
-import java.net.URISyntaxException;
 
 /**
  * Tests the load balancing proxy

@@ -18,11 +18,12 @@
 
 package io.undertow.servlet.test.streams;
 
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
 
 /**
  * @author Stuart Douglas

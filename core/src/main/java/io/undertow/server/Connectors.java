@@ -18,9 +18,19 @@
 
 package io.undertow.server;
 
+import java.io.IOException;
+import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
@@ -31,15 +41,6 @@ import io.undertow.util.LegacyCookieSupport;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.URLUtils;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.ConduitStreamSinkChannel;
-
-import java.io.IOException;
-import java.util.Date;
-import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
 
 /**
  * This class provides the connector part of the {@link HttpServerExchange} API.

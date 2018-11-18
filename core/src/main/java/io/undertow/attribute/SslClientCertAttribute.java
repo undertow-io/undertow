@@ -18,14 +18,14 @@
 
 package io.undertow.attribute;
 
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.security.cert.CertificateEncodingException;
+import javax.security.cert.X509Certificate;
+
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.util.Certificates;
-
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.security.cert.CertificateEncodingException;
-import javax.security.cert.X509Certificate;
 
 /**
  * @author Stuart Douglas

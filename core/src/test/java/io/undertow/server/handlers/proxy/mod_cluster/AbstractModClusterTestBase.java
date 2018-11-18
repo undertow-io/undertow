@@ -28,6 +28,21 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.cookie.Cookie;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.cookie.BasicClientCookie;
+import org.apache.http.message.BasicHeader;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.ssl.XnioSsl;
+
 import io.undertow.Undertow;
 import io.undertow.client.UndertowClient;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
@@ -44,20 +59,6 @@ import io.undertow.server.session.SessionManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.cookie.Cookie;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.cookie.BasicClientCookie;
-import org.apache.http.message.BasicHeader;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import org.xnio.ssl.XnioSsl;
 
 /**
  * @author Emanuel Muckenhuber

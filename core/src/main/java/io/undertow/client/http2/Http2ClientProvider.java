@@ -18,6 +18,23 @@
 
 package io.undertow.client.http2;
 
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.xnio.ChannelListener;
+import org.xnio.IoFuture;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.StreamConnection;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+import org.xnio.ssl.SslConnection;
+import org.xnio.ssl.XnioSsl;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
@@ -31,22 +48,6 @@ import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.protocols.http2.Http2Channel;
-import org.xnio.ChannelListener;
-import org.xnio.IoFuture;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import org.xnio.StreamConnection;
-import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
-import org.xnio.ssl.SslConnection;
-import org.xnio.ssl.XnioSsl;
-
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Plaintext HTTP2 client provider that works using HTTP upgrade

@@ -25,17 +25,18 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSinkChannel;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
 
 /**
  * @author Stuart Douglas

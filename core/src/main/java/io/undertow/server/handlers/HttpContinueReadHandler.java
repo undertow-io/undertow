@@ -23,15 +23,16 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.server.ConduitWrapper;
-import io.undertow.server.protocol.http.HttpContinue;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConduitFactory;
-import io.undertow.util.StatusCodes;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.StreamSourceConduit;
+
+import io.undertow.server.ConduitWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.protocol.http.HttpContinue;
+import io.undertow.util.ConduitFactory;
+import io.undertow.util.StatusCodes;
 
 /**
  * Handler for requests that require 100-continue responses. If an attempt is made to read from the source

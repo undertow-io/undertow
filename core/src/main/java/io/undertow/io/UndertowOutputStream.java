@@ -18,22 +18,23 @@
 
 package io.undertow.io;
 
+import static org.xnio.Bits.anyAreClear;
+import static org.xnio.Bits.anyAreSet;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
-import io.undertow.UndertowMessages;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
 import org.xnio.Buffers;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
-import static org.xnio.Bits.anyAreClear;
-import static org.xnio.Bits.anyAreSet;
+import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
 
 /**
  * Buffering output stream that wraps a channel.

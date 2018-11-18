@@ -17,24 +17,6 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.server.session.SecureRandomSessionIdGenerator;
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.util.WorkerUtils;
-import io.undertow.websockets.client.WebSocketClient;
-import io.undertow.websockets.core.CloseMessage;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSockets;
-import org.xnio.ChannelListener;
-import org.xnio.IoFuture;
-import org.xnio.IoUtils;
-
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.Extension;
-import javax.websocket.MessageHandler;
-import javax.websocket.RemoteEndpoint;
-import javax.websocket.Session;
 import java.io.IOException;
 import java.net.URI;
 import java.security.Principal;
@@ -47,6 +29,26 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.websocket.CloseReason;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.Extension;
+import javax.websocket.MessageHandler;
+import javax.websocket.RemoteEndpoint;
+import javax.websocket.Session;
+
+import org.xnio.ChannelListener;
+import org.xnio.IoFuture;
+import org.xnio.IoUtils;
+
+import io.undertow.server.session.SecureRandomSessionIdGenerator;
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.util.WorkerUtils;
+import io.undertow.websockets.client.WebSocketClient;
+import io.undertow.websockets.core.CloseMessage;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSockets;
 
 /**
  * {@link Session} implementation which makes use of the high-level WebSocket API of undertow under the hood.

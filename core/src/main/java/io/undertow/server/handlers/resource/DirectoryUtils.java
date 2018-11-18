@@ -18,6 +18,18 @@
 
 package io.undertow.server.handlers.resource;
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+import org.xnio.channels.Channels;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
@@ -28,17 +40,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
-import org.xnio.channels.Channels;
-
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
 
 /**
  * @author Stuart Douglas

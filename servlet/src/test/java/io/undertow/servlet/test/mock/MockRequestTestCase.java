@@ -18,19 +18,16 @@
 
 package io.undertow.servlet.test.mock;
 
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.servlet.api.Deployment;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.ServletContainer;
-import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.spec.RequestDispatcherImpl;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.testutils.DefaultServer;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.security.Principal;
+import java.util.Collection;
+import java.util.Enumeration;
+import java.util.Locale;
+import java.util.Map;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.DispatcherType;
@@ -49,16 +46,21 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
-import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
-import java.security.Principal;
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.Locale;
-import java.util.Map;
+
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.servlet.api.Deployment;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.spec.RequestDispatcherImpl;
+import io.undertow.servlet.test.util.TestClassIntrospector;
+import io.undertow.testutils.DefaultServer;
 
 /**
  * @author Stuart Douglas

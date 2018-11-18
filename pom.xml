@@ -28,7 +28,7 @@
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-parent</artifactId>
-    <version>2.0.17.Final-SNAPSHOT</version>
+    <version>3.0.0.Alpha1-SNAPSHOT</version>
 
     <name>Undertow</name>
     <description>Undertow</description>
@@ -109,6 +109,7 @@
         <module>examples</module>
         <module>websockets-jsr</module>
         <module>karaf</module>
+        <module>io</module>
     </modules>
 
     <build>
@@ -264,6 +265,12 @@
             <dependency>
                 <groupId>io.undertow</groupId>
                 <artifactId>undertow-examples</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-io</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

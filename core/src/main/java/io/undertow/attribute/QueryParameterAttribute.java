@@ -18,10 +18,10 @@
 
 package io.undertow.attribute;
 
-import io.undertow.server.HttpServerExchange;
-
 import java.util.ArrayDeque;
 import java.util.Deque;
+
+import io.undertow.server.HttpServerExchange;
 
 /**
  * Query parameter

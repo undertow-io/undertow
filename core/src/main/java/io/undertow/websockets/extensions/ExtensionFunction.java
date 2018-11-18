@@ -18,11 +18,11 @@
 
 package io.undertow.websockets.extensions;
 
+import java.io.IOException;
+
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
-
-import java.io.IOException;
 
 /**
  * Base interface for WebSocket Extensions implementation.

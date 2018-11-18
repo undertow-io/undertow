@@ -27,16 +27,17 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.UndertowMessages;
-import io.undertow.conduits.ConduitListener;
-import io.undertow.server.Connectors;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ImmediatePooledByteBuffer;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.ConduitReadableByteChannel;
 import org.xnio.conduits.StreamSourceConduit;
+
+import io.undertow.UndertowMessages;
+import io.undertow.conduits.ConduitListener;
+import io.undertow.server.Connectors;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.ImmediatePooledByteBuffer;
 
 /**
  * Underlying AJP request channel.

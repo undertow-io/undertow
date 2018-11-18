@@ -17,6 +17,12 @@
  */
 package io.undertow.security.impl;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.security.api.AuthenticationMechanism;
@@ -29,12 +35,6 @@ import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.StatusCodes;
-
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
 
 /**
  * The internal SecurityContext used to hold the state of security for the current exchange.

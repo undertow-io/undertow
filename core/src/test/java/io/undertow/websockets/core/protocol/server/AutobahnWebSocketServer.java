@@ -17,17 +17,9 @@
  */
 package io.undertow.websockets.core.protocol.server;
 
-import io.undertow.server.DefaultByteBufferPool;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.protocol.http.HttpOpenListener;
-import io.undertow.util.Transfer;
-import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.StreamSourceFrameChannel;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.WebSocketConnectionCallback;
-import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
-import io.undertow.websockets.spi.WebSocketHttpExchange;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -38,8 +30,17 @@ import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
+import io.undertow.server.DefaultByteBufferPool;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.protocol.http.HttpOpenListener;
+import io.undertow.util.Transfer;
+import io.undertow.websockets.WebSocketConnectionCallback;
+import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
+import io.undertow.websockets.core.StreamSinkFrameChannel;
+import io.undertow.websockets.core.StreamSourceFrameChannel;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketFrameType;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
 
 /**
  * This class is intended for use with testing against the Python

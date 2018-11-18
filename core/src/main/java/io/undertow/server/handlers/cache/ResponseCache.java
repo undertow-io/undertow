@@ -18,6 +18,9 @@
 
 package io.undertow.server.handlers.cache;
 
+import static io.undertow.util.Methods.GET;
+import static io.undertow.util.Methods.HEAD;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -32,9 +35,6 @@ import io.undertow.util.ETagUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
-
-import static io.undertow.util.Methods.GET;
-import static io.undertow.util.Methods.HEAD;
 
 /**
  * Facade for an underlying buffer cache that contains response information.

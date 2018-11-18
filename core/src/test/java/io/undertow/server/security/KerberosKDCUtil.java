@@ -19,7 +19,6 @@
 package io.undertow.server.security;
 
 import static javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag.REQUIRED;
-import io.undertow.testutils.DefaultServer;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -63,6 +62,8 @@ import org.apache.directory.server.ldap.LdapServer;
 import org.apache.directory.server.protocol.shared.transport.TcpTransport;
 import org.apache.directory.server.protocol.shared.transport.Transport;
 import org.apache.directory.server.protocol.shared.transport.UdpTransport;
+
+import io.undertow.testutils.DefaultServer;
 
 /**
  * Utility class to start up a test KDC backed by a directory server.

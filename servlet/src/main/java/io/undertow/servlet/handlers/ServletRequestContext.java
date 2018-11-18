@@ -22,22 +22,22 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.List;
 
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.ServletStackTraces;
-import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.api.SingleConstraintMatch;
+import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 
 /**
  * All the information that servlet needs to attach to the exchange.

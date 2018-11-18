@@ -17,12 +17,13 @@
  */
 package io.undertow.websockets.core;
 
-import io.undertow.UndertowMessages;
-import org.xnio.channels.Channels;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+
+import org.xnio.channels.Channels;
+
+import io.undertow.UndertowMessages;
 
 /**
  * {@link OutputStream} implementation which buffers all the data until {@link #close()} is called and then will

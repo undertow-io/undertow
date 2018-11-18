@@ -18,13 +18,13 @@
 
 package io.undertow.servlet.api;
 
-import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.util.ConstructorInstanceFactory;
-
 import java.lang.reflect.Constructor;
 import java.util.Set;
 
 import javax.servlet.ServletContainerInitializer;
+
+import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.util.ConstructorInstanceFactory;
 
 /**
  * @author Stuart Douglas

@@ -17,8 +17,12 @@
  */
 package io.undertow.conduits;
 
-import io.undertow.UndertowLogger;
-import io.undertow.util.WorkerUtils;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
+
 import org.xnio.Buffers;
 import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
@@ -31,11 +35,8 @@ import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 import org.xnio.conduits.WriteReadyHandler;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
+import io.undertow.UndertowLogger;
+import io.undertow.util.WorkerUtils;
 
 /**
  *  Conduit that adds support to close a channel once for a specified time no

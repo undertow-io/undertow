@@ -29,12 +29,13 @@ import java.nio.charset.CharsetDecoder;
 
 import javax.servlet.DispatcherType;
 
+import org.xnio.IoUtils;
+
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
-import org.xnio.IoUtils;
 
 /**
  * A sender that uses a print writer.

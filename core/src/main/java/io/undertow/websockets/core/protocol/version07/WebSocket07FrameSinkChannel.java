@@ -17,7 +17,12 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Random;
+
 import io.undertow.UndertowLogger;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.protocol.framed.SendFrameHeader;
 import io.undertow.util.ImmediatePooledByteBuffer;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
@@ -25,11 +30,6 @@ import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import io.undertow.websockets.extensions.NoopExtensionFunction;
-import io.undertow.connector.PooledByteBuffer;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Random;
 
 /**
  * {@link StreamSinkFrameChannel} implementation for writing WebSocket Frames on {@link io.undertow.websockets.core.WebSocketVersion#V08} connections

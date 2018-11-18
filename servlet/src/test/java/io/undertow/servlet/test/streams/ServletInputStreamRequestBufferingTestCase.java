@@ -20,14 +20,15 @@ package io.undertow.servlet.test.streams;
 
 import javax.servlet.ServletContext;
 
+import org.junit.BeforeClass;
+import org.junit.runner.RunWith;
+
 import io.undertow.server.handlers.RequestBufferingHandler;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
-import org.junit.BeforeClass;
-import org.junit.runner.RunWith;
 
 /**
  * @author Carter Kozak

@@ -18,31 +18,6 @@
 
 package io.undertow.websockets.jsr.test;
 
-import io.undertow.Handlers;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.ServletContainer;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.servlet.test.util.TestResourceLoader;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.util.FlexBase64;
-import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.FutureResult;
-
-import javax.servlet.ServletException;
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.ContainerProvider;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.OnMessage;
-import javax.websocket.RemoteEndpoint;
-import javax.websocket.Session;
-import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -55,6 +30,33 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import javax.servlet.ServletException;
+import javax.websocket.ClientEndpointConfig;
+import javax.websocket.ContainerProvider;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.OnMessage;
+import javax.websocket.RemoteEndpoint;
+import javax.websocket.Session;
+import javax.websocket.server.ServerEndpoint;
+
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.FutureResult;
+
+import io.undertow.Handlers;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.test.util.TestClassIntrospector;
+import io.undertow.servlet.test.util.TestResourceLoader;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.util.FlexBase64;
+import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 
 @RunWith(DefaultServer.class)
 @HttpOneOnly

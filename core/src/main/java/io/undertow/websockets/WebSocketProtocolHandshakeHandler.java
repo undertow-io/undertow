@@ -19,6 +19,14 @@
 package io.undertow.websockets;
 
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.xnio.StreamConnection;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
@@ -32,13 +40,6 @@ import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
 import io.undertow.websockets.extensions.ExtensionHandshake;
 import io.undertow.websockets.spi.AsyncWebSocketHttpServerExchange;
-import org.xnio.StreamConnection;
-
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link HttpHandler} which will process the {@link HttpServerExchange} and do the actual handshake/upgrade

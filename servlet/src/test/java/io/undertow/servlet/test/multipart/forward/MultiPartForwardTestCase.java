@@ -19,18 +19,12 @@
 package io.undertow.servlet.test.multipart.forward;
 
 import static io.undertow.servlet.Servlets.multipartConfig;
-import io.undertow.servlet.Servlets;
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
 
 import java.io.IOException;
 import java.util.Arrays;
 
 import javax.servlet.ServletException;
 
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -43,6 +37,13 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.undertow.servlet.Servlets;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 @RunWith(DefaultServer.class)
 public class MultiPartForwardTestCase {

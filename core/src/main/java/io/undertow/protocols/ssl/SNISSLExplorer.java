@@ -15,21 +15,20 @@
 
 package io.undertow.protocols.ssl;
 
-import java.nio.ByteBuffer;
-import java.nio.BufferUnderflowException;
 import java.io.IOException;
-
-import javax.net.ssl.SNIHostName;
-import javax.net.ssl.SNIServerName;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.StandardConstants;
-
+import java.nio.BufferUnderflowException;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SNIServerName;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.StandardConstants;
 
 import io.undertow.UndertowMessages;
 

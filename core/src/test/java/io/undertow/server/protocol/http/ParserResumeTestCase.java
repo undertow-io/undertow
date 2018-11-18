@@ -18,19 +18,20 @@
 
 package io.undertow.server.protocol.http;
 
-import io.undertow.UndertowOptions;
-import io.undertow.testutils.category.UnitTest;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
-import io.undertow.util.Protocols;
-import io.undertow.util.BadRequestException;
+import java.nio.ByteBuffer;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.xnio.OptionMap;
 
-import java.nio.ByteBuffer;
+import io.undertow.UndertowOptions;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.testutils.category.UnitTest;
+import io.undertow.util.BadRequestException;
+import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
 
 /**
  * Tests that the parser can resume when it is given partial input

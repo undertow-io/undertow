@@ -18,6 +18,11 @@
 
 package io.undertow.server.handlers;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.UndertowMessages;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
@@ -26,11 +31,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.HttpString;
-
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Set a fixed response header.

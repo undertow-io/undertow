@@ -18,12 +18,6 @@
 
 package io.undertow.servlet.spec;
 
-import io.undertow.server.handlers.form.FormData;
-import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,8 +27,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.http.Part;
+
+import io.undertow.server.handlers.form.FormData;
+import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 
 /**
  * @author Stuart Douglas

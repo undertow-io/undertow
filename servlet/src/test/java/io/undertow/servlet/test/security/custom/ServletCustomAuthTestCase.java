@@ -19,23 +19,6 @@ package io.undertow.servlet.test.security.custom;
 
 import static org.junit.Assert.assertEquals;
 
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.LoginConfig;
-import io.undertow.servlet.api.ServletContainer;
-import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.api.ServletSecurityInfo;
-import io.undertow.servlet.test.SimpleServletTestCase;
-import io.undertow.servlet.test.security.SendUsernameServlet;
-import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
-import io.undertow.servlet.test.security.form.FormLoginServlet;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,6 +40,23 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.LoginConfig;
+import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.api.ServletSecurityInfo;
+import io.undertow.servlet.test.SimpleServletTestCase;
+import io.undertow.servlet.test.security.SendUsernameServlet;
+import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
+import io.undertow.servlet.test.security.form.FormLoginServlet;
+import io.undertow.servlet.test.util.TestClassIntrospector;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 /**
  * Test case that validates the use of the DeploymentManagerImpl authMechanism override

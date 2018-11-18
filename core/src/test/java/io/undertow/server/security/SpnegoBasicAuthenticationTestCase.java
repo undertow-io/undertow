@@ -20,15 +20,16 @@ package io.undertow.server.security;
 import static io.undertow.server.security.BasicAuthenticationTestCase._testBadPassword;
 import static io.undertow.server.security.BasicAuthenticationTestCase._testBadUserName;
 import static io.undertow.server.security.BasicAuthenticationTestCase._testBasicSuccess;
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.api.SecurityNotification.EventType;
-import io.undertow.testutils.DefaultServer;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.SecurityNotification.EventType;
+import io.undertow.testutils.DefaultServer;
 
 /**
  * A test case to test the SPNEGO authentication mechanism with a fallback to BASIC authentication.

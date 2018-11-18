@@ -18,6 +18,16 @@
 
 package io.undertow.testutils;
 
+import java.io.IOException;
+import java.security.cert.X509Certificate;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocket;
+
 import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.conn.scheme.Scheme;
@@ -28,15 +38,6 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocket;
-import java.io.IOException;
-import java.security.cert.X509Certificate;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * @author Stuart Douglas

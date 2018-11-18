@@ -18,12 +18,12 @@
 
 package io.undertow.websockets.core;
 
-import io.undertow.server.protocol.framed.FramePriority;
-
 import java.util.Deque;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
+
+import io.undertow.server.protocol.framed.FramePriority;
 
 /**
  * Web socket frame priority

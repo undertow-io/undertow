@@ -18,18 +18,19 @@
 
 package io.undertow.client;
 
-import io.undertow.UndertowMessages;
-import org.xnio.ChannelListener;
-import org.xnio.Option;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.StreamConnection;
-import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
-
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.Channel;
 import java.util.concurrent.TimeUnit;
+
+import org.xnio.ChannelListener;
+import org.xnio.Option;
+import org.xnio.StreamConnection;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+
+import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
 
 /**
  * A client connection. This can be used to send requests, or to upgrade the connection.

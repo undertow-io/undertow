@@ -18,17 +18,17 @@
 
 package io.undertow.server.handlers.encoding;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.Predicates;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
 import io.undertow.util.QValueParser;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 /**
  *

@@ -18,15 +18,15 @@
 
 package io.undertow.util;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.server.handlers.Cookie;
-import io.undertow.server.handlers.CookieImpl;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.CookieImpl;
 
 /**
  * Class that contains utility methods for dealing with cookies.

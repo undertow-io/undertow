@@ -19,6 +19,7 @@
 package io.undertow.protocols.http2;
 
 import java.nio.ByteBuffer;
+
 import org.xnio.Bits;
 
 /**

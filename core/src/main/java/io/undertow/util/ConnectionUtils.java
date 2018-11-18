@@ -18,7 +18,11 @@
 
 package io.undertow.util;
 
-import io.undertow.UndertowLogger;
+import java.io.Closeable;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
+
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -28,10 +32,7 @@ import org.xnio.XnioExecutor;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
+import io.undertow.UndertowLogger;
 
 /**
  * @author Stuart Douglas

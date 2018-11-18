@@ -1,10 +1,10 @@
 package io.undertow.websockets.extensions;
 
+import java.io.IOException;
+
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
-
-import java.io.IOException;
 
 public class NoopExtensionFunction implements ExtensionFunction {
     public static final ExtensionFunction INSTANCE = new NoopExtensionFunction();

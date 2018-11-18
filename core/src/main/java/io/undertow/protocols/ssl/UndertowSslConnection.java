@@ -18,20 +18,22 @@
 
 package io.undertow.protocols.ssl;
 
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.util.Set;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSession;
+
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.Options;
-import io.undertow.connector.ByteBufferPool;
 import org.xnio.SslClientAuthMode;
 import org.xnio.StreamConnection;
 import org.xnio.ssl.SslConnection;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLSession;
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.util.Set;
+import io.undertow.connector.ByteBufferPool;
 
 /**
  * @author Stuart Douglas

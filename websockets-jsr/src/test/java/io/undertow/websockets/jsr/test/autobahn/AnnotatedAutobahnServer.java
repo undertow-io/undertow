@@ -17,16 +17,10 @@
  */
 package io.undertow.websockets.jsr.test.autobahn;
 
-import io.undertow.server.DefaultByteBufferPool;
-import io.undertow.server.protocol.http.HttpOpenListener;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.FilterInfo;
-import io.undertow.servlet.api.ServletContainer;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.websockets.extensions.PerMessageDeflateHandshake;
-import io.undertow.websockets.jsr.JsrWebSocketFilter;
-import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
+import java.net.InetSocketAddress;
+
+import javax.servlet.DispatcherType;
+
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -37,8 +31,16 @@ import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 
-import javax.servlet.DispatcherType;
-import java.net.InetSocketAddress;
+import io.undertow.server.DefaultByteBufferPool;
+import io.undertow.server.protocol.http.HttpOpenListener;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.FilterInfo;
+import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.test.util.TestClassIntrospector;
+import io.undertow.websockets.extensions.PerMessageDeflateHandshake;
+import io.undertow.websockets.jsr.JsrWebSocketFilter;
+import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

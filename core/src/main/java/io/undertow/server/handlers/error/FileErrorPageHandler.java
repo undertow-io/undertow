@@ -33,7 +33,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import io.undertow.util.MimeMappings;
 import org.jboss.logging.Logger;
 import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
@@ -49,6 +48,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.Headers;
+import io.undertow.util.MimeMappings;
 
 /**
  * Handler that serves up a file from disk to serve as an error page.

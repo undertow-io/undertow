@@ -18,22 +18,6 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.CompletionLatchHandler;
-import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.h2.jdbcx.JdbcConnectionPool;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -45,6 +29,23 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.h2.jdbcx.JdbcConnectionPool;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.CompletionLatchHandler;
+import io.undertow.util.StatusCodes;
 
 /**
  * Tests writing the database (in memory)

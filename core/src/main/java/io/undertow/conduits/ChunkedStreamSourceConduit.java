@@ -18,6 +18,19 @@
 
 package io.undertow.conduits;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
+
+import org.xnio.IoUtils;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.conduits.AbstractStreamSourceConduit;
+import org.xnio.conduits.ConduitReadableByteChannel;
+import org.xnio.conduits.PushBackStreamSourceConduit;
+import org.xnio.conduits.StreamSourceConduit;
+
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
@@ -29,18 +42,6 @@ import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.PooledAdaptor;
-import org.xnio.IoUtils;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.conduits.AbstractStreamSourceConduit;
-import org.xnio.conduits.ConduitReadableByteChannel;
-import org.xnio.conduits.PushBackStreamSourceConduit;
-import org.xnio.conduits.StreamSourceConduit;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.FileChannel;
 
 /**
  * Channel to de-chunkify data

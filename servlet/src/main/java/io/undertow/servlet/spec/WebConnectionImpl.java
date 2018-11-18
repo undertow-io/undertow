@@ -27,8 +27,9 @@ import javax.servlet.http.WebConnection;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
+
+import io.undertow.connector.ByteBufferPool;
 
 /**
  * @author Stuart Douglas

@@ -18,9 +18,23 @@
 
 package io.undertow.servlet.test.security.constraint;
 
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.BASIC;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 
 import javax.servlet.ServletException;
+
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -36,22 +50,9 @@ import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.FlexBase64;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.FlexBase64;
 import io.undertow.util.StatusCodes;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static org.junit.Assert.assertEquals;
 
 /**
  * @author Stuart Douglas

@@ -18,6 +18,11 @@
 
 package io.undertow.server.protocol.http;
 
+import org.jboss.logging.Logger;
+import org.xnio.conduits.ConduitStreamSourceChannel;
+import org.xnio.conduits.StreamSinkConduit;
+import org.xnio.conduits.StreamSourceConduit;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.ChunkedStreamSinkConduit;
@@ -34,10 +39,6 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
-import org.jboss.logging.Logger;
-import org.xnio.conduits.ConduitStreamSourceChannel;
-import org.xnio.conduits.StreamSinkConduit;
-import org.xnio.conduits.StreamSourceConduit;
 
 /**
  * Class that is  responsible for HTTP transfer encoding, this could be part of the {@link HttpReadListener},

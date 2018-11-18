@@ -17,22 +17,23 @@
  */
 package io.undertow.websockets.core;
 
-import io.undertow.UndertowLogger;
-import org.xnio.Buffers;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.util.Transfer;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
+
+import org.xnio.Buffers;
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
+
+import io.undertow.UndertowLogger;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.util.Transfer;
 
 /**
  * Utility class which holds general useful utility methods which

@@ -18,24 +18,24 @@
 
 package io.undertow.server.handlers.accesslog;
 
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.StoredResponseHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-
-import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 /**
  * @author Stuart Douglas

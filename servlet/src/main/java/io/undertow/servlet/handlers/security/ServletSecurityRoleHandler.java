@@ -17,6 +17,12 @@
  */
 package io.undertow.servlet.handlers.security;
 
+import java.util.List;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -24,11 +30,6 @@ import io.undertow.servlet.api.AuthorizationManager;
 import io.undertow.servlet.api.SingleConstraintMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.StatusCodes;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.List;
 
 /**
  * Servlet role handler

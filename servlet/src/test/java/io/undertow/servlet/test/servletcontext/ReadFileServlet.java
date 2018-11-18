@@ -18,15 +18,16 @@
 
 package io.undertow.servlet.test.servletcontext;
 
-import org.xnio.IoUtils;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
+
+import org.xnio.IoUtils;
 
 /**
  * @author Stuart Douglas

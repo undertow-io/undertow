@@ -17,13 +17,13 @@
  */
 package io.undertow.servlet.test.listener.request.async.onTimeout;
 
-import io.undertow.util.StatusCodes;
-
 import java.io.IOException;
 
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
 import javax.servlet.http.HttpServletResponse;
+
+import io.undertow.util.StatusCodes;
 
 public class SimpleAsyncListener implements AsyncListener {
 

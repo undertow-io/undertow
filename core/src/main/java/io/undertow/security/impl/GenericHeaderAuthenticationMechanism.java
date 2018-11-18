@@ -18,6 +18,14 @@
 
 package io.undertow.security.impl;
 
+import static io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED;
+import static io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_ATTEMPTED;
+import static io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import io.undertow.UndertowMessages;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
@@ -29,14 +37,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.HttpString;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import static io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismOutcome.AUTHENTICATED;
-import static io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_ATTEMPTED;
-import static io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
 
 /**
  * A authentication mechanism that requires the presence of two headers in the request. One of these will be used as a

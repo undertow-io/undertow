@@ -17,17 +17,6 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.websockets.core.BinaryOutputStream;
-import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.WebSocketCallback;
-import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.WebSocketUtils;
-import io.undertow.websockets.core.WebSockets;
-import org.xnio.channels.Channels;
-
-import javax.websocket.EncodeException;
-import javax.websocket.RemoteEndpoint;
-import javax.websocket.SendHandler;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -35,6 +24,19 @@ import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Future;
+
+import javax.websocket.EncodeException;
+import javax.websocket.RemoteEndpoint;
+import javax.websocket.SendHandler;
+
+import org.xnio.channels.Channels;
+
+import io.undertow.websockets.core.BinaryOutputStream;
+import io.undertow.websockets.core.StreamSinkFrameChannel;
+import io.undertow.websockets.core.WebSocketCallback;
+import io.undertow.websockets.core.WebSocketFrameType;
+import io.undertow.websockets.core.WebSocketUtils;
+import io.undertow.websockets.core.WebSockets;
 
 /**
  * {@link RemoteEndpoint} implementation which uses a WebSocketSession for all its operation.

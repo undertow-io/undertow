@@ -17,16 +17,6 @@
  */
 package io.undertow.server.handlers;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.security.api.SecurityContext;
-import io.undertow.server.ExchangeCompletionListener;
-import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.Headers;
-
 import java.net.InetSocketAddress;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -42,9 +32,20 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.security.api.SecurityContext;
+import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.util.Headers;
 
 public class JDBCLogHandler implements HttpHandler, Runnable {
 

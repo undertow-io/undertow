@@ -18,6 +18,28 @@
 
 package io.undertow.protocols.ajp;
 
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_CPONG;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_END_RESPONSE;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_REQUEST_BODY_CHUNK;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_BODY_CHUNK;
+import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_HEADERS;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.client.ClientConnection;
@@ -29,27 +51,6 @@ import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.util.Attachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import org.xnio.StreamConnection;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_CPONG;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_END_RESPONSE;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_REQUEST_BODY_CHUNK;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_BODY_CHUNK;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_HEADERS;
 
 /**
  * AJP client side channel.

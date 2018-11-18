@@ -21,14 +21,15 @@ package io.undertow.util;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.Pool;
+import org.xnio.channels.StreamSourceChannel;
+
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.XnioByteBufferPool;
 import io.undertow.websockets.core.UTF8Output;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.Pool;
-import org.xnio.channels.StreamSourceChannel;
 
 /**
  * Simple utility class for reading a string

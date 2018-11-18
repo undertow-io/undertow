@@ -18,24 +18,6 @@
 
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientStatistics;
-import io.undertow.client.UndertowClient;
-import io.undertow.server.ExchangeCompletionListener;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.CopyOnWriteMap;
-import io.undertow.util.Headers;
-import io.undertow.util.WorkerUtils;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import org.xnio.XnioExecutor;
-import org.xnio.XnioIoThread;
-import org.xnio.ssl.XnioSsl;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -48,6 +30,25 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.XnioExecutor;
+import org.xnio.XnioIoThread;
+import org.xnio.ssl.XnioSsl;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.client.ClientCallback;
+import io.undertow.client.ClientConnection;
+import io.undertow.client.ClientStatistics;
+import io.undertow.client.UndertowClient;
+import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.CopyOnWriteMap;
+import io.undertow.util.Headers;
+import io.undertow.util.WorkerUtils;
 
 /**
  * A pool of connections to a target host.

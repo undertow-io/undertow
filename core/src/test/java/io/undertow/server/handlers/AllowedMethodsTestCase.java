@@ -20,11 +20,6 @@ package io.undertow.server.handlers;
 
 import java.io.IOException;
 
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.Methods;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -32,6 +27,12 @@ import org.apache.http.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Methods;
+import io.undertow.util.StatusCodes;
 
 /**
  * Tests that the allowed and disallowed method handlers work as expected

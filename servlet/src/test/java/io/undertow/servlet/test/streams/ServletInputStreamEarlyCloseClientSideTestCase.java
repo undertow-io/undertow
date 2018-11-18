@@ -18,21 +18,23 @@
 
 package io.undertow.servlet.test.streams;
 
-import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.testutils.TestHttpClient;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.util.concurrent.TimeUnit;
+
+import javax.servlet.ServletException;
+
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.servlet.ServletException;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.util.concurrent.TimeUnit;
+import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.TestHttpClient;
 
 /**
  * Tests the behaviour of the input stream when the connection is closed on the client side

@@ -17,6 +17,8 @@
  */
 package io.undertow.servlet.test.security.custom;
 
+import java.util.Map;
+
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.SecurityContext;
@@ -25,8 +27,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
 import io.undertow.util.Methods;
-
-import java.util.Map;
 
 /**
  * <p>

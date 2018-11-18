@@ -18,16 +18,23 @@
 
 package io.undertow.server.security;
 
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.api.GSSAPIServerSubjectFactory;
-import io.undertow.security.api.SecurityNotification.EventType;
-import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
-import io.undertow.testutils.AjpIgnore;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.FlexBase64;
-import io.undertow.util.StatusCodes;
+import static io.undertow.server.security.KerberosKDCUtil.login;
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.NEGOTIATE;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.PrivilegedExceptionAction;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
+
+import javax.security.auth.Subject;
+
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -41,21 +48,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
-import java.security.PrivilegedExceptionAction;
-import java.util.Base64;
-import java.util.Collections;
-import java.util.List;
-import javax.security.auth.Subject;
-
-import static io.undertow.server.security.KerberosKDCUtil.login;
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.NEGOTIATE;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.GSSAPIServerSubjectFactory;
+import io.undertow.security.api.SecurityNotification.EventType;
+import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
+import io.undertow.testutils.AjpIgnore;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.FlexBase64;
+import io.undertow.util.StatusCodes;
 
 /**
  * A test case to test the SPNEGO authentication mechanism.

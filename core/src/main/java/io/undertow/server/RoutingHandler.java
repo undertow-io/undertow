@@ -18,6 +18,11 @@
 
 package io.undertow.server;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import io.undertow.predicate.Predicate;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.CopyOnWriteMap;
@@ -26,11 +31,6 @@ import io.undertow.util.Methods;
 import io.undertow.util.PathTemplate;
 import io.undertow.util.PathTemplateMatch;
 import io.undertow.util.PathTemplateMatcher;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * A Handler that handles the common case of routing via path template and method name.

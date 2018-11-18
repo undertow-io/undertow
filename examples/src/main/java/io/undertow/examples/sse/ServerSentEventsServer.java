@@ -18,6 +18,12 @@
 
 package io.undertow.examples.sse;
 
+import static io.undertow.Handlers.path;
+import static io.undertow.Handlers.resource;
+import static io.undertow.Handlers.serverSentEvents;
+
+import java.io.IOException;
+
 import io.undertow.Undertow;
 import io.undertow.examples.UndertowExample;
 import io.undertow.server.HttpHandler;
@@ -26,12 +32,6 @@ import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import io.undertow.server.handlers.sse.ServerSentEventConnection;
 import io.undertow.server.handlers.sse.ServerSentEventHandler;
 import io.undertow.util.StringReadChannelListener;
-
-import java.io.IOException;
-
-import static io.undertow.Handlers.path;
-import static io.undertow.Handlers.resource;
-import static io.undertow.Handlers.serverSentEvents;
 
 /**
  * @author Stuart Douglas

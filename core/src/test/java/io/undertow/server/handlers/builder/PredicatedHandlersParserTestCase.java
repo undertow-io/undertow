@@ -18,7 +18,14 @@
 
 package io.undertow.server.handlers.builder;
 
-import io.undertow.testutils.category.UnitTest;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import io.undertow.predicate.ContainsPredicate;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -29,15 +36,9 @@ import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser.BlockNode;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser.Node;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser.PredicateOperatorNode;
+import io.undertow.testutils.category.UnitTest;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
 
 /**
  * @author Stuart Douglas

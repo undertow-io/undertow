@@ -18,11 +18,11 @@
 
 package io.undertow.servlet.core;
 
-import io.undertow.util.StatusCodes;
-
 import java.util.Map;
 
 import javax.servlet.ServletException;
+
+import io.undertow.util.StatusCodes;
 
 /**
  * Class that maintains information about error page mappings.

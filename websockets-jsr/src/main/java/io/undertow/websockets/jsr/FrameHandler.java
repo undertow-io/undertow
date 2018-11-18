@@ -17,22 +17,6 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.websockets.core.AbstractReceiveListener;
-import io.undertow.websockets.core.BufferedBinaryMessage;
-import io.undertow.websockets.core.BufferedTextMessage;
-import io.undertow.websockets.core.StreamSourceFrameChannel;
-import io.undertow.websockets.core.UTF8Output;
-import io.undertow.websockets.core.WebSocketCallback;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSockets;
-import io.undertow.websockets.jsr.util.ClassUtils;
-import org.xnio.Buffers;
-import org.xnio.Pooled;
-
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
-import javax.websocket.MessageHandler;
-import javax.websocket.PongMessage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,6 +33,24 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
+
+import javax.websocket.CloseReason;
+import javax.websocket.Endpoint;
+import javax.websocket.MessageHandler;
+import javax.websocket.PongMessage;
+
+import org.xnio.Buffers;
+import org.xnio.Pooled;
+
+import io.undertow.websockets.core.AbstractReceiveListener;
+import io.undertow.websockets.core.BufferedBinaryMessage;
+import io.undertow.websockets.core.BufferedTextMessage;
+import io.undertow.websockets.core.StreamSourceFrameChannel;
+import io.undertow.websockets.core.UTF8Output;
+import io.undertow.websockets.core.WebSocketCallback;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSockets;
+import io.undertow.websockets.jsr.util.ClassUtils;
 
 /**
  * @author Stuart Douglas

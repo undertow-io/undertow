@@ -18,6 +18,8 @@
 
 package io.undertow.security.handlers;
 
+import java.util.List;
+
 import io.undertow.Handlers;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismContext;
@@ -25,8 +27,6 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
-
-import java.util.List;
 
 /**
  * Authentication handler that adds one or more authentication

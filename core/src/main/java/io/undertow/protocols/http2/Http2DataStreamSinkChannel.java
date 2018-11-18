@@ -18,16 +18,17 @@
 
 package io.undertow.protocols.http2;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+
 import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.protocol.framed.SendFrameHeader;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.ImmediatePooledByteBuffer;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
  * Headers channel

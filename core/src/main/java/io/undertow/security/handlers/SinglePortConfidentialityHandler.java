@@ -17,11 +17,11 @@
  */
 package io.undertow.security.handlers;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-
 import java.net.URI;
 import java.net.URISyntaxException;
+
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
 
 /**
  * An extension to {@link AbstractConfidentialityHandler} that uses the Host header from the incoming message and specifies the

@@ -19,6 +19,7 @@
 package io.undertow.servlet.test.response.writer;
 
 import java.io.IOException;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;

@@ -29,6 +29,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import io.undertow.security.handlers.SinglePortConfidentialityHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;

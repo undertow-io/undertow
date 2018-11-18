@@ -18,6 +18,10 @@
 
 package io.undertow.examples.servlet;
 
+import static io.undertow.servlet.Servlets.defaultContainer;
+import static io.undertow.servlet.Servlets.deployment;
+import static io.undertow.servlet.Servlets.servlet;
+
 import javax.servlet.ServletException;
 
 import io.undertow.Handlers;
@@ -27,10 +31,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
-
-import static io.undertow.servlet.Servlets.defaultContainer;
-import static io.undertow.servlet.Servlets.deployment;
-import static io.undertow.servlet.Servlets.servlet;
 
 /**
  * @author Stuart Douglas

@@ -17,15 +17,16 @@
  */
 package io.undertow.websockets.core.protocol.version13;
 
+import java.util.Set;
+
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version07.WebSocket07Channel;
 import io.undertow.websockets.extensions.ExtensionFunction;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.StreamConnection;
-
-import java.util.Set;
 
 /**
  *

@@ -18,15 +18,15 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.SameThreadExecutor;
-
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Represents a limit on a number of running requests.

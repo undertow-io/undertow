@@ -18,14 +18,15 @@
 
 package io.undertow.server.handlers.sse;
 
-import io.undertow.server.handlers.encoding.ContentEncodingRepository;
-import io.undertow.server.handlers.encoding.DeflateEncodingProvider;
-import io.undertow.server.handlers.encoding.EncodingHandler;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
-import io.undertow.util.WorkerUtils;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DecompressingHttpClient;
@@ -35,14 +36,14 @@ import org.junit.runner.RunWith;
 import org.xnio.IoUtils;
 import org.xnio.XnioIoThread;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import io.undertow.server.handlers.encoding.ContentEncodingRepository;
+import io.undertow.server.handlers.encoding.DeflateEncodingProvider;
+import io.undertow.server.handlers.encoding.EncodingHandler;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
+import io.undertow.util.WorkerUtils;
 
 /**
  * @author Stuart Douglas

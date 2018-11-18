@@ -21,6 +21,7 @@ package io.undertow.servlet.test.security.ssl;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.security.cert.X509Certificate;
+
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
 import javax.servlet.annotation.ServletSecurity;

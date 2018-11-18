@@ -1,9 +1,9 @@
 package io.undertow.protocols.ajp;
 
+import java.nio.ByteBuffer;
+
 import io.undertow.server.protocol.framed.SendFrameHeader;
 import io.undertow.util.ImmediatePooledByteBuffer;
-
-import java.nio.ByteBuffer;
 
 /**
  * @author Stuart Douglas

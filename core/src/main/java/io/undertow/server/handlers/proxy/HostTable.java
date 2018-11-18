@@ -18,13 +18,13 @@
 
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.UndertowMessages;
-import io.undertow.util.CopyOnWriteMap;
-import io.undertow.util.PathMatcher;
-
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+
+import io.undertow.UndertowMessages;
+import io.undertow.util.CopyOnWriteMap;
+import io.undertow.util.PathMatcher;
 
 /**
  * Class that maintains a table of remote hosts that this proxy knows about.

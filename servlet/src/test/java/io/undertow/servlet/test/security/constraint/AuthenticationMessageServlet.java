@@ -17,13 +17,13 @@
  */
 package io.undertow.servlet.test.security.constraint;
 
-import io.undertow.servlet.test.util.MessageServlet;
-
 import java.io.IOException;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import io.undertow.servlet.test.util.MessageServlet;
 
 /**
  * An extension to the MessageServlet that can also perform additional checks related to the authenticated principal.

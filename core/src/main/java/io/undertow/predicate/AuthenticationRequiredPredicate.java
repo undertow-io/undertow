@@ -1,12 +1,12 @@
 package io.undertow.predicate;
 
-import io.undertow.security.api.SecurityContext;
-import io.undertow.server.HttpServerExchange;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import io.undertow.security.api.SecurityContext;
+import io.undertow.server.HttpServerExchange;
 
 /**
  * Predicate that returns true if authentication is required.

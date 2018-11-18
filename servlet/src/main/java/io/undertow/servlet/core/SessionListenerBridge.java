@@ -20,6 +20,7 @@ package io.undertow.servlet.core;
 
 import java.security.AccessController;
 import java.util.HashSet;
+
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpSessionBindingEvent;

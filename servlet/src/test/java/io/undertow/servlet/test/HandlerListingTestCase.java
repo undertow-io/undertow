@@ -18,10 +18,7 @@
 
 package io.undertow.servlet.test;
 
-import io.undertow.attribute.ExchangeAttribute;
-import io.undertow.predicate.PredicateBuilder;
-import io.undertow.server.handlers.builder.HandlerBuilder;
-import org.junit.Test;
+import static java.lang.System.out;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,7 +27,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ServiceLoader;
 
-import static java.lang.System.out;
+import org.junit.Test;
+
+import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.predicate.PredicateBuilder;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 
 /**
  * not a real test, but used to generate documentation

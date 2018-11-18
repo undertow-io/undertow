@@ -34,6 +34,9 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
+import org.xnio.OptionMap;
+import org.xnio.Xnio;
+
 import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
@@ -51,8 +54,6 @@ import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.xnio.OptionMap;
-import org.xnio.Xnio;
 
 /**
  * @author Stuart Douglas

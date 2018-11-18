@@ -18,15 +18,6 @@
 
 package io.undertow.annotationprocessor;
 
-import org.jboss.classfilewriter.AccessFlag;
-import org.jboss.classfilewriter.ClassFile;
-import org.jboss.classfilewriter.ClassMethod;
-import org.jboss.classfilewriter.code.BranchEnd;
-import org.jboss.classfilewriter.code.CodeAttribute;
-import org.jboss.classfilewriter.code.CodeLocation;
-import org.jboss.classfilewriter.code.TableSwitchBuilder;
-import org.jboss.classfilewriter.util.DescriptorUtils;
-
 import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -40,6 +31,15 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.jboss.classfilewriter.AccessFlag;
+import org.jboss.classfilewriter.ClassFile;
+import org.jboss.classfilewriter.ClassMethod;
+import org.jboss.classfilewriter.code.BranchEnd;
+import org.jboss.classfilewriter.code.CodeAttribute;
+import org.jboss.classfilewriter.code.CodeLocation;
+import org.jboss.classfilewriter.code.TableSwitchBuilder;
+import org.jboss.classfilewriter.util.DescriptorUtils;
 
 /**
  * @author Stuart Douglas

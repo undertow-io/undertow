@@ -1,11 +1,11 @@
 package io.undertow.websockets.extensions;
 
+import java.io.IOException;
+import java.util.List;
+
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
-
-import java.io.IOException;
-import java.util.List;
 
 public class CompositeExtensionFunction implements ExtensionFunction {
 

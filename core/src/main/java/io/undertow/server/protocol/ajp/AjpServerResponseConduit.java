@@ -18,25 +18,8 @@
 
 package io.undertow.server.protocol.ajp;
 
-import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
-import io.undertow.conduits.AbstractFramedStreamSinkConduit;
-import io.undertow.conduits.ConduitListener;
-import io.undertow.server.Connectors;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.StatusCodes;
-import org.jboss.logging.Logger;
-import org.xnio.Buffers;
-import org.xnio.IoUtils;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.ConduitWritableByteChannel;
-import org.xnio.conduits.StreamSinkConduit;
-import org.xnio.conduits.WriteReadyHandler;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.anyAreSet;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -46,8 +29,26 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.anyAreSet;
+import org.jboss.logging.Logger;
+import org.xnio.Buffers;
+import org.xnio.IoUtils;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.StreamSinkConduit;
+import org.xnio.conduits.WriteReadyHandler;
+
+import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.conduits.AbstractFramedStreamSinkConduit;
+import io.undertow.conduits.ConduitListener;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.Connectors;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
 
 /**
  * AJP response channel. For now we are going to assume that the buffers are sized to

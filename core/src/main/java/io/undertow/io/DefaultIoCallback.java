@@ -20,9 +20,10 @@ package io.undertow.io;
 
 import java.io.IOException;
 
+import org.xnio.IoUtils;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
-import org.xnio.IoUtils;
 
 /**
  * A default callback implementation that simply ends the exchange

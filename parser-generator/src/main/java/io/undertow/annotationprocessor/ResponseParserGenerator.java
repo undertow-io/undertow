@@ -18,11 +18,11 @@
 
 package io.undertow.annotationprocessor;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.jboss.classfilewriter.ClassFile;
 import org.jboss.classfilewriter.ClassMethod;
 import org.jboss.classfilewriter.code.CodeAttribute;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Stuart Douglas

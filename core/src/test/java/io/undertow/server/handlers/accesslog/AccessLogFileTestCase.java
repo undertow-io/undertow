@@ -31,7 +31,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.After;
@@ -47,6 +46,7 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.CompletionLatchHandler;
 import io.undertow.util.FileUtils;
+import io.undertow.util.StatusCodes;
 
 /**
  * Tests writing the access log to a file

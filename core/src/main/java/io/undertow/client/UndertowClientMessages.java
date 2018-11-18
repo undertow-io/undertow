@@ -18,13 +18,14 @@
 
 package io.undertow.client;
 
-import io.undertow.util.HttpString;
+import java.io.IOException;
+import java.net.URI;
+
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 
-import java.io.IOException;
-import java.net.URI;
+import io.undertow.util.HttpString;
 
 /**
  * starting from 1000

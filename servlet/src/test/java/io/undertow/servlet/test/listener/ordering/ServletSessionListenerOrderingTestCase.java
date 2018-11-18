@@ -23,6 +23,13 @@ import java.util.List;
 
 import javax.servlet.ServletException;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -34,14 +41,8 @@ import io.undertow.servlet.test.util.EmptyServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.Tracker;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import io.undertow.testutils.TestHttpClient;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import io.undertow.util.StatusCodes;
 
 /**
  * @see https://issues.jboss.org/browse/UNDERTOW-23

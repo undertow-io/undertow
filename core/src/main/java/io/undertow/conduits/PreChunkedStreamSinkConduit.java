@@ -18,15 +18,8 @@
 
 package io.undertow.conduits;
 
-import io.undertow.UndertowMessages;
-import io.undertow.server.protocol.http.HttpAttachments;
-import io.undertow.util.Attachable;
-import org.xnio.IoUtils;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.AbstractStreamSinkConduit;
-import org.xnio.conduits.ConduitWritableByteChannel;
-import org.xnio.conduits.Conduits;
-import org.xnio.conduits.StreamSinkConduit;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.anyAreSet;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,8 +27,16 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.anyAreSet;
+import org.xnio.IoUtils;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.AbstractStreamSinkConduit;
+import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.Conduits;
+import org.xnio.conduits.StreamSinkConduit;
+
+import io.undertow.UndertowMessages;
+import io.undertow.server.protocol.http.HttpAttachments;
+import io.undertow.util.Attachable;
 
 /**
  * Channel that implements HTTP chunked transfer coding for data streams that already have chunk markers.

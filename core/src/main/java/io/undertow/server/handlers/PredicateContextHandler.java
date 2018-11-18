@@ -18,11 +18,11 @@
 
 package io.undertow.server.handlers;
 
+import java.util.TreeMap;
+
 import io.undertow.predicate.Predicate;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-
-import java.util.TreeMap;
 
 /**
  * Handler that sets up the predicate context

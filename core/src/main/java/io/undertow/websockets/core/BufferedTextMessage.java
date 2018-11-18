@@ -18,11 +18,12 @@
 
 package io.undertow.websockets.core;
 
-import org.xnio.ChannelListener;
-import io.undertow.connector.PooledByteBuffer;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import org.xnio.ChannelListener;
+
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * A buffered text message.

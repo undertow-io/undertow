@@ -18,16 +18,11 @@
 
 package io.undertow.server.handlers.file;
 
-import io.undertow.server.handlers.encoding.ContentEncodedResourceManager;
-import io.undertow.server.handlers.encoding.ContentEncodingRepository;
-import io.undertow.server.handlers.encoding.DeflateEncodingProvider;
-import io.undertow.server.handlers.resource.CachingResourceManager;
-import io.undertow.server.handlers.resource.PathResourceManager;
-import io.undertow.server.handlers.resource.ResourceHandler;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.FileUtils;
-import io.undertow.util.StatusCodes;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.entity.DecompressingEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -40,10 +35,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import io.undertow.server.handlers.encoding.ContentEncodedResourceManager;
+import io.undertow.server.handlers.encoding.ContentEncodingRepository;
+import io.undertow.server.handlers.encoding.DeflateEncodingProvider;
+import io.undertow.server.handlers.resource.CachingResourceManager;
+import io.undertow.server.handlers.resource.PathResourceManager;
+import io.undertow.server.handlers.resource.ResourceHandler;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.util.FileUtils;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas

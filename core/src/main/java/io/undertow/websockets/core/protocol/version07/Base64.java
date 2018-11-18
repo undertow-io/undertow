@@ -17,12 +17,12 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
-import io.undertow.UndertowLogger;
-
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
+import io.undertow.UndertowLogger;
 
 /**
  * <p>

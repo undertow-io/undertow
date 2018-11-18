@@ -18,10 +18,10 @@
 
 package io.undertow.attribute;
 
+import java.util.concurrent.TimeUnit;
+
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * The response time

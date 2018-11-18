@@ -18,6 +18,13 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
+import org.xnio.conduits.StreamSinkConduit;
+
 import io.undertow.conduits.HeadStreamSinkConduit;
 import io.undertow.conduits.RangeStreamSinkConduit;
 import io.undertow.server.ConduitWrapper;
@@ -32,12 +39,6 @@ import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
-import org.xnio.conduits.StreamSinkConduit;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Handler for Range requests. This is a generic handler that can handle range requests to any resource

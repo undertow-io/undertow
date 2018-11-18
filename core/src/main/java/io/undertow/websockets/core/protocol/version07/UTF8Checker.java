@@ -17,13 +17,13 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
-import io.undertow.server.protocol.framed.FrameHeaderData;
-import io.undertow.websockets.core.WebSocketMessages;
-import io.undertow.websockets.core.function.ChannelFunction;
-
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+
+import io.undertow.server.protocol.framed.FrameHeaderData;
+import io.undertow.websockets.core.WebSocketMessages;
+import io.undertow.websockets.core.function.ChannelFunction;
 
 /**
  * An utility class which can be used to check if a sequence of bytes or ByteBuffers contain non UTF-8 data.

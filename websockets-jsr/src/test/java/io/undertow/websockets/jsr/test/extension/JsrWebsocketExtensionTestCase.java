@@ -18,6 +18,22 @@
 
 package io.undertow.websockets.jsr.test.extension;
 
+import java.io.IOException;
+import java.net.URI;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
+
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
@@ -43,21 +59,6 @@ import io.undertow.websockets.extensions.PerMessageDeflateHandshake;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import io.undertow.websockets.jsr.test.BinaryEndpointTest;
 import io.undertow.websockets.jsr.test.autobahn.AutobahnAnnotatedEndpoint;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
-
-import java.io.IOException;
-import java.net.URI;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *

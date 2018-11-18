@@ -18,10 +18,11 @@
 
 package io.undertow.util;
 
-import io.undertow.connector.PooledByteBuffer;
+import java.nio.ByteBuffer;
+
 import org.xnio.Pooled;
 
-import java.nio.ByteBuffer;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * @author Stuart Douglas

@@ -18,6 +18,10 @@
 
 package io.undertow.examples.chat;
 
+import static io.undertow.Handlers.path;
+import static io.undertow.Handlers.resource;
+import static io.undertow.Handlers.websocket;
+
 import io.undertow.Undertow;
 import io.undertow.examples.UndertowExample;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
@@ -27,10 +31,6 @@ import io.undertow.websockets.core.BufferedTextMessage;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
-
-import static io.undertow.Handlers.path;
-import static io.undertow.Handlers.resource;
-import static io.undertow.Handlers.websocket;
 
 /**
  * @author Stuart Douglas

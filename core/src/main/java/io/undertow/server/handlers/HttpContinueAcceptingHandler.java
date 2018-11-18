@@ -29,10 +29,10 @@ import io.undertow.io.Sender;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.Predicates;
 import io.undertow.server.HandlerWrapper;
-import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.server.protocol.http.HttpContinue;
 
 /**
  * Handler that provides support for HTTP/1.1 continue responses.

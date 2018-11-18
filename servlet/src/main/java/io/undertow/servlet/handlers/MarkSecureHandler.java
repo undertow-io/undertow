@@ -18,14 +18,14 @@
 
 package io.undertow.servlet.handlers;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Handler that marks a request as secure, regardless of the underlying protocol.

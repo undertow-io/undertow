@@ -18,11 +18,11 @@
 
 package io.undertow.util;
 
-import io.undertow.UndertowLogger;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import io.undertow.UndertowLogger;
 
 /**
  * Represents a byte range for a range request

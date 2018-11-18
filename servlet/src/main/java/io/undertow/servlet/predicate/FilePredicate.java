@@ -18,6 +18,12 @@
 
 package io.undertow.servlet.predicate;
 
+import java.io.IOException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.predicate.Predicate;
@@ -26,12 +32,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.Resource;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.handlers.ServletRequestContext;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Predicate that returns true if the given location corresponds to a regular file.

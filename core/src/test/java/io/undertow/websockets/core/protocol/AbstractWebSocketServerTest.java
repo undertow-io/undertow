@@ -17,7 +17,23 @@
  */
 package io.undertow.websockets.core.protocol;
 
+import java.io.IOException;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.FutureResult;
+import org.xnio.Pooled;
+
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+import io.netty.util.CharsetUtil;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.NetworkUtils;
@@ -32,21 +48,6 @@ import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
-import io.netty.util.CharsetUtil;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.FutureResult;
-import org.xnio.Pooled;
-
-import java.io.IOException;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

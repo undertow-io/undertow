@@ -18,12 +18,12 @@
 
 package io.undertow.util;
 
+import java.util.Map;
+
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.handlers.form.FormParserFactory;
-
-import java.util.Map;
 
 /**
  * {@link AuthenticationMechanismFactory} that simply returns a pre configured {@link AuthenticationMechanism}

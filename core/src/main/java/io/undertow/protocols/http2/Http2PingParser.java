@@ -18,12 +18,12 @@
 
 package io.undertow.protocols.http2;
 
-import io.undertow.UndertowMessages;
-
 import static io.undertow.protocols.http2.Http2Channel.PING_FRAME_LENGTH;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import io.undertow.UndertowMessages;
 
 /**
  * Parser for HTTP2 ping frames.

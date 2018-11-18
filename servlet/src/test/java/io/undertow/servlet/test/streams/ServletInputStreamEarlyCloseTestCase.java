@@ -18,18 +18,19 @@
 
 package io.undertow.servlet.test.streams;
 
-import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 /**
  * Tests calling close on the input stream before all data has been read.

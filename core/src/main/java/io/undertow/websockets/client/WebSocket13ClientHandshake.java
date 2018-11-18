@@ -18,22 +18,6 @@
 
 package io.undertow.websockets.client;
 
-import io.undertow.util.FlexBase64;
-import io.undertow.util.Headers;
-import io.undertow.websockets.WebSocketExtension;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketMessages;
-import io.undertow.websockets.core.WebSocketVersion;
-import io.undertow.websockets.core.protocol.version13.WebSocket13Channel;
-import io.undertow.websockets.extensions.CompositeExtensionFunction;
-import io.undertow.websockets.extensions.ExtensionFunction;
-import io.undertow.websockets.extensions.ExtensionHandshake;
-import io.undertow.websockets.extensions.NoopExtensionFunction;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.StreamConnection;
-import org.xnio.http.ExtendedHandshakeChecker;
-
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -49,6 +33,23 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+import org.xnio.http.ExtendedHandshakeChecker;
+
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.util.FlexBase64;
+import io.undertow.util.Headers;
+import io.undertow.websockets.WebSocketExtension;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketMessages;
+import io.undertow.websockets.core.WebSocketVersion;
+import io.undertow.websockets.core.protocol.version13.WebSocket13Channel;
+import io.undertow.websockets.extensions.CompositeExtensionFunction;
+import io.undertow.websockets.extensions.ExtensionFunction;
+import io.undertow.websockets.extensions.ExtensionHandshake;
+import io.undertow.websockets.extensions.NoopExtensionFunction;
 
 /**
  * @author Stuart Douglas

@@ -18,6 +18,15 @@
 
 package io.undertow.security.impl;
 
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
+import java.util.WeakHashMap;
+
+import org.jboss.logging.Logger;
+import org.xnio.conduits.StreamSinkConduit;
+
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.api.SecurityContext;
@@ -33,15 +42,6 @@ import io.undertow.server.session.SessionListener;
 import io.undertow.server.session.SessionManager;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.Sessions;
-
-import org.jboss.logging.Logger;
-import org.xnio.conduits.StreamSinkConduit;
-
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-import java.util.WeakHashMap;
 
 /**
  * Authenticator that can be used to configure single sign on.

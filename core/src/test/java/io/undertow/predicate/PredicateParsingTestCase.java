@@ -18,15 +18,16 @@
 
 package io.undertow.predicate;
 
-import io.undertow.testutils.category.UnitTest;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
+import java.util.HashMap;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.HashMap;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.testutils.category.UnitTest;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 
 /**
  * @author Stuart Douglas

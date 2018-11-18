@@ -25,9 +25,6 @@ import java.nio.channels.Channel;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -38,6 +35,10 @@ import org.xnio.ChannelListener;
 import org.xnio.Options;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.WriteTimeoutException;
+
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.TestHttpClient;
 
 /**
  * Tests read timeout with a client that is slow to read the response

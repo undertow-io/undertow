@@ -18,6 +18,9 @@
 
 package io.undertow.conduits;
 
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.anyAreSet;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -29,9 +32,6 @@ import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.ConduitWritableByteChannel;
 import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
-
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.anyAreSet;
 
 /**
  * A conduit that discards all data written to it. This allows head requests to 'just work', as all data written

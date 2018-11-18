@@ -18,13 +18,14 @@
 
 package io.undertow.util;
 
-import io.undertow.security.impl.DigestAuthorizationToken;
-import io.undertow.testutils.category.UnitTest;
+import java.util.Collections;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.Collections;
+import io.undertow.security.impl.DigestAuthorizationToken;
+import io.undertow.testutils.category.UnitTest;
 
 /**
  * @author Stuart Douglas

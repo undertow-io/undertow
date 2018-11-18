@@ -18,16 +18,17 @@
 
 package io.undertow.websockets.jsr;
 
+import java.lang.reflect.Method;
+import java.util.Set;
+
+import javax.websocket.server.PathParam;
+
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.LogMessage;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
-
-import javax.websocket.server.PathParam;
-import java.lang.reflect.Method;
-import java.util.Set;
 
 /**
  * log messages start at 26000

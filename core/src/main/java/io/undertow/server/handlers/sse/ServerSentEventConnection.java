@@ -18,22 +18,6 @@
 
 package io.undertow.server.handlers.sse;
 
-import io.undertow.UndertowLogger;
-import io.undertow.connector.PooledByteBuffer;
-import io.undertow.security.api.SecurityContext;
-import io.undertow.security.idm.Account;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Attachable;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.AttachmentList;
-import io.undertow.util.HeaderMap;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.XnioExecutor;
-import org.xnio.channels.StreamSinkChannel;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
@@ -51,6 +35,23 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.XnioExecutor;
+import org.xnio.channels.StreamSinkChannel;
+
+import io.undertow.UndertowLogger;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.security.api.SecurityContext;
+import io.undertow.security.idm.Account;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Attachable;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.AttachmentList;
+import io.undertow.util.HeaderMap;
 
 /**
  * Represents the server side of a Server Sent Events connection.

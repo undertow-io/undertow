@@ -18,12 +18,12 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Map;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.PathTemplateMatcher;
-
-import java.util.Map;
 
 /**
  * A handler that matches URI templates

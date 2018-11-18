@@ -18,10 +18,10 @@
 
 package io.undertow.server.protocol.http;
 
+import java.util.function.Supplier;
+
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
-
-import java.util.function.Supplier;
 
 /**
  * Exchange attachments that have specific meaning when using the HTTP protocol

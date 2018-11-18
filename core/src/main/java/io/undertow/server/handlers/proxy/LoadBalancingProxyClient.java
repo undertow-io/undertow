@@ -18,17 +18,11 @@
 
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.UndertowLogger;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.UndertowClient;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.ServerConnection;
-import io.undertow.server.handlers.Cookie;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.AttachmentList;
-import io.undertow.util.CopyOnWriteMap;
-import org.xnio.OptionMap;
-import org.xnio.ssl.XnioSsl;
+import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.AVAILABLE;
+import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.FULL;
+import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.FULL_QUEUE;
+import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.PROBLEM;
+import static org.xnio.IoUtils.safeClose;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -38,8 +32,18 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.*;
-import static org.xnio.IoUtils.safeClose;
+import org.xnio.OptionMap;
+import org.xnio.ssl.XnioSsl;
+
+import io.undertow.UndertowLogger;
+import io.undertow.client.ClientConnection;
+import io.undertow.client.UndertowClient;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.AttachmentList;
+import io.undertow.util.CopyOnWriteMap;
 
 /**
  * Initial implementation of a load balancing proxy client. This initial implementation is rather simplistic, and

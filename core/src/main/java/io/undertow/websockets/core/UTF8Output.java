@@ -18,9 +18,9 @@
 
 package io.undertow.websockets.core;
 
-import org.xnio.Buffers;
-
 import java.nio.ByteBuffer;
+
+import org.xnio.Buffers;
 
 /**
  * Utility class which allows to extract a UTF8 String from bytes respecting valid code-points

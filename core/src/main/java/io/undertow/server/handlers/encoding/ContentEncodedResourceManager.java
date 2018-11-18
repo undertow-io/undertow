@@ -18,21 +18,6 @@
 
 package io.undertow.server.handlers.encoding;
 
-import io.undertow.UndertowLogger;
-import io.undertow.predicate.Predicate;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.resource.CachingResourceManager;
-import io.undertow.server.handlers.resource.Resource;
-import io.undertow.util.ImmediateConduitFactory;
-import org.xnio.IoUtils;
-import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.ConduitStreamSinkChannel;
-import org.xnio.conduits.Conduits;
-import org.xnio.conduits.StreamSinkConduit;
-import org.xnio.conduits.WriteReadyHandler;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -43,6 +28,22 @@ import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+
+import org.xnio.IoUtils;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.conduits.Conduits;
+import org.xnio.conduits.StreamSinkConduit;
+import org.xnio.conduits.WriteReadyHandler;
+
+import io.undertow.UndertowLogger;
+import io.undertow.predicate.Predicate;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.resource.CachingResourceManager;
+import io.undertow.server.handlers.resource.Resource;
+import io.undertow.util.ImmediateConduitFactory;
 
 /**
  * Class that provides a way of serving pre-encoded resources.

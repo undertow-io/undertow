@@ -18,6 +18,13 @@
 
 package io.undertow.server.handlers.form;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.channels.StreamSourceChannel;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
@@ -27,12 +34,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.URLUtils;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.channels.StreamSourceChannel;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
  * Parser definition for form encoded data. This handler takes effect for any request that has a mime type

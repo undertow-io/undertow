@@ -39,21 +39,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
-import io.undertow.client.ClientStatistics;
-import io.undertow.protocols.http2.Http2DataStreamSinkChannel;
-import io.undertow.protocols.http2.Http2GoAwayStreamSourceChannel;
-import io.undertow.protocols.http2.Http2PushPromiseStreamSourceChannel;
-import io.undertow.server.protocol.http.HttpAttachments;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Methods;
-import io.undertow.util.Protocols;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
-import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -66,14 +56,24 @@ import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
+import io.undertow.client.ClientStatistics;
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.protocols.http2.AbstractHttp2StreamSourceChannel;
 import io.undertow.protocols.http2.Http2Channel;
+import io.undertow.protocols.http2.Http2DataStreamSinkChannel;
+import io.undertow.protocols.http2.Http2GoAwayStreamSourceChannel;
 import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
 import io.undertow.protocols.http2.Http2PingStreamSourceChannel;
+import io.undertow.protocols.http2.Http2PushPromiseStreamSourceChannel;
 import io.undertow.protocols.http2.Http2RstStreamStreamSourceChannel;
 import io.undertow.protocols.http2.Http2StreamSourceChannel;
+import io.undertow.server.protocol.http.HttpAttachments;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
 
 /**
  * @author Stuart Douglas

@@ -18,11 +18,11 @@
 
 package io.undertow.util;
 
-import io.undertow.UndertowMessages;
-import io.undertow.connector.PooledByteBuffer;
-
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+import io.undertow.UndertowMessages;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * A reference counted pooled implementation, that basically consists of a main buffer, that can be sliced off into smaller buffers,

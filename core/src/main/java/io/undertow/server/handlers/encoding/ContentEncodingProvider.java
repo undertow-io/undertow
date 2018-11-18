@@ -18,10 +18,11 @@
 
 package io.undertow.server.handlers.encoding;
 
+import org.xnio.conduits.StreamSinkConduit;
+
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
-import org.xnio.conduits.StreamSinkConduit;
 
 /**
  * @author Stuart Douglas

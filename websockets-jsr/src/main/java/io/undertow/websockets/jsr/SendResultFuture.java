@@ -17,13 +17,13 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.websockets.core.WebSocketCallback;
-import io.undertow.websockets.core.WebSocketChannel;
-
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import io.undertow.websockets.core.WebSocketCallback;
+import io.undertow.websockets.core.WebSocketChannel;
 
 /**
  * Default implementation of a {@link Future} that is used in the {@link javax.websocket.RemoteEndpoint.Async}

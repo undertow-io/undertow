@@ -28,8 +28,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -38,6 +36,9 @@ import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.message.BasicNameValuePair;
 import org.junit.Assert;
+
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.util.StatusCodes;
 
 /**
  * Basic mod_cluster management client. This can be used to simulate management requests to the mod_cluster manager.

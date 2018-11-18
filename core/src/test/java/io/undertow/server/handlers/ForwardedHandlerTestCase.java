@@ -1,19 +1,7 @@
 package io.undertow.server.handlers;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.ProxyIgnore;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
-import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static io.undertow.server.handlers.ForwardedHandler.parseAddress;
+import static io.undertow.server.handlers.ForwardedHandler.parseHeader;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -22,8 +10,21 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
-import static io.undertow.server.handlers.ForwardedHandler.parseAddress;
-import static io.undertow.server.handlers.ForwardedHandler.parseHeader;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas

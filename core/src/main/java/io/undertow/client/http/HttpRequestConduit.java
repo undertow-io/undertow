@@ -18,18 +18,8 @@
 
 package io.undertow.client.http;
 
-import io.undertow.client.ClientRequest;
-import io.undertow.server.TruncatedResponseException;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
-import org.jboss.logging.Logger;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.XnioWorker;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.AbstractStreamSinkConduit;
-import org.xnio.conduits.Conduits;
-import org.xnio.conduits.StreamSinkConduit;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.allAreSet;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -37,8 +27,19 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.Iterator;
 
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.allAreSet;
+import org.jboss.logging.Logger;
+import org.xnio.XnioWorker;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.AbstractStreamSinkConduit;
+import org.xnio.conduits.Conduits;
+import org.xnio.conduits.StreamSinkConduit;
+
+import io.undertow.client.ClientRequest;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.TruncatedResponseException;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>

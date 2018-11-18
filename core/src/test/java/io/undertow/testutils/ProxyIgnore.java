@@ -18,10 +18,10 @@
 
 package io.undertow.testutils;
 
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
 import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
-
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
  *

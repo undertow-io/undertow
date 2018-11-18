@@ -1,8 +1,8 @@
 package io.undertow.server;
 
-import io.undertow.server.handlers.Cookie;
-
 import java.util.Map;
+
+import io.undertow.server.handlers.Cookie;
 
 /**
  * Sets the <pre>secure</pre> attribute on all response cookies.

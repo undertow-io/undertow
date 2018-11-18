@@ -20,7 +20,6 @@ package io.undertow.servlet.test.spec;
 
 import javax.servlet.ServletException;
 
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -38,6 +37,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 
 /**
  * Tests that getCookies() on a request does not fail due to invalid cookies.

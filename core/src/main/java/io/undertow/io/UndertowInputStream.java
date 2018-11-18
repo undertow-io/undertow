@@ -18,21 +18,22 @@
 
 package io.undertow.io;
 
-import io.undertow.UndertowMessages;
-import io.undertow.server.HttpServerExchange;
-import org.xnio.Buffers;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.channels.Channels;
-import org.xnio.channels.EmptyStreamSourceChannel;
-import org.xnio.channels.StreamSourceChannel;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.anyAreSet;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.anyAreSet;
+import org.xnio.Buffers;
+import org.xnio.channels.Channels;
+import org.xnio.channels.EmptyStreamSourceChannel;
+import org.xnio.channels.StreamSourceChannel;
+
+import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.HttpServerExchange;
 
 /**
  * Input stream that reads from the underlying channel. This stream delays creation

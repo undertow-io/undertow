@@ -18,9 +18,6 @@
 
 package io.undertow.util;
 
-import io.undertow.UndertowOptions;
-import io.undertow.server.HttpServerExchange;
-
 import java.text.ParsePosition;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -28,6 +25,9 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+import io.undertow.UndertowOptions;
+import io.undertow.server.HttpServerExchange;
 
 /**
  * Utility for parsing and generating dates

@@ -18,18 +18,19 @@
 
 package io.undertow.websockets.client;
 
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketVersion;
-import io.undertow.websockets.extensions.ExtensionHandshake;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.StreamConnection;
-import org.xnio.http.ExtendedHandshakeChecker;
-
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+import org.xnio.http.ExtendedHandshakeChecker;
+
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketVersion;
+import io.undertow.websockets.extensions.ExtensionHandshake;
 
 /**
  * @author Stuart Douglas

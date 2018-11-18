@@ -18,16 +18,17 @@
 
 package io.undertow.util;
 
-import io.undertow.testutils.category.UnitTest;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+import io.undertow.testutils.category.UnitTest;
 
 /**
  * @author Stuart Douglas

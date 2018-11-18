@@ -18,16 +18,10 @@
 
 package io.undertow.server.handlers.encoding;
 
-import io.undertow.conduits.DeflatingStreamSinkConduit;
-import io.undertow.io.IoCallback;
-import io.undertow.predicate.Predicates;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.Headers;
-import io.undertow.util.ObjectPool;
-import io.undertow.util.StatusCodes;
+import java.io.IOException;
+import java.util.Random;
+import java.util.zip.Deflater;
+
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.entity.DecompressingEntity;
@@ -39,9 +33,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
-import java.util.Random;
-import java.util.zip.Deflater;
+import io.undertow.conduits.DeflatingStreamSinkConduit;
+import io.undertow.io.IoCallback;
+import io.undertow.predicate.Predicates;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.util.Headers;
+import io.undertow.util.ObjectPool;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas

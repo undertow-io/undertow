@@ -43,9 +43,9 @@ import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.api.ThreadSetupHandler;
-import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletPathMatch;
+import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.QueryParameterUtils;
 
 /**

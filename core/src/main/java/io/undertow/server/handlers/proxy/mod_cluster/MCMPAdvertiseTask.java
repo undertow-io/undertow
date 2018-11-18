@@ -18,13 +18,6 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import io.undertow.UndertowLogger;
-import io.undertow.util.NetworkUtils;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import org.xnio.XnioWorker;
-import org.xnio.channels.MulticastMessageChannel;
-
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -37,6 +30,14 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
+
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.XnioWorker;
+import org.xnio.channels.MulticastMessageChannel;
+
+import io.undertow.UndertowLogger;
+import io.undertow.util.NetworkUtils;
 
 /**
  * @author Emanuel Muckenhuber

@@ -18,12 +18,16 @@
 
 package io.undertow.servlet.test.charset;
 
-import io.undertow.servlet.Servlets;
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
+import static io.undertow.servlet.Servlets.multipartConfig;
+
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.servlet.ServletException;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -37,14 +41,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.servlet.ServletException;
-import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
-
-import static io.undertow.servlet.Servlets.multipartConfig;
+import io.undertow.servlet.Servlets;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Matej Lazar

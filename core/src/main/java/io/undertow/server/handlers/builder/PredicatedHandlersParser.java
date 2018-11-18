@@ -18,18 +18,6 @@
 
 package io.undertow.server.handlers.builder;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.attribute.ExchangeAttribute;
-import io.undertow.attribute.ExchangeAttributeParser;
-import io.undertow.attribute.ExchangeAttributes;
-import io.undertow.predicate.Predicate;
-import io.undertow.predicate.PredicateBuilder;
-import io.undertow.predicate.Predicates;
-import io.undertow.predicate.PredicatesHandler;
-import io.undertow.server.HandlerWrapper;
-import io.undertow.util.FileUtils;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,6 +33,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.attribute.ExchangeAttributeParser;
+import io.undertow.attribute.ExchangeAttributes;
+import io.undertow.predicate.Predicate;
+import io.undertow.predicate.PredicateBuilder;
+import io.undertow.predicate.Predicates;
+import io.undertow.predicate.PredicatesHandler;
+import io.undertow.server.HandlerWrapper;
+import io.undertow.util.FileUtils;
 
 /**
  * Parser for the undertow-handlers.conf file.

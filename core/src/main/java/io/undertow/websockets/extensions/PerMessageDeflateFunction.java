@@ -18,6 +18,15 @@
 
 package io.undertow.websockets.extensions;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.zip.DataFormatException;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
+
+import org.xnio.Buffers;
+import org.xnio.IoUtils;
+
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.util.ImmediatePooledByteBuffer;
@@ -26,14 +35,6 @@ import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketMessages;
-import org.xnio.Buffers;
-import org.xnio.IoUtils;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.zip.DataFormatException;
-import java.util.zip.Deflater;
-import java.util.zip.Inflater;
 
 /**
  * Implementation of {@code permessage-deflate} WebSocket Extension.

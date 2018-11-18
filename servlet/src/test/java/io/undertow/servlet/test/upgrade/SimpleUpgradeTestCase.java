@@ -25,14 +25,15 @@ import java.net.Socket;
 
 import javax.servlet.ServletException;
 
-import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
 
 /**
  * @author Stuart Douglas

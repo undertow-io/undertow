@@ -18,14 +18,14 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Date;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-
-import java.util.Date;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 /**
  * Handler that records some metrics

@@ -23,12 +23,13 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jboss.logging.Logger;
+
 import io.undertow.security.idm.Account;
 import io.undertow.server.session.SecureRandomSessionIdGenerator;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionManager;
 import io.undertow.util.CopyOnWriteMap;
-import org.jboss.logging.Logger;
 
 /**
  * @author Stuart Douglas

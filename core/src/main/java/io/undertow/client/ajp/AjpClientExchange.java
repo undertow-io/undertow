@@ -18,6 +18,13 @@
 
 package io.undertow.client.ajp;
 
+import static org.xnio.Bits.anyAreSet;
+
+import java.io.IOException;
+
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
+
 import io.undertow.channels.DetachableStreamSinkChannel;
 import io.undertow.channels.DetachableStreamSourceChannel;
 import io.undertow.client.ClientCallback;
@@ -31,12 +38,6 @@ import io.undertow.protocols.ajp.AjpClientRequestClientStreamSinkChannel;
 import io.undertow.protocols.ajp.AjpClientResponseStreamSourceChannel;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.Headers;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
-
-import java.io.IOException;
-
-import static org.xnio.Bits.anyAreSet;
 
 /**
  * @author Stuart Douglas

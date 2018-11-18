@@ -18,29 +18,6 @@
 
 package io.undertow.websockets.spi;
 
-import io.undertow.UndertowLogger;
-import io.undertow.io.IoCallback;
-import io.undertow.io.Sender;
-import io.undertow.security.api.SecurityContext;
-import io.undertow.security.idm.Account;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpUpgradeListener;
-import io.undertow.server.session.SessionConfig;
-import io.undertow.server.session.SessionManager;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
-import io.undertow.websockets.core.WebSocketChannel;
-import org.xnio.ChannelListener;
-import org.xnio.FinishedIoFuture;
-import org.xnio.FutureResult;
-import org.xnio.IoFuture;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.channels.StreamSourceChannel;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -53,6 +30,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+
+import org.xnio.ChannelListener;
+import org.xnio.FinishedIoFuture;
+import org.xnio.FutureResult;
+import org.xnio.IoFuture;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.channels.StreamSourceChannel;
+
+import io.undertow.UndertowLogger;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
+import io.undertow.security.api.SecurityContext;
+import io.undertow.security.idm.Account;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
+import io.undertow.server.session.SessionConfig;
+import io.undertow.server.session.SessionManager;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
+import io.undertow.websockets.core.WebSocketChannel;
 
 /**
  * @author Stuart Douglas

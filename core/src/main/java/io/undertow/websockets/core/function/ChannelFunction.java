@@ -17,10 +17,10 @@
  */
 package io.undertow.websockets.core.function;
 
-import io.undertow.server.protocol.framed.FrameHeaderData;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import io.undertow.server.protocol.framed.FrameHeaderData;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

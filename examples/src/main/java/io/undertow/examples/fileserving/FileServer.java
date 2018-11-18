@@ -18,13 +18,13 @@
 
 package io.undertow.examples.fileserving;
 
-import io.undertow.Undertow;
-import io.undertow.examples.UndertowExample;
-import io.undertow.server.handlers.resource.PathResourceManager;
+import static io.undertow.Handlers.resource;
 
 import java.nio.file.Paths;
 
-import static io.undertow.Handlers.resource;
+import io.undertow.Undertow;
+import io.undertow.examples.UndertowExample;
+import io.undertow.server.handlers.resource.PathResourceManager;
 
 /**
  * @author Stuart Douglas

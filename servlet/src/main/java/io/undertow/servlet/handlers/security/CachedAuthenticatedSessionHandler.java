@@ -17,6 +17,10 @@
  */
 package io.undertow.servlet.handlers.security;
 
+import java.security.AccessController;
+
+import javax.servlet.http.HttpSession;
+
 import io.undertow.security.api.AuthenticatedSessionManager;
 import io.undertow.security.api.AuthenticatedSessionManager.AuthenticatedSession;
 import io.undertow.security.api.NotificationReceiver;
@@ -30,10 +34,6 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.SavedRequest;
-
-import java.security.AccessController;
-
-import javax.servlet.http.HttpSession;
 
 /**
  * {@link HttpHandler} responsible for setting up the {@link AuthenticatedSessionManager} for cached authentications and

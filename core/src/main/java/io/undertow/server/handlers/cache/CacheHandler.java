@@ -18,6 +18,10 @@
 
 package io.undertow.server.handlers.cache;
 
+import static io.undertow.util.Headers.CONTENT_LENGTH;
+
+import org.xnio.conduits.StreamSinkConduit;
+
 import io.undertow.Handlers;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpHandler;
@@ -25,9 +29,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.encoding.AllowedContentEncodings;
 import io.undertow.util.ConduitFactory;
-import org.xnio.conduits.StreamSinkConduit;
-
-import static io.undertow.util.Headers.CONTENT_LENGTH;
 
 /**
  *

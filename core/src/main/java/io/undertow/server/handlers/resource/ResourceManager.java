@@ -18,10 +18,10 @@
 
 package io.undertow.server.handlers.resource;
 
-import io.undertow.UndertowMessages;
-
 import java.io.Closeable;
 import java.io.IOException;
+
+import io.undertow.UndertowMessages;
 
 /**
  *

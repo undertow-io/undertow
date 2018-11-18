@@ -22,14 +22,15 @@ import static io.undertow.server.security.DigestAuthenticationAuthTestCase._test
 import static io.undertow.server.security.DigestAuthenticationAuthTestCase._testBadUsername;
 import static io.undertow.server.security.DigestAuthenticationAuthTestCase._testDigestSuccess;
 import static io.undertow.server.security.DigestAuthenticationAuthTestCase._testNonceCountReUse;
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.testutils.DefaultServer;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.testutils.DefaultServer;
 
 /**
  * A test case to test the SPNEGO authentication mechanism with a fallback to DIGEST authentication.

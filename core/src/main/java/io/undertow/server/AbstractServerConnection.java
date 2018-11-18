@@ -29,7 +29,6 @@ import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;

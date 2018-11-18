@@ -18,6 +18,18 @@
 
 package io.undertow.servlet.handlers;
 
+import static io.undertow.servlet.api.SessionPersistenceManager.PersistentSession;
+
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import javax.servlet.http.HttpSessionActivationListener;
+import javax.servlet.http.HttpSessionEvent;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
@@ -27,17 +39,6 @@ import io.undertow.servlet.api.SessionPersistenceManager;
 import io.undertow.servlet.core.Lifecycle;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
-
-import javax.servlet.http.HttpSessionActivationListener;
-import javax.servlet.http.HttpSessionEvent;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import static io.undertow.servlet.api.SessionPersistenceManager.PersistentSession;
 
 /**
  * A handler that restores persistent HTTP session state for requests in development mode.

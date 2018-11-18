@@ -18,15 +18,16 @@
 
 package io.undertow.websockets.extensions;
 
-import io.undertow.testutils.category.UnitTest;
+import java.util.zip.Deflater;
+import java.util.zip.Inflater;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.zip.Deflater;
-import java.util.zip.Inflater;
+import io.undertow.testutils.category.UnitTest;
 
 
 /**

@@ -22,11 +22,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
-import io.undertow.UndertowLogger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
+
+import io.undertow.UndertowLogger;
 
 /**
  * A simple write listener that can be used to write out the contents of a String. When the string is written

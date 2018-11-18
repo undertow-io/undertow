@@ -18,19 +18,20 @@
 
 package io.undertow.conduits;
 
-import io.undertow.server.AbstractServerConnection;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
+
 import org.xnio.Buffers;
 import org.xnio.IoUtils;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.ConduitReadableByteChannel;
 import org.xnio.conduits.StreamSourceConduit;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.AbstractServerConnection;
 
 /**
  * @author Stuart Douglas

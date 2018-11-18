@@ -18,11 +18,12 @@
 
 package io.undertow.servlet.test.lifecycle;
 
-import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.DeploymentUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.test.util.DeploymentUtils;
 
 /**
  * @author Stuart Douglas

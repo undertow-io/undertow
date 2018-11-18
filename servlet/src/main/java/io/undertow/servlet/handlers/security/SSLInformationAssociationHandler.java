@@ -20,6 +20,7 @@ package io.undertow.servlet.handlers.security;
 
 import java.io.ByteArrayInputStream;
 import java.security.cert.X509Certificate;
+
 import javax.servlet.ServletRequest;
 
 import io.undertow.server.HttpHandler;

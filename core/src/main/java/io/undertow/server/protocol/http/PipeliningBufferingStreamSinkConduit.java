@@ -18,6 +18,10 @@
 
 package io.undertow.server.protocol.http;
 
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.anyAreClear;
+import static org.xnio.Bits.anyAreSet;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
@@ -25,13 +29,9 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.HttpServerExchange;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
@@ -39,9 +39,10 @@ import org.xnio.conduits.ConduitWritableByteChannel;
 import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.anyAreClear;
-import static org.xnio.Bits.anyAreSet;
+import io.undertow.UndertowLogger;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.HttpServerExchange;
 
 /**
  * A buffer that is used when processing pipelined requests, that allows the server to

@@ -20,14 +20,15 @@ package io.undertow.examples.reverseproxy;
 
 import java.io.IOException;
 
+import org.xnio.OptionMap;
+import org.xnio.Xnio;
+import org.xnio.XnioWorker;
+
 import io.undertow.Undertow;
 import io.undertow.examples.UndertowExample;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.proxy.mod_cluster.MCMPConfig;
 import io.undertow.server.handlers.proxy.mod_cluster.ModCluster;
-import org.xnio.OptionMap;
-import org.xnio.Xnio;
-import org.xnio.XnioWorker;
 
 /**
  * @author Jean-Frederic Clere

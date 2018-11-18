@@ -1,11 +1,12 @@
 package io.undertow.server.protocol.proxy;
 
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.protocols.ssl.UndertowXnioSsl;
-import io.undertow.server.OpenListener;
 import org.xnio.ChannelListener;
 import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
+
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.server.OpenListener;
 
 /**
  * Open listener for proxied connections

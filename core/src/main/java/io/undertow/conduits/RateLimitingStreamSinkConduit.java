@@ -18,15 +18,15 @@
 
 package io.undertow.conduits;
 
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.AbstractStreamSinkConduit;
-import org.xnio.conduits.StreamSinkConduit;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
+
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.AbstractStreamSinkConduit;
+import org.xnio.conduits.StreamSinkConduit;
 
 import io.undertow.util.WorkerUtils;
 

@@ -18,6 +18,8 @@
 
 package io.undertow.servlet;
 
+import java.util.EventListener;
+
 import javax.servlet.Filter;
 import javax.servlet.MultipartConfigElement;
 import javax.servlet.Servlet;
@@ -33,8 +35,6 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.core.ServletContainerImpl;
-
-import java.util.EventListener;
 
 /**
  * Utility class for building servlet deployments.

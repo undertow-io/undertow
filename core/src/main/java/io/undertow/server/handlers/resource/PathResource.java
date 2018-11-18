@@ -1,16 +1,5 @@
 package io.undertow.server.handlers.resource;
 
-import io.undertow.UndertowLogger;
-import io.undertow.io.IoCallback;
-import io.undertow.io.Sender;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.DateUtils;
-import io.undertow.util.ETag;
-import io.undertow.util.MimeMappings;
-import io.undertow.util.StatusCodes;
-import org.xnio.IoUtils;
-import io.undertow.connector.PooledByteBuffer;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -25,6 +14,18 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import org.xnio.IoUtils;
+
+import io.undertow.UndertowLogger;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.DateUtils;
+import io.undertow.util.ETag;
+import io.undertow.util.MimeMappings;
+import io.undertow.util.StatusCodes;
 
 /**
  * A path resource

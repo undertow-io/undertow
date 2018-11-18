@@ -17,6 +17,12 @@
  */
 package io.undertow.websockets.jsr.test.annotated;
 
+import java.io.IOException;
+import java.net.URI;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -26,19 +32,12 @@ import javax.websocket.CloseReason;
 import javax.websocket.OnClose;
 import javax.websocket.Session;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.FutureResult;
-
 
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;

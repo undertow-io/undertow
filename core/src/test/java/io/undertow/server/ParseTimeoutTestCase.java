@@ -18,10 +18,13 @@
 
 package io.undertow.server;
 
-import io.undertow.UndertowOptions;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.testutils.ProxyIgnore;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -30,12 +33,10 @@ import org.junit.runner.RunWith;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import io.undertow.UndertowOptions;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.ProxyIgnore;
 
 @RunWith(DefaultServer.class)
 @ProxyIgnore

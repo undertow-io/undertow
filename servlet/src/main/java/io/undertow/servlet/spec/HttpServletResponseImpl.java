@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.spec;
 
+import static io.undertow.util.URLUtils.isAbsoluteUrl;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
@@ -54,8 +56,6 @@ import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
-
-import static io.undertow.util.URLUtils.isAbsoluteUrl;
 
 
 /**

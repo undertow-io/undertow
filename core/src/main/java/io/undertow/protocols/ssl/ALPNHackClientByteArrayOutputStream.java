@@ -18,8 +18,9 @@
 
 package io.undertow.protocols.ssl;
 
-import javax.net.ssl.SSLEngine;
 import java.io.ByteArrayOutputStream;
+
+import javax.net.ssl.SSLEngine;
 
 /**
  * Super hacky class that allows the client and server hello message to be modified and the corresponding hash generated

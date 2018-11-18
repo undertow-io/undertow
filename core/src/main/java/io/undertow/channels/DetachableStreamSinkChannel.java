@@ -18,8 +18,11 @@
 
 package io.undertow.channels;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
+
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
@@ -30,10 +33,8 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 
 /**
  * Stream sink channel. When this channel is considered detached it will no longer forward

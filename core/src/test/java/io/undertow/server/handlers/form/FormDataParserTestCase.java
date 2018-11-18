@@ -27,16 +27,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.BlockingHandler;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
-import junit.textui.TestRunner;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -47,6 +37,17 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.StatusCodes;
+import junit.textui.TestRunner;
 
 /**
  * @author Stuart Douglas

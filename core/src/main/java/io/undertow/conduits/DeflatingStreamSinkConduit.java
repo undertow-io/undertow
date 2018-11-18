@@ -29,9 +29,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
-import io.undertow.server.Connectors;
 import org.xnio.IoUtils;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSourceChannel;
@@ -41,11 +39,13 @@ import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.WriteReadyHandler;
 
 import io.undertow.UndertowLogger;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
+import io.undertow.util.Headers;
 import io.undertow.util.NewInstanceObjectPool;
 import io.undertow.util.ObjectPool;
-import io.undertow.util.Headers;
 import io.undertow.util.PooledObject;
 import io.undertow.util.SimpleObjectPool;
 

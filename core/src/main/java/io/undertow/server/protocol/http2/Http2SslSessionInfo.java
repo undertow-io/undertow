@@ -20,9 +20,11 @@ package io.undertow.server.protocol.http2;
 
 import java.io.IOException;
 import java.security.cert.Certificate;
+
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.security.cert.X509Certificate;
+
 import org.xnio.Options;
 import org.xnio.SslClientAuthMode;
 

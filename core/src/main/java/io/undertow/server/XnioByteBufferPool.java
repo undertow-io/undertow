@@ -18,12 +18,13 @@
 
 package io.undertow.server;
 
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
+import java.nio.ByteBuffer;
+
 import org.xnio.Pool;
 import org.xnio.Pooled;
 
-import java.nio.ByteBuffer;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * @author Stuart Douglas

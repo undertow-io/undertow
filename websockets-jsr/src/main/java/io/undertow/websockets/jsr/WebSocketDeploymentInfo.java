@@ -18,18 +18,20 @@
 
 package io.undertow.websockets.jsr;
 
-import io.undertow.server.XnioByteBufferPool;
-import io.undertow.websockets.extensions.ExtensionHandshake;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.Pool;
-import org.xnio.XnioWorker;
-
-import javax.websocket.server.ServerEndpointConfig;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
+
+import javax.websocket.server.ServerEndpointConfig;
+
+import org.xnio.Pool;
+import org.xnio.XnioWorker;
+
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.server.XnioByteBufferPool;
+import io.undertow.websockets.extensions.ExtensionHandshake;
 
 /**
  * Web socket deployment information

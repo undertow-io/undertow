@@ -23,17 +23,17 @@ import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import org.xnio.channels.StreamSinkChannel;
+
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
+import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.websockets.core.function.ChannelFunction;
 import io.undertow.websockets.core.function.ChannelFunctionFileChannel;
 import io.undertow.websockets.core.protocol.version07.Masker;
 import io.undertow.websockets.core.protocol.version07.UTF8Checker;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import io.undertow.websockets.extensions.NoopExtensionFunction;
-import org.xnio.channels.StreamSinkChannel;
-
-import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
-import io.undertow.server.protocol.framed.FrameHeaderData;
 
 /**
  * Base class for processes Frame bases StreamSourceChannels.

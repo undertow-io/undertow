@@ -18,19 +18,20 @@
 
 package io.undertow.websockets.spi;
 
-import io.undertow.server.HttpUpgradeListener;
-import io.undertow.util.AttachmentKey;
-import io.undertow.websockets.core.WebSocketChannel;
-import org.xnio.IoFuture;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.xnio.IoFuture;
+import org.xnio.OptionMap;
+
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.server.HttpUpgradeListener;
+import io.undertow.util.AttachmentKey;
+import io.undertow.websockets.core.WebSocketChannel;
 
 
 /**

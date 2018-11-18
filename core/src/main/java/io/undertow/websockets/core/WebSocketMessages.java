@@ -18,15 +18,15 @@
 
 package io.undertow.websockets.core;
 
-import org.jboss.logging.Messages;
-import org.jboss.logging.annotations.Cause;
-import org.jboss.logging.annotations.Message;
-import org.jboss.logging.annotations.MessageBundle;
-
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Collection;
 import java.util.zip.DataFormatException;
+
+import org.jboss.logging.Messages;
+import org.jboss.logging.annotations.Cause;
+import org.jboss.logging.annotations.Message;
+import org.jboss.logging.annotations.MessageBundle;
 
 /**
  * start at 20000

@@ -18,6 +18,15 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+import org.xnio.conduits.StreamSinkConduit;
+
 import io.undertow.conduits.RateLimitingStreamSinkConduit;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HandlerWrapper;
@@ -25,14 +34,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.ConduitFactory;
-import org.xnio.conduits.StreamSinkConduit;
-
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Handler that limits the download rate

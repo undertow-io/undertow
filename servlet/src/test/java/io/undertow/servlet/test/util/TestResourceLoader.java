@@ -18,6 +18,13 @@
 
 package io.undertow.servlet.test.util;
 
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Path;
+import java.util.Date;
+import java.util.List;
+
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
@@ -26,13 +33,6 @@ import io.undertow.server.handlers.resource.RangeAwareResource;
 import io.undertow.server.handlers.resource.Resource;
 import io.undertow.util.ETag;
 import io.undertow.util.MimeMappings;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.nio.file.Path;
-import java.util.Date;
-import java.util.List;
 
 /**
  * @author Stuart Douglas

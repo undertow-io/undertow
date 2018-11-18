@@ -18,21 +18,22 @@
 
 package io.undertow.websockets.core;
 
-import io.undertow.connector.PooledByteBuffer;
-import io.undertow.util.ImmediatePooledByteBuffer;
-import io.undertow.util.WorkerUtils;
-import org.xnio.Buffers;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.XnioExecutor;
+import static org.xnio.ChannelListeners.flushingChannelListener;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
-import static org.xnio.ChannelListeners.flushingChannelListener;
+import org.xnio.Buffers;
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.XnioExecutor;
+
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.util.ImmediatePooledByteBuffer;
+import io.undertow.util.WorkerUtils;
 
 /**
  * @author Stuart Douglas

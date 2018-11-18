@@ -18,10 +18,10 @@
 
 package io.undertow.server.handlers.resource;
 
-import io.undertow.UndertowMessages;
-
 import java.io.IOException;
 import java.net.URL;
+
+import io.undertow.UndertowMessages;
 
 /**
  * @author Stuart Douglas

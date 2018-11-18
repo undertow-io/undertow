@@ -18,14 +18,14 @@
 
 package io.undertow.server.handlers.file;
 
-import java.io.IOException;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.charset.StandardCharsets;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.http.Header;
@@ -38,6 +38,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import io.undertow.predicate.Predicates;
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;

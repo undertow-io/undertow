@@ -18,7 +18,6 @@
 
 package io.undertow.servlet.spec;
 
-import javax.servlet.DispatcherType;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
@@ -28,6 +27,8 @@ import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
 import java.util.Locale;
+
+import javax.servlet.DispatcherType;
 
 /**
  * Real servlet print writer functionality, that is not limited by extending

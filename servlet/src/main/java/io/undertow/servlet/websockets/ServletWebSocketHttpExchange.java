@@ -18,22 +18,6 @@
 
 package io.undertow.servlet.websockets;
 
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpUpgradeListener;
-import io.undertow.util.AttachmentKey;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.spi.WebSocketHttpExchange;
-import org.xnio.FinishedIoFuture;
-import org.xnio.FutureResult;
-import org.xnio.IoFuture;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-
-import javax.servlet.ServletInputStream;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -48,6 +32,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+
+import javax.servlet.ServletInputStream;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.xnio.FinishedIoFuture;
+import org.xnio.FutureResult;
+import org.xnio.IoFuture;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
+import io.undertow.util.AttachmentKey;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
 
 /**
 * @author Stuart Douglas

@@ -16,8 +16,9 @@
  */
 package io.undertow.util;
 
-import io.undertow.UndertowMessages;
 import java.util.BitSet;
+
+import io.undertow.UndertowMessages;
 
 /**
  * Class that contains utility methods for dealing with RFC6265 Cookies.

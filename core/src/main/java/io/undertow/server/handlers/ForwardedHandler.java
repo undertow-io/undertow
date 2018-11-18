@@ -1,13 +1,6 @@
 package io.undertow.server.handlers;
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
-import io.undertow.util.NetworkUtils;
+import static io.undertow.UndertowMessages.MESSAGES;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
@@ -16,7 +9,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import static io.undertow.UndertowMessages.MESSAGES;
+import io.undertow.UndertowLogger;
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
+import io.undertow.util.NetworkUtils;
 
 /**
  * Handler that implements rfc7239 Forwarded header

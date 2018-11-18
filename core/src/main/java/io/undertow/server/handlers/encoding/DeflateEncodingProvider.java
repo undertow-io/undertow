@@ -18,15 +18,16 @@
 
 package io.undertow.server.handlers.encoding;
 
+import java.util.zip.Deflater;
+
+import org.xnio.conduits.StreamSinkConduit;
+
 import io.undertow.UndertowLogger;
 import io.undertow.conduits.DeflatingStreamSinkConduit;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.ObjectPool;
-import org.xnio.conduits.StreamSinkConduit;
-
-import java.util.zip.Deflater;
 
 /**
  * Content coding for 'deflate'

@@ -27,12 +27,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.security.cert.CertificateEncodingException;
 import javax.security.cert.X509Certificate;
 
-import io.undertow.UndertowMessages;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -41,7 +40,9 @@ import org.xnio.IoUtils;
 import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
+
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.client.ClientCallback;
@@ -62,6 +63,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
+import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.Attachable;

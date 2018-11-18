@@ -18,6 +18,16 @@
 
 package io.undertow.server.handlers;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.channels.StreamSourceChannel;
+
 import io.undertow.UndertowLogger;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.Connectors;
@@ -26,15 +36,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.server.protocol.http.HttpContinue;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.channels.StreamSourceChannel;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
 /**
  *
  * Handler that will buffer all request data

@@ -17,15 +17,15 @@
  */
 package io.undertow.servlet.handlers.security;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.SingleConstraintMatch;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.handlers.ServletRequestContext;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * @author Stuart Douglas

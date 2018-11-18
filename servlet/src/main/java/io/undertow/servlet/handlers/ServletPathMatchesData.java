@@ -18,11 +18,11 @@
 
 package io.undertow.servlet.handlers;
 
-import io.undertow.UndertowMessages;
-import io.undertow.util.SubstringMap;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import io.undertow.UndertowMessages;
+import io.undertow.util.SubstringMap;
 
 /**
  * Class that maintains the complete set of servlet path matches.

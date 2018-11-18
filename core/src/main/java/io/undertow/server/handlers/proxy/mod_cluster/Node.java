@@ -28,13 +28,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import org.xnio.OptionMap;
+import org.xnio.XnioIoThread;
+
 import io.undertow.UndertowLogger;
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.proxy.ConnectionPoolManager;
 import io.undertow.server.handlers.proxy.ProxyConnectionPool;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.XnioIoThread;
 
 /**
  * @author Stuart Douglas

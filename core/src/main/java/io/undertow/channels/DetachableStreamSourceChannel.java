@@ -23,7 +23,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.UndertowLogger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
@@ -34,6 +33,7 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 
 /**

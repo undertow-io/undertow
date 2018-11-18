@@ -27,10 +27,10 @@ import java.util.concurrent.Executor;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.session.SessionManager;
-import io.undertow.servlet.core.ManagedFilters;
 import io.undertow.servlet.core.ApplicationListeners;
-import io.undertow.servlet.core.ManagedServlets;
 import io.undertow.servlet.core.ErrorPages;
+import io.undertow.servlet.core.ManagedFilters;
+import io.undertow.servlet.core.ManagedServlets;
 import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.spec.ServletContextImpl;
 

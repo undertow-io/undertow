@@ -20,6 +20,20 @@ package io.undertow.servlet.handlers.security;
 
 import static io.undertow.util.StatusCodes.OK;
 
+import java.io.IOException;
+import java.security.AccessController;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
+
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
+
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.idm.IdentityManager;
@@ -34,20 +48,6 @@ import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.util.SavedRequest;
 import io.undertow.util.Headers;
 import io.undertow.util.RedirectBuilder;
-
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletResponseWrapper;
-
-import java.io.IOException;
-import java.security.AccessController;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
-import java.util.WeakHashMap;
 
 /**
  * Servlet handler for FORM authentication. Instead of using a redirect it

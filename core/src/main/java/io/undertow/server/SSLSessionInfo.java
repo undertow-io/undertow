@@ -18,10 +18,11 @@
 
 package io.undertow.server;
 
-import org.xnio.SslClientAuthMode;
+import java.io.IOException;
 
 import javax.net.ssl.SSLSession;
-import java.io.IOException;
+
+import org.xnio.SslClientAuthMode;
 
 /**
  * SSL session information.

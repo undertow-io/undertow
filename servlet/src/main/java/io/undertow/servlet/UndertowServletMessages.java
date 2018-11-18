@@ -28,11 +28,12 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
-import io.undertow.servlet.api.DeploymentManager;
+import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
-import org.jboss.logging.Messages;
+
+import io.undertow.servlet.api.DeploymentManager;
 
 /**
  * messages start at 10000

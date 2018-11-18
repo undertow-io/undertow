@@ -18,14 +18,14 @@
 
 package io.undertow.servlet.api;
 
-import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.handlers.ServletChain;
-import io.undertow.servlet.handlers.ServletPathMatch;
-
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.handlers.ServletChain;
+import io.undertow.servlet.handlers.ServletPathMatch;
 
 /**
  * @author Stuart Douglas

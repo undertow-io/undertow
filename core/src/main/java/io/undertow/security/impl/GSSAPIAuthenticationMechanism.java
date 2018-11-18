@@ -17,6 +17,29 @@
  */
 package io.undertow.security.impl;
 
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.HOST;
+import static io.undertow.util.Headers.NEGOTIATE;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.StatusCodes.UNAUTHORIZED;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.security.GeneralSecurityException;
+import java.security.Principal;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import java.util.List;
+
+import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosPrincipal;
+
+import org.ietf.jgss.GSSContext;
+import org.ietf.jgss.GSSCredential;
+import org.ietf.jgss.GSSException;
+import org.ietf.jgss.GSSManager;
+import org.ietf.jgss.Oid;
+
 import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.GSSAPIServerSubjectFactory;
@@ -29,27 +52,6 @@ import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.proxy.ExclusivityChecker;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.FlexBase64;
-import org.ietf.jgss.GSSContext;
-import org.ietf.jgss.GSSCredential;
-import org.ietf.jgss.GSSException;
-import org.ietf.jgss.GSSManager;
-import org.ietf.jgss.Oid;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.security.GeneralSecurityException;
-import java.security.Principal;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
-import java.util.List;
-import javax.security.auth.Subject;
-import javax.security.auth.kerberos.KerberosPrincipal;
-
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.HOST;
-import static io.undertow.util.Headers.NEGOTIATE;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 
 /**
  * {@link io.undertow.security.api.AuthenticationMechanism} for GSSAPI / SPNEGO based authentication.

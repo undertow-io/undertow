@@ -18,14 +18,11 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.Handlers;
-import io.undertow.Undertow;
-import io.undertow.server.handlers.builder.PredicatedHandlersParser;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.NetworkUtils;
-import io.undertow.util.StatusCodes;
+import static io.undertow.testutils.DefaultServer.getHostAddress;
+import static io.undertow.testutils.DefaultServer.getHostPort;
+
+import java.net.URISyntaxException;
+
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -35,10 +32,14 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.net.URISyntaxException;
-
-import static io.undertow.testutils.DefaultServer.getHostAddress;
-import static io.undertow.testutils.DefaultServer.getHostPort;
+import io.undertow.Handlers;
+import io.undertow.Undertow;
+import io.undertow.server.handlers.builder.PredicatedHandlersParser;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.NetworkUtils;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Luis Mineiro

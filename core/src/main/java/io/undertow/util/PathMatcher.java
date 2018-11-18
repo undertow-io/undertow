@@ -18,14 +18,14 @@
 
 package io.undertow.util;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentMap;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 
 /**
  * Handler that dispatches to a given handler based of a prefix match of the path.

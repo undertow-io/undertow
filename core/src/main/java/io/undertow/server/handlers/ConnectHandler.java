@@ -18,15 +18,11 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.predicate.Predicate;
-import io.undertow.predicate.Predicates;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpUpgradeListener;
-import io.undertow.util.Methods;
-import io.undertow.util.SameThreadExecutor;
-import io.undertow.util.StatusCodes;
-import io.undertow.util.Transfer;
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.channels.Channel;
+
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -37,10 +33,15 @@ import org.xnio.Options;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.channels.Channel;
+import io.undertow.predicate.Predicate;
+import io.undertow.predicate.Predicates;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
+import io.undertow.util.Methods;
+import io.undertow.util.SameThreadExecutor;
+import io.undertow.util.StatusCodes;
+import io.undertow.util.Transfer;
 
 /**
  *

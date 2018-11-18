@@ -18,12 +18,12 @@
 
 package io.undertow.protocols.http2;
 
+import static io.undertow.protocols.http2.Hpack.HeaderField;
+
 import java.nio.ByteBuffer;
 
 import io.undertow.UndertowMessages;
 import io.undertow.util.HttpString;
-
-import static io.undertow.protocols.http2.Hpack.HeaderField;
 
 /**
  * A decoder for HPACK.

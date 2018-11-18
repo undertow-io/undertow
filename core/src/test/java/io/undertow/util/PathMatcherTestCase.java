@@ -1,9 +1,10 @@
 package io.undertow.util;
 
-import io.undertow.testutils.category.UnitTest;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import io.undertow.testutils.category.UnitTest;
 
 /**
  * Test the path matcher to ensure that it can handle different cases and

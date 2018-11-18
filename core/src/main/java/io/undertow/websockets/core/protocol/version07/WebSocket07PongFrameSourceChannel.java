@@ -17,10 +17,10 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.connector.PooledByteBuffer;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

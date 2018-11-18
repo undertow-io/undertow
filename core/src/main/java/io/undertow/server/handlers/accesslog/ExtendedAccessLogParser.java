@@ -18,6 +18,13 @@
 
 package io.undertow.server.handlers.accesslog;
 
+import java.io.IOException;
+import java.io.StringReader;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import io.undertow.UndertowLogger;
 import io.undertow.Version;
 import io.undertow.attribute.AuthenticationTypeExchangeAttribute;
@@ -49,13 +56,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-
-import java.io.IOException;
-import java.io.StringReader;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Parser that transforms an extended access log format string into a

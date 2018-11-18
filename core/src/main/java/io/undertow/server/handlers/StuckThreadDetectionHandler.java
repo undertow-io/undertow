@@ -17,15 +17,6 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.WorkerUtils;
-import org.xnio.XnioExecutor;
-import org.xnio.XnioIoThread;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -37,6 +28,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.xnio.XnioExecutor;
+import org.xnio.XnioIoThread;
+
+import io.undertow.UndertowLogger;
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.util.WorkerUtils;
 
 /**
  * This valve allows to detect requests that take a long time to process, which might

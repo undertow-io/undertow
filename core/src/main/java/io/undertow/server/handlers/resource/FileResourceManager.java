@@ -18,9 +18,9 @@
 
 package io.undertow.server.handlers.resource;
 
-import io.undertow.UndertowMessages;
-
 import java.io.File;
+
+import io.undertow.UndertowMessages;
 
 /**
  * Serves files from the file system.

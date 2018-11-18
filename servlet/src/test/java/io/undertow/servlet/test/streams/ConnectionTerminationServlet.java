@@ -18,14 +18,15 @@
 
 package io.undertow.servlet.test.streams;
 
-import io.undertow.servlet.handlers.ServletRequestContext;
+import java.io.IOException;
 
 import javax.servlet.ServletException;
 import javax.servlet.WriteListener;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
+
+import io.undertow.servlet.handlers.ServletRequestContext;
 
 /**
  * @author Stuart Douglas

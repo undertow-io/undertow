@@ -19,6 +19,11 @@ package io.undertow.servlet.handlers.security;
 
 import static io.undertow.servlet.UndertowServletMessages.MESSAGES;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import javax.servlet.http.HttpServletResponse;
+
 import io.undertow.security.handlers.SinglePortConfidentialityHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -27,10 +32,6 @@ import io.undertow.servlet.api.ConfidentialPortManager;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.StatusCodes;
-
-import javax.servlet.http.HttpServletResponse;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 /**
  * Servlet specific extension to {@link SinglePortConfidentialityHandler}

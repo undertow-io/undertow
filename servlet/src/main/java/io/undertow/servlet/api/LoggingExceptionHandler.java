@@ -18,18 +18,20 @@
 
 package io.undertow.servlet.api;
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.ExceptionLog;
-import org.jboss.logging.BasicLogger;
-import org.jboss.logging.Logger;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+
+import org.jboss.logging.BasicLogger;
+import org.jboss.logging.Logger;
+
+import io.undertow.UndertowLogger;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.ExceptionLog;
 
 /**
  * An exception handler that

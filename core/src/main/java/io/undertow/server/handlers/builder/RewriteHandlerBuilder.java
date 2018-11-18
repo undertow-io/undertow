@@ -18,15 +18,15 @@
 
 package io.undertow.server.handlers.builder;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.SetAttributeHandler;
-
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * @author Stuart Douglas

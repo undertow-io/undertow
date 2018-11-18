@@ -1,19 +1,20 @@
 package io.undertow.server.handlers.file;
 
-import io.undertow.server.handlers.resource.Resource;
-import io.undertow.testutils.category.UnitTest;
-import io.undertow.server.handlers.resource.PathResourceManager;
-import io.undertow.server.handlers.resource.ResourceManager;
-import io.undertow.util.ETag;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import io.undertow.server.handlers.resource.PathResourceManager;
+import io.undertow.server.handlers.resource.Resource;
+import io.undertow.server.handlers.resource.ResourceManager;
+import io.undertow.testutils.category.UnitTest;
+import io.undertow.util.ETag;
 
 /**
  * @author Tomaz Cerar (c) 2016 Red Hat Inc.

@@ -1,14 +1,11 @@
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.Undertow;
-import io.undertow.client.UndertowClient;
-import io.undertow.server.session.InMemorySessionManager;
-import io.undertow.server.session.SessionAttachmentHandler;
-import io.undertow.server.session.SessionCookieConfig;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
+import static io.undertow.Handlers.jvmRoute;
+import static io.undertow.Handlers.path;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
@@ -18,11 +15,15 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.Options;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-
-import static io.undertow.Handlers.jvmRoute;
-import static io.undertow.Handlers.path;
+import io.undertow.Undertow;
+import io.undertow.client.UndertowClient;
+import io.undertow.server.session.InMemorySessionManager;
+import io.undertow.server.session.SessionAttachmentHandler;
+import io.undertow.server.session.SessionCookieConfig;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 @RunWith(DefaultServer.class)
 public class LoadBalancingProxyWithCustomHostSelectorTestCase {

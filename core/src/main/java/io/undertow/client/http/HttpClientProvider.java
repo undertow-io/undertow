@@ -18,24 +18,6 @@
 
 package io.undertow.client.http;
 
-import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
-import io.undertow.client.ALPNClientSelector;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientProvider;
-import io.undertow.client.http2.Http2ClientProvider;
-import org.xnio.ChannelListener;
-import org.xnio.IoFuture;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.StreamConnection;
-import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
-import org.xnio.ssl.SslConnection;
-import org.xnio.ssl.XnioSsl;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -44,6 +26,25 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.xnio.ChannelListener;
+import org.xnio.IoFuture;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.StreamConnection;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+import org.xnio.ssl.SslConnection;
+import org.xnio.ssl.XnioSsl;
+
+import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.client.ALPNClientSelector;
+import io.undertow.client.ClientCallback;
+import io.undertow.client.ClientConnection;
+import io.undertow.client.ClientProvider;
+import io.undertow.client.http2.Http2ClientProvider;
+import io.undertow.connector.ByteBufferPool;
 
 /**
  * @author Stuart Douglas

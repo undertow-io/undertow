@@ -18,6 +18,14 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.StreamConnection;
+
 import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -25,13 +33,6 @@ import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.StreamConnection;
-
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * An HTTP request handler which upgrades the HTTP request and hands it off as a socket to any XNIO consumer.

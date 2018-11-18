@@ -17,13 +17,6 @@
  */
 package io.undertow.servlet.test.security.constraint;
 
-import io.undertow.security.idm.Account;
-import io.undertow.security.idm.Credential;
-import io.undertow.security.idm.DigestCredential;
-import io.undertow.security.idm.IdentityManager;
-import io.undertow.security.idm.PasswordCredential;
-import io.undertow.util.HexConverter;
-
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -34,6 +27,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import io.undertow.security.idm.Account;
+import io.undertow.security.idm.Credential;
+import io.undertow.security.idm.DigestCredential;
+import io.undertow.security.idm.IdentityManager;
+import io.undertow.security.idm.PasswordCredential;
+import io.undertow.util.HexConverter;
 
 /**
  * A mock {@link IdentityManager} implementation for servlet security testing.

@@ -17,6 +17,26 @@
  */
 package io.undertow.websockets.extensions;
 
+import static io.undertow.Handlers.path;
+
+import java.io.IOException;
+import java.net.URI;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.Xnio;
+import org.xnio.XnioWorker;
+
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.StringWriteChannelListener;
@@ -35,25 +55,6 @@ import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import org.xnio.Xnio;
-import org.xnio.XnioWorker;
-
-import java.io.IOException;
-import java.net.URI;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
-import static io.undertow.Handlers.path;
 
 /**
  *

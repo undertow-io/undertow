@@ -18,7 +18,11 @@
 
 package io.undertow.servlet.core;
 
-import io.undertow.servlet.UndertowServletLogger;
+import static io.undertow.servlet.core.ApplicationListeners.ListenerState.DECLARED_LISTENER;
+import static io.undertow.servlet.core.ApplicationListeners.ListenerState.PROGRAMATIC_LISTENER;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextAttributeEvent;
@@ -38,11 +42,8 @@ import javax.servlet.http.HttpSessionBindingEvent;
 import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionIdListener;
 import javax.servlet.http.HttpSessionListener;
-import java.util.ArrayList;
-import java.util.List;
 
-import static io.undertow.servlet.core.ApplicationListeners.ListenerState.DECLARED_LISTENER;
-import static io.undertow.servlet.core.ApplicationListeners.ListenerState.PROGRAMATIC_LISTENER;
+import io.undertow.servlet.UndertowServletLogger;
 
 /**
  * Class that is responsible for invoking application listeners.

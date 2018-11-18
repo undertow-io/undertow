@@ -18,10 +18,10 @@
 
 package io.undertow.util;
 
-import io.undertow.UndertowMessages;
-
 import java.io.IOException;
 import java.net.InetAddress;
+
+import io.undertow.UndertowMessages;
 
 /**
  * @author Stuart Douglas

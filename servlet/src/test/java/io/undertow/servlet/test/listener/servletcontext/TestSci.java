@@ -18,15 +18,16 @@
 
 package io.undertow.servlet.test.listener.servletcontext;
 
-import org.junit.Assert;
+import java.util.Set;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextAttributeEvent;
 import javax.servlet.ServletContextAttributeListener;
 import javax.servlet.ServletException;
-import java.util.Set;
-import java.util.concurrent.LinkedBlockingDeque;
+
+import org.junit.Assert;
 
 /**
  * @author Stuart Douglas

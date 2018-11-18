@@ -18,6 +18,10 @@
 package io.undertow.security.impl;
 
 import static io.undertow.UndertowMessages.MESSAGES;
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.BASIC;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -43,11 +47,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.Headers;
-
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 
 /**
  * The authentication handler responsible for BASIC authentication as described by RFC2617

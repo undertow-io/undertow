@@ -18,6 +18,23 @@
 
 package io.undertow.client.http2;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.xnio.ChannelListener;
+import org.xnio.IoFuture;
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.ssl.XnioSsl;
+
 import io.undertow.UndertowOptions;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
@@ -26,24 +43,8 @@ import io.undertow.client.ClientStatistics;
 import io.undertow.conduits.ByteActivityCallback;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
-import io.undertow.protocols.http2.Http2Channel;
-import org.xnio.ChannelListener;
-import org.xnio.IoFuture;
-import org.xnio.OptionMap;
 import io.undertow.connector.ByteBufferPool;
-import org.xnio.StreamConnection;
-import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
-import org.xnio.conduits.ConduitStreamSinkChannel;
-import org.xnio.ssl.XnioSsl;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import io.undertow.protocols.http2.Http2Channel;
 
 /**
  * HTTP2 client provider that connects to endpoints that are known to support HTTP2

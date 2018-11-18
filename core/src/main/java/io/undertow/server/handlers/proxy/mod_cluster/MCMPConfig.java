@@ -18,10 +18,10 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import java.net.InetSocketAddress;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
-
-import java.net.InetSocketAddress;
 
 /**
  * @author Emanuel Muckenhuber

@@ -23,9 +23,10 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import org.xnio.Buffers;
+
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
-import org.xnio.Buffers;
 
 /**
  * @author Stuart Douglas

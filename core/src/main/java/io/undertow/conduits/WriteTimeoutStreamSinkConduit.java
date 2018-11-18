@@ -18,10 +18,11 @@
 
 package io.undertow.conduits;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowOptions;
-import io.undertow.server.OpenListener;
-import io.undertow.util.WorkerUtils;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
 
 import org.xnio.Buffers;
 import org.xnio.ChannelListeners;
@@ -33,11 +34,10 @@ import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.StreamSinkConduit;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
+import io.undertow.server.OpenListener;
+import io.undertow.util.WorkerUtils;
 
 /**
  * Wrapper for write timeout. This should always be the first wrapper applied to the underlying channel.

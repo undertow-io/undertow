@@ -18,8 +18,6 @@
 
 package io.undertow.util;
 
-import io.undertow.UndertowMessages;
-
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,6 +26,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
+
+import io.undertow.UndertowMessages;
 
 /**
  * Utility class that provides fast path matching of path templates. Templates are stored in a map based on the stem of the template,

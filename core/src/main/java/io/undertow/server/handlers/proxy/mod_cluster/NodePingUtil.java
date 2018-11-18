@@ -23,26 +23,12 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.UndertowLogger;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientExchange;
-import io.undertow.client.ClientRequest;
-import io.undertow.client.UndertowClient;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.proxy.ProxyCallback;
-import io.undertow.server.handlers.proxy.ProxyConnection;
-import io.undertow.util.Headers;
-import io.undertow.util.Methods;
-import io.undertow.util.SameThreadExecutor;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.util.WorkerUtils;
 import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
@@ -50,6 +36,21 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.ssl.XnioSsl;
+
+import io.undertow.UndertowLogger;
+import io.undertow.client.ClientCallback;
+import io.undertow.client.ClientConnection;
+import io.undertow.client.ClientExchange;
+import io.undertow.client.ClientRequest;
+import io.undertow.client.UndertowClient;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.proxy.ProxyCallback;
+import io.undertow.server.handlers.proxy.ProxyConnection;
+import io.undertow.util.Headers;
+import io.undertow.util.Methods;
+import io.undertow.util.SameThreadExecutor;
+import io.undertow.util.WorkerUtils;
 
 /**
  * Utilities to ping a remote node.

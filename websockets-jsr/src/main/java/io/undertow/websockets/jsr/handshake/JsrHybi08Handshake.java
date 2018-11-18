@@ -17,14 +17,15 @@
  */
 package io.undertow.websockets.jsr.handshake;
 
+import java.util.Collections;
+
+import org.xnio.StreamConnection;
+
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.StreamConnection;
-
-import java.util.Collections;
 
 /**
  * {@link Hybi08Handshake} sub-class which takes care of match against the {@link javax.websocket.server.ServerEndpointConfig} and

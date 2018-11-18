@@ -18,6 +18,12 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
@@ -31,12 +37,6 @@ import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
-
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Handler that builds up a cache of resources that a browsers requests, and uses

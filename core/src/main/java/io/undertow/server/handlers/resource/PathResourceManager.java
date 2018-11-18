@@ -1,16 +1,6 @@
 package io.undertow.server.handlers.resource;
 
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.util.ETag;
-import org.jboss.logging.Logger;
-import org.xnio.FileChangeCallback;
-import org.xnio.FileChangeEvent;
-import org.xnio.FileSystemWatcher;
-import org.xnio.OptionMap;
-import org.xnio.Xnio;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -21,6 +11,17 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.TreeSet;
+
+import org.jboss.logging.Logger;
+import org.xnio.FileChangeCallback;
+import org.xnio.FileChangeEvent;
+import org.xnio.FileSystemWatcher;
+import org.xnio.OptionMap;
+import org.xnio.Xnio;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.util.ETag;
 
 /**
  * Serves files from the file system.

@@ -18,9 +18,6 @@
 
 package io.undertow.servlet.util;
 
-import io.undertow.servlet.UndertowServletLogger;
-import io.undertow.servlet.api.SessionPersistenceManager;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
@@ -29,6 +26,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import io.undertow.servlet.UndertowServletLogger;
+import io.undertow.servlet.api.SessionPersistenceManager;
 
 /**
  * Session persistence implementation that simply stores session information in memory.

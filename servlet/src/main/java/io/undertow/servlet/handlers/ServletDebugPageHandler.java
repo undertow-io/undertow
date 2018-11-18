@@ -18,14 +18,15 @@
 
 package io.undertow.servlet.handlers;
 
-import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
-
-import javax.servlet.ServletOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
+
+import javax.servlet.ServletOutputStream;
+
+import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.spec.HttpServletRequestImpl;
 
 /**
  * generates a servlet error page with a stack trace

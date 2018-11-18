@@ -18,14 +18,14 @@
 
 package io.undertow.servlet.attribute;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributeBuilder;
 import io.undertow.attribute.ReadOnlyAttributeException;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * An attribute in the servlet request

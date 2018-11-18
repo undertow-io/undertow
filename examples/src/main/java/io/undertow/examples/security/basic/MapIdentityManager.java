@@ -18,16 +18,16 @@
 
 package io.undertow.examples.security.basic;
 
-import io.undertow.security.idm.Account;
-import io.undertow.security.idm.Credential;
-import io.undertow.security.idm.IdentityManager;
-import io.undertow.security.idm.PasswordCredential;
-
 import java.security.Principal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+
+import io.undertow.security.idm.Account;
+import io.undertow.security.idm.Credential;
+import io.undertow.security.idm.IdentityManager;
+import io.undertow.security.idm.PasswordCredential;
 
 /**
  * A simple {@link IdentityManager} implementation, that just takes a map of users to their

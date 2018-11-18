@@ -18,6 +18,17 @@
 
 package io.undertow.websockets.core.protocol;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
+
+import org.xnio.IoFuture;
+import org.xnio.StreamConnection;
+
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketExtension;
 import io.undertow.websockets.core.WebSocketChannel;
@@ -25,16 +36,6 @@ import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import io.undertow.websockets.extensions.ExtensionHandshake;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
-import org.xnio.IoFuture;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.StreamConnection;
-
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
  * Abstract base class for doing a WebSocket Handshake.

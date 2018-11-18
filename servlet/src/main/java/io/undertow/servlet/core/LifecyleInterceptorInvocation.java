@@ -18,16 +18,17 @@
 
 package io.undertow.servlet.core;
 
-import io.undertow.servlet.api.FilterInfo;
-import io.undertow.servlet.api.LifecycleInterceptor;
-import io.undertow.servlet.api.ServletInfo;
+import java.util.List;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterConfig;
 import javax.servlet.Servlet;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
-import java.util.List;
+
+import io.undertow.servlet.api.FilterInfo;
+import io.undertow.servlet.api.LifecycleInterceptor;
+import io.undertow.servlet.api.ServletInfo;
 
 /**
  * Utility class for invoking servlet and filter lifecycle methods.

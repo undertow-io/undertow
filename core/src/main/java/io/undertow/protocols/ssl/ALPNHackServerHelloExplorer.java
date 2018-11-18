@@ -18,9 +18,6 @@
 
 package io.undertow.protocols.ssl;
 
-import io.undertow.UndertowMessages;
-
-import javax.net.ssl.SSLException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -28,6 +25,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+
+import javax.net.ssl.SSLException;
+
+import io.undertow.UndertowMessages;
 
 /**
  * Hacks up ALPN support into the server hello message

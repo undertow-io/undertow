@@ -18,7 +18,10 @@
 
 package io.undertow.websockets.jsr.test.dynamicupgrade;
 
-import io.undertow.websockets.jsr.ServerWebSocketContainer;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -29,10 +32,8 @@ import javax.websocket.Decoder;
 import javax.websocket.Encoder;
 import javax.websocket.Extension;
 import javax.websocket.server.ServerEndpointConfig;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+
+import io.undertow.websockets.jsr.ServerWebSocketContainer;
 
 /**
  * @author Stuart Douglas

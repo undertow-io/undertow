@@ -18,19 +18,20 @@
 
 package io.undertow.util;
 
-import io.undertow.UndertowMessages;
-import io.undertow.connector.ByteBufferPool;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channel;
+
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
+import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 
 
 /**

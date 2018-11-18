@@ -19,9 +19,6 @@ package io.undertow.security.impl;
 
 import static io.undertow.UndertowMessages.MESSAGES;
 
-import io.undertow.security.api.SessionNonceManager;
-import io.undertow.server.HttpServerExchange;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -41,6 +38,8 @@ import org.xnio.XnioExecutor;
 import org.xnio.XnioExecutor.Key;
 import org.xnio.XnioIoThread;
 
+import io.undertow.security.api.SessionNonceManager;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.WorkerUtils;
 

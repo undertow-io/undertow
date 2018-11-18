@@ -18,31 +18,6 @@
 
 package io.undertow.protocols.http2;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import io.undertow.server.protocol.ParseTimeoutUpdater;
-import io.undertow.server.protocol.framed.AbstractFramedChannel;
-import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
-import io.undertow.server.protocol.framed.FrameHeaderData;
-import io.undertow.server.protocol.http2.Http2OpenListener;
-import io.undertow.util.Attachable;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.AttachmentList;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
-import org.xnio.Bits;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import org.xnio.StreamConnection;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.ssl.SslConnection;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
@@ -58,7 +33,34 @@ import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import javax.net.ssl.SSLSession;
+
+import org.xnio.Bits;
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.ssl.SslConnection;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.protocol.ParseTimeoutUpdater;
+import io.undertow.server.protocol.framed.AbstractFramedChannel;
+import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
+import io.undertow.server.protocol.framed.FrameHeaderData;
+import io.undertow.server.protocol.http2.Http2OpenListener;
+import io.undertow.util.Attachable;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.AttachmentList;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 
 /**
  * HTTP2 channel.

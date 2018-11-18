@@ -1,11 +1,11 @@
 package io.undertow.server.handlers;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
-
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Handler that dispatches to a given handler and allows mapping exceptions

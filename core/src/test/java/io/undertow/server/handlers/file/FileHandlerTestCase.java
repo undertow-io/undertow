@@ -27,6 +27,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CanonicalPathHandler;
@@ -38,13 +46,6 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpHead;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 /**
  * @author Stuart Douglas

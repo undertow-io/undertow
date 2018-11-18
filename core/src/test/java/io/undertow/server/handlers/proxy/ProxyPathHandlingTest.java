@@ -1,15 +1,7 @@
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.Handlers;
-import io.undertow.Undertow;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.testutils.TestHttpClient;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.After;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -17,8 +9,17 @@ import java.net.URI;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.After;
+import org.junit.Test;
+
+import io.undertow.Handlers;
+import io.undertow.Undertow;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.testutils.TestHttpClient;
 
 public class ProxyPathHandlingTest {
     private final TargetServer targetServer = new TargetServer();

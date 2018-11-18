@@ -18,14 +18,15 @@
 
 package io.undertow.protocols.http2;
 
-import io.undertow.testutils.category.UnitTest;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
+import java.nio.ByteBuffer;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.nio.ByteBuffer;
+import io.undertow.testutils.category.UnitTest;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 
 /**
  * HPACK unit test case, based on examples from the spec

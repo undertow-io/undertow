@@ -20,6 +20,8 @@ package io.undertow.server.handlers.encoding;
 
 import java.util.List;
 
+import org.xnio.conduits.StreamSinkConduit;
+
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
@@ -27,7 +29,6 @@ import io.undertow.util.ConduitFactory;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
-import org.xnio.conduits.StreamSinkConduit;
 
 /**
  * An attachment that provides information about the current content encoding that will be chosen for the response

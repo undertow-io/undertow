@@ -23,6 +23,11 @@ import java.util.Collections;
 
 import javax.servlet.ServletException;
 
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -35,10 +40,6 @@ import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 /**
  * @author Stuart Douglas

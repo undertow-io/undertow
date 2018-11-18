@@ -18,18 +18,6 @@
 
 package io.undertow.client.http;
 
-import io.undertow.annotationprocessor.HttpResponseParserConfig;
-import io.undertow.util.BadRequestException;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
-import io.undertow.util.Protocols;
-
-import java.lang.reflect.Field;
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
-
 import static io.undertow.util.Headers.ACCEPT_RANGES_STRING;
 import static io.undertow.util.Headers.AGE_STRING;
 import static io.undertow.util.Headers.CACHE_CONTROL_STRING;
@@ -64,6 +52,18 @@ import static io.undertow.util.Headers.WWW_AUTHENTICATE_STRING;
 import static io.undertow.util.Protocols.HTTP_0_9_STRING;
 import static io.undertow.util.Protocols.HTTP_1_0_STRING;
 import static io.undertow.util.Protocols.HTTP_1_1_STRING;
+
+import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
+
+import io.undertow.annotationprocessor.HttpResponseParserConfig;
+import io.undertow.util.BadRequestException;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
 
 /**
  * @author Emanuel Muckenhuber

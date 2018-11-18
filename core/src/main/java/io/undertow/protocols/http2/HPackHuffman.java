@@ -18,12 +18,12 @@
 
 package io.undertow.protocols.http2;
 
-import io.undertow.UndertowMessages;
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+
+import io.undertow.UndertowMessages;
 
 /**
  * @author Stuart Douglas

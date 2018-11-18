@@ -18,9 +18,9 @@
 
 package io.undertow.protocols.http2;
 
-import io.undertow.util.HeaderMap;
-
 import java.nio.ByteBuffer;
+
+import io.undertow.util.HeaderMap;
 
 /**
  * Push promise channel

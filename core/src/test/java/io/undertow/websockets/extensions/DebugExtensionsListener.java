@@ -21,6 +21,8 @@ package io.undertow.websockets.extensions;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.xnio.Pooled;
+
 import io.undertow.websockets.core.AbstractReceiveListener;
 import io.undertow.websockets.core.BufferedBinaryMessage;
 import io.undertow.websockets.core.BufferedTextMessage;
@@ -28,7 +30,6 @@ import io.undertow.websockets.core.CloseMessage;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSockets;
-import org.xnio.Pooled;
 
 /**
  * A {@link AbstractReceiveListener} implementation used as echo server in Autobahn tests.

@@ -17,10 +17,10 @@
  */
 package io.undertow.servlet.test.listener.ordering;
 
-import io.undertow.servlet.test.util.Tracker;
-
 import javax.servlet.ServletRequestEvent;
 import javax.servlet.ServletRequestListener;
+
+import io.undertow.servlet.test.util.Tracker;
 
 public class FirstListener implements ServletRequestListener {
 

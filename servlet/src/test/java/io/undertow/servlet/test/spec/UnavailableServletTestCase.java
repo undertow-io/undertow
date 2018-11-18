@@ -1,10 +1,11 @@
 package io.undertow.servlet.test.spec;
 
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
+import static io.undertow.servlet.Servlets.servlet;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -12,11 +13,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.servlet.ServletException;
-
-import java.io.IOException;
-
-import static io.undertow.servlet.Servlets.servlet;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas

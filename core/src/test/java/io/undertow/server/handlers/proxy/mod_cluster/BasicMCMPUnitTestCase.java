@@ -20,14 +20,15 @@ package io.undertow.server.handlers.proxy.mod_cluster;
 
 import java.io.IOException;
 
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Emanuel Muckenhuber

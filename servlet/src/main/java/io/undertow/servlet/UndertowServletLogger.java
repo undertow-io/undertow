@@ -18,9 +18,13 @@
 
 package io.undertow.servlet;
 
+import static org.jboss.logging.Logger.Level.ERROR;
+import static org.jboss.logging.Logger.Level.WARN;
+
 import java.io.IOException;
 import java.util.Date;
 import java.util.Set;
+
 import javax.servlet.UnavailableException;
 
 import org.jboss.logging.BasicLogger;
@@ -29,9 +33,6 @@ import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.LogMessage;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
-
-import static org.jboss.logging.Logger.Level.ERROR;
-import static org.jboss.logging.Logger.Level.WARN;
 
 /**
  * log messages start at 15000

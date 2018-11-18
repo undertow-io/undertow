@@ -18,12 +18,6 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.builder.HandlerBuilder;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -33,6 +27,12 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+
+import io.undertow.UndertowLogger;
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 
 /**
  * A handler that performs reverse DNS lookup to resolve a peer address

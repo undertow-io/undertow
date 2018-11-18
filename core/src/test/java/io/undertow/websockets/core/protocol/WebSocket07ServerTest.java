@@ -17,6 +17,15 @@
  */
 package io.undertow.websockets.core.protocol;
 
+import java.io.IOException;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.junit.Test;
+import org.xnio.FutureResult;
+import org.xnio.Pooled;
+
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
@@ -33,14 +42,6 @@ import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
-import org.junit.Test;
-import org.xnio.FutureResult;
-import org.xnio.Pooled;
-
-import java.io.IOException;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

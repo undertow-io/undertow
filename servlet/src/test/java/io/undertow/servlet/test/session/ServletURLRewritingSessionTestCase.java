@@ -21,6 +21,7 @@ package io.undertow.servlet.test.session;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
+
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.SessionTrackingMode;
@@ -37,6 +38,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;

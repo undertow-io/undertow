@@ -18,10 +18,11 @@
 
 package io.undertow.server.protocol.http;
 
+import org.xnio.conduits.StreamSinkConduit;
+
 import io.undertow.conduits.AbstractFixedLengthStreamSinkConduit;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
-import org.xnio.conduits.StreamSinkConduit;
 
 /**
  * @author Stuart Douglas

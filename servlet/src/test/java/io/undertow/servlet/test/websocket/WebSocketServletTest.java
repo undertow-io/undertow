@@ -18,6 +18,18 @@
 
 package io.undertow.servlet.test.websocket;
 
+import java.io.IOException;
+import java.net.URI;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.servlet.Servlet;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.FutureResult;
+
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.undertow.servlet.api.ServletContainer;
@@ -36,16 +48,6 @@ import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
 import io.undertow.websockets.utils.WebSocketTestClient;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.FutureResult;
-
-import java.io.IOException;
-import java.net.URI;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.atomic.AtomicBoolean;
-import javax.servlet.Servlet;
 
 /**
  * @author Stuart Douglas

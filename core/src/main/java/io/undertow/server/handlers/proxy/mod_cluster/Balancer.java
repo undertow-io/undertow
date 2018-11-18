@@ -18,9 +18,9 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import io.undertow.UndertowLogger;
-
 import java.util.concurrent.atomic.AtomicInteger;
+
+import io.undertow.UndertowLogger;
 
 /**
  * The mod_cluster balancer config.

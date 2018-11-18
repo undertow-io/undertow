@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.spec;
 
+import static javax.servlet.annotation.ServletSecurity.TransportGuarantee.CONFIDENTIAL;
+
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -41,8 +43,6 @@ import io.undertow.servlet.api.ServletSecurityInfo;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.core.ManagedServlet;
-
-import static javax.servlet.annotation.ServletSecurity.TransportGuarantee.CONFIDENTIAL;
 
 /**
  * @author Stuart Douglas

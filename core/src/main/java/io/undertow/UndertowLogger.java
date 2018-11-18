@@ -18,20 +18,10 @@
 
 package io.undertow;
 
-import io.undertow.client.ClientConnection;
-import io.undertow.protocols.ssl.SslConduit;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.ServerConnection;
-import io.undertow.server.handlers.sse.ServerSentEventConnection;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
-import org.jboss.logging.BasicLogger;
-import org.jboss.logging.Logger;
-import org.jboss.logging.annotations.Cause;
-import org.jboss.logging.annotations.LogMessage;
-import org.jboss.logging.annotations.Message;
-import org.jboss.logging.annotations.MessageLogger;
-import org.xnio.ssl.SslConnection;
+import static org.jboss.logging.Logger.Level.DEBUG;
+import static org.jboss.logging.Logger.Level.ERROR;
+import static org.jboss.logging.Logger.Level.INFO;
+import static org.jboss.logging.Logger.Level.WARN;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -42,10 +32,21 @@ import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
 
-import static org.jboss.logging.Logger.Level.DEBUG;
-import static org.jboss.logging.Logger.Level.ERROR;
-import static org.jboss.logging.Logger.Level.INFO;
-import static org.jboss.logging.Logger.Level.WARN;
+import org.jboss.logging.BasicLogger;
+import org.jboss.logging.Logger;
+import org.jboss.logging.annotations.Cause;
+import org.jboss.logging.annotations.LogMessage;
+import org.jboss.logging.annotations.Message;
+import org.jboss.logging.annotations.MessageLogger;
+import org.xnio.ssl.SslConnection;
+
+import io.undertow.client.ClientConnection;
+import io.undertow.protocols.ssl.SslConduit;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
+import io.undertow.server.handlers.sse.ServerSentEventConnection;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 
 /**
  * log messages start at 5000

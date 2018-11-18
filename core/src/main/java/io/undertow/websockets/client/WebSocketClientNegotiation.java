@@ -18,10 +18,10 @@
 
 package io.undertow.websockets.client;
 
-import io.undertow.websockets.WebSocketExtension;
-
 import java.util.List;
 import java.util.Map;
+
+import io.undertow.websockets.WebSocketExtension;
 
 /**
  * @author Stuart Douglas

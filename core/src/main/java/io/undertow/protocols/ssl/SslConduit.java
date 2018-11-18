@@ -18,13 +18,28 @@
 
 package io.undertow.protocols.ssl;
 
-import io.undertow.UndertowLogger;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreSet;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSession;
+
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -40,22 +55,9 @@ import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 import org.xnio.conduits.WriteReadyHandler;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSession;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.allAreSet;
-import static org.xnio.Bits.anyAreSet;
+import io.undertow.UndertowLogger;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * @author Stuart Douglas

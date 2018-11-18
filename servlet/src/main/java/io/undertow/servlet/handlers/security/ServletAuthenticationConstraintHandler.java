@@ -20,9 +20,9 @@ package io.undertow.servlet.handlers.security;
 import java.util.List;
 
 import io.undertow.UndertowLogger;
+import io.undertow.security.handlers.AuthenticationConstraintHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.security.handlers.AuthenticationConstraintHandler;
 import io.undertow.servlet.api.SecurityInfo.EmptyRoleSemantic;
 import io.undertow.servlet.api.SingleConstraintMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;

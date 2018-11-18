@@ -17,6 +17,26 @@
  */
 package io.undertow.server.security;
 
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.DIGEST;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.idm.DigestAlgorithm;
@@ -30,25 +50,6 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HexConverter;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.DIGEST;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 /**
  * For Digest authentication we support RFC2617, however this includes a requirement to allow a fall back to RFC2069, this test

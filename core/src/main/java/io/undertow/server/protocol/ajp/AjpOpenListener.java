@@ -18,27 +18,8 @@
 
 package io.undertow.server.protocol.ajp;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
-import io.undertow.conduits.BytesReceivedStreamSourceConduit;
-import io.undertow.conduits.BytesSentStreamSinkConduit;
-import io.undertow.conduits.IdleTimeoutConduit;
-import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
-import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
-import io.undertow.server.ConnectorStatistics;
-import io.undertow.server.ConnectorStatisticsImpl;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.OpenListener;
-import io.undertow.server.ServerConnection;
-import io.undertow.server.XnioByteBufferPool;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.Pool;
-import org.xnio.StreamConnection;
+import static io.undertow.UndertowOptions.DECODE_URL;
+import static io.undertow.UndertowOptions.URL_CHARSET;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -47,8 +28,28 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static io.undertow.UndertowOptions.DECODE_URL;
-import static io.undertow.UndertowOptions.URL_CHARSET;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.Pool;
+import org.xnio.StreamConnection;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.conduits.BytesReceivedStreamSourceConduit;
+import io.undertow.conduits.BytesSentStreamSinkConduit;
+import io.undertow.conduits.IdleTimeoutConduit;
+import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
+import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.ConnectorStatistics;
+import io.undertow.server.ConnectorStatisticsImpl;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.OpenListener;
+import io.undertow.server.ServerConnection;
+import io.undertow.server.XnioByteBufferPool;
 
 /**
  * @author Stuart Douglas

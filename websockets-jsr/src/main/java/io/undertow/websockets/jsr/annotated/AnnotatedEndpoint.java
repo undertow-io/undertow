@@ -18,10 +18,10 @@
 
 package io.undertow.websockets.jsr.annotated;
 
-import io.undertow.UndertowLogger;
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.websockets.core.WebSocketLogger;
-import io.undertow.websockets.jsr.UndertowSession;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
@@ -30,10 +30,11 @@ import javax.websocket.MessageHandler;
 import javax.websocket.SendHandler;
 import javax.websocket.SendResult;
 import javax.websocket.Session;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
+
+import io.undertow.UndertowLogger;
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.websockets.core.WebSocketLogger;
+import io.undertow.websockets.jsr.UndertowSession;
 
 /**
  * @author Stuart Douglas

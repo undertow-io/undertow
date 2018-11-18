@@ -17,10 +17,11 @@
  */
 package io.undertow.websockets.jsr;
 
-import org.xnio.Buffers;
+import java.nio.ByteBuffer;
 
 import javax.websocket.PongMessage;
-import java.nio.ByteBuffer;
+
+import org.xnio.Buffers;
 
 /**
  * Default {@link PongMessage} implementation

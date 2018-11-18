@@ -18,6 +18,18 @@
 
 package io.undertow.websockets.jsr.test.reconnect;
 
+import java.io.IOException;
+import java.net.URI;
+
+import javax.websocket.CloseReason;
+import javax.websocket.Session;
+
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.Handlers;
 import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -30,16 +42,6 @@ import io.undertow.testutils.HttpOneOnly;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import io.undertow.websockets.jsr.WebSocketReconnectHandler;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import javax.websocket.CloseReason;
-import javax.websocket.Session;
-import java.io.IOException;
-import java.net.URI;
 
 /**
  * @author Stuart Douglas

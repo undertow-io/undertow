@@ -25,6 +25,7 @@ import static org.xnio.Bits.anyAreSet;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 
@@ -34,6 +35,7 @@ import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
+
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.servlet.UndertowServletMessages;

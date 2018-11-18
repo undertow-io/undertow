@@ -20,14 +20,6 @@ package io.undertow.client;
 
 import static java.security.AccessController.doPrivileged;
 
-import org.xnio.FutureResult;
-import org.xnio.IoFuture;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
-import org.xnio.ssl.XnioSsl;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -36,6 +28,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.ServiceLoader;
+
+import org.xnio.FutureResult;
+import org.xnio.IoFuture;
+import org.xnio.OptionMap;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+import org.xnio.ssl.XnioSsl;
+
+import io.undertow.connector.ByteBufferPool;
 
 /**
  * Undertow client class. This class loads {@link ClientProvider} implementations, and uses them to

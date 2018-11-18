@@ -18,6 +18,40 @@
 
 package io.undertow.client.http;
 
+import static io.undertow.client.UndertowClientMessages.MESSAGES;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreSet;
+import static org.xnio.IoUtils.safeClose;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import org.jboss.logging.Logger;
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.Option;
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.conduits.ConduitStreamSourceChannel;
+import org.xnio.conduits.PushBackStreamSourceConduit;
+import org.xnio.conduits.StreamSinkConduit;
+import org.xnio.conduits.StreamSourceConduit;
+import org.xnio.ssl.SslConnection;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.client.ClientCallback;
@@ -37,6 +71,8 @@ import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.FinishableStreamSourceConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.Connectors;
 import io.undertow.server.protocol.http.HttpContinue;
@@ -48,41 +84,6 @@ import io.undertow.util.Methods;
 import io.undertow.util.PooledAdaptor;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
-import org.jboss.logging.Logger;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.Option;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.StreamConnection;
-import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.ConduitStreamSinkChannel;
-import org.xnio.conduits.ConduitStreamSourceChannel;
-import org.xnio.conduits.PushBackStreamSourceConduit;
-import org.xnio.conduits.StreamSinkConduit;
-import org.xnio.conduits.StreamSourceConduit;
-import org.xnio.ssl.SslConnection;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.List;
-import java.util.Locale;
-import java.util.concurrent.CopyOnWriteArrayList;
-
-import static io.undertow.client.UndertowClientMessages.MESSAGES;
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.allAreSet;
-import static org.xnio.Bits.anyAreSet;
-import static org.xnio.IoUtils.safeClose;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>

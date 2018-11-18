@@ -23,10 +23,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.xnio.conduits.StreamSinkConduit;
+
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.ConduitFactory;
-import org.xnio.conduits.StreamSinkConduit;
 
 /**
  *

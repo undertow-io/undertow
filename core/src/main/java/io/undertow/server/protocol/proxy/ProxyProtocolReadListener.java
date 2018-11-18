@@ -1,5 +1,19 @@
 package io.undertow.server.protocol.proxy;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.charset.StandardCharsets;
+
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.PushBackStreamSourceConduit;
+import org.xnio.ssl.SslConnection;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
@@ -9,19 +23,6 @@ import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.OpenListener;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.PooledAdaptor;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import org.xnio.StreamConnection;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.PushBackStreamSourceConduit;
-import org.xnio.ssl.SslConnection;
-
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Implementation of version 1 of the proxy protocol (https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt)

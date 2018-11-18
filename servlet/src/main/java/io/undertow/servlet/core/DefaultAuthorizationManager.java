@@ -18,19 +18,20 @@
 
 package io.undertow.servlet.core;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.servlet.http.HttpServletRequest;
+
 import io.undertow.security.idm.Account;
 import io.undertow.servlet.api.AuthorizationManager;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.SecurityInfo;
 import io.undertow.servlet.api.SecurityRoleRef;
 import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.api.SingleConstraintMatch;
-
-import javax.servlet.http.HttpServletRequest;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import io.undertow.servlet.api.TransportGuaranteeType;
 
 /**
  * Default authorization manager that simply implements the rules as specified by the servlet spec

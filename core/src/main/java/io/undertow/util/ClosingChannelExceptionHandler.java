@@ -21,6 +21,7 @@ package io.undertow.util;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.channels.Channel;
+
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.IoUtils;
 

@@ -18,11 +18,11 @@
 
 package io.undertow.servlet.spec;
 
+import javax.servlet.SessionCookieConfig;
+
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.SessionConfig;
 import io.undertow.servlet.UndertowServletMessages;
-
-import javax.servlet.SessionCookieConfig;
 
 /**
  * @author Stuart Douglas

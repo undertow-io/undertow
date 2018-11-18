@@ -18,13 +18,13 @@
 
 package io.undertow.util;
 
-import io.undertow.server.HttpServerExchange;
-
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Deque;
 import java.util.Map;
+
+import io.undertow.server.HttpServerExchange;
 
 /**
  * Utility class for building redirects.

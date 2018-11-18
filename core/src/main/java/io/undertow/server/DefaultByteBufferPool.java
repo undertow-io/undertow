@@ -18,10 +18,6 @@
 
 package io.undertow.server;
 
-import io.undertow.UndertowMessages;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
@@ -30,6 +26,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * A byte buffer pool that supports reference counted pools.

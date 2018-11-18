@@ -18,20 +18,22 @@
 
 package io.undertow.servlet.spec;
 
-import io.undertow.servlet.UndertowServletMessages;
+import static org.xnio.Bits.anyAreClear;
+import static org.xnio.Bits.anyAreSet;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Executor;
+
+import javax.servlet.ServletOutputStream;
+import javax.servlet.WriteListener;
+
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
-import javax.servlet.ServletOutputStream;
-import javax.servlet.WriteListener;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.concurrent.Executor;
-
-import static org.xnio.Bits.anyAreClear;
-import static org.xnio.Bits.anyAreSet;
+import io.undertow.servlet.UndertowServletMessages;
 
 /**
  * Output stream used for upgraded requests. This is different to {@link ServletOutputStreamImpl}

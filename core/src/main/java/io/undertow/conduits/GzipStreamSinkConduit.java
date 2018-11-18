@@ -18,14 +18,15 @@
 
 package io.undertow.conduits;
 
+import java.util.zip.CRC32;
+import java.util.zip.Deflater;
+
+import org.xnio.conduits.StreamSinkConduit;
+
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.ObjectPool;
-import org.xnio.conduits.StreamSinkConduit;
-
-import java.util.zip.CRC32;
-import java.util.zip.Deflater;
 
 /**
  * @author Stuart Douglas

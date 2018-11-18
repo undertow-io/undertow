@@ -20,7 +20,6 @@ package io.undertow.client.http2;
 
 import java.io.IOException;
 
-import io.undertow.client.PushCallback;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -30,6 +29,7 @@ import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.client.ContinueNotification;
+import io.undertow.client.PushCallback;
 import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.protocols.http2.Http2StreamSinkChannel;
 import io.undertow.protocols.http2.Http2StreamSourceChannel;

@@ -22,13 +22,14 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import org.xnio.OptionMap;
+import org.xnio.XnioWorker;
+import org.xnio.ssl.XnioSsl;
+
 import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.ProxyHandler;
-import org.xnio.OptionMap;
-import org.xnio.XnioWorker;
-import org.xnio.ssl.XnioSsl;
 
 /**
  * @author Emanuel Muckenhuber

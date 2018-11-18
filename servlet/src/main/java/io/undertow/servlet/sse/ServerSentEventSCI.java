@@ -18,13 +18,11 @@
 
 package io.undertow.servlet.sse;
 
-import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.PathTemplateHandler;
-import io.undertow.server.handlers.sse.ServerSentEventConnectionCallback;
-import io.undertow.server.handlers.sse.ServerSentEventHandler;
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.servlet.spec.ServletContextImpl;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
@@ -32,11 +30,14 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HandlesTypes;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.PathTemplateHandler;
+import io.undertow.server.handlers.sse.ServerSentEventConnectionCallback;
+import io.undertow.server.handlers.sse.ServerSentEventHandler;
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.spec.ServletContextImpl;
 
 /**
  * @author Stuart Douglas

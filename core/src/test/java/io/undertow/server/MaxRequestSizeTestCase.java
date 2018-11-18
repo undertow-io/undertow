@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -35,11 +34,12 @@ import org.xnio.OptionMap;
 import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas

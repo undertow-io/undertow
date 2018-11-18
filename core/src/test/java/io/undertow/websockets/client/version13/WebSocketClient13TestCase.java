@@ -26,12 +26,6 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.undertow.Undertow;
-import io.undertow.protocols.ssl.UndertowXnioSsl;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.ConnectHandler;
-import io.undertow.testutils.ProxyIgnore;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -43,8 +37,14 @@ import org.xnio.Options;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 
+import io.undertow.Undertow;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.ConnectHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.util.StringWriteChannelListener;
 import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.core.AbstractReceiveListener;

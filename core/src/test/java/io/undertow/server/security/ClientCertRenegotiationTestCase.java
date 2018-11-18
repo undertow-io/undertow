@@ -17,17 +17,15 @@
  */
 package io.undertow.server.security;
 
+import static org.junit.Assert.assertEquals;
+import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
+import static org.xnio.SslClientAuthMode.NOT_REQUESTED;
+
 import java.util.Collections;
 import java.util.List;
 
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.api.SecurityNotification.EventType;
-import io.undertow.security.impl.ClientCertAuthenticationMechanism;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.ProxyIgnore;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
+import javax.net.ssl.SSLContext;
+
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -38,13 +36,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
+
 import io.undertow.connector.PooledByteBuffer;
-
-import javax.net.ssl.SSLContext;
-
-import static org.junit.Assert.assertEquals;
-import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
-import static org.xnio.SslClientAuthMode.NOT_REQUESTED;
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.SecurityNotification.EventType;
+import io.undertow.security.impl.ClientCertAuthenticationMechanism;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 /**
  * Test case covering the core of Client-Cert

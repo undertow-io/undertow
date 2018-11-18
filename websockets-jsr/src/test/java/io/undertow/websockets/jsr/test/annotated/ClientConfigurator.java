@@ -18,8 +18,8 @@
 
 package io.undertow.websockets.jsr.test.annotated;
 
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.HandshakeResponse;
+import static io.undertow.util.Headers.SEC_WEB_SOCKET_PROTOCOL_STRING;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -27,7 +27,8 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import static io.undertow.util.Headers.SEC_WEB_SOCKET_PROTOCOL_STRING;
+import javax.websocket.ClientEndpointConfig;
+import javax.websocket.HandshakeResponse;
 
 /**
  * @author Stuart Douglas

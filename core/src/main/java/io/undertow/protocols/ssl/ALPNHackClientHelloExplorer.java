@@ -18,15 +18,16 @@
 
 package io.undertow.protocols.ssl;
 
-import io.undertow.UndertowMessages;
-
-import javax.net.ssl.SSLException;
 import java.io.ByteArrayOutputStream;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.net.ssl.SSLException;
+
+import io.undertow.UndertowMessages;
 
 /**
  * This class is used to both read and write the ALPN protocol names in the ClientHello SSL message.

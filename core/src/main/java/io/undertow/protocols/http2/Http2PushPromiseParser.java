@@ -18,9 +18,9 @@
 
 package io.undertow.protocols.http2;
 
-import org.xnio.Bits;
-
 import java.nio.ByteBuffer;
+
+import org.xnio.Bits;
 
 /**
  * Parser for HTTP2 Headers frames

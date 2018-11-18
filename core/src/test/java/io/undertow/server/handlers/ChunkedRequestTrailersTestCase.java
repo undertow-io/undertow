@@ -18,17 +18,11 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.UndertowOptions;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.ServerConnection;
-import io.undertow.server.protocol.http.HttpAttachments;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.AjpIgnore;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.StatusCodes;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -36,10 +30,17 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
+import io.undertow.UndertowOptions;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ServerConnection;
+import io.undertow.server.protocol.http.HttpAttachments;
+import io.undertow.testutils.AjpIgnore;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas

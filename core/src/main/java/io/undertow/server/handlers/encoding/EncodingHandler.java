@@ -18,16 +18,16 @@
 
 package io.undertow.server.handlers.encoding;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.Handlers;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Handler that serves as the basis for content encoding implementations.

@@ -18,13 +18,7 @@
 
 package io.undertow.servlet.test.spec;
 
-import io.undertow.servlet.ServletExtension;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.DefaultServer;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import java.io.IOException;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -34,7 +28,15 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
-import java.io.IOException;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import io.undertow.servlet.ServletExtension;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.testutils.DefaultServer;
 
 /**
  * @author Stuart Douglas

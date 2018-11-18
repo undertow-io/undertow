@@ -4,14 +4,15 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
+import org.junit.Assert;
+import org.junit.Test;
+
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.util.FileUtils;
 import io.undertow.util.HttpString;
-import org.junit.Assert;
-import org.junit.Test;
 
 /**
  * Tests the proxy protocol

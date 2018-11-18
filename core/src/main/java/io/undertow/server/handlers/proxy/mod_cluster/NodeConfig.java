@@ -17,10 +17,10 @@
  */
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import io.undertow.UndertowLogger;
-
 import java.net.URI;
 import java.net.URISyntaxException;
+
+import io.undertow.UndertowLogger;
 
 /**
  * The node configuration.

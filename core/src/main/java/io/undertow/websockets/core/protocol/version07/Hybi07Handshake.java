@@ -19,6 +19,17 @@
 package io.undertow.websockets.core.protocol.version07;
 
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+
+import org.xnio.IoUtils;
+import org.xnio.StreamConnection;
+
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.util.Headers;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
@@ -26,16 +37,6 @@ import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.extensions.CompositeExtensionFunction;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
-import org.xnio.IoUtils;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.StreamConnection;
-
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
 
 /**
  * The handshaking protocol implementation for Hybi-07.

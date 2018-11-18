@@ -18,20 +18,21 @@
 
 package io.undertow.server.handlers.proxy;
 
+import java.io.IOException;
+import java.net.URI;
+import java.nio.channels.Channel;
+import java.util.concurrent.TimeUnit;
+
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.util.AttachmentKey;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-
-import java.io.IOException;
-import java.net.URI;
-import java.nio.channels.Channel;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Simple proxy client provider. This provider simply proxies to another server, using a a one to one

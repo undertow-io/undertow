@@ -17,15 +17,16 @@
  */
 package io.undertow.util;
 
-import io.undertow.testutils.category.UnitTest;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.TimeZone;
+
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.TimeZone;
+import io.undertow.testutils.category.UnitTest;
 
 /**
  * @author Tomasz Knyziak

@@ -18,6 +18,9 @@
 
 package io.undertow.examples.websockets_extension;
 
+import static io.undertow.Handlers.path;
+import static io.undertow.Handlers.resource;
+
 import io.undertow.Undertow;
 import io.undertow.examples.UndertowExample;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
@@ -29,9 +32,6 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.extensions.PerMessageDeflateHandshake;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
-
-import static io.undertow.Handlers.path;
-import static io.undertow.Handlers.resource;
 
 /**
  * @author Stuart Douglas

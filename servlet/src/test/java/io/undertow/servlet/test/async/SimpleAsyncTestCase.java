@@ -18,15 +18,13 @@
 
 package io.undertow.servlet.test.async;
 
-import io.undertow.servlet.ServletExtension;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.ErrorPage;
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.servlet.test.util.MessageServlet;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
+import static io.undertow.servlet.Servlets.servlet;
+
+import java.io.IOException;
+
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -36,11 +34,15 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import java.io.IOException;
-
-import static io.undertow.servlet.Servlets.servlet;
+import io.undertow.servlet.ServletExtension;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.ErrorPage;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.servlet.test.util.MessageServlet;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas

@@ -17,6 +17,15 @@
  */
 package io.undertow.security.impl;
 
+import java.io.IOException;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
+import java.util.Map;
+
+import javax.net.ssl.SSLPeerUnverifiedException;
+
+import org.xnio.SslClientAuthMode;
+
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.SecurityContext;
@@ -28,15 +37,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.handlers.form.FormParserFactory;
-
-import org.xnio.SslClientAuthMode;
-
-import javax.net.ssl.SSLPeerUnverifiedException;
-
-import java.io.IOException;
-import java.security.cert.Certificate;
-import java.security.cert.X509Certificate;
-import java.util.Map;
 
 /**
  * The Client Cert based authentication mechanism.

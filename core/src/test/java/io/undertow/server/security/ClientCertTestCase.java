@@ -17,16 +17,13 @@
  */
 package io.undertow.server.security;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.Collections;
 import java.util.List;
 
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.security.api.SecurityNotification.EventType;
-import io.undertow.security.impl.ClientCertAuthenticationMechanism;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
+import javax.net.ssl.SSLContext;
+
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -35,9 +32,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.net.ssl.SSLContext;
-
-import static org.junit.Assert.assertEquals;
+import io.undertow.security.api.AuthenticationMechanism;
+import io.undertow.security.api.SecurityNotification.EventType;
+import io.undertow.security.impl.ClientCertAuthenticationMechanism;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 /**
  * Test case covering the core of Client-Cert

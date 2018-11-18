@@ -18,6 +18,18 @@
 
 package io.undertow.server.handlers;
 
+import static io.undertow.Handlers.predicate;
+import static io.undertow.Handlers.predicateContext;
+
+import java.io.IOException;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.Handlers;
 import io.undertow.predicate.Predicates;
 import io.undertow.server.HttpHandler;
@@ -26,17 +38,6 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import java.io.IOException;
-
-import static io.undertow.Handlers.predicate;
-import static io.undertow.Handlers.predicateContext;
 
 /**
  * Tests the redirect handler

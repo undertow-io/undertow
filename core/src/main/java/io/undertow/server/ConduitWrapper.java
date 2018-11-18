@@ -18,8 +18,9 @@
 
 package io.undertow.server;
 
-import io.undertow.util.ConduitFactory;
 import org.xnio.conduits.Conduit;
+
+import io.undertow.util.ConduitFactory;
 
 /**
  * Interface that provides a means of wrapping a {@link Conduit}.  Every conduit wrapper has a chance

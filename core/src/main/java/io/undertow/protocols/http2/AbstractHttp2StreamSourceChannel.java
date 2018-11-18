@@ -19,7 +19,6 @@
 package io.undertow.protocols.http2;
 
 import io.undertow.connector.PooledByteBuffer;
-
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
 

@@ -30,20 +30,20 @@ import java.util.Deque;
 import java.util.LinkedList;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.UndertowLogger;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * Source channel, used to receive framed messages.

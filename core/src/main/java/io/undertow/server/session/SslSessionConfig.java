@@ -18,12 +18,13 @@
 
 package io.undertow.server.session;
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.SSLSessionInfo;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+
+import io.undertow.UndertowLogger;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.SSLSessionInfo;
 
 /**
  * Session config that stores the session ID in the current SSL session.

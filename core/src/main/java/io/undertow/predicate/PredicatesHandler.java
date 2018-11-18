@@ -18,6 +18,12 @@
 
 package io.undertow.predicate;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
@@ -25,12 +31,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.server.handlers.builder.PredicatedHandler;
 import io.undertow.util.AttachmentKey;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
 
 /**
  * Handler that can deal with a large number of predicates. chaining together a large number of {@link io.undertow.predicate.PredicatesHandler.Holder}

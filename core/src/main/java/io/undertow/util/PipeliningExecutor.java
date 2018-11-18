@@ -18,11 +18,11 @@
 
 package io.undertow.util;
 
-import io.undertow.UndertowLogger;
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executor;
+
+import io.undertow.UndertowLogger;
 
 /**
  * Executor that will continue to re-run tasks in a loop that are submitted from its own thread.

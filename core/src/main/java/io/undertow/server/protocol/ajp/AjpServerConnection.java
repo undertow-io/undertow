@@ -18,20 +18,21 @@
 
 package io.undertow.server.protocol.ajp;
 
-import io.undertow.UndertowMessages;
-import io.undertow.server.AbstractServerConnection;
-import io.undertow.server.BasicSSLSessionInfo;
-import io.undertow.server.HttpUpgradeListener;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.SSLSessionInfo;
-import io.undertow.util.DateUtils;
 import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.WriteReadyHandler;
+
+import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.server.AbstractServerConnection;
+import io.undertow.server.BasicSSLSessionInfo;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
+import io.undertow.server.SSLSessionInfo;
+import io.undertow.util.DateUtils;
 
 /**
  * A server-side AJP connection.

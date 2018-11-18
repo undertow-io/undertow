@@ -17,6 +17,10 @@
  */
 package io.undertow.security.impl;
 
+import static io.undertow.UndertowMessages.MESSAGES;
+
+import java.io.IOException;
+
 import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityContext;
@@ -34,10 +38,6 @@ import io.undertow.util.Methods;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.Sessions;
 import io.undertow.util.StatusCodes;
-
-import java.io.IOException;
-
-import static io.undertow.UndertowMessages.MESSAGES;
 
 /**
  * @author Stuart Douglas

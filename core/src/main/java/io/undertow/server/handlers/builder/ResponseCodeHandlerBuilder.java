@@ -18,14 +18,14 @@
 
 package io.undertow.server.handlers.builder;
 
-import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.ResponseCodeHandler;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.ResponseCodeHandler;
 
 /**
  * @author Stuart Douglas

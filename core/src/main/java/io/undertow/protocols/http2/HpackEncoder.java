@@ -18,10 +18,10 @@
 
 package io.undertow.protocols.http2;
 
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
+import static io.undertow.protocols.http2.Hpack.HeaderField;
+import static io.undertow.protocols.http2.Hpack.STATIC_TABLE;
+import static io.undertow.protocols.http2.Hpack.STATIC_TABLE_LENGTH;
+import static io.undertow.protocols.http2.Hpack.encodeInteger;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
@@ -34,10 +34,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static io.undertow.protocols.http2.Hpack.HeaderField;
-import static io.undertow.protocols.http2.Hpack.STATIC_TABLE;
-import static io.undertow.protocols.http2.Hpack.STATIC_TABLE_LENGTH;
-import static io.undertow.protocols.http2.Hpack.encodeInteger;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 
 /**
  * Encoder for HPACK frames.

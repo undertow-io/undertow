@@ -18,10 +18,10 @@
 
 package io.undertow.server.session;
 
+import java.util.Set;
+
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
-
-import java.util.Set;
 
 /**
  * Interface that manages sessions.

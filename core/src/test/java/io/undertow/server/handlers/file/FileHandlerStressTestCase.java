@@ -29,6 +29,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.cache.CacheHandler;
@@ -38,13 +44,8 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import io.undertow.testutils.TestHttpClient;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas

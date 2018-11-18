@@ -18,21 +18,6 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import io.undertow.UndertowLogger;
-import io.undertow.client.UndertowClient;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.Cookie;
-import io.undertow.server.handlers.cache.LRUCache;
-import io.undertow.server.handlers.proxy.ProxyClient;
-import io.undertow.util.CopyOnWriteMap;
-import io.undertow.util.Headers;
-import io.undertow.util.PathMatcher;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.OptionMap;
-import org.xnio.XnioExecutor;
-import org.xnio.XnioIoThread;
-import org.xnio.ssl.XnioSsl;
-
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,6 +26,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
+
+import org.xnio.OptionMap;
+import org.xnio.XnioExecutor;
+import org.xnio.XnioIoThread;
+import org.xnio.ssl.XnioSsl;
+
+import io.undertow.UndertowLogger;
+import io.undertow.client.UndertowClient;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.cache.LRUCache;
+import io.undertow.server.handlers.proxy.ProxyClient;
+import io.undertow.util.CopyOnWriteMap;
+import io.undertow.util.Headers;
+import io.undertow.util.PathMatcher;
 
 /**
  * @author Stuart Douglas

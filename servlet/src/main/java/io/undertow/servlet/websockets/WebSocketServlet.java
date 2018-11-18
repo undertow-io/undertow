@@ -18,6 +18,21 @@
 
 package io.undertow.servlet.websockets;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.xnio.StreamConnection;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
@@ -29,19 +44,6 @@ import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.core.protocol.version07.Hybi07Handshake;
 import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
-import org.xnio.StreamConnection;
-
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Stuart Douglas

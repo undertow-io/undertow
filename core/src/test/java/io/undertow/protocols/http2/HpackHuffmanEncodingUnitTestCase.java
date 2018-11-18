@@ -18,12 +18,13 @@
 
 package io.undertow.protocols.http2;
 
-import io.undertow.testutils.category.UnitTest;
+import java.nio.ByteBuffer;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.nio.ByteBuffer;
+import io.undertow.testutils.category.UnitTest;
 
 /**
  * @author Stuart Douglas

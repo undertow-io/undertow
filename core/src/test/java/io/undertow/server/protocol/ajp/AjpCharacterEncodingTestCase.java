@@ -18,6 +18,17 @@
 
 package io.undertow.server.protocol.ajp;
 
+import java.io.IOException;
+import java.net.Socket;
+import java.net.URI;
+
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
+
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
@@ -27,16 +38,6 @@ import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.ProxyIgnore;
 import io.undertow.util.FileUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
-
-import java.io.IOException;
-import java.net.Socket;
-import java.net.URI;
 
 /**
  * @author Stuart Douglas

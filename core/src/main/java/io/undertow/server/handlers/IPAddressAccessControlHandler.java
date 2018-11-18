@@ -32,13 +32,14 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
 
+import org.xnio.Bits;
+
 import io.undertow.UndertowMessages;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.StatusCodes;
-import org.xnio.Bits;
 
 /**
  * Handler that can accept or reject a request based on the IP address of the remote peer.

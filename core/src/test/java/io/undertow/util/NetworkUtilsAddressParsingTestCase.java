@@ -1,12 +1,12 @@
 package io.undertow.util;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * verifies that the proxy protocol ip address parser correctly parses IP addresses as per the additional requirements

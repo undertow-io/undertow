@@ -21,6 +21,12 @@ package io.undertow.server.handlers.caching;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.cache.CacheHandler;
@@ -28,14 +34,9 @@ import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.cache.ResponseCache;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.Headers;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 /**
  * Tests out the caching handler

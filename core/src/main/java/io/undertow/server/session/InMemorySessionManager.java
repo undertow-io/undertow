@@ -18,13 +18,6 @@
 
 package io.undertow.server.session;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.AttachmentKey;
-import io.undertow.util.ConcurrentDirectDeque;
-import io.undertow.util.WorkerUtils;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
@@ -43,7 +36,13 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
+import io.undertow.util.ConcurrentDirectDeque;
+import io.undertow.util.WorkerUtils;
 
 /**
  * The default in memory session manager. This basically just stores sessions in an in memory hash map.

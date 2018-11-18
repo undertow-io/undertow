@@ -24,11 +24,11 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.concurrent.TimeUnit;
 
 import org.xnio.ChannelListener;
+import org.xnio.ChannelListener.Setter;
 import org.xnio.Option;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
-import org.xnio.ChannelListener.Setter;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 

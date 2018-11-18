@@ -18,6 +18,9 @@
 
 package io.undertow.conduits;
 
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.anyAreSet;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
@@ -27,7 +30,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import org.xnio.IoUtils;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.AbstractStreamSinkConduit;
+import org.xnio.conduits.ConduitWritableByteChannel;
+import org.xnio.conduits.Conduits;
+import org.xnio.conduits.StreamSinkConduit;
+
 import io.undertow.UndertowLogger;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
@@ -35,17 +47,6 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.ImmediatePooledByteBuffer;
-import org.xnio.IoUtils;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.AbstractStreamSinkConduit;
-import org.xnio.conduits.ConduitWritableByteChannel;
-import org.xnio.conduits.Conduits;
-import org.xnio.conduits.StreamSinkConduit;
-
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.anyAreSet;
 
 /**
  * Channel that implements HTTP chunked transfer coding.

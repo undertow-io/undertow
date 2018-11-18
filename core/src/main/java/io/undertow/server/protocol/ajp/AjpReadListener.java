@@ -18,24 +18,12 @@
 
 package io.undertow.server.protocol.ajp;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowOptions;
-import io.undertow.conduits.ConduitListener;
-import io.undertow.conduits.EmptyStreamSourceConduit;
-import io.undertow.conduits.ReadDataStreamSourceConduit;
-import io.undertow.server.AbstractServerConnection;
-import io.undertow.server.ConnectorStatisticsImpl;
-import io.undertow.server.Connectors;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.protocol.ParseTimeoutUpdater;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
+import static org.xnio.IoUtils.safeClose;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
 import org.xnio.ChannelListener;
-import io.undertow.connector.PooledByteBuffer;
-import io.undertow.util.StatusCodes;
-import io.undertow.util.BadRequestException;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
@@ -44,10 +32,23 @@ import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSourceConduit;
 import org.xnio.conduits.WriteReadyHandler;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
-import static org.xnio.IoUtils.safeClose;
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
+import io.undertow.conduits.ConduitListener;
+import io.undertow.conduits.EmptyStreamSourceConduit;
+import io.undertow.conduits.ReadDataStreamSourceConduit;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.AbstractServerConnection;
+import io.undertow.server.ConnectorStatisticsImpl;
+import io.undertow.server.Connectors;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.protocol.ParseTimeoutUpdater;
+import io.undertow.util.BadRequestException;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas

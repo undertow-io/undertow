@@ -18,13 +18,11 @@
 
 package io.undertow.conduits;
 
-import io.undertow.UndertowLogger;
-import org.xnio.Buffers;
-import org.xnio.channels.FixedLengthOverflowException;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.AbstractStreamSinkConduit;
-import org.xnio.conduits.Conduits;
-import org.xnio.conduits.StreamSinkConduit;
+import static java.lang.Math.min;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreSet;
+import static org.xnio.Bits.longBitMask;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -32,11 +30,14 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
-import static java.lang.Math.min;
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.allAreSet;
-import static org.xnio.Bits.anyAreSet;
-import static org.xnio.Bits.longBitMask;
+import org.xnio.Buffers;
+import org.xnio.channels.FixedLengthOverflowException;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.AbstractStreamSinkConduit;
+import org.xnio.conduits.Conduits;
+import org.xnio.conduits.StreamSinkConduit;
+
+import io.undertow.UndertowLogger;
 
 /**
  * A channel which writes a fixed amount of data.  A listener is called once the data has been written.

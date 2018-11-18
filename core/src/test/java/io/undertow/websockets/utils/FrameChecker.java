@@ -17,15 +17,16 @@
  */
 package io.undertow.websockets.utils;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+
+import org.junit.Assert;
+import org.xnio.FutureResult;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import org.junit.Assert;
-import org.xnio.FutureResult;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

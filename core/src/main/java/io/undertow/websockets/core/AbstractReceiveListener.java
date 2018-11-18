@@ -18,12 +18,12 @@
 
 package io.undertow.websockets.core;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
 
 /**
  * A receive listener that performs a callback when it receives a message

@@ -18,10 +18,11 @@
 
 package io.undertow.protocols.ssl;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
 
 /**
  * Super hacky class that allows the ServerHello message to be modified and the corresponding hash generated at runtime.

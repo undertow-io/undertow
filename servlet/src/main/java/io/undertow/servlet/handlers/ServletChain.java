@@ -22,14 +22,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+import javax.servlet.http.MappingMatch;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.core.ManagedFilter;
 import io.undertow.servlet.core.ManagedServlet;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-import javax.servlet.http.MappingMatch;
 
 /**
 * @author Stuart Douglas

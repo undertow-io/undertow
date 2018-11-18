@@ -18,9 +18,10 @@
 
 package io.undertow.server.handlers;
 
+import org.jboss.logging.Logger;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import org.jboss.logging.Logger;
 
 /**
  * A handler which simply sets a response code.

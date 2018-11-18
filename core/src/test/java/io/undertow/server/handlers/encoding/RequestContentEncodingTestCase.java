@@ -32,6 +32,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import io.undertow.conduits.GzipStreamSourceConduit;
 import io.undertow.conduits.InflatingStreamSourceConduit;
 import io.undertow.io.IoCallback;

@@ -18,16 +18,17 @@
 
 package io.undertow.websockets.core;
 
-import io.undertow.util.ImmediatePooled;
-import org.xnio.ChannelListener;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.Pooled;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import org.xnio.ChannelListener;
+import org.xnio.Pooled;
+
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.util.ImmediatePooled;
 
 /**
  * A buffered binary message.

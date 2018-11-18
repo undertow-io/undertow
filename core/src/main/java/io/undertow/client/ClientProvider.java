@@ -18,15 +18,16 @@
 
 package io.undertow.client;
 
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.Set;
+
 import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
 
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.Set;
+import io.undertow.connector.ByteBufferPool;
 
 /**
  * A client connection provider. This allows the difference between various connection

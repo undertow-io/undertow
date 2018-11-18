@@ -26,6 +26,7 @@ import org.apache.http.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import io.undertow.io.Receiver;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;

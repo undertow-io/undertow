@@ -1,11 +1,12 @@
 package io.undertow.util;
 
-import io.undertow.testutils.category.UnitTest;
+import java.util.Locale;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.Locale;
+import io.undertow.testutils.category.UnitTest;
 
 @Category(UnitTest.class)
 public class LocaleUtilsTestCase {

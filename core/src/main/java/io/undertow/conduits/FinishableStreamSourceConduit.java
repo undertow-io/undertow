@@ -18,13 +18,13 @@
 
 package io.undertow.conduits;
 
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.conduits.AbstractStreamSourceConduit;
-import org.xnio.conduits.StreamSourceConduit;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.conduits.AbstractStreamSourceConduit;
+import org.xnio.conduits.StreamSourceConduit;
 
 /**
  * A conduit that calls a finish listener when there is no data left in the underlying conduit.

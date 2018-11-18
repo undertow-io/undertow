@@ -18,9 +18,9 @@
 
 package io.undertow.attribute;
 
-import io.undertow.server.HttpServerExchange;
-
 import java.net.InetSocketAddress;
+
+import io.undertow.server.HttpServerExchange;
 
 /**
  * The remote Host address (if resolved)

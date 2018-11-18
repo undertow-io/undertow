@@ -18,14 +18,14 @@
 
 package io.undertow.servlet.attribute;
 
+import javax.servlet.ServletRequest;
+import javax.servlet.http.HttpServletRequest;
+
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributeBuilder;
 import io.undertow.attribute.ReadOnlyAttributeException;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
-
-import javax.servlet.ServletRequest;
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * The request session ID

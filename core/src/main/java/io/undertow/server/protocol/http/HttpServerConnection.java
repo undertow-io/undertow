@@ -18,8 +18,19 @@
 
 package io.undertow.server.protocol.http;
 
+import java.nio.ByteBuffer;
+
+import javax.net.ssl.SSLSession;
+
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+import org.xnio.channels.SslChannel;
+import org.xnio.conduits.StreamSinkConduit;
+
 import io.undertow.UndertowMessages;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.ConnectionSSLSessionInfo;
@@ -36,15 +47,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediatePooledByteBuffer;
 import io.undertow.util.Methods;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.StreamConnection;
-import org.xnio.channels.SslChannel;
-import org.xnio.conduits.StreamSinkConduit;
-
-import javax.net.ssl.SSLSession;
-import java.nio.ByteBuffer;
 
 /**
  * A server-side HTTP connection.

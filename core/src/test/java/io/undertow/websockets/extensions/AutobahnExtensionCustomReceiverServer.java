@@ -20,6 +20,17 @@ package io.undertow.websockets.extensions;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import org.apache.log4j.BasicConfigurator;
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.StreamConnection;
+import org.xnio.Xnio;
+import org.xnio.XnioWorker;
+import org.xnio.channels.AcceptingChannel;
+
 import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.protocol.http.HttpOpenListener;
@@ -31,16 +42,6 @@ import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
-import org.apache.log4j.BasicConfigurator;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import org.xnio.StreamConnection;
-import org.xnio.Xnio;
-import org.xnio.XnioWorker;
-import org.xnio.channels.AcceptingChannel;
 
 /**
  * A WebSocket Server implementation for use with <a href="http://www.tavendo.de/autobahn/testsuite.html">AutoBahn test suite</a>.

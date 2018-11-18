@@ -18,10 +18,11 @@
 
 package io.undertow.servlet.api;
 
-import io.undertow.security.idm.Account;
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.List;
+
+import io.undertow.security.idm.Account;
 
 /**
  * Authorization manager. The servlet implementation delegates all authorization checks to this interface.

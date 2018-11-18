@@ -18,6 +18,9 @@
 
 package io.undertow;
 
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.PredicateParser;
@@ -26,7 +29,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.JvmRouteHandler;
 import io.undertow.server.RoutingHandler;
 import io.undertow.server.handlers.AccessControlListHandler;
-import io.undertow.server.handlers.LearningPushHandler;
 import io.undertow.server.handlers.DateHandler;
 import io.undertow.server.handlers.DisableCacheHandler;
 import io.undertow.server.handlers.ExceptionHandler;
@@ -35,6 +37,7 @@ import io.undertow.server.handlers.HttpContinueAcceptingHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
 import io.undertow.server.handlers.HttpTraceHandler;
 import io.undertow.server.handlers.IPAddressAccessControlHandler;
+import io.undertow.server.handlers.LearningPushHandler;
 import io.undertow.server.handlers.NameVirtualHostHandler;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.PathTemplateHandler;
@@ -58,9 +61,6 @@ import io.undertow.server.handlers.sse.ServerSentEventConnectionCallback;
 import io.undertow.server.handlers.sse.ServerSentEventHandler;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
-
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Utility class with convenience methods for dealing with handlers

@@ -18,33 +18,6 @@
 
 package io.undertow.websockets.client;
 
-import io.undertow.UndertowMessages;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientExchange;
-import io.undertow.client.ClientRequest;
-import io.undertow.client.UndertowClient;
-import io.undertow.protocols.ssl.UndertowXnioSsl;
-import io.undertow.util.Headers;
-import io.undertow.util.Methods;
-import io.undertow.util.Protocols;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketLogger;
-import io.undertow.websockets.core.WebSocketVersion;
-
-import io.undertow.websockets.extensions.ExtensionHandshake;
-import org.xnio.Cancellable;
-import org.xnio.ChannelListener;
-import org.xnio.FutureResult;
-import org.xnio.IoFuture;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.StreamConnection;
-import org.xnio.XnioWorker;
-import org.xnio.http.HttpUpgrade;
-import org.xnio.http.RedirectException;
-import org.xnio.ssl.XnioSsl;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -54,6 +27,33 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.xnio.Cancellable;
+import org.xnio.ChannelListener;
+import org.xnio.FutureResult;
+import org.xnio.IoFuture;
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+import org.xnio.XnioWorker;
+import org.xnio.http.HttpUpgrade;
+import org.xnio.http.RedirectException;
+import org.xnio.ssl.XnioSsl;
+
+import io.undertow.UndertowMessages;
+import io.undertow.client.ClientCallback;
+import io.undertow.client.ClientConnection;
+import io.undertow.client.ClientExchange;
+import io.undertow.client.ClientRequest;
+import io.undertow.client.UndertowClient;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.util.Headers;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketLogger;
+import io.undertow.websockets.core.WebSocketVersion;
+import io.undertow.websockets.extensions.ExtensionHandshake;
 
 /**
  * The Web socket client.

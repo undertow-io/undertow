@@ -18,6 +18,8 @@
 
 package io.undertow.security.impl;
 
+import java.util.Map;
+
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.SecurityContext;
@@ -27,8 +29,6 @@ import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.AttachmentKey;
-
-import java.util.Map;
 
 /**
  *

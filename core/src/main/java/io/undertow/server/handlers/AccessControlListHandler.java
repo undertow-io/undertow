@@ -18,14 +18,6 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.UndertowMessages;
-import io.undertow.attribute.ExchangeAttribute;
-import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.StatusCodes;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,6 +27,14 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+
+import io.undertow.UndertowMessages;
+import io.undertow.attribute.ExchangeAttribute;
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.util.StatusCodes;
 
 /**
  * Handler that can accept or reject a request based on an attribute of the remote peer

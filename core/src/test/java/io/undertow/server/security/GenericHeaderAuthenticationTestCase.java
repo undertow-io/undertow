@@ -18,6 +18,18 @@
 
 package io.undertow.server.security;
 
+import static io.undertow.security.impl.GenericHeaderAuthenticationMechanism.NAME;
+import static org.junit.Assert.assertEquals;
+
+import java.util.Collections;
+import java.util.List;
+
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.impl.GenericHeaderAuthenticationMechanism;
@@ -26,17 +38,6 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import java.util.Collections;
-import java.util.List;
-
-import static io.undertow.security.impl.GenericHeaderAuthenticationMechanism.NAME;
-import static org.junit.Assert.assertEquals;
 
 /**
  * A test case to test when the only authentication mechanism is the GENERIC_HEADER mechanism.

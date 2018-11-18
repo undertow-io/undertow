@@ -18,6 +18,20 @@
 
 package io.undertow.server.protocol.http;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.StreamConnection;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.conduits.ConduitStreamSourceChannel;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
@@ -37,19 +51,6 @@ import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.StringWriteChannelListener;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.StreamConnection;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.ConduitStreamSinkChannel;
-import org.xnio.conduits.ConduitStreamSourceChannel;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.concurrent.Executor;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * Listener which reads requests and headers off of an HTTP stream.

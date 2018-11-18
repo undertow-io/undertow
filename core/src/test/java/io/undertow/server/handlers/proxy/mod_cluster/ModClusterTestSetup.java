@@ -21,14 +21,15 @@ package io.undertow.server.handlers.proxy.mod_cluster;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import org.xnio.OptionMap;
+import org.xnio.Xnio;
+import org.xnio.XnioWorker;
+
 import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser;
-import org.xnio.OptionMap;
-import org.xnio.Xnio;
-import org.xnio.XnioWorker;
 
 /**
  * Server setup to the run the mod_cluster tests

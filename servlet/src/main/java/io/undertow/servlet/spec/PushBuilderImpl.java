@@ -18,6 +18,15 @@
 
 package io.undertow.servlet.spec;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+
+import javax.servlet.http.HttpSession;
+import javax.servlet.http.PushBuilder;
+
 import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.servlet.UndertowServletMessages;
@@ -26,14 +35,6 @@ import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
-
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.PushBuilder;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * @author Stuart Douglas

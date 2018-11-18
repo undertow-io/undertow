@@ -18,11 +18,11 @@
 
 package io.undertow.servlet.test.metrics;
 
-import io.undertow.server.handlers.MetricsHandler;
-import io.undertow.servlet.api.MetricsCollector;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import io.undertow.server.handlers.MetricsHandler;
+import io.undertow.servlet.api.MetricsCollector;
 
 /**
  * @author Tomaz Cerar (c) 2014 Red Hat Inc.

@@ -17,6 +17,17 @@
  */
 package io.undertow.websockets.jsr.handshake;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.websocket.Extension;
+
+import org.xnio.StreamConnection;
+
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.websockets.WebSocketExtension;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.version13.Hybi13Handshake;
@@ -24,15 +35,6 @@ import io.undertow.websockets.extensions.ExtensionHandshake;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.jsr.ExtensionImpl;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.StreamConnection;
-
-import javax.websocket.Extension;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * {@link Hybi13Handshake} sub-class which takes care of match against the {@link javax.websocket.server.ServerEndpointConfig} and

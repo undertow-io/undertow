@@ -23,13 +23,14 @@ import static io.undertow.server.handlers.cache.LimitedBufferSlicePool.PooledByt
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.concurrent.ConcurrentHashMap;
+
+import org.xnio.BufferAllocator;
 
 import io.undertow.util.ConcurrentDirectDeque;
-import org.xnio.BufferAllocator;
 
 /**
  * A non-blocking buffer cache where entries are indexed by a path and are made up of a

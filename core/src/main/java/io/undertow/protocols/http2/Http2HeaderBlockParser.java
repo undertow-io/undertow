@@ -25,8 +25,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.xnio.Bits;
-import io.undertow.UndertowLogger;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.Connectors;
 import io.undertow.util.HeaderMap;

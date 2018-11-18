@@ -18,6 +18,12 @@
 
 package io.undertow.server.handlers;
 
+import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
@@ -25,12 +31,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.Headers;
 import io.undertow.util.NetworkUtils;
-
-import java.net.InetSocketAddress;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Pattern;
 
 /**
  * Handler that sets the peer address to the value of the X-Forwarded-For header.

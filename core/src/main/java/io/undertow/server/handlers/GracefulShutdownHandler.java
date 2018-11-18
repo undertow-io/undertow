@@ -18,15 +18,15 @@
 
 package io.undertow.server.handlers;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+
 import io.undertow.UndertowMessages;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.StatusCodes;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 /**
  * Handler that allows for graceful server shutdown. Basically it provides a way to prevent the server from

@@ -20,16 +20,17 @@ package io.undertow.server.handlers;
 
 import java.io.IOException;
 
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.Headers;
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import io.undertow.testutils.TestHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
+import io.undertow.util.StatusCodes;
 
 /**
  * Tests that the Origin header is correctly interpreted

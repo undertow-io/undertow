@@ -18,15 +18,38 @@
 
 package io.undertow.servlet.handlers;
 
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.security.AccessController;
+import java.security.PrivilegedExceptionAction;
+import java.util.Map;
+import java.util.concurrent.Executor;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.xnio.Option;
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+import org.xnio.conduits.ConduitStreamSinkChannel;
+import org.xnio.conduits.ConduitStreamSourceChannel;
+import org.xnio.conduits.StreamSinkConduit;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
-import io.undertow.server.XnioBufferPoolAdaptor;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.ExceptionHandler;
 import io.undertow.servlet.api.LoggingExceptionHandler;
@@ -45,32 +68,6 @@ import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
-import org.xnio.ChannelListener;
-import org.xnio.Option;
-import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.Pool;
-import org.xnio.StreamConnection;
-import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
-import org.xnio.channels.ConnectedChannel;
-import org.xnio.conduits.ConduitStreamSinkChannel;
-import org.xnio.conduits.ConduitStreamSourceChannel;
-import org.xnio.conduits.StreamSinkConduit;
-
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedExceptionAction;
-import java.util.Map;
-import java.util.concurrent.Executor;
 
 /**
  * This must be the initial handler in the blocking servlet chain. This sets up the request and response objects,
@@ -121,14 +118,14 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         this.paths = paths;
         this.listeners = servletContext.getDeployment().getApplicationListeners();
         SecurityManager sm = System.getSecurityManager();
-        if(sm != null) {
+        if (sm != null) {
             //handle request can use doPrivilidged
             //we need to make sure this is not abused
             sm.checkPermission(PERMISSION);
         }
         ExceptionHandler handler = servletContext.getDeployment().getDeploymentInfo().getExceptionHandler();
-        if(handler != null) {
-             this.exceptionHandler = handler;
+        if (handler != null) {
+            this.exceptionHandler = handler;
         } else {
             this.exceptionHandler = LoggingExceptionHandler.DEFAULT;
         }
@@ -144,7 +141,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
-        if(isForbiddenPath(path)) {
+        if (isForbiddenPath(path)) {
             exchange.setStatusCode(StatusCodes.NOT_FOUND);
             return;
         }
@@ -159,7 +156,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         if (info.getType() == ServletPathMatch.Type.REDIRECT && !isUpgradeRequest) {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
-            if(exchange.getRequestMethod().equals(Methods.GET) || exchange.getRequestMethod().equals(Methods.HEAD)) {
+            if (exchange.getRequestMethod().equals(Methods.GET) || exchange.getRequestMethod().equals(Methods.HEAD)) {
                 exchange.setStatusCode(StatusCodes.FOUND);
             } else {
                 exchange.setStatusCode(StatusCodes.TEMPORARY_REDIRECT);
@@ -200,7 +197,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
     private boolean isForbiddenPath(String path) {
         return path.equalsIgnoreCase("/meta-inf/")
-            || path.regionMatches(true, 0, "/web-inf/", 0, "/web-inf/".length());
+                || path.regionMatches(true, 0, "/web-inf/", 0, "/web-inf/".length());
     }
 
     public void dispatchToPath(final HttpServerExchange exchange, final ServletPathMatch pathInfo, final DispatcherType dispatcherType) throws Exception {
@@ -281,8 +278,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         //set request attributes from the connector
         //generally this is only applicable if apache is sending AJP_ prefixed environment variables
         Map<String, String> attrs = exchange.getAttachment(HttpServerExchange.REQUEST_ATTRIBUTES);
-        if(attrs != null) {
-            for(Map.Entry<String, String> entry : attrs.entrySet()) {
+        if (attrs != null) {
+            for (Map.Entry<String, String> entry : attrs.entrySet()) {
                 request.setAttribute(entry.getKey(), entry.getValue());
             }
         }
@@ -291,22 +288,22 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             listeners.requestInitialized(request);
             next.handleRequest(exchange);
             AsyncContextImpl asyncContextInternal = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
-            if(asyncContextInternal != null && asyncContextInternal.isCompletedBeforeInitialRequestDone()) {
+            if (asyncContextInternal != null && asyncContextInternal.isCompletedBeforeInitialRequestDone()) {
                 asyncContextInternal.handleCompletedBeforeInitialRequestDone();
             }
             //
-            if(servletRequestContext.getErrorCode() > 0) {
+            if (servletRequestContext.getErrorCode() > 0) {
                 servletRequestContext.getOriginalResponse().doErrorDispatch(servletRequestContext.getErrorCode(), servletRequestContext.getErrorMessage());
             }
         } catch (Throwable t) {
             AsyncContextImpl asyncContextInternal = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
-            if(asyncContextInternal != null && asyncContextInternal.isCompletedBeforeInitialRequestDone()) {
+            if (asyncContextInternal != null && asyncContextInternal.isCompletedBeforeInitialRequestDone()) {
                 asyncContextInternal.handleCompletedBeforeInitialRequestDone();
             }
             //by default this will just log the exception
             boolean handled = exceptionHandler.handleThrowable(exchange, request, response, t);
 
-            if(handled) {
+            if (handled) {
                 exchange.endExchange();
             } else if (request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
                 exchange.unDispatch();
@@ -346,9 +343,9 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             servletRequestContext.getOriginalResponse().responseDone();
             servletRequestContext.getOriginalRequest().clearAttributes();
         }
-        if(!exchange.isDispatched()) {
+        if (!exchange.isDispatched()) {
             AsyncContextImpl ctx = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
-            if(ctx != null) {
+            if (ctx != null) {
                 ctx.complete();
             }
         }
@@ -361,19 +358,10 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     private static class MockServerConnection extends ServerConnection {
         private final ByteBufferPool bufferPool;
         private SSLSessionInfo sslSessionInfo;
-        private XnioBufferPoolAdaptor poolAdaptor;
+
         private MockServerConnection(ByteBufferPool bufferPool) {
             this.bufferPool = bufferPool;
         }
-
-        @Override
-        public Pool<ByteBuffer> getBufferPool() {
-            if(poolAdaptor == null) {
-                poolAdaptor = new XnioBufferPoolAdaptor(getByteBufferPool());
-            }
-            return poolAdaptor;
-        }
-
 
         @Override
         public ByteBufferPool getByteBufferPool() {
@@ -436,11 +424,6 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
         @Override
         public <A extends SocketAddress> A getPeerAddress(Class<A> type) {
-            return null;
-        }
-
-        @Override
-        public ChannelListener.Setter<? extends ConnectedChannel> getCloseSetter() {
             return null;
         }
 

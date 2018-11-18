@@ -18,16 +18,16 @@
 
 package io.undertow.protocols.ajp;
 
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_END_RESPONSE;
 import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_REQUEST_BODY_CHUNK;
 import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_BODY_CHUNK;
 import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_HEADERS;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 
 /**
  * Parser used for the client (i.e. load balancer) side of the AJP connection.

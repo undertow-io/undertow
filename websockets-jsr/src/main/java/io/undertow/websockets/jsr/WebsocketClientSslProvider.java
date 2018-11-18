@@ -18,12 +18,13 @@
 
 package io.undertow.websockets.jsr;
 
-import org.xnio.XnioWorker;
-import org.xnio.ssl.XnioSsl;
+import java.net.URI;
 
 import javax.websocket.ClientEndpointConfig;
 import javax.websocket.Endpoint;
-import java.net.URI;
+
+import org.xnio.XnioWorker;
+import org.xnio.ssl.XnioSsl;
 
 /**
  * Interface that is loaded from a service loader, that allows

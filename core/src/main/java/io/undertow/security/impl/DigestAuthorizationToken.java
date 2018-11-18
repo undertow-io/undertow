@@ -17,14 +17,14 @@
  */
 package io.undertow.security.impl;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import io.undertow.util.HeaderToken;
 import io.undertow.util.HeaderTokenParser;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 /**
  * Enumeration of tokens expected in a HTTP Digest 'Authorization' header.

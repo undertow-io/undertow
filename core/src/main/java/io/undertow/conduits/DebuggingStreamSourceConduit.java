@@ -18,18 +18,18 @@
 
 package io.undertow.conduits;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import org.xnio.Buffers;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.ConduitReadableByteChannel;
 import org.xnio.conduits.StreamSourceConduit;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Conduit that saves all the data that is written through it and can dump it to the console

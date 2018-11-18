@@ -18,6 +18,9 @@
 
 package io.undertow.servlet.test.multipart;
 
+import static io.undertow.servlet.Servlets.multipartConfig;
+import static io.undertow.servlet.Servlets.servlet;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -25,16 +28,6 @@ import java.nio.charset.StandardCharsets;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
-import io.undertow.servlet.ServletExtension;
-import io.undertow.servlet.Servlets;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.LoggingExceptionHandler;
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.ProxyIgnore;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.HttpMultipartMode;
@@ -47,8 +40,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static io.undertow.servlet.Servlets.multipartConfig;
-import static io.undertow.servlet.Servlets.servlet;
+import io.undertow.servlet.ServletExtension;
+import io.undertow.servlet.Servlets;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.LoggingExceptionHandler;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas

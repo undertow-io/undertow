@@ -18,23 +18,25 @@
 
 package io.undertow.servlet.spec;
 
-import io.undertow.servlet.UndertowServletMessages;
-import org.xnio.Buffers;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.channels.Channels;
-import org.xnio.channels.StreamSourceChannel;
+import static org.xnio.Bits.anyAreClear;
+import static org.xnio.Bits.anyAreSet;
 
-import javax.servlet.ReadListener;
-import javax.servlet.ServletInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
 
-import static org.xnio.Bits.anyAreClear;
-import static org.xnio.Bits.anyAreSet;
+import javax.servlet.ReadListener;
+import javax.servlet.ServletInputStream;
+
+import org.xnio.Buffers;
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.channels.Channels;
+import org.xnio.channels.StreamSourceChannel;
+
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.servlet.UndertowServletMessages;
 
 /**
  * Servlet input stream implementation. This stream is non-buffered, and is only used for

@@ -18,6 +18,10 @@
 
 package io.undertow.servlet.core;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.MetricsHandler;
@@ -26,10 +30,6 @@ import io.undertow.servlet.api.MetricsCollector;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @author Tomaz Cerar (c) 2014 Red Hat Inc.

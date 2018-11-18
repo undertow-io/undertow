@@ -22,6 +22,7 @@ import static io.undertow.servlet.Servlets.servlet;
 
 import java.io.IOException;
 import java.util.Collections;
+
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 
@@ -35,13 +36,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.undertow.util.StatusCodes;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas

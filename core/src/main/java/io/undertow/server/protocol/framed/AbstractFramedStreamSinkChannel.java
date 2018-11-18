@@ -18,10 +18,16 @@
 
 package io.undertow.server.protocol.framed;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.connector.PooledByteBuffer;
-import io.undertow.util.ImmediatePooledByteBuffer;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.anyAreSet;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -34,15 +40,10 @@ import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.anyAreSet;
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.util.ImmediatePooledByteBuffer;
 
 /**
  * Framed Stream Sink Channel.

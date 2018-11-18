@@ -18,14 +18,14 @@
 
 package io.undertow.servlet.handlers.security;
 
+import java.security.AccessController;
+
 import io.undertow.security.impl.SingleSignOnAuthenticationMechanism;
 import io.undertow.security.impl.SingleSignOnManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
-
-import java.security.AccessController;
 
 /**
  * Servlet version of the single sign on authentication mechanism.

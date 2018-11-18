@@ -17,27 +17,28 @@
  */
 package io.undertow.server.security;
 
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.BASIC;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static org.junit.Assert.assertEquals;
+
 import java.util.Collections;
 import java.util.List;
+
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.impl.BasicAuthenticationMechanism;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.FlexBase64;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.FlexBase64;
 import io.undertow.util.StatusCodes;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static org.junit.Assert.assertEquals;
 
 /**
  * A test case to test when the only authentication mechanism is the BASIC mechanism.

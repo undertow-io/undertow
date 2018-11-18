@@ -18,18 +18,21 @@
 
 package io.undertow;
 
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.protocols.ssl.UndertowXnioSsl;
-import io.undertow.server.ConnectorStatistics;
-import io.undertow.server.DefaultByteBufferPool;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.OpenListener;
-import io.undertow.server.protocol.ajp.AjpOpenListener;
-import io.undertow.server.protocol.http.AlpnOpenListener;
-import io.undertow.server.protocol.http.HttpOpenListener;
-import io.undertow.server.protocol.http2.Http2OpenListener;
-import io.undertow.server.protocol.http2.Http2UpgradeHandler;
-import io.undertow.server.protocol.proxy.ProxyProtocolOpenListener;
+import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
@@ -42,19 +45,18 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.JsseSslUtils;
 
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.server.ConnectorStatistics;
+import io.undertow.server.DefaultByteBufferPool;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.OpenListener;
+import io.undertow.server.protocol.ajp.AjpOpenListener;
+import io.undertow.server.protocol.http.AlpnOpenListener;
+import io.undertow.server.protocol.http.HttpOpenListener;
+import io.undertow.server.protocol.http2.Http2OpenListener;
+import io.undertow.server.protocol.http2.Http2UpgradeHandler;
+import io.undertow.server.protocol.proxy.ProxyProtocolOpenListener;
 
 /**
  * Convenience class used to build an Undertow server.

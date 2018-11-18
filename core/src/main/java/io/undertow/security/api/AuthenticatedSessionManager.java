@@ -17,11 +17,11 @@
  */
 package io.undertow.security.api;
 
+import java.io.Serializable;
+
 import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
-
-import java.io.Serializable;
 
 /**
  * Interface that represents a persistent authenticated session.
