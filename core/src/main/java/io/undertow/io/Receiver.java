@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.RequestTooBigException;
+import io.undertow.util.RequestTooBigException;
 
 /**
  * Interface that provides an easy way to read data from the request. It is lambda compatible.

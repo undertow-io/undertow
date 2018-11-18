@@ -58,6 +58,10 @@
 
         <dependency>
             <groupId>io.undertow</groupId>
+            <artifactId>undertow-xnio</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.undertow</groupId>
             <artifactId>undertow-io</artifactId>
         </dependency>
         <dependency>

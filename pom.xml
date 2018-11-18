@@ -108,8 +108,9 @@
         <module>servlet</module>
         <module>examples</module>
         <module>websockets-jsr</module>
-        <module>karaf</module>
+        <!--<module>karaf</module>-->
         <module>io</module>
+        <module>xnio</module>
     </modules>
 
     <build>
@@ -271,6 +272,12 @@
             <dependency>
                 <groupId>io.undertow</groupId>
                 <artifactId>undertow-io</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-xnio</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

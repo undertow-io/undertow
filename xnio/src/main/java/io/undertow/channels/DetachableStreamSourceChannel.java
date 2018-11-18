@@ -1,19 +1,16 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.undertow.channels;
@@ -33,8 +30,8 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
+import io.undertow.UndertowXnioLogger;
+import io.undertow.UndertowXnioMessages;
 
 /**
  * A stream source channel that can be marked as detached. Once this is marked as detached then
@@ -42,7 +39,7 @@ import io.undertow.UndertowMessages;
  *
  * @author Stuart Douglas
  */
-public abstract class DetachableStreamSourceChannel implements StreamSourceChannel{
+public abstract class DetachableStreamSourceChannel implements StreamSourceChannel {
 
     protected final StreamSourceChannel delegate;
 
@@ -105,7 +102,7 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
     public <T> T setOption(final Option<T> option, final T value) throws IllegalArgumentException, IOException {
 
         if (isFinished()) {
-            throw UndertowMessages.MESSAGES.channelIsClosed();
+            throw UndertowXnioMessages.MESSAGES.channelIsClosed();
         }
         return delegate.setOption(option, value);
     }
@@ -125,10 +122,10 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
         if (readSetter == null) {
             readSetter = new ChannelListener.SimpleSetter<>();
             if (!isFinished()) {
-                if(delegate instanceof ConduitStreamSourceChannel) {
-                    ((ConduitStreamSourceChannel)delegate).setReadListener(new SetterDelegatingListener((ChannelListener.SimpleSetter)readSetter, this));
+                if (delegate instanceof ConduitStreamSourceChannel) {
+                    ((ConduitStreamSourceChannel) delegate).setReadListener(new SetterDelegatingListener((ChannelListener.SimpleSetter) readSetter, this));
                 } else {
-                    delegate.getReadSetter().set(new SetterDelegatingListener((ChannelListener.SimpleSetter)readSetter, this));
+                    delegate.getReadSetter().set(new SetterDelegatingListener((ChannelListener.SimpleSetter) readSetter, this));
                 }
             }
         }
@@ -169,7 +166,7 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
 
     public void awaitReadable(final long time, final TimeUnit timeUnit) throws IOException {
         if (isFinished()) {
-            throw UndertowMessages.MESSAGES.channelIsClosed();
+            throw UndertowXnioMessages.MESSAGES.channelIsClosed();
         }
         delegate.awaitReadable(time, timeUnit);
     }
@@ -178,8 +175,8 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
         if (closeSetter == null) {
             closeSetter = new ChannelListener.SimpleSetter<>();
             if (!isFinished()) {
-                if(delegate instanceof ConduitStreamSourceChannel) {
-                    ((ConduitStreamSourceChannel)delegate).setCloseListener(ChannelListeners.delegatingChannelListener(this, closeSetter));
+                if (delegate instanceof ConduitStreamSourceChannel) {
+                    ((ConduitStreamSourceChannel) delegate).setCloseListener(ChannelListeners.delegatingChannelListener(this, closeSetter));
                 } else {
                     delegate.getCloseSetter().set(ChannelListeners.delegatingChannelListener(this, closeSetter));
                 }
@@ -197,7 +194,7 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
 
     public <T> T getOption(final Option<T> option) throws IOException {
         if (isFinished()) {
-            throw UndertowMessages.MESSAGES.streamIsClosed();
+            throw UndertowXnioMessages.MESSAGES.streamIsClosed();
         }
         return delegate.getOption(option);
     }
@@ -227,10 +224,10 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
 
         public void handleEvent(final StreamSourceChannel channel) {
             ChannelListener<? super StreamSourceChannel> channelListener = setter.get();
-            if(channelListener != null) {
+            if (channelListener != null) {
                 ChannelListeners.invokeChannelListener(this.channel, channelListener);
             } else {
-                UndertowLogger.REQUEST_LOGGER.debugf("suspending reads on %s to prevent listener runaway", channel);
+                UndertowXnioLogger.REQUEST_LOGGER.debugf("suspending reads on %s to prevent listener runaway", channel);
                 channel.suspendReads();
             }
         }

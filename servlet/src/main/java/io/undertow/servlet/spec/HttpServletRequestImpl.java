@@ -64,7 +64,7 @@ import javax.servlet.http.PushBuilder;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.RequestTooBigException;
+import io.undertow.util.RequestTooBigException;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartParserDefinition;

@@ -1,19 +1,16 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.undertow;
@@ -30,23 +27,18 @@ import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 
-import io.undertow.predicate.PredicateBuilder;
-import io.undertow.protocols.http2.HpackException;
-import io.undertow.security.api.AuthenticationMechanism;
-import io.undertow.util.RequestTooBigException;
-import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import io.undertow.util.BadRequestException;
-import io.undertow.util.HttpString;
 import io.undertow.util.ParameterLimitException;
+import io.undertow.util.RequestTooBigException;
+import io.undertow.protocols.http2.HpackException;
 
 /**
  * @author Stuart Douglas
  */
-@MessageBundle(projectCode = "UT")
-public interface UndertowMessages {
+@MessageBundle(projectCode = "UTXNIO")
+public interface UndertowXnioMessages {
 
-    UndertowMessages MESSAGES = Messages.getBundle(UndertowMessages.class);
+    UndertowXnioMessages MESSAGES = Messages.getBundle(UndertowXnioMessages.class);
 
     @Message(id = 1, value = "Maximum concurrent requests must be larger than zero.")
     IllegalArgumentException maximumConcurrentRequestsMustBeLargerThanZero();
@@ -169,7 +161,7 @@ public interface UndertowMessages {
     IllegalStateException dataAlreadyQueued();
 
     @Message(id = 44, value = "More than one predicate with name %s. Builder class %s and %s")
-    IllegalStateException moreThanOnePredicateWithName(String name, Class<? extends PredicateBuilder> aClass, Class<? extends PredicateBuilder> existing);
+    IllegalStateException moreThanOnePredicateWithName(String name, Class<? extends Object> aClass, Class<?> existing);
 
     @Message(id = 45, value = "Error parsing predicated handler string %s:%n%s")
     IllegalArgumentException errorParsingPredicateString(String reason, String s);
@@ -194,9 +186,9 @@ public interface UndertowMessages {
 
     @Message(id = 53, value = "Listener %s already registered")
     IllegalArgumentException listenerAlreadyRegistered(String name);
-
-    @Message(id = 54, value = "The maximum size %s for an individual file in a multipart request was exceeded")
-    MultiPartParserDefinition.FileTooLargeException maxFileSizeExceeded(long maxIndividualFileSize);
+//
+//    @Message(id = 54, value = "The maximum size %s for an individual file in a multipart request was exceeded")
+//    MultiPartParserDefinition.FileTooLargeException maxFileSizeExceeded(long maxIndividualFileSize);
 
     @Message(id = 55, value = "Could not set attribute %s to %s as it is read only")
     String couldNotSetAttribute(String attributeName, String newValue);
@@ -207,8 +199,8 @@ public interface UndertowMessages {
     @Message(id = 57, value = "Mismatched braces in attribute string %s")
     RuntimeException mismatchedBraces(String valueString);
 
-    @Message(id = 58, value = "More than one handler with name %s. Builder class %s and %s")
-    IllegalStateException moreThanOneHandlerWithName(String name, Class<? extends HandlerBuilder> aClass, Class<? extends HandlerBuilder> existing);
+//    @Message(id = 58, value = "More than one handler with name %s. Builder class %s and %s")
+//    IllegalStateException moreThanOneHandlerWithName(String name, Class<? extends HandlerBuilder> aClass, Class<? extends HandlerBuilder> existing);
 //
 //    @Message(id = 59, value = "Invalid syntax %s")
 //    IllegalArgumentException invalidSyntax(String line);
@@ -486,7 +478,7 @@ public interface UndertowMessages {
     IllegalArgumentException newlineNotSupportedInHttpString(String value);
 
     @Message(id = 150, value = "Pseudo header %s received after receiving normal headers. Pseudo headers must be the first headers in a HTTP/2 header block.")
-    String pseudoHeaderInWrongOrder(HttpString header);
+    String pseudoHeaderInWrongOrder(Object header);
 
     @Message(id = 151, value = "Expected to receive a continuation frame")
     String expectedContinuationFrame();
@@ -498,7 +490,7 @@ public interface UndertowMessages {
     IllegalStateException streamNotRegistered();
 
     @Message(id = 154, value = "Mechanism %s returned a null result from sendChallenge()")
-    NullPointerException sendChallengeReturnedNull(AuthenticationMechanism mechanism);
+    NullPointerException sendChallengeReturnedNull(Object mechanism);
 
     @Message(id = 155, value = "Framed channel body was set when it was not ready for flush")
     IllegalStateException bodyIsSetAndNotReadyForFlush();
