@@ -28,7 +28,7 @@ import org.xnio.OptionMap;
 import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
 
-import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
  * Client SSL provider that gets the SSL context in one of two ways.

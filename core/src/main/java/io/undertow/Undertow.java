@@ -46,9 +46,9 @@ import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.JsseSslUtils;
 
 import io.undertow.connector.ByteBufferPool;
-import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.ConnectorStatistics;
-import io.undertow.server.DefaultByteBufferPool;
+import io.undertow.connector.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
 import io.undertow.server.protocol.ajp.AjpOpenListener;

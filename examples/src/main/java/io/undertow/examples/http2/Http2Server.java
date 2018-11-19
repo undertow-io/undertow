@@ -42,7 +42,7 @@ import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.examples.UndertowExample;
-import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.LearningPushHandler;

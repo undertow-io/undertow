@@ -22,7 +22,8 @@ import java.util.Arrays;
 
 import javax.net.ssl.SSLEngine;
 
-import io.undertow.protocols.ssl.ALPNHackSSLEngine;
+import io.undertow.connector.alpn.ALPNProvider;
+import io.undertow.xnio.protocols.ssl.ALPNHackSSLEngine;
 
 /**
  * Open listener adaptor for ALPN connections that uses the SSLExplorer based approach and hack into the JDK8

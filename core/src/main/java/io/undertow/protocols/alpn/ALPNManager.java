@@ -27,6 +27,9 @@ import java.util.function.Function;
 
 import javax.net.ssl.SSLEngine;
 
+import io.undertow.connector.alpn.ALPNEngineManager;
+import io.undertow.connector.alpn.ALPNProvider;
+
 /**
  * @author Stuart Douglas
  */

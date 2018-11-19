@@ -18,7 +18,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.OpenListener;
 import io.undertow.util.NetworkUtils;

@@ -13,24 +13,27 @@
  * limitations under the License.
  */
 
-package io.undertow.protocols.alpn;
+package io.undertow.xnio.protocols.ssl;
 
 import java.util.function.Function;
 
 import javax.net.ssl.SSLEngine;
 
-public interface ALPNEngineManager {
+import io.undertow.connector.alpn.ALPNEngineManager;
 
-    /**
-     * @return The priority of this provider, higher priority managers will be tried first
-     */
-    int getPriority();
+public class SNIAlpnEngineManager implements ALPNEngineManager {
+    @Override
+    public int getPriority() {
+        return 100;
+    }
 
-    /**
-     * @param engine           The original SSL Engine
-     * @param selectedFunction A function that must be called when the Underlying SSL engine has been selected. The return value of this callback may be a wrapped engine, which must replace the selected engine
-     * @return <code>true</code> if the engine was registered, false otherwise
-     */
-    boolean registerEngine(SSLEngine engine, Function<SSLEngine, SSLEngine> selectedFunction);
-
+    @Override
+    public boolean registerEngine(SSLEngine engine, Function<SSLEngine, SSLEngine> selectedFunction) {
+        if (!(engine instanceof SNISSLEngine)) {
+            return false;
+        }
+        SNISSLEngine snisslEngine = (SNISSLEngine) engine;
+        snisslEngine.setSelectionCallback(selectedFunction);
+        return true;
+    }
 }

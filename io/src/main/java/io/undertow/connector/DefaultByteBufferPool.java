@@ -1,22 +1,19 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package io.undertow.server;
+package io.undertow.connector;
 
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
@@ -27,13 +24,9 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import io.undertow.UndertowMessages;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-
 /**
  * A byte buffer pool that supports reference counted pools.
- *
+ * <p>
  * TODO: move this somewhere more appropriate
  *
  * @author Stuart Douglas
@@ -65,12 +58,13 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
 
     /**
-     * @param direct               If this implementation should use direct buffers
-     * @param bufferSize           The buffer size to use
+     * @param direct     If this implementation should use direct buffers
+     * @param bufferSize The buffer size to use
      */
     public DefaultByteBufferPool(boolean direct, int bufferSize) {
         this(direct, bufferSize, -1, 12, 0);
     }
+
     /**
      * @param direct               If this implementation should use direct buffers
      * @param bufferSize           The buffer size to use
@@ -83,7 +77,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         this.maximumPoolSize = maximumPoolSize;
         this.threadLocalCacheSize = threadLocalCacheSize;
         this.leakDectionPercent = leakDecetionPercent;
-        if(direct) {
+        if (direct) {
             arrayBackedPool = new DefaultByteBufferPool(false, bufferSize, maximumPoolSize, 0, leakDecetionPercent);
         } else {
             arrayBackedPool = this;
@@ -114,11 +108,11 @@ public class DefaultByteBufferPool implements ByteBufferPool {
     @Override
     public PooledByteBuffer allocate() {
         if (closed) {
-            throw UndertowMessages.MESSAGES.poolIsClosed();
+            throw UndertowConnectorMessages.MESSAGES.poolIsClosed();
         }
         ByteBuffer buffer = null;
         ThreadLocalData local = null;
-        if(threadLocalCacheSize > 0) {
+        if (threadLocalCacheSize > 0) {
             local = threadLocalCache.get();
             if (local != null) {
                 buffer = local.buffers.poll();
@@ -126,7 +120,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
                 local = new ThreadLocalData();
                 synchronized (threadLocalDataList) {
                     if (closed) {
-                        throw UndertowMessages.MESSAGES.poolIsClosed();
+                        throw UndertowConnectorMessages.MESSAGES.poolIsClosed();
                     }
                     cleanupThreadLocalData();
                     threadLocalDataList.add(new WeakReference<>(local));
@@ -148,8 +142,8 @@ public class DefaultByteBufferPool implements ByteBufferPool {
                 buffer = ByteBuffer.allocate(bufferSize);
             }
         }
-        if(local != null) {
-            if(local.allocationDepth < threadLocalCacheSize) { //prevent overflow if the thread only allocates and never frees
+        if (local != null) {
+            if (local.allocationDepth < threadLocalCacheSize) { //prevent overflow if the thread only allocates and never frees
                 local.allocationDepth++;
             }
         }
@@ -189,8 +183,8 @@ public class DefaultByteBufferPool implements ByteBufferPool {
             return; //GC will take care of it
         }
         ThreadLocalData local = threadLocalCache.get();
-        if(local != null) {
-            if(local.allocationDepth > 0) {
+        if (local != null) {
+            if (local.allocationDepth > 0) {
                 local.allocationDepth--;
                 if (local.buffers.size() < threadLocalCacheSize) {
                     local.buffers.add(buffer);
@@ -205,7 +199,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         int size;
         do {
             size = currentQueueLength;
-            if(size > maximumPoolSize) {
+            if (size > maximumPoolSize) {
                 DirectByteBufferDeallocator.free(buffer);
                 return;
             }
@@ -256,16 +250,16 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
         @Override
         public ByteBuffer getBuffer() {
-            if(referenceCount == 0) {
-                throw UndertowMessages.MESSAGES.bufferAlreadyFreed();
+            if (referenceCount == 0) {
+                throw UndertowConnectorMessages.MESSAGES.bufferAlreadyFreed();
             }
             return buffer;
         }
 
         @Override
         public void close() {
-            if(referenceCountUpdater.compareAndSet(this, 1, 0)) {
-                if(leakDetector != null) {
+            if (referenceCountUpdater.compareAndSet(this, 1, 0)) {
+                if (leakDetector != null) {
                     leakDetector.closed = true;
                 }
                 pool.freeInternal(buffer);
@@ -317,7 +311,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         @Override
         protected void finalize() throws Throwable {
             super.finalize();
-            if(!closed) {
+            if (!closed) {
                 allocationPoint.printStackTrace();
             }
         }

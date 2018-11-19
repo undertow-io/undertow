@@ -16,7 +16,7 @@ import org.xnio.OptionMap;
 import org.xnio.Options;
 
 import io.undertow.Undertow;
-import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;

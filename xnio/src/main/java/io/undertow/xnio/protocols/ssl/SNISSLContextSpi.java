@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.undertow.protocols.ssl;
+package io.undertow.xnio.protocols.ssl;
 
 import java.security.KeyManagementException;
 import java.security.SecureRandom;

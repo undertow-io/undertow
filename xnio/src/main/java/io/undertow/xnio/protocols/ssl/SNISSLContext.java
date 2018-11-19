@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.undertow.protocols.ssl;
+package io.undertow.xnio.protocols.ssl;
 
 import javax.net.ssl.SSLContext;
 

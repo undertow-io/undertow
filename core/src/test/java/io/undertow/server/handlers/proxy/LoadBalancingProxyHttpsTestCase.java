@@ -28,7 +28,7 @@ import org.xnio.Options;
 
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
-import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.ProxyIgnore;

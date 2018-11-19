@@ -1,22 +1,19 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package io.undertow.protocols.ssl;
+package io.undertow.xnio.protocols.ssl;
 
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Field;
@@ -32,16 +29,16 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSession;
 
-import io.undertow.UndertowLogger;
+import io.undertow.xnio.UndertowXnioLogger;
 
 /**
  * SSLEngine wrapper that provides some super hacky ALPN support on JDK8.
- *
+ * <p>
  * Even though this is a nasty hack that relies on JDK internals it is still preferable to modifying the boot class path.
- *
+ * <p>
  * It is expected to work with all JDK8 versions, however this cannot be guaranteed if the SSL internals are changed
  * in an incompatible way.
- *
+ * <p>
  * This class will go away once JDK8 is no longer in use.
  *
  * @author Stuart Douglas
@@ -95,7 +92,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
             handshakeHashFinMd.setAccessible(true);
 
         } catch (Exception e) {
-            UndertowLogger.ROOT_LOGGER.debug("JDK8 ALPN Hack failed ", e);
+            UndertowXnioLogger.ROOT_LOGGER.debug("JDK8 ALPN Hack failed ", e);
             enabled = false;
             handshaker = null;
             handshakeHash = null;
@@ -135,7 +132,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
     }
 
     public static boolean isEnabled(SSLEngine engine) {
-        if(!ENABLED) {
+        if (!ENABLED) {
             return false;
         }
         return SSL_ENGINE_IMPL_CLASS.isAssignableFrom(engine.getClass());
@@ -143,7 +140,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
 
     @Override
     public SSLEngineResult wrap(ByteBuffer[] byteBuffers, int i, int i1, ByteBuffer byteBuffer) throws SSLException {
-        if(bufferedWrapData != null) {
+        if (bufferedWrapData != null) {
             int prod = bufferedWrapData.remaining();
             byteBuffer.put(bufferedWrapData);
             bufferedWrapData = null;
@@ -151,9 +148,9 @@ public class ALPNHackSSLEngine extends SSLEngine {
         }
         int pos = byteBuffer.position();
         int limit = byteBuffer.limit();
-        SSLEngineResult res =  delegate.wrap(byteBuffers, i, i1, byteBuffer);
-        if(!ourHelloSent && res.bytesProduced() > 0) {
-            if(delegate.getUseClientMode() && applicationProtocols != null && !applicationProtocols.isEmpty()) {
+        SSLEngineResult res = delegate.wrap(byteBuffers, i, i1, byteBuffer);
+        if (!ourHelloSent && res.bytesProduced() > 0) {
+            if (delegate.getUseClientMode() && applicationProtocols != null && !applicationProtocols.isEmpty()) {
                 ourHelloSent = true;
                 ALPNHackClientByteArrayOutputStream = replaceClientByteOutput(delegate);
                 ByteBuffer newBuf = byteBuffer.duplicate();
@@ -161,15 +158,15 @@ public class ALPNHackSSLEngine extends SSLEngine {
                 byte[] data = new byte[newBuf.remaining()];
                 newBuf.get(data);
                 byte[] newData = ALPNHackClientHelloExplorer.rewriteClientHello(data, applicationProtocols);
-                if(newData != null) {
+                if (newData != null) {
                     byte[] clientHelloMesage = new byte[newData.length - 5];
-                    System.arraycopy(newData, 5, clientHelloMesage, 0 , clientHelloMesage.length);
+                    System.arraycopy(newData, 5, clientHelloMesage, 0, clientHelloMesage.length);
                     ALPNHackClientByteArrayOutputStream.setSentClientHello(clientHelloMesage);
                     byteBuffer.clear();
                     byteBuffer.put(newData);
                 }
             } else if (!getUseClientMode()) {
-                if(selectedApplicationProtocol != null && alpnHackServerByteArrayOutputStream != null) {
+                if (selectedApplicationProtocol != null && alpnHackServerByteArrayOutputStream != null) {
                     byte[] newServerHello = alpnHackServerByteArrayOutputStream.getServerHello(); //this is the new server hello, it will be part of the first TLS plaintext record
                     if (newServerHello != null) {
                         byteBuffer.flip();
@@ -192,7 +189,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
                 }
             }
         }
-        if(res.bytesProduced() > 0) {
+        if (res.bytesProduced() > 0) {
             ourHelloSent = true;
         }
         return res;
@@ -200,13 +197,13 @@ public class ALPNHackSSLEngine extends SSLEngine {
 
     @Override
     public SSLEngineResult unwrap(ByteBuffer dataToUnwrap, ByteBuffer[] byteBuffers, int i, int i1) throws SSLException {
-        if(!unwrapHelloSeen) {
-            if(!delegate.getUseClientMode() && applicationProtocols != null) {
+        if (!unwrapHelloSeen) {
+            if (!delegate.getUseClientMode() && applicationProtocols != null) {
                 try {
                     List<String> result = ALPNHackClientHelloExplorer.exploreClientHello(dataToUnwrap.duplicate());
-                    if(result != null) {
-                        for(String protocol : applicationProtocols) {
-                            if(result.contains(protocol)) {
+                    if (result != null) {
+                        for (String protocol : applicationProtocols) {
+                            if (result.contains(protocol)) {
                                 selectedApplicationProtocol = protocol;
                                 break;
                             }
@@ -216,8 +213,8 @@ public class ALPNHackSSLEngine extends SSLEngine {
                 } catch (BufferUnderflowException e) {
                     return new SSLEngineResult(SSLEngineResult.Status.BUFFER_UNDERFLOW, SSLEngineResult.HandshakeStatus.NEED_UNWRAP, 0, 0);
                 }
-            } else if(delegate.getUseClientMode() && ALPNHackClientByteArrayOutputStream != null) {
-                if(!dataToUnwrap.hasRemaining()) {
+            } else if (delegate.getUseClientMode() && ALPNHackClientByteArrayOutputStream != null) {
+                if (!dataToUnwrap.hasRemaining()) {
                     return delegate.unwrap(dataToUnwrap, byteBuffers, i, i1);
                 }
                 try {
@@ -225,7 +222,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
                     int type = dup.get();
                     int major = dup.get();
                     int minor = dup.get();
-                    if(type == 22 && major == 3 && minor == 3) {
+                    if (type == 22 && major == 3 && minor == 3) {
                         //we only care about TLS 1.2
                         //split up the records, there may be multiple when doing a fast session resume
                         List<ByteBuffer> records = ALPNHackServerHelloExplorer.extractRecords(dataToUnwrap.duplicate());
@@ -264,7 +261,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
             }
         }
         SSLEngineResult res = delegate.unwrap(dataToUnwrap, byteBuffers, i, i1);
-        if(!delegate.getUseClientMode() && selectedApplicationProtocol != null && alpnHackServerByteArrayOutputStream == null) {
+        if (!delegate.getUseClientMode() && selectedApplicationProtocol != null && alpnHackServerByteArrayOutputStream == null) {
             alpnHackServerByteArrayOutputStream = replaceServerByteOutput(delegate, selectedApplicationProtocol);
         }
         return res;
@@ -382,8 +379,9 @@ public class ALPNHackSSLEngine extends SSLEngine {
 
     /**
      * JDK8 ALPN hack support method.
-     *
+     * <p>
      * These methods will be removed once JDK8 ALPN support is no longer required
+     *
      * @param applicationProtocols
      */
     public void setApplicationProtocols(List<String> applicationProtocols) {
@@ -392,7 +390,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
 
     /**
      * JDK8 ALPN hack support method.
-     *
+     * <p>
      * These methods will be removed once JDK8 ALPN support is no longer required
      */
     public List<String> getApplicationProtocols() {
@@ -401,7 +399,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
 
     /**
      * JDK8 ALPN hack support method.
-     *
+     * <p>
      * These methods will be removed once JDK8 ALPN support is no longer required
      */
     public String getSelectedApplicationProtocol() {
@@ -419,7 +417,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
             HANDSHAKE_HASH_DATA.set(hash, out);
             return out;
         } catch (Exception e) {
-            UndertowLogger.ROOT_LOGGER.debug("Failed to replace hash output stream ", e);
+            UndertowXnioLogger.ROOT_LOGGER.debug("Failed to replace hash output stream ", e);
             return null;
         }
     }
@@ -433,10 +431,11 @@ public class ALPNHackSSLEngine extends SSLEngine {
             HANDSHAKE_HASH_DATA.set(hash, out);
             return out;
         } catch (Exception e) {
-            UndertowLogger.ROOT_LOGGER.debug("Failed to replace hash output stream ", e);
+            UndertowXnioLogger.ROOT_LOGGER.debug("Failed to replace hash output stream ", e);
             return null;
         }
     }
+
     static void regenerateHashes(SSLEngine sslEngineToHack, ByteArrayOutputStream data, byte[]... hashBytes) {
         //hack up the SSL engine internal state
         try {

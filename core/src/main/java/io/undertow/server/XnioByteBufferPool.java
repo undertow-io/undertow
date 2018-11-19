@@ -24,6 +24,7 @@ import org.xnio.Pool;
 import org.xnio.Pooled;
 
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.DefaultByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 
 /**

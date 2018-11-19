@@ -27,6 +27,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 
 import io.undertow.UndertowLogger;
+import io.undertow.connector.alpn.ALPNProvider;
 
 /**
  * Open listener adaptor for ALPN connections that use the JDK9 API

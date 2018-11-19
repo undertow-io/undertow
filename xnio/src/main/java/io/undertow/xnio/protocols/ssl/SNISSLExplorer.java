@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.undertow.protocols.ssl;
+package io.undertow.xnio.protocols.ssl;
 
 import java.io.IOException;
 import java.nio.BufferUnderflowException;
@@ -30,7 +30,7 @@ import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.StandardConstants;
 
-import io.undertow.UndertowMessages;
+import io.undertow.xnio.UndertowXnioMessages;
 
 /**
  * Instances of this class acts as an explorer of the network data of an
@@ -44,7 +44,7 @@ final class SNISSLExplorer {
 
     /**
      * The header size of TLS/SSL records.
-     * <P>
+     * <p>
      * The value of this constant is {@value}.
      */
     public static final int RECORD_HEADER_SIZE = 0x05;
@@ -52,21 +52,20 @@ final class SNISSLExplorer {
     /**
      * Returns the required number of bytes in the {@code source}
      * {@link ByteBuffer} necessary to explore SSL/TLS connection.
-     * <P>
+     * <p>
      * This method tries to parse as few bytes as possible from
      * {@code source} byte buffer to get the length of an
      * SSL/TLS record.
-     * <P>
+     * <p>
      * This method accesses the {@code source} parameter in read-only
      * mode, and does not update the buffer's properties such as capacity,
      * limit, position, and mark values.
      *
-     * @param  source
-     *         a {@link ByteBuffer} containing
-     *         inbound or outbound network data for an SSL/TLS connection.
-     * @throws BufferUnderflowException if less than {@code RECORD_HEADER_SIZE}
-     *         bytes remaining in {@code source}
+     * @param source a {@link ByteBuffer} containing
+     *               inbound or outbound network data for an SSL/TLS connection.
      * @return the required size in byte to explore an SSL/TLS connection
+     * @throws BufferUnderflowException if less than {@code RECORD_HEADER_SIZE}
+     *                                  bytes remaining in {@code source}
      */
     public static int getRequiredSize(ByteBuffer source) {
 
@@ -93,57 +92,50 @@ final class SNISSLExplorer {
     /**
      * Returns the required number of bytes in the {@code source} byte array
      * necessary to explore SSL/TLS connection.
-     * <P>
+     * <p>
      * This method tries to parse as few bytes as possible from
      * {@code source} byte array to get the length of an
      * SSL/TLS record.
      *
-     * @param  source
-     *         a byte array containing inbound or outbound network data for
-     *         an SSL/TLS connection.
-     * @param  offset
-     *         the start offset in array {@code source} at which the
-     *         network data is read from.
-     * @param  length
-     *         the maximum number of bytes to read.
-     *
-     * @throws BufferUnderflowException if less than {@code RECORD_HEADER_SIZE}
-     *         bytes remaining in {@code source}
+     * @param source a byte array containing inbound or outbound network data for
+     *               an SSL/TLS connection.
+     * @param offset the start offset in array {@code source} at which the
+     *               network data is read from.
+     * @param length the maximum number of bytes to read.
      * @return the required size in byte to explore an SSL/TLS connection
+     * @throws BufferUnderflowException if less than {@code RECORD_HEADER_SIZE}
+     *                                  bytes remaining in {@code source}
      */
     public static int getRequiredSize(byte[] source,
-            int offset, int length) throws IOException {
+                                      int offset, int length) throws IOException {
 
         ByteBuffer byteBuffer =
-            ByteBuffer.wrap(source, offset, length).asReadOnlyBuffer();
+                ByteBuffer.wrap(source, offset, length).asReadOnlyBuffer();
         return getRequiredSize(byteBuffer);
     }
 
     /**
      * Launch and explore the security capabilities from byte buffer.
-     * <P>
+     * <p>
      * This method tries to parse as few records as possible from
      * {@code source} byte buffer to get the capabilities
      * of an SSL/TLS connection.
-     * <P>
+     * <p>
      * Please NOTE that this method must be called before any handshaking
      * occurs.  The behavior of this method is not defined in this release
      * if the handshake has begun, or has completed.
-     * <P>
+     * <p>
      * This method accesses the {@code source} parameter in read-only
      * mode, and does not update the buffer's properties such as capacity,
      * limit, position, and mark values.
      *
-     * @param  source
-     *         a {@link ByteBuffer} containing
-     *         inbound or outbound network data for an SSL/TLS connection.
-     *
-     * @throws IOException on network data error
-     * @throws BufferUnderflowException if not enough source bytes available
-     *         to make a complete exploration.
-     *
+     * @param source a {@link ByteBuffer} containing
+     *               inbound or outbound network data for an SSL/TLS connection.
      * @return the explored capabilities of the SSL/TLS
-     *         connection
+     * connection
+     * @throws IOException              on network data error
+     * @throws BufferUnderflowException if not enough source bytes available
+     *                                  to make a complete exploration.
      */
     public static List<SNIServerName> explore(ByteBuffer source)
             throws SSLException {
@@ -164,42 +156,37 @@ final class SNISSLExplorer {
             return Collections.emptyList();
         } else if (firstByte == 22) {   // 22: handshake record
             return exploreTLSRecord(input,
-                                    firstByte, secondByte, thirdByte);
+                    firstByte, secondByte, thirdByte);
         } else {
-            throw UndertowMessages.MESSAGES.notHandshakeRecord();
+            throw UndertowXnioMessages.MESSAGES.notHandshakeRecord();
         }
     }
 
     /**
      * Launch and explore the security capabilities from byte array.
-     * <P>
+     * <p>
      * Please NOTE that this method must be called before any handshaking
      * occurs.  The behavior of this method is not defined in this release
      * if the handshake has begun, or has completed.  Once handshake has
      * begun, or has completed, the security capabilities can not and
      * should not be launched with this method.
      *
-     * @param  source
-     *         a byte array containing inbound or outbound network data for
-     *         an SSL/TLS connection.
-     * @param  offset
-     *         the start offset in array {@code source} at which the
-     *         network data is read from.
-     * @param  length
-     *         the maximum number of bytes to read.
-     *
-     * @throws IOException on network data error
-     * @throws BufferUnderflowException if not enough source bytes available
-     *         to make a complete exploration.
+     * @param source a byte array containing inbound or outbound network data for
+     *               an SSL/TLS connection.
+     * @param offset the start offset in array {@code source} at which the
+     *               network data is read from.
+     * @param length the maximum number of bytes to read.
      * @return the explored capabilities of the SSL/TLS
-     *         connection
-     *
+     * connection
+     * @throws IOException              on network data error
+     * @throws BufferUnderflowException if not enough source bytes available
+     *                                  to make a complete exploration.
      * @see #explore(ByteBuffer)
      */
     public static List<SNIServerName> explore(byte[] source,
-            int offset, int length) throws IOException {
+                                              int offset, int length) throws IOException {
         ByteBuffer byteBuffer =
-            ByteBuffer.wrap(source, offset, length).asReadOnlyBuffer();
+                ByteBuffer.wrap(source, offset, length).asReadOnlyBuffer();
         return explore(byteBuffer);
     }
 
@@ -227,7 +214,7 @@ final class SNISSLExplorer {
 
         // Is it a handshake message?
         if (firstByte != 22) {        // 22: handshake record
-            throw UndertowMessages.MESSAGES.notHandshakeRecord();
+            throw UndertowXnioMessages.MESSAGES.notHandshakeRecord();
         }
 
         // Is there enough data for a full record?
@@ -239,9 +226,9 @@ final class SNISSLExplorer {
         // We have already had enough source bytes.
         try {
             return exploreHandshake(input,
-                secondByte, thirdByte, recordLength);
+                    secondByte, thirdByte, recordLength);
         } catch (BufferUnderflowException ignored) {
-            throw UndertowMessages.MESSAGES.invalidHandshakeRecord();
+            throw UndertowXnioMessages.MESSAGES.invalidHandshakeRecord();
         }
     }
 
@@ -279,7 +266,7 @@ final class SNISSLExplorer {
         // What is the handshake type?
         byte handshakeType = input.get();
         if (handshakeType != 0x01) {   // 0x01: client_hello message
-            throw UndertowMessages.MESSAGES.expectedClientHello();
+            throw UndertowXnioMessages.MESSAGES.expectedClientHello();
         }
 
         // What is the handshake body length?
@@ -288,13 +275,13 @@ final class SNISSLExplorer {
         // Theoretically, a single handshake message might span multiple
         // records, but in practice this does not occur.
         if (handshakeLength > recordLength - 4) { // 4: handshake header size
-            throw UndertowMessages.MESSAGES.multiRecordSSLHandshake();
+            throw UndertowXnioMessages.MESSAGES.multiRecordSSLHandshake();
         }
 
         input = input.duplicate();
         input.limit(handshakeLength + input.position());
         return exploreClientHello(input,
-                                    recordMajorVersion, recordMinorVersion);
+                recordMajorVersion, recordMinorVersion);
     }
 
     /*
@@ -407,21 +394,21 @@ final class SNISSLExplorer {
      *
      */
     private static List<String> exploreALPN(ByteBuffer input,
-            int extLen) throws SSLException {
+                                            int extLen) throws SSLException {
         final ArrayList<String> strings = new ArrayList<>();
 
         int rem = extLen;
         if (extLen >= 2) {
             int listLen = getInt16(input);
             if (listLen == 0 || listLen + 2 != extLen) {
-                throw UndertowMessages.MESSAGES.invalidTlsExt();
+                throw UndertowXnioMessages.MESSAGES.invalidTlsExt();
             }
 
             rem -= 2;
             while (rem > 0) {
                 int len = getInt8(input);
                 if (len > rem) {
-                    throw UndertowMessages.MESSAGES.notEnoughData();
+                    throw UndertowXnioMessages.MESSAGES.notEnoughData();
                 }
                 byte[] b = new byte[len];
                 input.get(b);
@@ -452,7 +439,7 @@ final class SNISSLExplorer {
      * } ServerNameList;
      */
     private static List<SNIServerName> exploreSNIExt(ByteBuffer input,
-            int extLen) throws SSLException {
+                                                     int extLen) throws SSLException {
 
         Map<Integer, SNIServerName> sniMap = new LinkedHashMap<>();
 
@@ -460,7 +447,7 @@ final class SNISSLExplorer {
         if (extLen >= 2) {     // "server_name" extension in ClientHello
             int listLen = getInt16(input);     // length of server_name_list
             if (listLen == 0 || listLen + 2 != extLen) {
-                throw UndertowMessages.MESSAGES.invalidTlsExt();
+                throw UndertowXnioMessages.MESSAGES.invalidTlsExt();
             }
 
             remains -= 2;     // 0x02: the length field of server_name_list
@@ -468,7 +455,7 @@ final class SNISSLExplorer {
                 int code = getInt8(input);      // name_type
                 int snLen = getInt16(input);    // length field of server name
                 if (snLen > remains) {
-                    throw UndertowMessages.MESSAGES.notEnoughData();
+                    throw UndertowXnioMessages.MESSAGES.notEnoughData();
                 }
                 byte[] encoded = new byte[snLen];
                 input.get(encoded);
@@ -477,7 +464,7 @@ final class SNISSLExplorer {
                 switch (code) {
                     case StandardConstants.SNI_HOST_NAME:
                         if (encoded.length == 0) {
-                            throw UndertowMessages.MESSAGES.emptyHostNameSni();
+                            throw UndertowXnioMessages.MESSAGES.emptyHostNameSni();
                         }
                         serverName = new SNIHostName(encoded);
                         break;
@@ -486,18 +473,18 @@ final class SNISSLExplorer {
                 }
                 // check for duplicated server name type
                 if (sniMap.put(serverName.getType(), serverName) != null) {
-                    throw UndertowMessages.MESSAGES.duplicatedSniServerName(serverName.getType());
+                    throw UndertowXnioMessages.MESSAGES.duplicatedSniServerName(serverName.getType());
                 }
 
                 remains -= encoded.length + 3;  // NameType: 1 byte
-                                                // HostName length: 2 bytes
+                // HostName length: 2 bytes
             }
         } else if (extLen == 0) {     // "server_name" extension in ServerHello
-            throw UndertowMessages.MESSAGES.invalidTlsExt();
+            throw UndertowXnioMessages.MESSAGES.invalidTlsExt();
         }
 
         if (remains != 0) {
-            throw UndertowMessages.MESSAGES.invalidTlsExt();
+            throw UndertowXnioMessages.MESSAGES.invalidTlsExt();
         }
 
         return Collections.unmodifiableList(new ArrayList<>(sniMap.values()));
@@ -513,7 +500,7 @@ final class SNISSLExplorer {
 
     private static int getInt24(ByteBuffer input) {
         return (input.get() & 0xFF) << 16 | (input.get() & 0xFF) << 8 |
-            input.get() & 0xFF;
+                input.get() & 0xFF;
     }
 
     private static void ignoreByteVector8(ByteBuffer input) {

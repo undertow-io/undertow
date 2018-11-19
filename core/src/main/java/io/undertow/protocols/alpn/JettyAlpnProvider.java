@@ -28,6 +28,8 @@ import javax.net.ssl.SSLSession;
 
 import org.eclipse.jetty.alpn.ALPN;
 
+import io.undertow.connector.alpn.ALPNProvider;
+
 /**
  * Jetty ALPN implementation. This is the lowest priority
  *

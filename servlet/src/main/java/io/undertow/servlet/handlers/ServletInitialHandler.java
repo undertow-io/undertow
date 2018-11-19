@@ -44,7 +44,7 @@ import org.xnio.conduits.StreamSinkConduit;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
-import io.undertow.server.DefaultByteBufferPool;
+import io.undertow.connector.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;

@@ -30,7 +30,7 @@ import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 
-import io.undertow.server.DefaultByteBufferPool;
+import io.undertow.connector.DefaultByteBufferPool;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;

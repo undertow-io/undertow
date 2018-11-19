@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.undertow.protocols.ssl;
+package io.undertow.xnio.protocols.ssl;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,7 +24,7 @@ import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLContext;
 
-import io.undertow.UndertowMessages;
+import io.undertow.xnio.UndertowXnioMessages;
 
 public class SNIContextMatcher {
 
@@ -67,8 +67,8 @@ public class SNIContextMatcher {
         private final Map<SNIMatcher, SSLContext> exacts = new LinkedHashMap<>();
 
         public SNIContextMatcher build() {
-            if(defaultContext == null) {
-                throw UndertowMessages.MESSAGES.defaultContextCannotBeNull();
+            if (defaultContext == null) {
+                throw UndertowXnioMessages.MESSAGES.defaultContextCannotBeNull();
             }
             return new SNIContextMatcher(defaultContext, wildcards, exacts);
         }

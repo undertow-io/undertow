@@ -5,7 +5,7 @@ import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 
 import io.undertow.connector.ByteBufferPool;
-import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.OpenListener;
 
 /**

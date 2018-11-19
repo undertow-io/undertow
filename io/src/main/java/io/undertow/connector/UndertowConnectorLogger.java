@@ -1,22 +1,19 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package io.undertow;
+package io.undertow.connector;
 
 import static org.jboss.logging.Logger.Level.DEBUG;
 import static org.jboss.logging.Logger.Level.ERROR;
@@ -38,13 +35,7 @@ import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.LogMessage;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
-import org.xnio.ssl.SslConnection;
 
-import io.undertow.client.ClientConnection;
-import io.undertow.xnio.protocols.ssl.SslConduit;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.ServerConnection;
-import io.undertow.server.handlers.sse.ServerSentEventConnection;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 
@@ -54,22 +45,21 @@ import io.undertow.util.HttpString;
  * @author Stuart Douglas
  */
 @MessageLogger(projectCode = "UT")
-public interface UndertowLogger extends BasicLogger {
+public interface UndertowConnectorLogger extends BasicLogger {
 
-    UndertowLogger ROOT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName());
-    UndertowLogger CLIENT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, ClientConnection.class.getPackage().getName());
+    UndertowConnectorLogger ROOT_LOGGER = Logger.getMessageLogger(UndertowConnectorLogger.class, UndertowConnectorLogger.class.getPackage().getName());
 
-    UndertowLogger REQUEST_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request");
-    UndertowLogger SESSION_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".session");
-    UndertowLogger SECURITY_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request.security");
-    UndertowLogger PROXY_REQUEST_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".proxy");
-    UndertowLogger REQUEST_DUMPER_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request.dump");
+    UndertowConnectorLogger REQUEST_LOGGER = Logger.getMessageLogger(UndertowConnectorLogger.class, UndertowConnectorLogger.class.getPackage().getName() + ".request");
+    UndertowConnectorLogger SESSION_LOGGER = Logger.getMessageLogger(UndertowConnectorLogger.class, UndertowConnectorLogger.class.getPackage().getName() + ".session");
+    UndertowConnectorLogger SECURITY_LOGGER = Logger.getMessageLogger(UndertowConnectorLogger.class, UndertowConnectorLogger.class.getPackage().getName() + ".request.security");
+    UndertowConnectorLogger PROXY_REQUEST_LOGGER = Logger.getMessageLogger(UndertowConnectorLogger.class, UndertowConnectorLogger.class.getPackage().getName() + ".proxy");
+    UndertowConnectorLogger REQUEST_DUMPER_LOGGER = Logger.getMessageLogger(UndertowConnectorLogger.class, UndertowConnectorLogger.class.getPackage().getName() + ".request.dump");
     /**
      * Logger used for IO exceptions. Generally these should be suppressed, because they are of little interest, and it is easy for an
      * attacker to fill up the logs by intentionally causing IO exceptions.
      */
-    UndertowLogger REQUEST_IO_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request.io");
-    UndertowLogger ERROR_RESPONSE = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request.error-response");
+    UndertowConnectorLogger REQUEST_IO_LOGGER = Logger.getMessageLogger(UndertowConnectorLogger.class, UndertowConnectorLogger.class.getPackage().getName() + ".request.io");
+    UndertowConnectorLogger ERROR_RESPONSE = Logger.getMessageLogger(UndertowConnectorLogger.class, UndertowConnectorLogger.class.getPackage().getName() + ".request.error-response");
 
     @LogMessage(level = ERROR)
     @Message(id = 5001, value = "An exception occurred processing the request")
@@ -133,7 +123,7 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = ERROR)
     @Message(id = 5018, value = "Exception invoking close listener %s")
-    void exceptionInvokingCloseListener(ServerConnection.CloseListener l, @Cause Throwable e);
+    void exceptionInvokingCloseListener(Object l, @Cause Throwable e);
 
 //    @LogMessage(level = Logger.Level.ERROR)
 //    @Message(id = 5019, value = "Cannot upgrade connection")
@@ -197,7 +187,7 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = DEBUG)
     @Message(id = 5035, value = "Closing channel because of parse timeout for remote address %s")
-    void parseRequestTimedOut(java.net.SocketAddress remoteAddress);
+    void parseRequestTimedOut(SocketAddress remoteAddress);
 
     @LogMessage(level = ERROR)
     @Message(id = 5036, value = "ALPN negotiation failed for %s and no fallback defined, closing connection")
@@ -213,7 +203,7 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = DEBUG)
     @Message(id = 5038, value = "Balancer created: id: %s, name: %s, stickySession: %s, stickySessionCookie: %s, stickySessionPath: %s, stickySessionRemove: %s, stickySessionForce: %s, waitWorker: %s, maxattempts: %s")
     void balancerCreated(int id, String name, boolean stickySession, String stickySessionCookie, String stickySessionPath, boolean stickySessionRemove,
-                                            boolean stickySessionForce, int waitWorker, int maxattempts);
+                         boolean stickySessionForce, int waitWorker, int maxattempts);
 
     @LogMessage(level = INFO)
     @Message(id = 5039, value = "Undertow starts mod_cluster proxy advertisements on %s with frequency %s ms")
@@ -303,7 +293,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5060, value = "Predicate %s uses old style square braces to define predicates, which will be removed in a future release. predicate[value] should be changed to predicate(value)")
     void oldStylePredicateSyntax(String string);
 
-    @Message(id=5061, value = "More than %s restarts detected, breaking assumed infinite loop")
+    @Message(id = 5061, value = "More than %s restarts detected, breaking assumed infinite loop")
     IllegalStateException maxRestartsExceeded(int maxRestarts);
 
     @LogMessage(level = ERROR)
@@ -344,7 +334,7 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = ERROR)
     @Message(id = 5071, value = "Undertow request failed %s")
-    void undertowRequestFailed(@Cause Throwable t, HttpServerExchange exchange);
+    void undertowRequestFailed(@Cause Throwable t, Object exchange);
 
     @LogMessage(level = WARN)
     @Message(id = 5072, value = "Thread %s (id=%s) has been active for %s milliseconds (since %s) to serve the same request for %s and may be stuck (configured threshold for this StuckThreadDetectionValve is %s seconds). There is/are %s thread(s) in total that are monitored by this Valve and may be stuck.")
@@ -354,36 +344,18 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5073, value = "Thread %s (id=%s) was previously reported to be stuck but has completed. It was active for approximately %s milliseconds. There is/are still %s thread(s) that are monitored by this Valve and may be stuck.")
     void stuckThreadCompleted(String threadName, long threadId, long active, int stuckCount);
 
-    @LogMessage(level = ERROR)
-    @Message(id = 5074, value = "Failed to invoke error callback %s for SSE task")
-    void failedToInvokeFailedCallback(ServerSentEventConnection.EventCallback callback, @Cause Exception e);
-
     @Message(id = 5075, value = "Unable to resolve mod_cluster management host's address for '%s'")
     IllegalStateException unableToResolveModClusterManagementHost(String providedHost);
 
-    @LogMessage(level = ERROR)
-    @Message(id = 5076, value = "SSL read loop detected. This should not happen, please report this to the Undertow developers. Current state %s")
-    void sslReadLoopDetected(SslConduit sslConduit);
-
-    @LogMessage(level = ERROR)
-    @Message(id = 5077, value = "SSL unwrap buffer overflow detected. This should not happen, please report this to the Undertow developers. Current state %s")
-    void sslBufferOverflow(SslConduit sslConduit);
 
 //    @LogMessage(level = ERROR)
 //    @Message(id = 5078, value = "ALPN connection failed")
 //    void alpnConnectionFailed(@Cause Exception e);
 
-    @LogMessage(level = ERROR)
-    @Message(id = 5079, value = "ALPN negotiation on %s failed")
-    void alpnConnectionFailed(SslConnection connection);
 
     @LogMessage(level = ERROR)
     @Message(id = 5080, value = "HttpServerExchange cannot have both async IO resumed and dispatch() called in the same cycle")
     void resumedAndDispatched();
-
-    @LogMessage(level = ERROR)
-    @Message(id = 5081, value = "Response has already been started, cannot proxy request %s")
-    void cannotProxyStartedRequest(HttpServerExchange exchange);
 
     @Message(id = 5082, value = "Configured mod_cluster management host address cannot be a wildcard address (%s)!")
     IllegalArgumentException cannotUseWildcardAddressAsModClusterManagementHost(String providedAddress);
@@ -394,9 +366,6 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5084, value = "Attempted to write %s bytes however content-length has been set to %s")
     IOException dataLargerThanContentLength(long totalToWrite, long responseContentLength);
 
-    @LogMessage(level = ERROR)
-    @Message(id = 5085, value = "Connection %s for exchange %s was not closed cleanly, forcibly closing connection")
-    void responseWasNotTerminated(ServerConnection connection, HttpServerExchange exchange);
 
     @LogMessage(level = ERROR)
     @Message(id = 5086, value = "Failed to accept SSL request")

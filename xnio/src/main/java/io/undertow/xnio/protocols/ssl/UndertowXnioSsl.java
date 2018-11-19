@@ -1,22 +1,19 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package io.undertow.protocols.ssl;
+package io.undertow.xnio.protocols.ssl;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -64,7 +61,7 @@ import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.connector.ByteBufferPool;
-import io.undertow.server.DefaultByteBufferPool;
+import io.undertow.connector.DefaultByteBufferPool;
 
 /**
  * @author Stuart Douglas
@@ -79,11 +76,11 @@ public class UndertowXnioSsl extends XnioSsl {
     /**
      * Construct a new instance.
      *
-     * @param xnio the XNIO instance to associate with
+     * @param xnio      the XNIO instance to associate with
      * @param optionMap the options for this provider
-     * @throws java.security.NoSuchProviderException if the given SSL provider is not found
+     * @throws java.security.NoSuchProviderException  if the given SSL provider is not found
      * @throws java.security.NoSuchAlgorithmException if the given SSL algorithm is not supported
-     * @throws java.security.KeyManagementException if the SSL context could not be initialized
+     * @throws java.security.KeyManagementException   if the SSL context could not be initialized
      */
     public UndertowXnioSsl(final Xnio xnio, final OptionMap optionMap) throws NoSuchProviderException, NoSuchAlgorithmException, KeyManagementException {
         this(xnio, optionMap, DEFAULT_BUFFER_POOL, JsseSslUtils.createSSLContext(optionMap));
@@ -91,8 +88,9 @@ public class UndertowXnioSsl extends XnioSsl {
 
     /**
      * Construct a new instance.
-     *  @param xnio the XNIO instance to associate with
-     * @param optionMap the options for this provider
+     *
+     * @param xnio       the XNIO instance to associate with
+     * @param optionMap  the options for this provider
      * @param sslContext the SSL context to use for this instance
      */
     public UndertowXnioSsl(final Xnio xnio, final OptionMap optionMap, final SSLContext sslContext) {
@@ -102,12 +100,12 @@ public class UndertowXnioSsl extends XnioSsl {
     /**
      * Construct a new instance.
      *
-     * @param xnio the XNIO instance to associate with
-     * @param optionMap the options for this provider
+     * @param xnio       the XNIO instance to associate with
+     * @param optionMap  the options for this provider
      * @param bufferPool
-     * @throws java.security.NoSuchProviderException if the given SSL provider is not found
+     * @throws java.security.NoSuchProviderException  if the given SSL provider is not found
      * @throws java.security.NoSuchAlgorithmException if the given SSL algorithm is not supported
-     * @throws java.security.KeyManagementException if the SSL context could not be initialized
+     * @throws java.security.KeyManagementException   if the SSL context could not be initialized
      */
     public UndertowXnioSsl(final Xnio xnio, final OptionMap optionMap, ByteBufferPool bufferPool) throws NoSuchProviderException, NoSuchAlgorithmException, KeyManagementException {
         this(xnio, optionMap, bufferPool, JsseSslUtils.createSSLContext(optionMap));
@@ -115,8 +113,9 @@ public class UndertowXnioSsl extends XnioSsl {
 
     /**
      * Construct a new instance.
-     *  @param xnio the XNIO instance to associate with
-     * @param optionMap the options for this provider
+     *
+     * @param xnio       the XNIO instance to associate with
+     * @param optionMap  the options for this provider
      * @param bufferPool
      * @param sslContext the SSL context to use for this instance
      */
@@ -188,6 +187,7 @@ public class UndertowXnioSsl extends XnioSsl {
         final IoFuture<StreamConnection> connection = worker.openStreamConnection(bindAddress, destination, new StreamConnectionChannelListener(optionMap, destination, futureResult, openListener), bindListener, optionMap);
         return setupSslConnection(futureResult, connection);
     }
+
     @Override
     public IoFuture<SslConnection> openSslConnection(final XnioIoThread ioThread, final InetSocketAddress bindAddress, final InetSocketAddress destination, final ChannelListener<? super SslConnection> openListener, final ChannelListener<? super BoundChannel> bindListener, final OptionMap optionMap) {
         final FutureResult<SslConnection> futureResult = new FutureResult<>(ioThread);
@@ -206,8 +206,8 @@ public class UndertowXnioSsl extends XnioSsl {
     /**
      * Create a new  SSL engine, configured from an option map.
      *
-     * @param sslContext the SSL context
-     * @param optionMap the SSL options
+     * @param sslContext  the SSL context
+     * @param optionMap   the SSL options
      * @param peerAddress the peer address of the connection
      * @return the configured SSL engine
      */
@@ -354,7 +354,7 @@ public class UndertowXnioSsl extends XnioSsl {
     }
 
     public AcceptingChannel<SslConnection> createSslConnectionServer(final XnioWorker worker, final InetSocketAddress bindAddress, final ChannelListener<? super AcceptingChannel<SslConnection>> acceptListener, final OptionMap optionMap) throws IOException {
-        final UndertowAcceptingSslChannel server = new UndertowAcceptingSslChannel(this, worker.createStreamConnectionServer(bindAddress,  null,  optionMap), optionMap, bufferPool, false);
+        final UndertowAcceptingSslChannel server = new UndertowAcceptingSslChannel(this, worker.createStreamConnectionServer(bindAddress, null, optionMap), optionMap, bufferPool, false);
         if (acceptListener != null) server.getAcceptSetter().set(acceptListener);
         return server;
     }

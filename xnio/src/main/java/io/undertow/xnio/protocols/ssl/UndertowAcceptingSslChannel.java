@@ -1,22 +1,19 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package io.undertow.protocols.ssl;
+package io.undertow.xnio.protocols.ssl;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -52,9 +49,8 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.SslConnection;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowOptions;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.xnio.UndertowXnioLogger;
 
 /**
  * @author Stuart Douglas
@@ -111,7 +107,8 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
         closeSetter = ChannelListeners.<AcceptingChannel<SslConnection>>getDelegatingSetter(tcpServer.getCloseSetter(), this);
         //noinspection ThisEscapedInObjectConstruction
         acceptSetter = ChannelListeners.<AcceptingChannel<SslConnection>>getDelegatingSetter(tcpServer.getAcceptSetter(), this);
-        useCipherSuitesOrder = optionMap.get(UndertowOptions.SSL_USER_CIPHER_SUITES_ORDER, false);
+        //useCipherSuitesOrder = optionMap.get(UndertowOptions.SSL_USER_CIPHER_SUITES_ORDER, false);
+        useCipherSuitesOrder = false;
     }
 
     private static final Set<Option<?>> SUPPORTED_OPTIONS = Option.setBuilder()
@@ -144,7 +141,7 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
         } else {
             return tcpServer.setOption(option, value);
         }
-        throw UndertowLogger.ROOT_LOGGER.nullParameter("value");
+        throw UndertowXnioLogger.ROOT_LOGGER.nullParameter("value");
     }
 
     public XnioWorker getWorker() {
@@ -166,7 +163,7 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
                     USE_CIPHER_SUITES_METHOD.invoke(sslParameters, true);
                     engine.setSSLParameters(sslParameters);
                 } catch (IllegalAccessException | InvocationTargetException e) {
-                    UndertowLogger.ROOT_LOGGER.failedToUseServerOrder(e);
+                    UndertowXnioLogger.ROOT_LOGGER.failedToUseServerOrder(e);
                 }
             }
             final boolean clientMode = useClientMode != 0;
@@ -222,7 +219,7 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
             return accept(tcpConnection, engine);
         } catch (IOException | RuntimeException e) {
             IoUtils.safeClose(tcpConnection);
-            UndertowLogger.REQUEST_LOGGER.failedToAcceptSSLRequest(e);
+            UndertowXnioLogger.REQUEST_LOGGER.failedToAcceptSSLRequest(e);
             return null;
         }
     }

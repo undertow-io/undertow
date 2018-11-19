@@ -19,6 +19,8 @@ import java.util.function.Function;
 
 import javax.net.ssl.SSLEngine;
 
+import io.undertow.connector.alpn.ALPNEngineManager;
+
 public class DefaultAlpnEngineManager implements ALPNEngineManager {
 
     @Override

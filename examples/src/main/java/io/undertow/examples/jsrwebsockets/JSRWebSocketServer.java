@@ -23,7 +23,7 @@ import javax.servlet.ServletException;
 import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.examples.UndertowExample;
-import io.undertow.server.DefaultByteBufferPool;
+import io.undertow.connector.DefaultByteBufferPool;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import io.undertow.servlet.api.DeploymentInfo;

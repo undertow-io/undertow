@@ -12,5 +12,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-io.undertow.protocols.ssl.SNIAlpnEngineManager
+io.undertow.xnio.protocols.ssl.SNIAlpnEngineManager
 io.undertow.protocols.alpn.DefaultAlpnEngineManager

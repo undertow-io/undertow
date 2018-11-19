@@ -1,22 +1,19 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package io.undertow.protocols.ssl;
+package io.undertow.xnio.protocols.ssl;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.BufferUnderflowException;
@@ -27,7 +24,8 @@ import java.util.List;
 
 import javax.net.ssl.SSLException;
 
-import io.undertow.UndertowMessages;
+import io.undertow.xnio.UndertowXnioMessages;
+
 
 /**
  * This class is used to both read and write the ALPN protocol names in the ClientHello SSL message.
@@ -82,7 +80,7 @@ final class ALPNHackClientHelloExplorer {
             }
             return null;
         } else {
-            throw UndertowMessages.MESSAGES.notHandshakeRecord();
+            throw UndertowXnioMessages.MESSAGES.notHandshakeRecord();
         }
     }
 
@@ -127,7 +125,7 @@ final class ALPNHackClientHelloExplorer {
                 }
                 return null;
             } else {
-                throw UndertowMessages.MESSAGES.notHandshakeRecord();
+                throw UndertowXnioMessages.MESSAGES.notHandshakeRecord();
             }
         } catch (ALPNPresentException e) {
             return null;
@@ -158,7 +156,7 @@ final class ALPNHackClientHelloExplorer {
 
         // Is it a handshake message?
         if (firstByte != 22) {        // 22: handshake record
-            throw UndertowMessages.MESSAGES.notHandshakeRecord();
+            throw UndertowXnioMessages.MESSAGES.notHandshakeRecord();
         }
 
         // Is there enough data for a full record?
@@ -176,7 +174,7 @@ final class ALPNHackClientHelloExplorer {
             exploreHandshake(input,
                 secondByte, thirdByte, recordLength, alpnProtocols, out);
         } catch (BufferUnderflowException ignored) {
-            throw UndertowMessages.MESSAGES.invalidHandshakeRecord();
+            throw UndertowXnioMessages.MESSAGES.invalidHandshakeRecord();
         }
     }
 
@@ -214,7 +212,7 @@ final class ALPNHackClientHelloExplorer {
         // What is the handshake type?
         byte handshakeType = input.get();
         if (handshakeType != 0x01) {   // 0x01: client_hello message
-            throw UndertowMessages.MESSAGES.expectedClientHello();
+            throw UndertowXnioMessages.MESSAGES.expectedClientHello();
         }
         if(out != null) {
             out.write(handshakeType & 0xFF);
@@ -232,7 +230,7 @@ final class ALPNHackClientHelloExplorer {
         // Theoretically, a single handshake message might span multiple
         // records, but in practice this does not occur.
         if (handshakeLength > recordLength - 4) { // 4: handshake header size
-            throw UndertowMessages.MESSAGES.multiRecordSSLHandshake();
+            throw UndertowXnioMessages.MESSAGES.multiRecordSSLHandshake();
         }
 
         input = input.duplicate();

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.undertow.protocols.ssl;
+package io.undertow.xnio.protocols.ssl;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
@@ -35,7 +35,7 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSessionContext;
 import javax.security.cert.X509Certificate;
 
-import io.undertow.UndertowMessages;
+import io.undertow.xnio.UndertowXnioMessages;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -324,7 +324,7 @@ class SNISSLEngine extends SSLEngine {
                 SSLContext sslContext = selector.getContext(names);
                 if (sslContext == null) {
                     // no SSL context is available
-                    throw UndertowMessages.MESSAGES.noContextForSslConnection();
+                    throw UndertowXnioMessages.MESSAGES.noContextForSslConnection();
                 }
                 next = engineFunction.apply(sslContext);
                 if (enabledSuites != null) {
@@ -372,7 +372,7 @@ class SNISSLEngine extends SSLEngine {
         }
 
         public String[] getSupportedCipherSuites() {
-            if(enabledSuites == null) {
+            if (enabledSuites == null) {
                 return new String[0];
             }
             return enabledSuites;
@@ -387,7 +387,7 @@ class SNISSLEngine extends SSLEngine {
         }
 
         public String[] getSupportedProtocols() {
-            if(enabledProtocols == null) {
+            if (enabledProtocols == null) {
                 return new String[0];
             }
             //this kinda sucks, but there is not much else we can do
