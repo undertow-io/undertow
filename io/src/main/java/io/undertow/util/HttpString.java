@@ -1,19 +1,16 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.undertow.util;
@@ -30,7 +27,6 @@ import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
-import io.undertow.UndertowMessages;
 
 /**
  * An HTTP case-insensitive Latin-1 string.
@@ -124,9 +120,9 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     }
 
     private void checkForNewlines() {
-        for(byte b : bytes) {
-            if(b == '\r' || b == '\n') {
-                throw UndertowMessages.MESSAGES.newlineNotSupportedInHttpString(string);
+        for (byte b : bytes) {
+            if (b == '\r' || b == '\n') {
+                throw new IllegalArgumentException("newline in string");
             }
         }
     }
@@ -148,7 +144,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      */
     public static HttpString tryFromString(String string) {
         HttpString cached = Headers.fromCache(string);
-        if(cached != null) {
+        if (cached != null) {
             return cached;
         }
         final int len = string.length();
@@ -255,7 +251,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      * @return -1, 0, or 1
      */
     public int compareTo(final HttpString other) {
-        if(orderInt != 0 && other.orderInt != 0) {
+        if (orderInt != 0 && other.orderInt != 0) {
             return signum(orderInt - other.orderInt);
         }
         final int len = Math.min(bytes.length, other.bytes.length);
@@ -286,14 +282,14 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      */
     @Override
     public boolean equals(final Object other) {
-        if(other == this) {
+        if (other == this) {
             return true;
         }
-        if(!(other instanceof HttpString)) {
+        if (!(other instanceof HttpString)) {
             return false;
         }
         HttpString otherString = (HttpString) other;
-        if(orderInt > 0 && otherString.orderInt > 0) {
+        if (orderInt > 0 && otherString.orderInt > 0) {
             //if the order int is set for both of them and different then we know they are different strings
             return false;
         }
@@ -370,13 +366,13 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     }
 
     public boolean equalToString(String headerName) {
-        if(headerName.length() != bytes.length) {
+        if (headerName.length() != bytes.length) {
             return false;
         }
 
         final int len = bytes.length;
         for (int i = 0; i < len; i++) {
-            if (higher(bytes[i]) != higher((byte)headerName.charAt(i))) {
+            if (higher(bytes[i]) != higher((byte) headerName.charAt(i))) {
                 return false;
             }
         }
