@@ -1,19 +1,16 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.undertow.conduits;
@@ -35,7 +32,7 @@ import org.xnio.conduits.ConduitWritableByteChannel;
 import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
-import io.undertow.UndertowMessages;
+import io.undertow.UndertowXnioMessages;
 import io.undertow.connector.PooledByteBuffer;
 
 /**
@@ -96,7 +93,7 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
     @Override
     public int write(ByteBuffer src) throws IOException {
         if (anyAreSet(state, FLAG_WRITES_TERMINATED)) {
-            throw UndertowMessages.MESSAGES.channelIsClosed();
+            throw UndertowXnioMessages.MESSAGES.channelIsClosed();
         }
         return (int) doWrite(new ByteBuffer[]{src}, 0, 1);
     }
@@ -104,7 +101,7 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
     @Override
     public long write(ByteBuffer[] srcs, int offs, int len) throws IOException {
         if (anyAreSet(state, FLAG_WRITES_TERMINATED)) {
-            throw UndertowMessages.MESSAGES.channelIsClosed();
+            throw UndertowXnioMessages.MESSAGES.channelIsClosed();
         }
         return doWrite(srcs, offs, len);
     }
@@ -224,7 +221,7 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
         for (Frame frame : frameQueue) {
             FrameCallBack cb = frame.callback;
             if (cb != null) {
-                cb.failed(UndertowMessages.MESSAGES.channelIsClosed());
+                cb.failed(UndertowXnioMessages.MESSAGES.channelIsClosed());
             }
         }
     }
