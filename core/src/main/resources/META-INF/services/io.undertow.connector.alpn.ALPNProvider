@@ -16,7 +16,7 @@
 #  limitations under the License.
 #
 
-io.undertow.protocols.alpn.JDK8HackAlpnProvider
-io.undertow.protocols.alpn.JettyAlpnProvider
-io.undertow.protocols.alpn.JDK9AlpnProvider
-io.undertow.protocols.alpn.OpenSSLAlpnProvider
+io.undertow.xnio.protocols.alpn.JDK8HackAlpnProvider
+io.undertow.xnio.protocols.alpn.JettyAlpnProvider
+io.undertow.xnio.protocols.alpn.JDK9AlpnProvider
+io.undertow.xnio.protocols.alpn.OpenSSLAlpnProvider

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.undertow.protocols.alpn;
+package io.undertow.xnio.protocols.alpn;
 
 import java.util.function.Function;
 

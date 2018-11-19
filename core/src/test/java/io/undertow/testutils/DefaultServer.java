@@ -69,14 +69,9 @@ import org.xnio.ssl.XnioSsl;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.connector.ByteBufferPool;
-import io.undertow.protocols.alpn.ALPNManager;
-import io.undertow.connector.alpn.ALPNProvider;
-import io.undertow.protocols.alpn.JettyAlpnProvider;
-import io.undertow.xnio.protocols.ssl.SNIContextMatcher;
-import io.undertow.xnio.protocols.ssl.SNISSLContext;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
-import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.connector.DefaultByteBufferPool;
+import io.undertow.connector.alpn.ALPNProvider;
+import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.OpenListener;
@@ -94,6 +89,10 @@ import io.undertow.util.Headers;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.SingleByteStreamSinkConduit;
 import io.undertow.util.SingleByteStreamSourceConduit;
+import io.undertow.xnio.protocols.alpn.ALPNManager;
+import io.undertow.xnio.protocols.ssl.SNIContextMatcher;
+import io.undertow.xnio.protocols.ssl.SNISSLContext;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
  * A class that starts a server before the test suite. By swapping out the root handler
@@ -701,7 +700,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             sslServer = null;
         }
         clientSslContext = null;
-        if(proxyOpenListener != null) {
+        if (proxyOpenListener != null) {
             proxyOpenListener.closeConnections();
         } else {
             openListener.closeConnections();
@@ -745,7 +744,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         }
         openListener.setUndertowOptions(builder.getMap());
         openListener.closeConnections();
-        if(proxyOpenListener != null) {
+        if (proxyOpenListener != null) {
             proxyOpenListener.closeConnections();
         }
         if (loadBalancingProxyClient != null) {
@@ -814,11 +813,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             //so we can't tell that ALPN is enabled or now
             SSLEngine engine = getClientSSLContext().createSSLEngine();
             ALPNProvider provider = ALPNManager.INSTANCE.getProvider(engine);
-            if (provider instanceof JettyAlpnProvider) {
-                alpnEnabled = System.getProperty("alpn-boot-string") != null;
-            } else {
-                alpnEnabled = provider != null;
-            }
+            alpnEnabled = provider != null;
         }
         return alpnEnabled;
     }

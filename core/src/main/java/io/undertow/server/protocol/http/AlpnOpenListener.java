@@ -45,7 +45,7 @@ import io.undertow.UndertowOptions;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.connector.alpn.ALPNProvider;
-import io.undertow.protocols.alpn.ALPNManager;
+import io.undertow.xnio.protocols.alpn.ALPNManager;
 import io.undertow.server.AggregateConnectorStatistics;
 import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.DelegateOpenListener;
