@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.undertow.protocols.http2;
+package io.undertow.xnio.protocols.http2;
 
 /**
  * Exception that is thrown when the HPACK compress context is broken.

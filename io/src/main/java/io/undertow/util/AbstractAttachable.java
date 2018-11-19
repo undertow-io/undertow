@@ -1,19 +1,16 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.undertow.util;
@@ -22,8 +19,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-
-import io.undertow.UndertowMessages;
+import java.util.Objects;
 
 /**
  * A thing which can have named attachments.
@@ -65,10 +61,8 @@ public abstract class AbstractAttachable implements Attachable {
      */
     @Override
     public <T> T putAttachment(final AttachmentKey<T> key, final T value) {
-        if (key == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull("key");
-        }
-        if(attachments == null) {
+        Objects.requireNonNull(key);
+        if (attachments == null) {
             attachments = createAttachmentMap();
         }
         return (T) attachments.put(key, value);
@@ -95,7 +89,7 @@ public abstract class AbstractAttachable implements Attachable {
     @Override
     public <T> void addToAttachmentList(final AttachmentKey<AttachmentList<T>> key, final T value) {
         if (key != null) {
-            if(attachments == null) {
+            if (attachments == null) {
                 attachments = createAttachmentMap();
             }
             final Map<AttachmentKey<?>, Object> attachments = this.attachments;

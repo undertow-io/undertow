@@ -20,7 +20,7 @@ package io.undertow.client.http;
 
 import org.xnio.conduits.StreamSinkConduit;
 
-import io.undertow.conduits.AbstractFixedLengthStreamSinkConduit;
+import io.undertow.xnio.conduits.AbstractFixedLengthStreamSinkConduit;
 
 class ClientFixedLengthStreamSinkConduit extends AbstractFixedLengthStreamSinkConduit {
 

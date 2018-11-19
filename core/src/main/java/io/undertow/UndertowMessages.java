@@ -31,7 +31,7 @@ import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 
 import io.undertow.predicate.PredicateBuilder;
-import io.undertow.protocols.http2.HpackException;
+import io.undertow.xnio.protocols.http2.HpackException;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.util.RequestTooBigException;
 import io.undertow.server.handlers.builder.HandlerBuilder;

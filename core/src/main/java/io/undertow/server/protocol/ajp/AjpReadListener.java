@@ -35,7 +35,7 @@ import org.xnio.conduits.WriteReadyHandler;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.ConduitListener;
-import io.undertow.conduits.EmptyStreamSourceConduit;
+import io.undertow.xnio.conduits.EmptyStreamSourceConduit;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.AbstractServerConnection;

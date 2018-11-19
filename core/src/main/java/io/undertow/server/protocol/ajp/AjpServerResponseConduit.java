@@ -39,7 +39,7 @@ import org.xnio.conduits.WriteReadyHandler;
 
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
-import io.undertow.conduits.AbstractFramedStreamSinkConduit;
+import io.undertow.xnio.conduits.AbstractFramedStreamSinkConduit;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;

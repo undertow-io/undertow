@@ -25,6 +25,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import io.undertow.testutils.category.UnitTest;
+import io.undertow.xnio.protocols.http2.HpackException;
 
 /**
  * @author Stuart Douglas

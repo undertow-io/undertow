@@ -36,7 +36,7 @@ import io.undertow.protocols.alpn.ALPNManager;
 import io.undertow.protocols.alpn.ALPNProvider;
 import io.undertow.protocols.ssl.SslConduit;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
-import io.undertow.util.ImmediatePooled;
+import io.undertow.xnio.util.ImmediatePooled;
 
 /**
  * @author Stuart Douglas

@@ -32,6 +32,7 @@ import io.undertow.server.Connectors;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.xnio.protocols.http2.HpackException;
 
 /**
  * Parser for HTTP2 headers

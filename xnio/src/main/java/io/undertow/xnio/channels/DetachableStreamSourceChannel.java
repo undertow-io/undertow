@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.undertow.channels;
+package io.undertow.xnio.channels;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,8 +30,8 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 
-import io.undertow.UndertowXnioLogger;
-import io.undertow.UndertowXnioMessages;
+import io.undertow.xnio.UndertowXnioLogger;
+import io.undertow.xnio.UndertowXnioMessages;
 
 /**
  * A stream source channel that can be marked as detached. Once this is marked as detached then

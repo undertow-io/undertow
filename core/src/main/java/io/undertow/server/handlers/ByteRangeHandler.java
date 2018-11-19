@@ -26,7 +26,7 @@ import java.util.Set;
 import org.xnio.conduits.StreamSinkConduit;
 
 import io.undertow.conduits.HeadStreamSinkConduit;
-import io.undertow.conduits.RangeStreamSinkConduit;
+import io.undertow.xnio.conduits.RangeStreamSinkConduit;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;

@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import io.undertow.UndertowMessages;
+import io.undertow.xnio.protocols.http2.HpackException;
 
 /**
  * @author Stuart Douglas

@@ -25,8 +25,8 @@ import java.io.IOException;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
-import io.undertow.channels.DetachableStreamSinkChannel;
-import io.undertow.channels.DetachableStreamSourceChannel;
+import io.undertow.xnio.channels.DetachableStreamSinkChannel;
+import io.undertow.xnio.channels.DetachableStreamSourceChannel;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientExchange;

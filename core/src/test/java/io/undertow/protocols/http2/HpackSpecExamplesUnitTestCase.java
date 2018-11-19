@@ -27,6 +27,7 @@ import org.junit.experimental.categories.Category;
 import io.undertow.testutils.category.UnitTest;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.xnio.protocols.http2.HpackException;
 
 /**
  * HPACK unit test case, based on examples from the spec

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.undertow;
+package io.undertow.xnio;
 
 import static org.jboss.logging.Logger.Level.DEBUG;
 import static org.jboss.logging.Logger.Level.ERROR;

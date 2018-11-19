@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.undertow;
+package io.undertow.xnio;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -30,7 +30,7 @@ import org.jboss.logging.annotations.MessageBundle;
 import io.undertow.util.BadRequestException;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.RequestTooBigException;
-import io.undertow.protocols.http2.HpackException;
+import io.undertow.xnio.protocols.http2.HpackException;
 
 /**
  * @author Stuart Douglas

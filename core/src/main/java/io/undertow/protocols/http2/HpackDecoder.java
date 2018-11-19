@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 
 import io.undertow.UndertowMessages;
 import io.undertow.util.HttpString;
+import io.undertow.xnio.protocols.http2.HpackException;
 
 /**
  * A decoder for HPACK.

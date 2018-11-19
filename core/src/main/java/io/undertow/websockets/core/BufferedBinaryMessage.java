@@ -28,7 +28,7 @@ import org.xnio.ChannelListener;
 import org.xnio.Pooled;
 
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.util.ImmediatePooled;
+import io.undertow.xnio.util.ImmediatePooled;
 
 /**
  * A buffered binary message.

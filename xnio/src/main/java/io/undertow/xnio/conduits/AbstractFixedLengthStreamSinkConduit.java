@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.undertow.conduits;
+package io.undertow.xnio.conduits;
 
 import static java.lang.Math.min;
 import static org.xnio.Bits.allAreClear;
@@ -34,7 +34,7 @@ import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
-import io.undertow.UndertowXnioLogger;
+import io.undertow.xnio.UndertowXnioLogger;
 
 /**
  * A channel which writes a fixed amount of data.  A listener is called once the data has been written.

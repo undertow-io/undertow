@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.undertow.conduits;
+package io.undertow.xnio.conduits;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
@@ -32,7 +32,7 @@ import org.xnio.conduits.ConduitWritableByteChannel;
 import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
-import io.undertow.UndertowXnioMessages;
+import io.undertow.xnio.UndertowXnioMessages;
 import io.undertow.connector.PooledByteBuffer;
 
 /**
@@ -40,7 +40,7 @@ import io.undertow.connector.PooledByteBuffer;
  * that can be invoked when a frame event occurs.
  * <p>
  * When a write takes place all frames are attempted to be written out at once via a gathering write. Frames can be
- * queued via {@link #queueFrame(io.undertow.conduits.AbstractFramedStreamSinkConduit.FrameCallBack, java.nio.ByteBuffer...)}.
+ * queued via {@link #queueFrame(AbstractFramedStreamSinkConduit.FrameCallBack, java.nio.ByteBuffer...)}.
  *
  * @author Stuart Douglas
  */
