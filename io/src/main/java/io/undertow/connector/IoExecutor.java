@@ -16,6 +16,17 @@
 package io.undertow.connector;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
-public interface IoThread extends Executor {
+public interface IoExecutor extends Executor {
+
+    boolean isCurrentThread();
+
+    Key executeAfter(Runnable task, long timeout, TimeUnit timeUnit);
+
+    boolean isShutdown();
+
+    interface Key {
+        boolean remove();
+    }
 }

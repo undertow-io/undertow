@@ -20,11 +20,11 @@ package io.undertow.examples.reverseproxy;
 
 import java.io.IOException;
 
+import org.xnio.OptionMap;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 
 import io.undertow.Undertow;
-import io.undertow.connector.UndertowOptionMap;
 import io.undertow.examples.UndertowExample;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.proxy.mod_cluster.MCMPConfig;
@@ -46,7 +46,7 @@ public class ModClusterProxyServer {
     static final int pport = Integer.parseInt(System.getProperty("io.undertow.examples.proxy.PORT", "8000"));
 
     public static void main(final String[] args) throws IOException {
-        final XnioWorker worker = Xnio.getInstance().createWorker(UndertowOptionMap.EMPTY);
+        final XnioWorker worker = Xnio.getInstance().createWorker(OptionMap.EMPTY);
         final Undertow server;
 
         final ModCluster modCluster = ModCluster.builder(worker).build();

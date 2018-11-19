@@ -34,10 +34,7 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 
-import org.xnio.XnioExecutor;
-import org.xnio.XnioExecutor.Key;
-import org.xnio.XnioIoThread;
-
+import io.undertow.connector.IoExecutor;
 import io.undertow.security.api.SessionNonceManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.FlexBase64;
@@ -274,7 +271,7 @@ public class SimpleNonceManager implements SessionNonceManager {
         }
     }
 
-    private boolean validateNonceWithCount(Nonce nonce, int nonceCount, final XnioIoThread executor) {
+    private boolean validateNonceWithCount(Nonce nonce, int nonceCount, final IoExecutor executor) {
         // This point could have been reached either because the knownNonces map contained the key or because
         // it didn't and a count was supplied - either way need to double check the contents of knownNonces once
         // the lock is in place.
@@ -318,7 +315,7 @@ public class SimpleNonceManager implements SessionNonceManager {
 
     }
 
-    private boolean addInvalidNonce(final Nonce nonce, final XnioExecutor executor) {
+    private boolean addInvalidNonce(final Nonce nonce, final IoExecutor executor) {
         long now = System.currentTimeMillis();
         long invalidBefore = now - firstUseTimeOut;
 
@@ -465,7 +462,7 @@ public class SimpleNonceManager implements SessionNonceManager {
         @SuppressWarnings("unused")
         private final NonceHolder previousNonce;
         private byte[] sessionKey;
-        private Key executorKey;
+        private IoExecutor.Key executorKey;
 
         private Nonce(final String nonce) {
             this(nonce, -1, -1);

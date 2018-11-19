@@ -23,6 +23,7 @@ import javax.servlet.DispatcherType;
 
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
+import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
@@ -30,7 +31,6 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 
 import io.undertow.connector.DefaultByteBufferPool;
-import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -58,7 +58,7 @@ public class ProgramaticAutobahnServer implements Runnable {
         Xnio xnio = Xnio.getInstance();
         try {
 
-            XnioWorker worker = xnio.createWorker(UndertowOptionMap.builder()
+            XnioWorker worker = xnio.createWorker(OptionMap.builder()
                     .set(Options.CONNECTION_HIGH_WATER, 1000000)
                     .set(Options.CONNECTION_LOW_WATER, 1000000)
                     .set(Options.WORKER_TASK_CORE_THREADS, 10)
@@ -67,19 +67,19 @@ public class ProgramaticAutobahnServer implements Runnable {
                     .set(Options.CORK, true)
                     .getMap());
 
-            UndertowOptionMap serverOptions = UndertowOptionMap.builder()
+            OptionMap serverOptions = OptionMap.builder()
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
                     .getMap();
             DefaultByteBufferPool pool = new DefaultByteBufferPool(true, 8192);
             HttpOpenListener openListener = new HttpOpenListener(pool);
             ChannelListener acceptListener = ChannelListeners.openListenerAdapter(openListener);
-           AcceptingChannel<StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(port), acceptListener, serverOptions);
+            AcceptingChannel<StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(port), acceptListener, serverOptions);
 
             server.resumeAccepts();
 
             final ServletContainer container = ServletContainer.Factory.newInstance();
-                    DeploymentInfo builder = new DeploymentInfo()
+            DeploymentInfo builder = new DeploymentInfo()
                     .setClassLoader(ProgramaticAutobahnServer.class.getClassLoader())
                     .setContextPath("/")
                     .setClassIntrospecter(TestClassIntrospector.INSTANCE)
@@ -87,14 +87,14 @@ public class ProgramaticAutobahnServer implements Runnable {
                     .addFilter(new FilterInfo("filter", JsrWebSocketFilter.class))
                     .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST)
 
-                            .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
-                                    new WebSocketDeploymentInfo()
-                                            .setBuffers(pool)
-                                            .setWorker(worker)
-                                            .setDispatchToWorkerThread(true)
-                                            .addEndpoint(new ServerEndpointConfigImpl(ProgramaticAutobahnEndpoint.class, "/"))
-                                            .addExtension(new PerMessageDeflateHandshake())
-                            );
+                    .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
+                            new WebSocketDeploymentInfo()
+                                    .setBuffers(pool)
+                                    .setWorker(worker)
+                                    .setDispatchToWorkerThread(true)
+                                    .addEndpoint(new ServerEndpointConfigImpl(ProgramaticAutobahnEndpoint.class, "/"))
+                                    .addExtension(new PerMessageDeflateHandshake())
+                    );
 
             DeploymentManager manager = container.addDeployment(builder);
             manager.deploy();

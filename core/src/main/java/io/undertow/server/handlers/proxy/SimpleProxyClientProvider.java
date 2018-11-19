@@ -33,6 +33,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.xnio.client.ClientCallback;
 import io.undertow.xnio.client.ClientConnection;
 import io.undertow.xnio.client.UndertowClient;
+import io.undertow.xnio.protocols.XnioThread;
 
 /**
  * Simple proxy client provider. This provider simply proxies to another server, using a a one to one
@@ -74,7 +75,7 @@ public class SimpleProxyClientProvider implements ProxyClient {
                 exchange.getConnection().removeAttachment(clientAttachmentKey);
             }
         }
-        client.connect(new ConnectNotifier(callback, exchange), uri, exchange.getIoThread(), exchange.getConnection().getByteBufferPool(), UndertowOptionMap.EMPTY);
+        client.connect(new ConnectNotifier(callback, exchange), uri, ((XnioThread)exchange.getIoThread()).getIoThread(), exchange.getConnection().getByteBufferPool(), UndertowOptionMap.EMPTY);
     }
 
     private final class ConnectNotifier implements ClientCallback<ClientConnection> {

@@ -44,6 +44,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.CachingResourceManager;
 import io.undertow.server.handlers.resource.Resource;
 import io.undertow.util.ImmediateConduitFactory;
+import io.undertow.xnio.protocols.XnioThread;
 
 /**
  * Class that provides a way of serving pre-encoded resources.
@@ -269,7 +270,7 @@ public class ContentEncodedResourceManager {
 
         @Override
         public XnioIoThread getWriteThread() {
-            return exchange.getIoThread();
+            return ((XnioThread)exchange.getIoThread()).getIoThread();
         }
 
         @Override

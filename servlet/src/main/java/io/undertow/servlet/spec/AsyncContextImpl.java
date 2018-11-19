@@ -41,9 +41,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.xnio.IoUtils;
-import org.xnio.XnioExecutor;
 
 import io.undertow.UndertowLogger;
+import io.undertow.connector.IoExecutor;
 import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
@@ -87,7 +87,7 @@ public class AsyncContextImpl implements AsyncContext {
     //todo: make default configurable
     private volatile long timeout = 30000;
 
-    private volatile XnioExecutor.Key timeoutKey;
+    private volatile IoExecutor.Key timeoutKey;
 
     private boolean dispatched;
     private boolean initialRequestDone;
@@ -116,7 +116,7 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     public void updateTimeout() {
-        XnioExecutor.Key key = this.timeoutKey;
+        IoExecutor.Key key = this.timeoutKey;
         if (key != null) {
             if (!key.remove()) {
                 return;

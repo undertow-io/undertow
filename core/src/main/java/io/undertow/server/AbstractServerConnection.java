@@ -27,7 +27,6 @@ import java.util.concurrent.Executor;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
 import org.xnio.StreamConnection;
-import org.xnio.XnioIoThread;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
@@ -36,8 +35,10 @@ import org.xnio.conduits.StreamSourceConduit;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.IoExecutor;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.connector.UndertowOptionMap;
+import io.undertow.xnio.protocols.XnioThread;
 
 public abstract class AbstractServerConnection extends ServerConnection {
     protected final StreamConnection channel;
@@ -48,6 +49,7 @@ public abstract class AbstractServerConnection extends ServerConnection {
     protected final StreamSourceConduit originalSourceConduit;
     protected final StreamSinkConduit originalSinkConduit;
     protected final List<CloseListener> closeListeners = new LinkedList<>();
+    private final XnioThread ioThread;
 
     protected HttpServerExchange current;
 
@@ -69,9 +71,11 @@ public abstract class AbstractServerConnection extends ServerConnection {
             this.originalSinkConduit = channel.getSinkChannel().getConduit();
             this.originalSourceConduit = channel.getSourceChannel().getConduit();
             channel.setCloseListener(closeSetter);
+            ioThread = new XnioThread(channel.getIoThread());
         } else {
             this.originalSinkConduit = null;
             this.originalSourceConduit = null;
+            this.ioThread = null;
         }
     }
 
@@ -109,11 +113,11 @@ public abstract class AbstractServerConnection extends ServerConnection {
     }
 
     @Override
-    public XnioIoThread getIoThread() {
+    public IoExecutor getIoThread() {
         if (channel == null) {
             return null;
         }
-        return channel.getIoThread();
+        return ioThread;
     }
 
 

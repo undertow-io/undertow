@@ -24,6 +24,7 @@ import javax.servlet.DispatcherType;
 import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
+import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
@@ -31,7 +32,6 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 
 import io.undertow.connector.DefaultByteBufferPool;
-import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -60,7 +60,7 @@ public class AnnotatedAutobahnServer implements Runnable {
         Xnio xnio = Xnio.getInstance();
         try {
 
-            XnioWorker worker = xnio.createWorker(UndertowOptionMap.builder()
+            XnioWorker worker = xnio.createWorker(OptionMap.builder()
                     .set(Options.WORKER_WRITE_THREADS, 4)
                     .set(Options.WORKER_READ_THREADS, 4)
                     .set(Options.CONNECTION_HIGH_WATER, 1000000)
@@ -71,7 +71,7 @@ public class AnnotatedAutobahnServer implements Runnable {
                     .set(Options.CORK, true)
                     .getMap());
 
-            UndertowOptionMap serverOptions = UndertowOptionMap.builder()
+            OptionMap serverOptions = OptionMap.builder()
                     .set(Options.WORKER_ACCEPT_THREADS, 4)
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)

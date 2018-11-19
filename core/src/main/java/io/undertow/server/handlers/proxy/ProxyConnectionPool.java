@@ -39,6 +39,7 @@ import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.connector.IoExecutor;
 import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
@@ -48,6 +49,7 @@ import io.undertow.xnio.client.ClientCallback;
 import io.undertow.xnio.client.ClientConnection;
 import io.undertow.xnio.client.ClientStatistics;
 import io.undertow.xnio.client.UndertowClient;
+import io.undertow.xnio.protocols.XnioThread;
 import io.undertow.xnio.util.WorkerUtils;
 
 /**
@@ -299,7 +301,7 @@ public class ProxyConnectionPool implements Closeable {
                 }
                 callback.failed(exchange);
             }
-        }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getByteBufferPool(), options);
+        }, bindAddress, getUri(), ((XnioThread)exchange.getIoThread()).getIoThread(), ssl, exchange.getConnection().getByteBufferPool(), options);
     }
 
     private void redistributeQueued(HostThreadData hostData) {
@@ -404,7 +406,7 @@ public class ProxyConnectionPool implements Closeable {
                             connectionPoolManager.handleError();
                             scheduleFailedHostRetry(exchange);
                         }
-                    }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getByteBufferPool(), options);
+                    }, bindAddress, getUri(), ((XnioThread)exchange.getIoThread()).getIoThread(), ssl, exchange.getConnection().getByteBufferPool(), options);
                 }
             }, retry, TimeUnit.SECONDS);
         }
@@ -441,7 +443,7 @@ public class ProxyConnectionPool implements Closeable {
                     return;
                 }
             } else {
-                // If we are below the soft limit, just cancel the task
+                // If we are below the soft limit, just remove the task
                 if (data.timeoutKey != null) {
                     data.timeoutKey.remove();
                     data.timeoutKey = null;
@@ -574,7 +576,7 @@ public class ProxyConnectionPool implements Closeable {
     private final class HostThreadData {
 
         int connections = 0;
-        XnioIoThread.Key timeoutKey;
+        XnioExecutor.Key timeoutKey;
         long nextTimeout = -1;
 
         final Deque<ConnectionHolder> availableConnections = new ArrayDeque<>();
@@ -606,7 +608,7 @@ public class ProxyConnectionPool implements Closeable {
         final ProxyCallback<ProxyConnection> callback;
         final HttpServerExchange exchange;
         final long expireTime;
-        XnioExecutor.Key timeoutKey;
+        IoExecutor.Key timeoutKey;
         boolean cancelled = false;
 
         private CallbackHolder(ProxyClient.ProxyTarget proxyTarget, ProxyCallback<ProxyConnection> callback, HttpServerExchange exchange, long expireTime) {
@@ -628,7 +630,7 @@ public class ProxyConnectionPool implements Closeable {
             return expireTime;
         }
 
-        private XnioExecutor.Key getTimeoutKey() {
+        private IoExecutor.Key getTimeoutKey() {
             return timeoutKey;
         }
 
@@ -636,7 +638,7 @@ public class ProxyConnectionPool implements Closeable {
             return cancelled || exchange.isResponseStarted();
         }
 
-        private void setTimeoutKey(XnioExecutor.Key timeoutKey) {
+        private void setTimeoutKey(IoExecutor.Key timeoutKey) {
             this.timeoutKey = timeoutKey;
         }
 

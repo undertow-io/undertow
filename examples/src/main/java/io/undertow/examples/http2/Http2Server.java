@@ -34,6 +34,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
+import org.xnio.OptionMap;
 import org.xnio.Xnio;
 
 import io.undertow.Handlers;
@@ -91,7 +92,7 @@ public class Http2Server {
 
         SSLContext clientSslContext = createSSLContext(loadKeyStore("client.keystore"), loadKeyStore("client.truststore"));
         LoadBalancingProxyClient proxy = new LoadBalancingProxyClient()
-                .addHost(new URI("https://localhost:8443"), null, new UndertowXnioSsl(Xnio.getInstance(), UndertowOptionMap.EMPTY, clientSslContext), UndertowOptionMap.create(UndertowOptions.ENABLE_HTTP2, true))
+                .addHost(new URI("https://localhost:8443"), null, new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, clientSslContext), UndertowOptionMap.create(UndertowOptions.ENABLE_HTTP2, true))
                 .setConnectionsPerThread(20);
 
         Undertow reverseProxy = Undertow.builder()

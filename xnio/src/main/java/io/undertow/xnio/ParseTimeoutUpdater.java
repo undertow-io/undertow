@@ -94,7 +94,7 @@ public final class ParseTimeoutUpdater implements Runnable, Closeable {
         long newExpireTime = System.currentTimeMillis() + timeout;
         long oldExpireTime = this.expireTime;
         this.expireTime = newExpireTime;
-        //if the new one is less than the current one we need to schedule a new timer, so cancel the old one
+        //if the new one is less than the current one we need to schedule a new timer, so remove the old one
         if (newExpireTime < oldExpireTime) {
             if (handle != null) {
                 handle.remove();

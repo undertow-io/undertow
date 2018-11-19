@@ -24,10 +24,10 @@ import javax.net.ssl.SSLContext;
 import javax.websocket.ClientEndpointConfig;
 import javax.websocket.Endpoint;
 
+import org.xnio.OptionMap;
 import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
 
-import io.undertow.connector.UndertowOptionMap;
 import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
@@ -67,7 +67,7 @@ public class DefaultWebSocketClientSslProvider implements WebsocketClientSslProv
         SSLContext sslContext = (SSLContext) cec.getUserProperties().get(SSL_CONTEXT);
 
         if (sslContext != null) {
-            return new UndertowXnioSsl(worker.getXnio(), UndertowOptionMap.EMPTY, sslContext);
+            return new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, sslContext);
         }
         return null;
     }
@@ -79,7 +79,7 @@ public class DefaultWebSocketClientSslProvider implements WebsocketClientSslProv
         SSLContext val = LOCAL_SSL_CONTEXT.get();
         if (val != null) {
             LOCAL_SSL_CONTEXT.remove();
-            return new UndertowXnioSsl(worker.getXnio(), UndertowOptionMap.EMPTY, val);
+            return new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, val);
         }
         return null;
     }

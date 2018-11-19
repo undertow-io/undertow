@@ -38,13 +38,13 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.StreamConnection;
-import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
+import io.undertow.connector.IoExecutor;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.predicate.IdempotentPredicate;
@@ -102,7 +102,7 @@ public final class ProxyHandler implements HttpHandler {
 
     private static final AttachmentKey<ProxyConnection> CONNECTION = AttachmentKey.create(ProxyConnection.class);
     private static final AttachmentKey<HttpServerExchange> EXCHANGE = AttachmentKey.create(HttpServerExchange.class);
-    private static final AttachmentKey<XnioExecutor.Key> TIMEOUT_KEY = AttachmentKey.create(XnioExecutor.Key.class);
+    private static final AttachmentKey<IoExecutor.Key> TIMEOUT_KEY = AttachmentKey.create(IoExecutor.Key.class);
 
     private final ProxyClient proxyClient;
     private final int maxRequestTime;
@@ -196,7 +196,7 @@ public final class ProxyHandler implements HttpHandler {
         }
         final ProxyClientHandler clientHandler = new ProxyClientHandler(exchange, target, timeout, maxRetries, idempotentRequestPredicate);
         if (timeout > 0) {
-            final XnioExecutor.Key key = WorkerUtils.executeAfter(exchange.getIoThread(), new Runnable() {
+            final IoExecutor.Key key = WorkerUtils.executeAfter(exchange.getIoThread(), new Runnable() {
                 @Override
                 public void run() {
                     clientHandler.cancel(exchange);

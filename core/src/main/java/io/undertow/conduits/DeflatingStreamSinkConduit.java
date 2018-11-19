@@ -48,6 +48,7 @@ import io.undertow.util.NewInstanceObjectPool;
 import io.undertow.util.ObjectPool;
 import io.undertow.util.PooledObject;
 import io.undertow.util.SimpleObjectPool;
+import io.undertow.xnio.protocols.XnioThread;
 
 /**
  * Channel that handles deflate compression
@@ -296,7 +297,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
     @Override
     public XnioIoThread getWriteThread() {
-        return exchange.getConnection().getIoThread();
+        return ((XnioThread)exchange.getConnection().getIoThread()).getIoThread();
     }
 
     @Override

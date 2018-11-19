@@ -43,7 +43,6 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import org.xnio.XnioIoThread;
 import org.xnio.channels.Channels;
 import org.xnio.channels.Configurable;
 import org.xnio.channels.StreamSinkChannel;
@@ -57,6 +56,7 @@ import org.xnio.conduits.StreamSourceConduit;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.connector.IoExecutor;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.io.AsyncReceiverImpl;
 import io.undertow.io.AsyncSenderImpl;
@@ -83,6 +83,7 @@ import io.undertow.util.StatusCodes;
 import io.undertow.xnio.channels.DetachableStreamSinkChannel;
 import io.undertow.xnio.channels.DetachableStreamSourceChannel;
 import io.undertow.xnio.conduits.EmptyStreamSourceConduit;
+import io.undertow.xnio.protocols.XnioThread;
 
 /**
  * An HTTP server request/response exchange.  An instance of this class is constructed as soon as the request headers are
@@ -707,7 +708,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return <code>true</code> If the current thread in the IO thread for the exchange
      */
     public boolean isInIoThread() {
-        return getIoThread() == Thread.currentThread();
+        return getIoThread().isCurrentThread();
     }
 
     /**
@@ -1201,7 +1202,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             return null;
         }
         if (anyAreSet(state, FLAG_REQUEST_TERMINATED)) {
-            return requestChannel = new ReadDispatchChannel(new ConduitStreamSourceChannel(Configurable.EMPTY, new EmptyStreamSourceConduit(getIoThread())));
+            return requestChannel = new ReadDispatchChannel(new ConduitStreamSourceChannel(Configurable.EMPTY, new EmptyStreamSourceConduit(((XnioThread)getIoThread()).getIoThread())));
         }
         final ConduitWrapper<StreamSourceConduit>[] wrappers = this.requestWrappers;
         final ConduitStreamSourceChannel sourceChannel = connection.getSourceChannel();
@@ -1790,7 +1791,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         return this;
     }
 
-    public XnioIoThread getIoThread() {
+    public IoExecutor getIoThread() {
         return connection.getIoThread();
     }
 

@@ -29,10 +29,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.xnio.XnioExecutor;
-import org.xnio.XnioIoThread;
-
 import io.undertow.UndertowLogger;
+import io.undertow.connector.IoExecutor;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -45,7 +43,6 @@ import io.undertow.xnio.util.WorkerUtils;
  * Based on code proposed by TomLu in Bugzilla entry #50306
  *
  * @author slaurent
- *
  */
 public class StuckThreadDetectionHandler implements HttpHandler {
 
@@ -76,40 +73,7 @@ public class StuckThreadDetectionHandler implements HttpHandler {
 
     private final HttpHandler next;
 
-
-    private final Runnable stuckThreadTask = new Runnable() {
-        @Override
-        public void run() {
-            long thresholdInMillis = threshold * 1000L;
-
-            // Check monitored threads, being careful that the request might have
-            // completed by the time we examine it
-            for (MonitoredThread monitoredThread : activeThreads.values()) {
-                long activeTime = monitoredThread.getActiveTimeInMillis();
-
-                if (activeTime >= thresholdInMillis && monitoredThread.markAsStuckIfStillRunning()) {
-                    int numStuckThreads = stuckCount.incrementAndGet();
-                    notifyStuckThreadDetected(monitoredThread, activeTime, numStuckThreads);
-                }
-            }
-            // Check if any threads previously reported as stuck, have finished.
-            for (CompletedStuckThread completedStuckThread = completedStuckThreadsQueue.poll();
-                 completedStuckThread != null; completedStuckThread = completedStuckThreadsQueue.poll()) {
-
-                int numStuckThreads = stuckCount.decrementAndGet();
-                notifyStuckThreadCompleted(completedStuckThread, numStuckThreads);
-            }
-            synchronized (StuckThreadDetectionHandler.this) {
-                if(activeThreads.isEmpty()) {
-                    timerKey = null;
-                } else {
-                    timerKey = WorkerUtils.executeAfter(((XnioIoThread)Thread.currentThread()), stuckThreadTask, 1, TimeUnit.SECONDS);
-                }
-            }
-        }
-    };
-
-    private volatile XnioExecutor.Key timerKey;
+    private volatile IoExecutor.Key timerKey;
 
     public StuckThreadDetectionHandler(HttpHandler next) {
         this(DEFAULT_THRESHOLD, next);
@@ -128,9 +92,8 @@ public class StuckThreadDetectionHandler implements HttpHandler {
     }
 
 
-
     private void notifyStuckThreadDetected(MonitoredThread monitoredThread,
-        long activeTime, int numStuckThreads) {
+                                           long activeTime, int numStuckThreads) {
         Throwable th = new Throwable();
         th.setStackTrace(monitoredThread.getThread().getStackTrace());
         UndertowLogger.REQUEST_LOGGER.stuckThreadDetected
@@ -139,7 +102,7 @@ public class StuckThreadDetectionHandler implements HttpHandler {
     }
 
     private void notifyStuckThreadCompleted(CompletedStuckThread thread,
-            int numStuckThreads) {
+                                            int numStuckThreads) {
         UndertowLogger.REQUEST_LOGGER.stuckThreadCompleted
                 (thread.getName(), thread.getId(), thread.getTotalActiveTime(), numStuckThreads);
     }
@@ -157,10 +120,10 @@ public class StuckThreadDetectionHandler implements HttpHandler {
         Long key = Thread.currentThread().getId();
         MonitoredThread monitoredThread = new MonitoredThread(Thread.currentThread(), exchange.getRequestURI() + exchange.getQueryString());
         activeThreads.put(key, monitoredThread);
-        if(timerKey == null) {
+        if (timerKey == null) {
             synchronized (this) {
-                if(timerKey == null) {
-                    timerKey = exchange.getIoThread().executeAfter(stuckThreadTask, 1, TimeUnit.SECONDS);
+                if (timerKey == null) {
+                    timerKey = exchange.getIoThread().executeAfter(new StuckThreadTask(exchange.getIoThread()), 1, TimeUnit.SECONDS);
                 }
             }
         }
@@ -172,7 +135,7 @@ public class StuckThreadDetectionHandler implements HttpHandler {
             if (monitoredThread.markAsDone() == MonitoredThreadState.STUCK) {
                 completedStuckThreadsQueue.add(
                         new CompletedStuckThread(monitoredThread.getThread(),
-                            monitoredThread.getActiveTimeInMillis()));
+                                monitoredThread.getActiveTimeInMillis()));
             }
         }
     }
@@ -201,7 +164,7 @@ public class StuckThreadDetectionHandler implements HttpHandler {
         private final String requestUri;
         private final long start;
         private final AtomicInteger state = new AtomicInteger(
-            MonitoredThreadState.RUNNING.ordinal());
+                MonitoredThreadState.RUNNING.ordinal());
 
         MonitoredThread(Thread thread, String requestUri) {
             this.thread = thread;
@@ -227,7 +190,7 @@ public class StuckThreadDetectionHandler implements HttpHandler {
 
         public boolean markAsStuckIfStillRunning() {
             return this.state.compareAndSet(MonitoredThreadState.RUNNING.ordinal(),
-                MonitoredThreadState.STUCK.ordinal());
+                    MonitoredThreadState.STUCK.ordinal());
         }
 
         public MonitoredThreadState markAsDone() {
@@ -312,10 +275,49 @@ public class StuckThreadDetectionHandler implements HttpHandler {
         @Override
         public HandlerWrapper build(Map<String, Object> config) {
             Integer threshhold = (Integer) config.get("threshhold");
-            if(threshhold == null) {
+            if (threshhold == null) {
                 return new Wrapper();
             } else {
                 return new Wrapper(threshhold);
+            }
+        }
+    }
+
+    private class StuckThreadTask implements Runnable {
+
+        final IoExecutor thread;
+
+        private StuckThreadTask(IoExecutor thread) {
+            this.thread = thread;
+        }
+
+        @Override
+        public void run() {
+            long thresholdInMillis = threshold * 1000L;
+
+            // Check monitored threads, being careful that the request might have
+            // completed by the time we examine it
+            for (MonitoredThread monitoredThread : activeThreads.values()) {
+                long activeTime = monitoredThread.getActiveTimeInMillis();
+
+                if (activeTime >= thresholdInMillis && monitoredThread.markAsStuckIfStillRunning()) {
+                    int numStuckThreads = stuckCount.incrementAndGet();
+                    notifyStuckThreadDetected(monitoredThread, activeTime, numStuckThreads);
+                }
+            }
+            // Check if any threads previously reported as stuck, have finished.
+            for (CompletedStuckThread completedStuckThread = completedStuckThreadsQueue.poll();
+                 completedStuckThread != null; completedStuckThread = completedStuckThreadsQueue.poll()) {
+
+                int numStuckThreads = stuckCount.decrementAndGet();
+                notifyStuckThreadCompleted(completedStuckThread, numStuckThreads);
+            }
+            synchronized (StuckThreadDetectionHandler.this) {
+                if (activeThreads.isEmpty()) {
+                    timerKey = null;
+                } else {
+                    timerKey = WorkerUtils.executeAfter(thread, this, 1, TimeUnit.SECONDS);
+                }
             }
         }
     }

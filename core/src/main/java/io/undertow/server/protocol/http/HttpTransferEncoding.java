@@ -21,7 +21,6 @@ package io.undertow.server.protocol.http;
 import java.io.IOException;
 
 import org.jboss.logging.Logger;
-import org.xnio.IoUtils;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;

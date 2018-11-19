@@ -42,6 +42,7 @@ import io.undertow.util.Methods;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.Transfer;
+import io.undertow.xnio.protocols.XnioThread;
 
 /**
  *
@@ -83,7 +84,7 @@ public class ConnectHandler implements HttpHandler {
             exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
                 @Override
                 public void run() {
-                    exchange.getConnection().getIoThread().openStreamConnection(new InetSocketAddress(host, port), new ChannelListener<StreamConnection>() {
+                    ((XnioThread)exchange.getConnection().getIoThread()).getIoThread().openStreamConnection(new InetSocketAddress(host, port), new ChannelListener<StreamConnection>() {
                         @Override
                         public void handleEvent(final StreamConnection clientChannel) {
                             exchange.acceptConnectRequest(new HttpUpgradeListener() {

@@ -34,6 +34,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.xnio.protocols.XnioThread;
 
 /**
  * Input stream that reads from the underlying channel. This stream delays creation
@@ -59,7 +60,7 @@ public class UndertowInputStream extends InputStream {
         if (exchange.isRequestChannelAvailable()) {
             this.channel = exchange.getRequestChannel();
         } else {
-            this.channel = new EmptyStreamSourceChannel(exchange.getIoThread());
+            this.channel = new EmptyStreamSourceChannel(((XnioThread)exchange.getIoThread()).getIoThread());
         }
         this.bufferPool = exchange.getConnection().getByteBufferPool();
     }

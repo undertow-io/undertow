@@ -34,11 +34,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import org.xnio.XnioExecutor;
-import org.xnio.XnioIoThread;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.connector.IoExecutor;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcurrentDirectDeque;
@@ -377,10 +375,10 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         private volatile boolean invalid = false;
         private volatile boolean invalidationStarted = false;
 
-        final XnioIoThread executor;
+        final IoExecutor executor;
         final Executor worker;
 
-        XnioExecutor.Key timerCancelKey;
+        IoExecutor.Key timerCancelKey;
 
         Runnable cancelTask = new Runnable() {
             @Override
@@ -399,7 +397,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             }
         };
 
-        private SessionImpl(final InMemorySessionManager sessionManager, final String sessionId, final SessionConfig sessionCookieConfig, final XnioIoThread executor, final Executor worker, final Object evictionToken, final int maxInactiveInterval) {
+        private SessionImpl(final InMemorySessionManager sessionManager, final String sessionId, final SessionConfig sessionCookieConfig, final IoExecutor executor, final Executor worker, final Object evictionToken, final int maxInactiveInterval) {
             this.sessionManager = sessionManager;
             this.sessionId = sessionId;
             this.sessionCookieConfig = sessionCookieConfig;

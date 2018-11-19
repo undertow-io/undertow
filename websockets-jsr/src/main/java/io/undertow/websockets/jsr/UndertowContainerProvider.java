@@ -29,13 +29,13 @@ import java.util.function.Supplier;
 import javax.websocket.ContainerProvider;
 import javax.websocket.WebSocketContainer;
 
+import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.DefaultByteBufferPool;
-import io.undertow.connector.UndertowOptionMap;
 import io.undertow.servlet.api.ClassIntrospecter;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.util.DefaultClassIntrospector;

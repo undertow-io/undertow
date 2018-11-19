@@ -28,7 +28,6 @@ import javax.net.ssl.SSLSession;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
 import org.xnio.StreamConnection;
-import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.Configurable;
 import org.xnio.conduits.ConduitStreamSinkChannel;
@@ -44,7 +43,9 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.IoExecutor;
 import io.undertow.connector.UndertowOptionMap;
+import io.undertow.xnio.protocols.XnioThread;
 import io.undertow.xnio.protocols.http2.Http2Channel;
 import io.undertow.xnio.protocols.http2.Http2DataStreamSinkChannel;
 import io.undertow.xnio.protocols.http2.Http2HeadersStreamSinkChannel;
@@ -128,7 +129,7 @@ public class Http2ServerConnection extends ServerConnection {
         originalSinkConduit = new StreamSinkChannelWrappingConduit(responseChannel);
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
-        this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(Configurable.EMPTY, new EmptyStreamSourceConduit(getIoThread()));
+        this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(Configurable.EMPTY, new EmptyStreamSourceConduit(((XnioThread)getIoThread()).getIoThread()));
     }
 
     public SSLSession getSslSession() {
@@ -146,8 +147,8 @@ public class Http2ServerConnection extends ServerConnection {
     }
 
     @Override
-    public XnioIoThread getIoThread() {
-        return channel.getIoThread();
+    public IoExecutor getIoThread() {
+        return new XnioThread(channel.getIoThread());
     }
 
     @Override

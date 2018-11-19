@@ -34,7 +34,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.xnio.Option;
 import org.xnio.StreamConnection;
-import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
@@ -44,6 +43,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.DefaultByteBufferPool;
+import io.undertow.connector.IoExecutor;
 import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -374,7 +374,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         }
 
         @Override
-        public XnioIoThread getIoThread() {
+        public IoExecutor getIoThread() {
             return null;
         }
 

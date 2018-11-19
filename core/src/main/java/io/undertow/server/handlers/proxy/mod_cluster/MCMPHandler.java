@@ -77,6 +77,7 @@ import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
+import io.undertow.xnio.protocols.XnioThread;
 
 /**
  * The mod cluster management protocol http handler.
@@ -299,7 +300,7 @@ class MCMPHandler implements HttpHandler {
         try {
             // Build the config
             config = node.build();
-            if (container.addNode(config, balancer, exchange.getIoThread(), exchange.getConnection().getByteBufferPool())) {
+            if (container.addNode(config, balancer, ((XnioThread)exchange.getIoThread()).getIoThread(), exchange.getConnection().getByteBufferPool())) {
                 // Apparently this is hard to do in the C part, so maybe we should just remove this
                 if (contexts != null && hosts != null) {
                     for (final String context : contexts) {

@@ -39,6 +39,7 @@ import org.xnio.channels.StreamSourceChannel;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.xnio.protocols.XnioThread;
 
 /**
  * Servlet input stream implementation. This stream is non-buffered, and is used for both
@@ -77,7 +78,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if (request.getExchange().isRequestChannelAvailable()) {
             this.channel = request.getExchange().getRequestChannel();
         } else {
-            this.channel = new EmptyStreamSourceChannel(request.getExchange().getIoThread());
+            this.channel = new EmptyStreamSourceChannel(((XnioThread)request.getExchange().getIoThread()).getIoThread());
         }
         this.bufferPool = request.getExchange().getConnection().getByteBufferPool();
     }

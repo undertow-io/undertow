@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 
+import io.undertow.connector.IoExecutor;
 import io.undertow.xnio.UndertowXnioLogger;
 
 /**
@@ -36,6 +37,32 @@ public class WorkerUtils {
      * down then it is logged at debug level and the exception is not re-thrown
      *
      * @param thread   The IO thread
+     * @param task     The task to execute
+     * @param timeout  The timeout
+     * @param timeUnit The time unit
+     */
+    public static IoExecutor.Key executeAfter(IoExecutor thread, Runnable task, long timeout, TimeUnit timeUnit) {
+        try {
+            return thread.executeAfter(task, timeout, timeUnit);
+        } catch (RejectedExecutionException e) {
+            if (thread.isShutdown()) {
+                UndertowXnioLogger.ROOT_LOGGER.debugf(e, "Failed to schedule task %s as worker is shutting down", task);
+                //we just return a bogus key in this case
+                return new IoExecutor.Key() {
+                    @Override
+                    public boolean remove() {
+                        return false;
+                    }
+                };
+            } else {
+                throw e;
+            }
+        }
+    }
+    /**
+     * Schedules a task for future execution. If the execution is rejected because the worker is shutting
+     * down then it is logged at debug level and the exception is not re-thrown
+     *  @param thread   The IO thread
      * @param task     The task to execute
      * @param timeout  The timeout
      * @param timeUnit The time unit

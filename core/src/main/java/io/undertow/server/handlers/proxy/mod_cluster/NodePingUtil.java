@@ -51,6 +51,7 @@ import io.undertow.xnio.client.ClientConnection;
 import io.undertow.xnio.client.ClientExchange;
 import io.undertow.xnio.client.ClientRequest;
 import io.undertow.xnio.client.UndertowClient;
+import io.undertow.xnio.protocols.XnioThread;
 import io.undertow.xnio.util.WorkerUtils;
 
 /**
@@ -84,11 +85,11 @@ class NodePingUtil {
      */
     static void pingHost(InetSocketAddress address, HttpServerExchange exchange, PingCallback callback, UndertowOptionMap options) {
 
-        final XnioIoThread thread = exchange.getIoThread();
+        final XnioIoThread thread = ((XnioThread)exchange.getIoThread()).getIoThread();
         final XnioWorker worker = thread.getWorker();
         final HostPingTask r = new HostPingTask(address, worker, callback, options);
         // Schedule timeout task
-        scheduleCancelTask(exchange.getIoThread(), r, 5, TimeUnit.SECONDS);
+        scheduleCancelTask(thread, r, 5, TimeUnit.SECONDS);
         exchange.dispatch(exchange.isInIoThread() ? SameThreadExecutor.INSTANCE : thread, r);
     }
 
@@ -104,12 +105,12 @@ class NodePingUtil {
      */
     static void pingHttpClient(URI connection, PingCallback callback, HttpServerExchange exchange, UndertowClient client, XnioSsl xnioSsl, UndertowOptionMap options) {
 
-        final XnioIoThread thread = exchange.getIoThread();
+        final XnioIoThread thread = ((XnioThread)exchange.getIoThread()).getIoThread();
         final RequestExchangeListener exchangeListener = new RequestExchangeListener(callback, NodeHealthChecker.NO_CHECK, true);
         final Runnable r = new HttpClientPingTask(connection, exchangeListener, thread, client, xnioSsl, exchange.getConnection().getByteBufferPool(), options);
         exchange.dispatch(exchange.isInIoThread() ? SameThreadExecutor.INSTANCE : thread, r);
         // Schedule timeout task
-        scheduleCancelTask(exchange.getIoThread(), exchangeListener, 5, TimeUnit.SECONDS);
+        scheduleCancelTask(thread, exchangeListener, 5, TimeUnit.SECONDS);
     }
 
     /**
@@ -135,7 +136,7 @@ class NodePingUtil {
                         final RequestExchangeListener exchangeListener = new RequestExchangeListener(callback, NodeHealthChecker.NO_CHECK, false);
                         exchange.dispatch(SameThreadExecutor.INSTANCE, new ConnectionPoolPingTask(result, exchangeListener, node.getNodeConfig().getConnectionURI()));
                         // Schedule timeout task
-                        scheduleCancelTask(exchange.getIoThread(), exchangeListener, timeout, TimeUnit.SECONDS);
+                        scheduleCancelTask(((XnioThread)exchange.getIoThread()).getIoThread(), exchangeListener, timeout, TimeUnit.SECONDS);
                     }
 
                     @Override

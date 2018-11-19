@@ -27,12 +27,12 @@ import javax.net.ssl.SSLSession;
 
 import org.xnio.Option;
 import org.xnio.StreamConnection;
-import org.xnio.XnioIoThread;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
 
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.IoExecutor;
 import io.undertow.connector.UndertowOptionMap;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
@@ -61,7 +61,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      *
      * @return The IO thread associated with the connection
      */
-    public abstract XnioIoThread getIoThread();
+    public abstract IoExecutor getIoThread();
 
     /**
      * Sends an out of band response, such as a HTTP 100-continue response.
