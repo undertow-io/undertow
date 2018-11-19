@@ -40,7 +40,7 @@ import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
 import org.xnio.ssl.SslConnection;
 
-import io.undertow.client.ClientConnection;
+import io.undertow.xnio.client.ClientConnection;
 import io.undertow.xnio.protocols.ssl.SslConduit;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;

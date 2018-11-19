@@ -45,11 +45,11 @@ import org.xnio.Options;
 
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientExchange;
-import io.undertow.client.ClientRequest;
-import io.undertow.client.UndertowClient;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientExchange;
+import io.undertow.xnio.client.ClientRequest;
+import io.undertow.xnio.client.UndertowClient;
 import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;

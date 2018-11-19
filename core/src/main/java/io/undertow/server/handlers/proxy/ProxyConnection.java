@@ -18,7 +18,7 @@
 
 package io.undertow.server.handlers.proxy;
 
-import io.undertow.client.ClientConnection;
+import io.undertow.xnio.client.ClientConnection;
 
 /**
  * A connection to a backend proxy.

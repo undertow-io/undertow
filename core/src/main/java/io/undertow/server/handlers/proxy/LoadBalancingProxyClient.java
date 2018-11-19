@@ -36,8 +36,8 @@ import org.xnio.OptionMap;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowLogger;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.UndertowClient;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.UndertowClient;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.Cookie;

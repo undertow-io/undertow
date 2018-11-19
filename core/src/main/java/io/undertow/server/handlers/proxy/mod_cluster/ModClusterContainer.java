@@ -33,7 +33,7 @@ import org.xnio.XnioIoThread;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowLogger;
-import io.undertow.client.UndertowClient;
+import io.undertow.xnio.client.UndertowClient;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;

@@ -44,7 +44,7 @@ import org.xnio.Options;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.Undertow;
-import io.undertow.client.UndertowClient;
+import io.undertow.xnio.client.UndertowClient;
 import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;

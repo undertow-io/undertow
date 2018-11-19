@@ -22,7 +22,7 @@ import static org.xnio.IoUtils.safeClose;
 
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.client.ClientConnection;
+import io.undertow.xnio.client.ClientConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.proxy.ExclusivityChecker;

@@ -16,7 +16,7 @@ import org.junit.runner.RunWith;
 import org.xnio.Options;
 
 import io.undertow.Undertow;
-import io.undertow.client.UndertowClient;
+import io.undertow.xnio.client.UndertowClient;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;

@@ -39,10 +39,10 @@ import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
-import io.undertow.client.ALPNClientSelector;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientProvider;
+import io.undertow.xnio.client.ALPNClientSelector;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientProvider;
 import io.undertow.client.http2.Http2ClientProvider;
 import io.undertow.connector.ByteBufferPool;
 

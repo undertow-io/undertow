@@ -18,7 +18,7 @@
 
 package io.undertow.client.http;
 
-import static io.undertow.client.UndertowClientMessages.MESSAGES;
+import static io.undertow.xnio.client.UndertowClientMessages.MESSAGES;
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreSet;
@@ -54,13 +54,13 @@ import org.xnio.ssl.SslConnection;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientExchange;
-import io.undertow.client.ClientRequest;
-import io.undertow.client.ClientResponse;
-import io.undertow.client.ClientStatistics;
-import io.undertow.client.UndertowClientMessages;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientExchange;
+import io.undertow.xnio.client.ClientRequest;
+import io.undertow.xnio.client.ClientResponse;
+import io.undertow.xnio.client.ClientStatistics;
+import io.undertow.xnio.client.UndertowClientMessages;
 import io.undertow.client.http2.Http2ClearClientProvider;
 import io.undertow.client.http2.Http2ClientConnection;
 import io.undertow.conduits.ByteActivityCallback;

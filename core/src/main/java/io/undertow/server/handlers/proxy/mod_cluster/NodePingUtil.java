@@ -38,11 +38,11 @@ import org.xnio.channels.StreamSourceChannel;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowLogger;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientExchange;
-import io.undertow.client.ClientRequest;
-import io.undertow.client.UndertowClient;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientExchange;
+import io.undertow.xnio.client.ClientRequest;
+import io.undertow.xnio.client.UndertowClient;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.proxy.ProxyCallback;

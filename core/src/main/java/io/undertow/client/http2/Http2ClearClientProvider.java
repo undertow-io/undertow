@@ -40,10 +40,10 @@ import org.xnio.http.HttpUpgrade;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowOptions;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientProvider;
-import io.undertow.client.ClientStatistics;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientProvider;
+import io.undertow.xnio.client.ClientStatistics;
 import io.undertow.conduits.ByteActivityCallback;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;

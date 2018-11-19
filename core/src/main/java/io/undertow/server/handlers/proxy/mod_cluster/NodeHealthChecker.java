@@ -18,7 +18,7 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import io.undertow.client.ClientResponse;
+import io.undertow.xnio.client.ClientResponse;
 
 /**
  * @author Emanuel Muckenhuber

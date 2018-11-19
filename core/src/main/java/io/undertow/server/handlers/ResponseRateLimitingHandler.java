@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.xnio.conduits.StreamSinkConduit;
 
-import io.undertow.conduits.RateLimitingStreamSinkConduit;
+import io.undertow.xnio.conduits.RateLimitingStreamSinkConduit;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;

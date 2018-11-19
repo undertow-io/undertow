@@ -40,11 +40,11 @@ import org.xnio.http.RedirectException;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowMessages;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientExchange;
-import io.undertow.client.ClientRequest;
-import io.undertow.client.UndertowClient;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientExchange;
+import io.undertow.xnio.client.ClientRequest;
+import io.undertow.xnio.client.UndertowClient;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.util.Headers;

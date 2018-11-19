@@ -40,10 +40,10 @@ import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientStatistics;
-import io.undertow.client.UndertowClient;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientStatistics;
+import io.undertow.xnio.client.UndertowClient;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;

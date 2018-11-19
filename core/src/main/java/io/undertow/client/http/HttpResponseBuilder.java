@@ -18,7 +18,7 @@
 
 package io.undertow.client.http;
 
-import io.undertow.client.ClientResponse;
+import io.undertow.xnio.client.ClientResponse;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 
