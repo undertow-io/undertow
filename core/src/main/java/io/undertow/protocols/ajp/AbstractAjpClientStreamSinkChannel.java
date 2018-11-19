@@ -18,7 +18,7 @@
 
 package io.undertow.protocols.ajp;
 
-import io.undertow.server.protocol.framed.AbstractFramedStreamSinkChannel;
+import io.undertow.xnio.protocols.framed.AbstractFramedStreamSinkChannel;
 
 /**
  * @author Stuart Douglas

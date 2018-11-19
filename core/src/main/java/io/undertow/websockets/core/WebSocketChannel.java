@@ -35,12 +35,12 @@ import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 
-import io.undertow.conduits.IdleTimeoutConduit;
+import io.undertow.xnio.conduits.IdleTimeoutConduit;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.server.protocol.framed.AbstractFramedChannel;
-import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
-import io.undertow.server.protocol.framed.FrameHeaderData;
+import io.undertow.xnio.protocols.framed.AbstractFramedChannel;
+import io.undertow.xnio.protocols.framed.AbstractFramedStreamSourceChannel;
+import io.undertow.xnio.protocols.framed.FrameHeaderData;
 import io.undertow.websockets.extensions.ExtensionFunction;
 
 /**

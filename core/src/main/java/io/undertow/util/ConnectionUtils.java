@@ -33,6 +33,7 @@ import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 
 import io.undertow.UndertowLogger;
+import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * @author Stuart Douglas

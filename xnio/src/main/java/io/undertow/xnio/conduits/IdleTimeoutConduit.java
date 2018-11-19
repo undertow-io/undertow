@@ -1,21 +1,18 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-package io.undertow.conduits;
+package io.undertow.xnio.conduits;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,11 +32,11 @@ import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 import org.xnio.conduits.WriteReadyHandler;
 
-import io.undertow.UndertowLogger;
-import io.undertow.util.WorkerUtils;
+import io.undertow.xnio.UndertowXnioLogger;
+import io.undertow.xnio.util.WorkerUtils;
 
 /**
- *  Conduit that adds support to close a channel once for a specified time no
+ * Conduit that adds support to close a channel once for a specified time no
  * reads and no writes were performed.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -62,26 +59,26 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
         @Override
         public void run() {
             handle = null;
-            if(expireTime == -1) {
+            if (expireTime == -1) {
                 return;
             }
             long current = System.currentTimeMillis();
-            if(current  < expireTime) {
+            if (current < expireTime) {
                 //timeout has been bumped, re-schedule
                 handle = WorkerUtils.executeAfter(getWriteThread(), timeoutCommand, (expireTime - current) + DELTA, TimeUnit.MILLISECONDS);
                 return;
             }
 
-            UndertowLogger.REQUEST_LOGGER.trace("Timing out channel due to inactivity");
+            UndertowXnioLogger.REQUEST_LOGGER.trace("Timing out channel due to inactivity");
             timedOut = true;
             doClose();
             if (sink.isWriteResumed()) {
-                if(writeReadyHandler != null) {
+                if (writeReadyHandler != null) {
                     writeReadyHandler.writeReady();
                 }
             }
             if (source.isReadResumed()) {
-                if(readReadyHandler != null) {
+                if (readReadyHandler != null) {
                     readReadyHandler.readReady();
                 }
             }
@@ -101,16 +98,16 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     }
 
     private void handleIdleTimeout() throws ClosedChannelException {
-        if(timedOut) {
+        if (timedOut) {
             return;
         }
         long idleTimeout = this.idleTimeout;
-        if(idleTimeout <= 0) {
+        if (idleTimeout <= 0) {
             return;
         }
         long currentTime = System.currentTimeMillis();
         long expireTimeVar = expireTime;
-        if(expireTimeVar != -1 && currentTime > expireTimeVar) {
+        if (expireTimeVar != -1 && currentTime > expireTimeVar) {
             timedOut = true;
             doClose();
             throw new ClosedChannelException();
@@ -136,8 +133,8 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public int writeFinal(ByteBuffer src) throws IOException {
         handleIdleTimeout();
         int w = sink.writeFinal(src);
-        if(source.isReadShutdown() && !src.hasRemaining()) {
-            if(handle != null) {
+        if (source.isReadShutdown() && !src.hasRemaining()) {
+            if (handle != null) {
                 handle.remove();
                 handle = null;
             }
@@ -149,8 +146,8 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
         handleIdleTimeout();
         long w = sink.writeFinal(srcs, offset, length);
-        if(source.isReadShutdown() && !Buffers.hasRemaining(srcs, offset, length)) {
-            if(handle != null) {
+        if (source.isReadShutdown() && !Buffers.hasRemaining(srcs, offset, length)) {
+            if (handle != null) {
                 handle.remove();
                 handle = null;
             }
@@ -162,8 +159,8 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public long transferTo(long position, long count, FileChannel target) throws IOException {
         handleIdleTimeout();
         long w = source.transferTo(position, count, target);
-        if(sink.isWriteShutdown() && w == -1) {
-            if(handle != null) {
+        if (sink.isWriteShutdown() && w == -1) {
+            if (handle != null) {
                 handle.remove();
                 handle = null;
             }
@@ -175,8 +172,8 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
         handleIdleTimeout();
         long w = source.transferTo(count, throughBuffer, target);
-        if(sink.isWriteShutdown() && w == -1) {
-            if(handle != null) {
+        if (sink.isWriteShutdown() && w == -1) {
+            if (handle != null) {
                 handle.remove();
                 handle = null;
             }
@@ -188,8 +185,8 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
         handleIdleTimeout();
         long r = source.read(dsts, offset, length);
-        if(sink.isWriteShutdown() && r == -1) {
-            if(handle != null) {
+        if (sink.isWriteShutdown() && r == -1) {
+            if (handle != null) {
                 handle.remove();
                 handle = null;
             }
@@ -201,8 +198,8 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public int read(ByteBuffer dst) throws IOException {
         handleIdleTimeout();
         int r = source.read(dst);
-        if(sink.isWriteShutdown() && r == -1) {
-            if(handle != null) {
+        if (sink.isWriteShutdown() && r == -1) {
+            if (handle != null) {
                 handle.remove();
                 handle = null;
             }
@@ -226,7 +223,7 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public void suspendReads() {
         source.suspendReads();
         XnioExecutor.Key handle = this.handle;
-        if(handle != null && !isWriteResumed()) {
+        if (handle != null && !isWriteResumed()) {
             handle.remove();
             this.handle = null;
         }
@@ -235,8 +232,8 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     @Override
     public void terminateReads() throws IOException {
         source.terminateReads();
-        if(sink.isWriteShutdown()) {
-            if(handle != null) {
+        if (sink.isWriteShutdown()) {
+            if (handle != null) {
                 handle.remove();
                 handle = null;
             }
@@ -264,6 +261,7 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
         source.wakeupReads();
         handleResumeTimeout();
     }
+
     @Override
     public void awaitReadable() throws IOException {
         source.awaitReadable();
@@ -302,8 +300,8 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     @Override
     public void terminateWrites() throws IOException {
         sink.terminateWrites();
-        if(source.isReadShutdown()) {
-            if(handle != null) {
+        if (source.isReadShutdown()) {
+            if (handle != null) {
                 handle.remove();
                 handle = null;
             }
@@ -325,7 +323,7 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     public void suspendWrites() {
         sink.suspendWrites();
         XnioExecutor.Key handle = this.handle;
-        if(handle != null && !isReadResumed()) {
+        if (handle != null && !isReadResumed()) {
             handle.remove();
             this.handle = null;
         }
@@ -346,7 +344,7 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
         long currentTime = System.currentTimeMillis();
         long newExpireTime = currentTime + timeout;
         boolean shorter = newExpireTime < expireTime;
-        if(shorter && handle != null) {
+        if (shorter && handle != null) {
             handle.remove();
             handle = null;
         }
@@ -386,8 +384,8 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
     @Override
     public void truncateWrites() throws IOException {
         sink.truncateWrites();
-        if(source.isReadShutdown()) {
-            if(handle != null) {
+        if (source.isReadShutdown()) {
+            if (handle != null) {
                 handle.remove();
                 handle = null;
             }
@@ -411,9 +409,9 @@ public class IdleTimeoutConduit implements StreamSinkConduit, StreamSourceCondui
 
     public void setIdleTimeout(long idleTimeout) {
         this.idleTimeout = idleTimeout;
-        if(idleTimeout > 0) {
+        if (idleTimeout > 0) {
             expireTime = System.currentTimeMillis() + idleTimeout;
-            if(isReadResumed() || isWriteResumed()) {
+            if (isReadResumed() || isWriteResumed()) {
                 handleResumeTimeout();
             }
         } else {

@@ -37,7 +37,7 @@ import org.xnio.conduits.StreamSourceConduit;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.server.OpenListener;
-import io.undertow.util.WorkerUtils;
+import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * Wrapper for read timeout. This should always be the first wrapper applied to the underlying channel.

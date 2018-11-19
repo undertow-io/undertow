@@ -19,8 +19,8 @@
 package io.undertow.protocols.http2;
 
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
-import io.undertow.server.protocol.framed.FrameHeaderData;
+import io.undertow.xnio.protocols.framed.AbstractFramedStreamSourceChannel;
+import io.undertow.xnio.protocols.framed.FrameHeaderData;
 
 /**
  * HTTP2 stream source channel

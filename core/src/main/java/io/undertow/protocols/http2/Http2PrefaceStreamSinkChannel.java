@@ -20,7 +20,7 @@ package io.undertow.protocols.http2;
 
 import java.nio.ByteBuffer;
 
-import io.undertow.server.protocol.framed.SendFrameHeader;
+import io.undertow.xnio.protocols.framed.SendFrameHeader;
 import io.undertow.util.ImmediatePooledByteBuffer;
 
 /**

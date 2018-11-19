@@ -28,7 +28,7 @@ import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.StreamSinkConduit;
 
-import io.undertow.util.WorkerUtils;
+import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * Class that implements the token bucket algorithm.

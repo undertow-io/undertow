@@ -41,7 +41,7 @@ import org.xnio.XnioIoThread;
 import io.undertow.security.api.SessionNonceManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.FlexBase64;
-import io.undertow.util.WorkerUtils;
+import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * A default {@link io.undertow.security.api.NonceManager} implementation to provide reasonable single host management of nonces.

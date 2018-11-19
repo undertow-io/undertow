@@ -78,7 +78,7 @@ import io.undertow.util.NetworkUtils;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.Transfer;
-import io.undertow.util.WorkerUtils;
+import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * An HTTP handler which proxies content to a remote server.

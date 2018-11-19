@@ -36,7 +36,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
-import io.undertow.conduits.IdleTimeoutConduit;
+import io.undertow.xnio.conduits.IdleTimeoutConduit;
 import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
 import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
 import io.undertow.connector.ByteBufferPool;

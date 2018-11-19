@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
-import io.undertow.server.protocol.framed.FramePriority;
+import io.undertow.xnio.protocols.framed.FramePriority;
 
 /**
  * Web socket frame priority

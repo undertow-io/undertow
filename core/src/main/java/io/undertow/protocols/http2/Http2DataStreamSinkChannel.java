@@ -26,7 +26,7 @@ import org.xnio.ChannelListeners;
 
 import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.server.protocol.framed.SendFrameHeader;
+import io.undertow.xnio.protocols.framed.SendFrameHeader;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.ImmediatePooledByteBuffer;
 

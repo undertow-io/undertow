@@ -41,7 +41,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.client.ProxiedRequestAttachments;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.server.protocol.framed.SendFrameHeader;
+import io.undertow.xnio.protocols.framed.SendFrameHeader;
 import io.undertow.util.Attachable;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.HeaderMap;

@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * Utility for parsing and generating dates

@@ -50,7 +50,7 @@ import io.undertow.server.handlers.proxy.ProxyConnection;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.SameThreadExecutor;
-import io.undertow.util.WorkerUtils;
+import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * Utilities to ping a remote node.

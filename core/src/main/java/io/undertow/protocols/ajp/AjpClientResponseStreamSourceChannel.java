@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.xnio.ChannelListener;
 
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.server.protocol.framed.FrameHeaderData;
+import io.undertow.xnio.protocols.framed.FrameHeaderData;
 import io.undertow.util.HeaderMap;
 
 /**

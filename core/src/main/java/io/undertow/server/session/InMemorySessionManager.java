@@ -42,7 +42,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcurrentDirectDeque;
-import io.undertow.util.WorkerUtils;
+import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * The default in memory session manager. This basically just stores sessions in an in memory hash map.

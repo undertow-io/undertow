@@ -28,7 +28,7 @@ import org.xnio.channels.ConnectedChannel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.ServerConnection;
-import io.undertow.util.WorkerUtils;
+import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * Wrapper for parse timeout.

@@ -1,21 +1,18 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-package io.undertow.server.protocol.framed;
+package io.undertow.xnio.protocols.framed;
 
 import static org.xnio.IoUtils.safeClose;
 
@@ -56,13 +53,11 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.channels.SuspendableWriteChannel;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
-import io.undertow.conduits.IdleTimeoutConduit;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.util.ReferenceCountedPooled;
+import io.undertow.xnio.UndertowXnioLogger;
+import io.undertow.xnio.UndertowXnioMessages;
+import io.undertow.xnio.conduits.IdleTimeoutConduit;
 
 /**
  * A {@link org.xnio.channels.ConnectedChannel} which can be used to send and receive Frames.
@@ -159,8 +154,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     public void run() {
                         synchronized (AbstractFramedChannel.this) {
                             if(outstandingBuffersUpdater.get(AbstractFramedChannel.this) < maxQueuedBuffers) {
-                                if(UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
-                                    UndertowLogger.REQUEST_IO_LOGGER.tracef("Resuming reads on %s as buffers have been consumed", AbstractFramedChannel.this);
+                                if(UndertowXnioLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
+                                    UndertowXnioLogger.REQUEST_IO_LOGGER.tracef("Resuming reads on %s as buffers have been consumed", AbstractFramedChannel.this);
                                 }
                                 channel.getSourceChannel().resumeReads();
                             }
@@ -177,7 +172,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             try {
                 AbstractFramedStreamSourceChannel stream = channel.receive();
                 if(stream != null) {
-                    UndertowLogger.REQUEST_IO_LOGGER.debugf("Draining channel %s as no receive listener has been set", stream);
+                    UndertowXnioLogger.REQUEST_IO_LOGGER.debugf("Draining channel %s as no receive listener has been set", stream);
                     stream.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE, null, null));
                     stream.wakeupReads();
                 }
@@ -188,7 +183,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     };
 
     /**
-     * Create a new {@link io.undertow.server.protocol.framed.AbstractFramedChannel}
+     * Create a new {@link AbstractFramedChannel}
      * 8
      *  @param connectedStreamChannel The {@link org.xnio.channels.ConnectedStreamChannel} over which the Frames should get send and received.
      *                               Be aware that it already must be "upgraded".
@@ -198,7 +193,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     protected AbstractFramedChannel(final StreamConnection connectedStreamChannel, ByteBufferPool bufferPool, FramePriority<C, R, S> framePriority, final PooledByteBuffer readData, OptionMap settings) {
         this.framePriority = framePriority;
-        this.maxQueuedBuffers = settings.get(UndertowOptions.MAX_QUEUED_READ_BUFFERS, 10);
+        //this.maxQueuedBuffers = settings.get(UndertowOptions.MAX_QUEUED_READ_BUFFERS, 10);
+        this.maxQueuedBuffers = 10;
         this.settings = settings;
         if (readData != null) {
             if(readData.getBuffer().hasRemaining()) {
@@ -208,10 +204,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             }
         }
         if(bufferPool == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull("bufferPool");
+            throw UndertowXnioMessages.MESSAGES.argumentCannotBeNull("bufferPool");
         }
         if(connectedStreamChannel == null) {
-            throw UndertowMessages.MESSAGES.argumentCannotBeNull("connectedStreamChannel");
+            throw UndertowXnioMessages.MESSAGES.argumentCannotBeNull("connectedStreamChannel");
         }
         IdleTimeoutConduit idle = createIdleTimeoutChannel(connectedStreamChannel);
         connectedStreamChannel.getSourceChannel().setConduit(idle);
@@ -519,8 +515,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         //we need to re-read in a sync block, to prevent races
                         expect = outstandingBuffersUpdater.get(this);
                         if (expect == maxQueuedBuffers) {
-                            if(UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
-                                UndertowLogger.REQUEST_IO_LOGGER.tracef("Suspending reads on %s due to too many outstanding buffers", this);
+                            if(UndertowXnioLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
+                                UndertowXnioLogger.REQUEST_IO_LOGGER.tracef("Suspending reads on %s due to too many outstanding buffers", this);
                             }
                             channel.getSourceChannel().suspendReads();
                             return null;
@@ -574,7 +570,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     protected synchronized void flushSenders() {
         if(flushingSenders) {
-            throw UndertowMessages.MESSAGES.recursiveCallToFlushingSenders();
+            throw UndertowXnioMessages.MESSAGES.recursiveCallToFlushingSenders();
         }
         flushingSenders = true;
         try {
@@ -704,8 +700,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     protected void queueFrame(final S channel) throws IOException {
         assert !newFrames.contains(channel);
         if (isWritesBroken() || !this.channel.getSinkChannel().isOpen() || channel.isBroken() || !channel.isOpen()) {
-            IoUtils.safeClose(channel);
-            throw UndertowMessages.MESSAGES.channelIsClosed();
+            safeClose(channel);
+            throw UndertowXnioMessages.MESSAGES.channelIsClosed();
         }
         newFrames.add(channel);
 
@@ -807,12 +803,12 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     }
 
     /**
-     * Forcibly closes the {@link io.undertow.server.protocol.framed.AbstractFramedChannel}.
+     * Forcibly closes the {@link AbstractFramedChannel}.
      */
     @Override
     public void close() throws IOException {
-        if(UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
-            UndertowLogger.REQUEST_IO_LOGGER.tracef(new ClosedChannelException(), "Channel %s is being closed", this);
+        if(UndertowXnioLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
+            UndertowXnioLogger.REQUEST_IO_LOGGER.tracef(new ClosedChannelException(), "Channel %s is being closed", this);
         }
         safeClose(channel);
         if(readData != null) {
@@ -837,8 +833,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected void markReadsBroken(Throwable cause) {
         if (readsBrokenUpdater.compareAndSet(this, 0, 1)) {
-            if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
-                UndertowLogger.REQUEST_IO_LOGGER.debugf(new ClosedChannelException(), "Marking reads broken on channel %s", this);
+            if(UndertowXnioLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
+                UndertowXnioLogger.REQUEST_IO_LOGGER.debugf(new ClosedChannelException(), "Marking reads broken on channel %s", this);
             }
             if(receiver != null) {
                 receiver.markStreamBroken();
@@ -873,8 +869,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     @SuppressWarnings({"unchecked", "rawtypes"})
     protected void markWritesBroken(Throwable cause) {
         if (writesBrokenUpdater.compareAndSet(this, 0, 1)) {
-            if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
-                UndertowLogger.REQUEST_IO_LOGGER.debugf(new ClosedChannelException(), "Marking writes broken on channel %s", this);
+            if(UndertowXnioLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
+                UndertowXnioLogger.REQUEST_IO_LOGGER.debugf(new ClosedChannelException(), "Marking writes broken on channel %s", this);
             }
             handleBrokenSinkChannel(cause);
             safeClose(channel.getSinkChannel());
@@ -945,7 +941,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 if(listener == null) {
                     listener = DRAIN_LISTENER;
                 }
-                UndertowLogger.REQUEST_IO_LOGGER.tracef("Invoking receive listener", receiver);
+                UndertowXnioLogger.REQUEST_IO_LOGGER.tracef("Invoking receive listener", receiver);
                 ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, listener);
             }
             if (readData != null  && !readData.isFreed() && channel.isOpen()) {

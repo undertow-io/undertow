@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.server.protocol.framed.SendFrameHeader;
+import io.undertow.xnio.protocols.framed.SendFrameHeader;
 
 /**
  * //TODO: ack

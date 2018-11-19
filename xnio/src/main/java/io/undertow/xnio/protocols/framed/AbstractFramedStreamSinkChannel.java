@@ -1,22 +1,19 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package io.undertow.server.protocol.framed;
+package io.undertow.xnio.protocols.framed;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
@@ -40,10 +37,10 @@ import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.util.ImmediatePooledByteBuffer;
+import io.undertow.xnio.UndertowXnioLogger;
+import io.undertow.xnio.UndertowXnioMessages;
 
 /**
  * Framed Stream Sink Channel.
@@ -83,7 +80,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     /**
      * If the last frame has been queued.
-     *
+     * <p>
      * Note that this may not actually be the final frame in some circumstances, e.g. if the final frame
      * is two large to fit in the flow control window. In this case the flag may be cleared after flush is complete.
      */
@@ -131,13 +128,12 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     /**
      * Returns the header for the current frame.
-     *
+     * <p>
      * This consists of the frame data, and also an integer specifying how much data is remaining in the buffer.
      * If this is non-zero then this method must adjust the buffers limit accordingly.
-     *
+     * <p>
      * It is expected that this will be used when limits on the size of a data frame prevent the whole buffer from
      * being sent at once.
-     *
      *
      * @return The header for the current frame, or null
      */
@@ -151,7 +147,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         return header;
     }
 
-    protected SendFrameHeader createFrameHeader() throws IOException{
+    protected SendFrameHeader createFrameHeader() throws IOException {
         return null;
     }
 
@@ -185,11 +181,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     protected void resumeWritesInternal(boolean wakeup) {
         boolean alreadyResumed = writesResumed;
-        if(!wakeup && alreadyResumed) {
+        if (!wakeup && alreadyResumed) {
             return;
         }
         writesResumed = true;
-        if(readyForFlush && !wakeup) {
+        if (readyForFlush && !wakeup) {
             //we already have data queued to be flushed
             return;
         }
@@ -208,7 +204,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                         }
                         if (loopCount++ == 100) {
                             //should never happen
-                            UndertowLogger.ROOT_LOGGER.listenerNotProgressing();
+                            UndertowXnioLogger.ROOT_LOGGER.listenerNotProgressing();
                             IoUtils.safeClose(AbstractFramedStreamSinkChannel.this);
                             return;
                         }
@@ -266,8 +262,8 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void awaitWritable() throws IOException {
-        if(Thread.currentThread() == getIoThread()) {
-            throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+        if (Thread.currentThread() == getIoThread()) {
+            throw UndertowXnioMessages.MESSAGES.awaitCalledFromIoThread();
         }
         synchronized (lock) {
             if (anyAreSet(state, STATE_CLOSED) || broken) {
@@ -278,7 +274,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                     waiterCount++;
                     //we need to re-check after incrementing the waiters count
 
-                    if(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken) {
+                    if (readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken) {
                         lock.wait();
                     }
                 } catch (InterruptedException e) {
@@ -292,8 +288,8 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void awaitWritable(long l, TimeUnit timeUnit) throws IOException {
-        if(Thread.currentThread() == getIoThread()) {
-            throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
+        if (Thread.currentThread() == getIoThread()) {
+            throw UndertowXnioMessages.MESSAGES.awaitCalledFromIoThread();
         }
         synchronized (lock) {
             if (anyAreSet(state, STATE_CLOSED) || broken) {
@@ -302,7 +298,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             if (readyForFlush) {
                 try {
                     waiterCount++;
-                    if(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken) {
+                    if (readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken) {
                         lock.wait(timeUnit.toMillis(l));
                     }
                 } catch (InterruptedException e) {
@@ -341,11 +337,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public boolean flush() throws IOException {
-        if(anyAreSet(state, STATE_CLOSED)) {
+        if (anyAreSet(state, STATE_CLOSED)) {
             return true;
         }
         if (broken) {
-            throw UndertowMessages.MESSAGES.channelIsClosed();
+            throw UndertowXnioMessages.MESSAGES.channelIsClosed();
         }
 
         if (readyForFlush) {
@@ -361,10 +357,10 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             queueFinalFrame();
             return false;
         }
-        if(anyAreSet(state, STATE_WRITES_SHUTDOWN)) {
+        if (anyAreSet(state, STATE_WRITES_SHUTDOWN)) {
             return false;
         }
-        if(isFlushRequiredOnEmptyBuffer() || (writeBuffer != null && writeBuffer.getBuffer().position() > 0)) {
+        if (isFlushRequiredOnEmptyBuffer() || (writeBuffer != null && writeBuffer.getBuffer().position() > 0)) {
             handleBufferFull();
             return !readyForFlush;
         }
@@ -377,15 +373,15 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        if(!safeToSend()) {
+        if (!safeToSend()) {
             return 0;
         }
-        if(writeBuffer == null) {
+        if (writeBuffer == null) {
             writeBuffer = getChannel().getBufferPool().allocate();
         }
         ByteBuffer buffer = writeBuffer.getBuffer();
         int copied = Buffers.copy(buffer, srcs, offset, length);
-        if(!buffer.hasRemaining()) {
+        if (!buffer.hasRemaining()) {
             handleBufferFull();
         }
         return copied;
@@ -398,15 +394,15 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public int write(ByteBuffer src) throws IOException {
-        if(!safeToSend()) {
+        if (!safeToSend()) {
             return 0;
         }
-        if(writeBuffer == null) {
+        if (writeBuffer == null) {
             writeBuffer = getChannel().getBufferPool().allocate();
         }
         ByteBuffer buffer = writeBuffer.getBuffer();
         int copied = Buffers.copy(buffer, src);
-        if(!buffer.hasRemaining()) {
+        if (!buffer.hasRemaining()) {
             handleBufferFull();
         }
         return copied;
@@ -421,11 +417,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
      * @throws IOException if this channel is closed
      */
     public boolean send(PooledByteBuffer pooled) throws IOException {
-        if(isWritesShutdown()) {
-            throw UndertowMessages.MESSAGES.channelIsClosed();
+        if (isWritesShutdown()) {
+            throw UndertowXnioMessages.MESSAGES.channelIsClosed();
         }
         boolean result = sendInternal(pooled);
-        if(result) {
+        if (result) {
             flush();
         }
         return result;
@@ -442,13 +438,13 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     protected boolean safeToSend() throws IOException {
         int state = this.state;
         if (anyAreSet(state, STATE_CLOSED) || broken) {
-            throw UndertowMessages.MESSAGES.channelIsClosed();
+            throw UndertowXnioMessages.MESSAGES.channelIsClosed();
         }
         if (readyForFlush) {
             return false; //we can't do anything, we are waiting for a flush
         }
-        if( null != this.body) {
-            throw UndertowMessages.MESSAGES.bodyIsSetAndNotReadyForFlush();
+        if (null != this.body) {
+            throw UndertowXnioMessages.MESSAGES.bodyIsSetAndNotReadyForFlush();
         }
         return true;
     }
@@ -481,12 +477,12 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     private void sendWriteBuffer() throws IOException {
-        if(writeBuffer == null) {
+        if (writeBuffer == null) {
             writeBuffer = EMPTY_BYTE_BUFFER;
         }
         writeBuffer.getBuffer().flip();
-        if(!sendInternal(writeBuffer)) {
-            throw UndertowMessages.MESSAGES.failedToSendAfterBeingSafe();
+        if (!sendInternal(writeBuffer)) {
+            throw UndertowXnioMessages.MESSAGES.failedToSendAfterBeingSafe();
         }
         writeBuffer = null;
     }
@@ -498,7 +494,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     /**
      * @return true if the channel is ready to be flushed. When a channel is ready to be flushed nothing should modify the buffer,
-     *         as it may be written out by another thread.
+     * as it may be written out by another thread.
      */
     public boolean isReadyForFlush() {
         return readyForFlush;
@@ -518,18 +514,18 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void close() throws IOException {
-        if(fullyFlushed || anyAreSet(state, STATE_CLOSED)) {
+        if (fullyFlushed || anyAreSet(state, STATE_CLOSED)) {
             return;
         }
         try {
             synchronized (lock) {
                 state |= STATE_CLOSED;
             }
-            if(writeBuffer != null) {
+            if (writeBuffer != null) {
                 writeBuffer.close();
                 writeBuffer = null;
             }
-            if(body != null) {
+            if (body != null) {
                 body.close();
                 body = null;
             }
@@ -550,16 +546,16 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     /**
      * Called when a channel has been forcibly closed, and data (frames) have already been written.
-     *
+     * <p>
      * The action this should take is protocol dependent, e.g. for SPDY a RST_STREAM should be sent,
      * for websockets the channel should be closed.
-     *
+     * <p>
      * By default this will just close the underlying channel
      *
      * @throws IOException
      */
     protected void channelForciblyClosed() throws IOException {
-        if(isFirstDataWritten()) {
+        if (isFirstDataWritten()) {
             getChannel().markWritesBroken(null);
         }
         wakeupWaiters();
@@ -581,10 +577,10 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     public ByteBuffer getBuffer() {
-        if(anyAreSet(state, STATE_CLOSED)) {
+        if (anyAreSet(state, STATE_CLOSED)) {
             throw new IllegalStateException();
         }
-        if(body == null) {
+        if (body == null) {
             // TODO should we IllegalState here? we expect a buffer to already exist
             body = EMPTY_BYTE_BUFFER;
         }
@@ -690,17 +686,17 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 ChannelListeners.invokeChannelListener(getIoThread(), (S) this, closeListener);
             }
         } finally {
-            if(header != null) {
-                if( header.getByteBuffer() != null) {
+            if (header != null) {
+                if (header.getByteBuffer() != null) {
                     header.getByteBuffer().close();
                     header = null;
                 }
             }
-            if(body != null) {
+            if (body != null) {
                 body.close();
                 body = null;
             }
-            if(writeBuffer != null) {
+            if (writeBuffer != null) {
                 writeBuffer.close();
                 writeBuffer = null;
             }
@@ -712,7 +708,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     private void wakeupWaiters() {
-        if(waiterCount > 0) {
+        if (waiterCount > 0) {
             synchronized (lock) {
                 // It is possible that waiter count would be updated before gaining the lock, lets check one more
                 // time whether the condition wasn't changed in the meantime.

@@ -17,7 +17,7 @@
  */
 package io.undertow.websockets.core;
 
-import io.undertow.server.protocol.framed.AbstractFramedStreamSinkChannel;
+import io.undertow.xnio.protocols.framed.AbstractFramedStreamSinkChannel;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

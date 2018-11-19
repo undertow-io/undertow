@@ -48,7 +48,7 @@ import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
-import io.undertow.util.WorkerUtils;
+import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * A pool of connections to a target host.

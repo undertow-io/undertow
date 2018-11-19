@@ -19,7 +19,7 @@ package io.undertow.websockets.core.protocol.version07;
 
 import java.nio.ByteBuffer;
 
-import io.undertow.server.protocol.framed.FrameHeaderData;
+import io.undertow.xnio.protocols.framed.FrameHeaderData;
 import io.undertow.websockets.core.function.ChannelFunction;
 
 /**

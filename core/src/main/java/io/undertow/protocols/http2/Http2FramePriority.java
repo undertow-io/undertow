@@ -23,8 +23,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import io.undertow.UndertowLogger;
-import io.undertow.server.protocol.framed.FramePriority;
-import io.undertow.server.protocol.framed.SendFrameHeader;
+import io.undertow.xnio.protocols.framed.FramePriority;
+import io.undertow.xnio.protocols.framed.SendFrameHeader;
 
 /**
  * TODO: real priority

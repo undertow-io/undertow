@@ -1,33 +1,30 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package io.undertow.util;
+package io.undertow.xnio.protocols.framed;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.xnio.UndertowXnioMessages;
 
 /**
  * A reference counted pooled implementation, that basically consists of a main buffer, that can be sliced off into smaller buffers,
  * and the underlying buffer will not be freed until all the slices and the main buffer itself have also been freed.
- *
+ * <p>
  * This also supports the notion of un-freeing the main buffer. Basically this allows the buffer be re-used, so if only a small slice of the
  * buffer was used for read operations the main buffer can potentially be re-used. This prevents buffer exhaustion attacks where content
  * is sent in many small packets, and you end up allocating a large number of buffers to hold a small amount of data.
@@ -57,7 +54,7 @@ public class ReferenceCountedPooled implements PooledByteBuffer {
 
     @Override
     public void close() {
-        if(mainFreed) {
+        if (mainFreed) {
             return;
         }
         mainFreed = true;
@@ -76,9 +73,9 @@ public class ReferenceCountedPooled implements PooledByteBuffer {
     public boolean tryUnfree() {
         int refs;
         do {
-            refs  = referenceCountUpdater.get(this);
-            if(refs <= 0) {
-                 return false;
+            refs = referenceCountUpdater.get(this);
+            if (refs <= 0) {
+                return false;
             }
         } while (!referenceCountUpdater.compareAndSet(this, refs, refs + 1));
         ByteBuffer resource = slice != null ? slice : underlying.getBuffer();
@@ -90,9 +87,9 @@ public class ReferenceCountedPooled implements PooledByteBuffer {
     }
 
     private void freeInternal() {
-        if(referenceCountUpdater.decrementAndGet(this) == 0) {
+        if (referenceCountUpdater.decrementAndGet(this) == 0) {
             underlying.close();
-            if(freeNotifier != null) {
+            if (freeNotifier != null) {
                 freeNotifier.freed();
             }
         }
@@ -100,10 +97,10 @@ public class ReferenceCountedPooled implements PooledByteBuffer {
 
     @Override
     public ByteBuffer getBuffer() throws IllegalStateException {
-        if(mainFreed) {
-            throw UndertowMessages.MESSAGES.bufferAlreadyFreed();
+        if (mainFreed) {
+            throw UndertowXnioMessages.MESSAGES.bufferAlreadyFreed();
         }
-        if(slice != null) {
+        if (slice != null) {
             return slice;
         }
         return underlying.getBuffer();
@@ -118,7 +115,7 @@ public class ReferenceCountedPooled implements PooledByteBuffer {
             @Override
             public void close() {
                 //make sure that a given view can only be freed once
-                if(!free) {
+                if (!free) {
                     free = true;
                     ReferenceCountedPooled.this.freeInternal();
                 }
@@ -131,8 +128,8 @@ public class ReferenceCountedPooled implements PooledByteBuffer {
 
             @Override
             public ByteBuffer getBuffer() throws IllegalStateException {
-                if(free) {
-                    throw UndertowMessages.MESSAGES.bufferAlreadyFreed();
+                if (free) {
+                    throw UndertowXnioMessages.MESSAGES.bufferAlreadyFreed();
                 }
                 return newValue;
             }
@@ -155,10 +152,10 @@ public class ReferenceCountedPooled implements PooledByteBuffer {
         int val;
         do {
             val = referenceCountUpdater.get(this);
-            if(val == 0) {
+            if (val == 0) {
                 //should never happen, as this should only be called from
                 //code that already has a reference
-                throw UndertowMessages.MESSAGES.objectWasFreed();
+                throw UndertowXnioMessages.MESSAGES.objectWasFreed();
             }
         } while (!referenceCountUpdater.compareAndSet(this, val, val + 1));
     }

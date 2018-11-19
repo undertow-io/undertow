@@ -26,7 +26,7 @@ import org.xnio.StreamConnection;
 
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
+import io.undertow.xnio.protocols.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;

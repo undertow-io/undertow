@@ -18,7 +18,7 @@
 
 package io.undertow.protocols.http2;
 
-import io.undertow.server.protocol.framed.AbstractFramedStreamSinkChannel;
+import io.undertow.xnio.protocols.framed.AbstractFramedStreamSinkChannel;
 
 /**
  * @author Stuart Douglas

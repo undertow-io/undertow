@@ -33,7 +33,7 @@ import org.xnio.XnioExecutor;
 
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.util.ImmediatePooledByteBuffer;
-import io.undertow.util.WorkerUtils;
+import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * @author Stuart Douglas

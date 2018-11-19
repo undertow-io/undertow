@@ -44,7 +44,7 @@ import org.xnio.IoUtils;
 
 import io.undertow.server.session.SecureRandomSessionIdGenerator;
 import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.util.WorkerUtils;
+import io.undertow.xnio.util.WorkerUtils;
 import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.core.CloseMessage;
 import io.undertow.websockets.core.WebSocketChannel;

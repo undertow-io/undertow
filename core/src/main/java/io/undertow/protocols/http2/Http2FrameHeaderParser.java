@@ -38,8 +38,8 @@ import java.nio.ByteBuffer;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
-import io.undertow.server.protocol.framed.FrameHeaderData;
+import io.undertow.xnio.protocols.framed.AbstractFramedStreamSourceChannel;
+import io.undertow.xnio.protocols.framed.FrameHeaderData;
 
 /**
  * @author Stuart Douglas

@@ -45,9 +45,9 @@ import io.undertow.UndertowMessages;
 import io.undertow.client.ClientConnection;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.server.protocol.framed.AbstractFramedChannel;
-import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
-import io.undertow.server.protocol.framed.FrameHeaderData;
+import io.undertow.xnio.protocols.framed.AbstractFramedChannel;
+import io.undertow.xnio.protocols.framed.AbstractFramedStreamSourceChannel;
+import io.undertow.xnio.protocols.framed.FrameHeaderData;
 import io.undertow.util.Attachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
@@ -74,7 +74,7 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
     private boolean lastFrameReceived;
 
     /**
-     * Create a new {@link io.undertow.server.protocol.framed.AbstractFramedChannel}
+     * Create a new {@link AbstractFramedChannel}
      * 8
      *
      * @param connectedStreamChannel The {@link org.xnio.channels.ConnectedStreamChannel} over which the WebSocket Frames should get send and received.

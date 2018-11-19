@@ -23,7 +23,7 @@ import java.util.Random;
 
 import io.undertow.UndertowLogger;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.server.protocol.framed.SendFrameHeader;
+import io.undertow.xnio.protocols.framed.SendFrameHeader;
 import io.undertow.util.ImmediatePooledByteBuffer;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
