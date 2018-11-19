@@ -42,7 +42,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.io.BufferWritableOutputStream;
-import io.undertow.server.protocol.http.HttpAttachments;
+import io.undertow.connector.HttpAttachments;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.Headers;

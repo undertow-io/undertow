@@ -44,7 +44,7 @@ import javax.servlet.http.HttpSession;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.protocol.http.HttpAttachments;
+import io.undertow.connector.HttpAttachments;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.CanonicalPathUtils;

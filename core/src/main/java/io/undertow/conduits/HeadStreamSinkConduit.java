@@ -33,6 +33,8 @@ import org.xnio.conduits.ConduitWritableByteChannel;
 import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
+import io.undertow.xnio.conduits.ConduitListener;
+
 /**
  * A conduit that discards all data written to it. This allows head requests to 'just work', as all data written
  * will be discarded.

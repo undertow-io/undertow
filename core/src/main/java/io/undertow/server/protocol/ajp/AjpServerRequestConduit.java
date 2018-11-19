@@ -34,7 +34,7 @@ import org.xnio.conduits.ConduitReadableByteChannel;
 import org.xnio.conduits.StreamSourceConduit;
 
 import io.undertow.UndertowMessages;
-import io.undertow.conduits.ConduitListener;
+import io.undertow.xnio.conduits.ConduitListener;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ImmediatePooledByteBuffer;

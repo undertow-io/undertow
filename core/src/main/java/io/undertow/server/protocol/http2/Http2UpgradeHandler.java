@@ -34,7 +34,7 @@ import io.undertow.connector.UndertowOptionMap;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
-import io.undertow.protocols.http2.Http2Channel;
+import io.undertow.xnio.protocols.http2.Http2Channel;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;

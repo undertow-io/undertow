@@ -1,5 +1,5 @@
-io.undertow.client.http.HttpClientProvider
-io.undertow.client.ajp.AjpClientProvider
-io.undertow.client.http2.Http2ClientProvider
-io.undertow.client.http2.Http2ClearClientProvider
-io.undertow.client.http2.Http2PriorKnowledgeClientProvider
+io.undertow.xnio.client.http.HttpClientProvider
+io.undertow.xnio.client.ajp.AjpClientProvider
+io.undertow.xnio.client.http2.Http2ClientProvider
+io.undertow.xnio.client.http2.Http2ClearClientProvider
+io.undertow.xnio.client.http2.Http2PriorKnowledgeClientProvider

@@ -21,7 +21,7 @@ import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.OpenListener;
 import io.undertow.util.NetworkUtils;
-import io.undertow.util.PooledAdaptor;
+import io.undertow.xnio.util.PooledAdaptor;
 import io.undertow.xnio.XnioUndertowOptions;
 import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 

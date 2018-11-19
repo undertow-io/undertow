@@ -29,7 +29,7 @@ import org.xnio.Options;
 import org.xnio.SslClientAuthMode;
 
 import io.undertow.UndertowMessages;
-import io.undertow.protocols.http2.Http2Channel;
+import io.undertow.xnio.protocols.http2.Http2Channel;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;

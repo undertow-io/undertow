@@ -37,7 +37,7 @@ import javax.tools.JavaFileObject;
 /**
  * @author Stuart Douglas
  */
-@SupportedAnnotationTypes("io.undertow.annotationprocessor.HttpParserConfig")
+@SupportedAnnotationTypes({"io.undertow.annotationprocessor.HttpParserConfig", "io.undertow.annotationprocessor.HttpResponseParserConfig"})
 @SupportedOptions({
 })
 @SupportedSourceVersion(SourceVersion.RELEASE_8)

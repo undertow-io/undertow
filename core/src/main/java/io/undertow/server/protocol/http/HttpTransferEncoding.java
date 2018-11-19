@@ -18,20 +18,25 @@
 
 package io.undertow.server.protocol.http;
 
+import java.io.IOException;
+
 import org.jboss.logging.Logger;
+import org.xnio.IoUtils;
 import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
-import io.undertow.conduits.ChunkedStreamSinkConduit;
-import io.undertow.conduits.ChunkedStreamSourceConduit;
-import io.undertow.conduits.ConduitListener;
-import io.undertow.conduits.FinishableStreamSinkConduit;
-import io.undertow.conduits.FixedLengthStreamSourceConduit;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.xnio.conduits.ChunkedStreamSinkConduit;
+import io.undertow.xnio.conduits.ChunkedStreamSourceConduit;
+import io.undertow.connector.HttpAttachments;
+import io.undertow.xnio.conduits.ConduitListener;
+import io.undertow.xnio.conduits.FinishableStreamSinkConduit;
+import io.undertow.xnio.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.conduits.HeadStreamSinkConduit;
-import io.undertow.conduits.PreChunkedStreamSinkConduit;
+import io.undertow.xnio.conduits.PreChunkedStreamSinkConduit;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
@@ -110,7 +115,34 @@ class HttpTransferEncoding {
         }
         if (transferEncodingHeader != null && !transferEncoding.equals(Headers.IDENTITY)) {
             ConduitStreamSourceChannel sourceChannel = ((HttpServerConnection) exchange.getConnection()).getChannel().getSourceChannel();
-            sourceChannel.setConduit(new ChunkedStreamSourceConduit(sourceChannel.getConduit(), exchange, chunkedDrainListener(exchange)));
+            sourceChannel.setConduit(new ChunkedStreamSourceConduit(sourceChannel.getConduit(), new ChunkedStreamSourceConduit.ChunkedOperations() {
+                @Override
+                public PooledByteBuffer allocate() {
+                    return exchange.getConnection().getByteBufferPool().allocate();
+                }
+
+                @Override
+                public void pushBack(PooledByteBuffer pooled) {
+                    ((HttpServerConnection) exchange.getConnection()).ungetRequestBytes(pooled);
+                }
+
+                @Override
+                public long getMaxEntitySize() {
+                    return exchange.getMaxEntitySize();
+                }
+
+                @Override
+                public void requestToLarge() {
+                    Connectors.terminateRequest(exchange);
+                    exchange.setPersistent(false);
+                }
+
+                @Override
+                public void close() throws IOException {
+                    exchange.setPersistent(false);
+                    Connectors.terminateRequest(exchange);
+                }
+            }, chunkedDrainListener(exchange), exchange));
         } else if (contentLengthHeader != null) {
             final long contentLength;
             contentLength = parsePositiveLong(contentLengthHeader);
@@ -164,7 +196,24 @@ class HttpTransferEncoding {
     }
 
     private static StreamSourceConduit fixedLengthStreamSourceConduitWrapper(final long contentLength, final StreamSourceConduit conduit, final HttpServerExchange exchange) {
-        return new FixedLengthStreamSourceConduit(conduit, contentLength, fixedLengthDrainListener(exchange), exchange);
+        return new FixedLengthStreamSourceConduit(conduit, contentLength, fixedLengthDrainListener(exchange), new FixedLengthStreamSourceConduit.Operations() {
+            @Override
+            public long getMaxEntitySize() {
+                return exchange.getMaxEntitySize();
+            }
+
+            @Override
+            public void requestTooLarge() {
+                Connectors.terminateRequest(exchange);
+                exchange.setPersistent(false);
+            }
+
+            @Override
+            public void close() throws IOException {
+                exchange.setPersistent(false);
+
+            }
+        });
     }
 
     private static ConduitListener<FixedLengthStreamSourceConduit> fixedLengthDrainListener(final HttpServerExchange exchange) {

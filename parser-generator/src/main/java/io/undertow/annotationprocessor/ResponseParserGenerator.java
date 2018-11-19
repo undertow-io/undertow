@@ -31,8 +31,8 @@ import org.jboss.classfilewriter.code.CodeAttribute;
 public class ResponseParserGenerator extends AbstractParserGenerator {
 
     //class names
-    public static final String PARSE_STATE_CLASS = "io.undertow.client.http.ResponseParseState";
-    public static final String HTTP_RESPONSE_CLASS = "io.undertow.client.http.HttpResponseBuilder";
+    public static final String PARSE_STATE_CLASS = "io.undertow.xnio.client.http.ResponseParseState";
+    public static final String HTTP_RESPONSE_CLASS = "io.undertow.xnio.client.http.HttpResponseBuilder";
 
     //parsing states
     public static final int VERSION = 0;

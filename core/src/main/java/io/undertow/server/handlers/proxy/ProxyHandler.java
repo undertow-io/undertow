@@ -56,7 +56,7 @@ import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.server.protocol.http.HttpAttachments;
+import io.undertow.connector.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
