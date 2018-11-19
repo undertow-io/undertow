@@ -41,7 +41,8 @@ import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.protocol.ParseTimeoutUpdater;
+import io.undertow.server.ServerConnection;
+import io.undertow.xnio.ParseTimeoutUpdater;
 import io.undertow.server.protocol.http2.Http2ReceiveListener;
 import io.undertow.util.ClosingChannelExceptionHandler;
 import io.undertow.util.ConnectionUtils;
@@ -107,7 +108,12 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             this.parseTimeoutUpdater = null;
         } else {
             this.parseTimeoutUpdater = new ParseTimeoutUpdater(connection.getChannel(), requestParseTimeout, requestIdleTimeout);
-            connection.addCloseListener(parseTimeoutUpdater);
+            connection.addCloseListener(new ServerConnection.CloseListener() {
+                @Override
+                public void closed(ServerConnection connection) {
+                    parseTimeoutUpdater.close();
+                }
+            });
         }
         state = new ParseState(connection.getUndertowOptions().get(UndertowOptions.HTTP_HEADERS_CACHE_SIZE, UndertowOptions.DEFAULT_HTTP_HEADERS_CACHE_SIZE));
     }

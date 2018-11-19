@@ -1,22 +1,19 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package io.undertow.server.protocol;
+package io.undertow.xnio;
 
 import java.io.Closeable;
 import java.util.concurrent.RejectedExecutionException;
@@ -26,8 +23,6 @@ import org.xnio.IoUtils;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.ConnectedChannel;
 
-import io.undertow.UndertowLogger;
-import io.undertow.server.ServerConnection;
 import io.undertow.xnio.util.WorkerUtils;
 
 /**
@@ -36,7 +31,7 @@ import io.undertow.xnio.util.WorkerUtils;
  * @author Sebastian Laskawiec
  * @see io.undertow.UndertowOptions#REQUEST_PARSE_TIMEOUT
  */
-public final class ParseTimeoutUpdater implements Runnable, ServerConnection.CloseListener, Closeable {
+public final class ParseTimeoutUpdater implements Runnable, Closeable {
 
     private final ConnectedChannel connection;
     private final long requestParseTimeout;
@@ -53,7 +48,8 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
 
     /**
      * Creates new instance of ParseTimeoutSourceConduit.
-     *  @param channel             Channel which will be closed in case of timeout.
+     *
+     * @param channel             Channel which will be closed in case of timeout.
      * @param requestParseTimeout Timeout value. Negative value will indicate that this updated is disabled.
      * @param requestIdleTimeout
      */
@@ -68,7 +64,8 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
 
     /**
      * Creates new instance of ParseTimeoutSourceConduit.
-     *  @param channel             Channel which will be closed in case of timeout.
+     *
+     * @param channel             Channel which will be closed in case of timeout.
      * @param requestParseTimeout Timeout value. Negative value will indicate that this updated is disabled.
      * @param requestIdleTimeout
      */
@@ -78,6 +75,7 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
         this.requestIdleTimeout = requestIdleTimeout;
         this.closeTask = closeTask;
     }
+
     /**
      * Called when the connection goes idle
      */
@@ -88,7 +86,7 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
 
     private void handleSchedule(long timeout) {
         //no current timeout, clear the expire time
-        if(timeout == -1) {
+        if (timeout == -1) {
             this.expireTime = -1;
             return;
         }
@@ -97,17 +95,17 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
         long oldExpireTime = this.expireTime;
         this.expireTime = newExpireTime;
         //if the new one is less than the current one we need to schedule a new timer, so cancel the old one
-        if(newExpireTime < oldExpireTime) {
-            if(handle != null) {
+        if (newExpireTime < oldExpireTime) {
+            if (handle != null) {
                 handle.remove();
                 handle = null;
             }
         }
-        if(handle == null) {
+        if (handle == null) {
             try {
                 handle = WorkerUtils.executeAfter(connection.getIoThread(), this, timeout + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
             } catch (RejectedExecutionException e) {
-                UndertowLogger.REQUEST_LOGGER.debug("Failed to schedule parse timeout, server is probably shutting down", e);
+                UndertowXnioLogger.REQUEST_LOGGER.debug("Failed to schedule parse timeout, server is probably shutting down", e);
             }
         }
     }
@@ -115,10 +113,9 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
     /**
      * Called when a request is received, however it is not parsed in a single read() call. This starts a timer,
      * and if the request is not parsed within this time then the connection is closed.
-     *
      */
     public void failedParse() {
-        if(!parsing) {
+        if (!parsing) {
             parsing = true;
             handleSchedule(requestParseTimeout);
         }
@@ -137,32 +134,28 @@ public final class ParseTimeoutUpdater implements Runnable, ServerConnection.Clo
 
     @Override
     public void run() {
-        if(!connection.isOpen()) {
+        if (!connection.isOpen()) {
             return;
         }
         handle = null;
         if (expireTime > 0) { //timeout is not active
             long now = System.currentTimeMillis();
-            if(expireTime > now) {
+            if (expireTime > now) {
                 handle = WorkerUtils.executeAfter(connection.getIoThread(), this, (expireTime - now) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
             } else {
-                if(parsing) {
-                    UndertowLogger.REQUEST_LOGGER.parseRequestTimedOut(connection.getPeerAddress());
+                if (parsing) {
+                    UndertowXnioLogger.REQUEST_LOGGER.parseRequestTimedOut(connection.getPeerAddress());
                 } else {
-                    UndertowLogger.REQUEST_LOGGER.debugf("Timing out idle connection from %s", connection.getPeerAddress());
+                    UndertowXnioLogger.REQUEST_LOGGER.debugf("Timing out idle connection from %s", connection.getPeerAddress());
                 }
                 closeTask.run();
             }
         }
     }
 
-    @Override
-    public void closed(ServerConnection connection) {
-        close();
-    }
 
     public void close() {
-        if(handle != null) {
+        if (handle != null) {
             handle.remove();
             handle = null;
         }

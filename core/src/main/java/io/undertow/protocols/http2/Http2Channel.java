@@ -51,7 +51,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.server.protocol.ParseTimeoutUpdater;
+import io.undertow.xnio.ParseTimeoutUpdater;
 import io.undertow.xnio.protocols.framed.AbstractFramedChannel;
 import io.undertow.xnio.protocols.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.xnio.protocols.framed.FrameHeaderData;
