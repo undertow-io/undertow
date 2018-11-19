@@ -1,28 +1,25 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package io.undertow.protocols.ajp;
+package io.undertow.xnio.protocols.ajp;
 
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_CPONG;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_END_RESPONSE;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_REQUEST_BODY_CHUNK;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_BODY_CHUNK;
-import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_HEADERS;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.FRAME_TYPE_CPONG;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.FRAME_TYPE_END_RESPONSE;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.FRAME_TYPE_REQUEST_BODY_CHUNK;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_BODY_CHUNK;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_HEADERS;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -40,17 +37,16 @@ import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.client.ClientConnection;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.xnio.protocols.framed.AbstractFramedChannel;
-import io.undertow.xnio.protocols.framed.AbstractFramedStreamSourceChannel;
-import io.undertow.xnio.protocols.framed.FrameHeaderData;
 import io.undertow.util.Attachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.xnio.UndertowXnioLogger;
+import io.undertow.xnio.UndertowXnioMessages;
+import io.undertow.xnio.protocols.framed.AbstractFramedChannel;
+import io.undertow.xnio.protocols.framed.AbstractFramedStreamSourceChannel;
+import io.undertow.xnio.protocols.framed.FrameHeaderData;
 
 /**
  * AJP client side channel.
@@ -65,7 +61,7 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
     private AjpClientRequestClientStreamSinkChannel sink;
 
 
-    private final List<ClientConnection.PingListener> pingListeners = new ArrayList<>();
+    private final List<PingListener> pingListeners = new ArrayList<>();
 
     boolean sinkDone = true;
     boolean sourceDone = true;
@@ -100,11 +96,11 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
             return null;
         } else if (frameHeaderData instanceof CpongResponse) {
             synchronized (pingListeners) {
-                for(ClientConnection.PingListener i : pingListeners) {
+                for (PingListener i : pingListeners) {
                     try {
                         i.acknowledged();
                     } catch (Throwable t) {
-                        UndertowLogger.ROOT_LOGGER.debugf("Exception notifying ping listener", t);
+                        UndertowXnioLogger.ROOT_LOGGER.debugf("Exception notifying ping listener", t);
                     }
                 }
                 pingListeners.clear();
@@ -139,7 +135,7 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
                 } else if (parser.prefix == FRAME_TYPE_CPONG) {
                     return new CpongResponse();
                 } else {
-                    UndertowLogger.ROOT_LOGGER.debug("UNKOWN FRAME");
+                    UndertowXnioLogger.ROOT_LOGGER.debug("UNKOWN FRAME");
                 }
             } finally {
                 ajpParser.reset();
@@ -150,7 +146,7 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
 
     public AjpClientRequestClientStreamSinkChannel sendRequest(final HttpString method, final String path, final HttpString protocol, final HeaderMap headers, final Attachable attachable, ChannelListener<AjpClientRequestClientStreamSinkChannel> finishListener) {
         if (!sinkDone || !sourceDone) {
-            throw UndertowMessages.MESSAGES.ajpRequestAlreadyInProgress();
+            throw UndertowXnioMessages.MESSAGES.ajpRequestAlreadyInProgress();
         }
         sinkDone = false;
         sourceDone = false;
@@ -171,7 +167,7 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
     }
 
     protected void lastDataRead() {
-        if(!lastFrameSent) {
+        if (!lastFrameSent) {
             markReadsBroken(new ClosedChannelException());
             markWritesBroken(new ClosedChannelException());
         }
@@ -195,7 +191,7 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
 
     @Override
     protected Collection<AbstractFramedStreamSourceChannel<AjpClientChannel, AbstractAjpClientStreamSourceChannel, AbstractAjpClientStreamSinkChannel>> getReceivers() {
-        if(source == null) {
+        if (source == null) {
             return Collections.emptyList();
         }
         return Collections.<AbstractFramedStreamSourceChannel<AjpClientChannel, AbstractAjpClientStreamSourceChannel, AbstractAjpClientStreamSinkChannel>>singleton(source);
@@ -233,7 +229,7 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
         super.recalculateHeldFrames();
     }
 
-    public void sendPing(ClientConnection.PingListener pingListener, long timeout, TimeUnit timeUnit) {
+    public void sendPing(PingListener pingListener, long timeout, TimeUnit timeUnit) {
         AjpClientCPingStreamSinkChannel pingChannel = new AjpClientCPingStreamSinkChannel(this);
         try {
             pingChannel.shutdownWrites();
@@ -259,9 +255,9 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
         }
         getIoThread().executeAfter(() -> {
             synchronized (pingListeners) {
-                if(pingListeners.contains(pingListener)) {
+                if (pingListeners.contains(pingListener)) {
                     pingListeners.remove(pingListener);
-                    pingListener.failed(UndertowMessages.MESSAGES.pingTimeout());
+                    pingListener.failed(UndertowXnioMessages.MESSAGES.pingTimeout());
                 }
             }
         }, timeout, timeUnit);
@@ -359,5 +355,11 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
         public AbstractFramedStreamSourceChannel<?, ?, ?> getExistingChannel() {
             return null;
         }
+    }
+
+    public interface PingListener {
+        void acknowledged();
+
+        void failed(IOException e);
     }
 }

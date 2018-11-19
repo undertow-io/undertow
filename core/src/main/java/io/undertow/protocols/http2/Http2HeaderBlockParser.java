@@ -28,10 +28,10 @@ import org.xnio.Bits;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.server.Connectors;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.HttpTokens;
 import io.undertow.xnio.protocols.http2.HpackException;
 
 /**
@@ -179,7 +179,7 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
             if(c>= 'A' && c <= 'Z') {
                 invalid = true;
                 UndertowLogger.REQUEST_LOGGER.debugf("Malformed request, header %s contains uppercase characters", name);
-            } else if(c != ':' && !Connectors.isValidTokenCharacter(c)) {
+            } else if(c != ':' && !HttpTokens.isValidTokenCharacter(c)) {
                 invalid = true;
                 UndertowLogger.REQUEST_LOGGER.debugf("Malformed request, header %s contains invalid token character", name);
             }

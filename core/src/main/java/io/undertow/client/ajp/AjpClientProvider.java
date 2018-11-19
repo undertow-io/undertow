@@ -41,7 +41,7 @@ import io.undertow.conduits.ByteActivityCallback;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.connector.ByteBufferPool;
-import io.undertow.protocols.ajp.AjpClientChannel;
+import io.undertow.xnio.protocols.ajp.AjpClientChannel;
 
 /**
  * @author Stuart Douglas

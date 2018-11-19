@@ -1,32 +1,19 @@
-package io.undertow.protocols.ajp;
+/*
+ * JBoss, Home of Professional Open Source.
+ * Copyright 2018 Red Hat, Inc., and individual contributors
+ * as indicated by the @author tags.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import static io.undertow.util.Methods.ACL;
-import static io.undertow.util.Methods.BASELINE_CONTROL;
-import static io.undertow.util.Methods.CHECKIN;
-import static io.undertow.util.Methods.CHECKOUT;
-import static io.undertow.util.Methods.COPY;
-import static io.undertow.util.Methods.DELETE;
-import static io.undertow.util.Methods.GET;
-import static io.undertow.util.Methods.HEAD;
-import static io.undertow.util.Methods.LABEL;
-import static io.undertow.util.Methods.LOCK;
-import static io.undertow.util.Methods.MERGE;
-import static io.undertow.util.Methods.MKACTIVITY;
-import static io.undertow.util.Methods.MKCOL;
-import static io.undertow.util.Methods.MKWORKSPACE;
-import static io.undertow.util.Methods.MOVE;
-import static io.undertow.util.Methods.OPTIONS;
-import static io.undertow.util.Methods.POST;
-import static io.undertow.util.Methods.PROPFIND;
-import static io.undertow.util.Methods.PROPPATCH;
-import static io.undertow.util.Methods.PUT;
-import static io.undertow.util.Methods.REPORT;
-import static io.undertow.util.Methods.SEARCH;
-import static io.undertow.util.Methods.TRACE;
-import static io.undertow.util.Methods.UNCHECKOUT;
-import static io.undertow.util.Methods.UNLOCK;
-import static io.undertow.util.Methods.UPDATE;
-import static io.undertow.util.Methods.VERSION_CONTROL;
+package io.undertow.xnio.protocols.ajp;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,6 +21,7 @@ import java.util.Map;
 
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
 
 /**
  * @author Stuart Douglas
@@ -90,33 +78,33 @@ class AjpConstants {
         HEADER_MAP = Collections.unmodifiableMap(headers);
 
         final Map<HttpString, Integer> methods = new HashMap<>();
-        methods.put(OPTIONS, 1);
-        methods.put(GET, 2);
-        methods.put(HEAD, 3);
-        methods.put(POST, 4);
-        methods.put(PUT, 5);
-        methods.put(DELETE, 6);
-        methods.put(TRACE, 7);
-        methods.put(PROPFIND, 8);
-        methods.put(PROPPATCH, 9);
-        methods.put(MKCOL, 10);
-        methods.put(COPY, 11);
-        methods.put(MOVE, 12);
-        methods.put(LOCK, 13);
-        methods.put(UNLOCK, 14);
-        methods.put(ACL, 15);
-        methods.put(REPORT, 16);
-        methods.put(VERSION_CONTROL, 17);
-        methods.put(CHECKIN, 18);
-        methods.put(CHECKOUT, 19);
-        methods.put(UNCHECKOUT, 20);
-        methods.put(SEARCH, 21);
-        methods.put(MKWORKSPACE, 22);
-        methods.put(UPDATE, 23);
-        methods.put(LABEL, 24);
-        methods.put(MERGE, 25);
-        methods.put(BASELINE_CONTROL, 26);
-        methods.put(MKACTIVITY, 27);
+        methods.put(Methods.OPTIONS, 1);
+        methods.put(Methods.GET, 2);
+        methods.put(Methods.HEAD, 3);
+        methods.put(Methods.POST, 4);
+        methods.put(Methods.PUT, 5);
+        methods.put(Methods.DELETE, 6);
+        methods.put(Methods.TRACE, 7);
+        methods.put(Methods.PROPFIND, 8);
+        methods.put(Methods.PROPPATCH, 9);
+        methods.put(Methods.MKCOL, 10);
+        methods.put(Methods.COPY, 11);
+        methods.put(Methods.MOVE, 12);
+        methods.put(Methods.LOCK, 13);
+        methods.put(Methods.UNLOCK, 14);
+        methods.put(Methods.ACL, 15);
+        methods.put(Methods.REPORT, 16);
+        methods.put(Methods.VERSION_CONTROL, 17);
+        methods.put(Methods.CHECKIN, 18);
+        methods.put(Methods.CHECKOUT, 19);
+        methods.put(Methods.UNCHECKOUT, 20);
+        methods.put(Methods.SEARCH, 21);
+        methods.put(Methods.MKWORKSPACE, 22);
+        methods.put(Methods.UPDATE, 23);
+        methods.put(Methods.LABEL, 24);
+        methods.put(Methods.MERGE, 25);
+        methods.put(Methods.BASELINE_CONTROL, 26);
+        methods.put(Methods.MKACTIVITY, 27);
         HTTP_METHODS_MAP = Collections.unmodifiableMap(methods);
 
         HTTP_HEADERS_ARRAY = new HttpString[]{null,

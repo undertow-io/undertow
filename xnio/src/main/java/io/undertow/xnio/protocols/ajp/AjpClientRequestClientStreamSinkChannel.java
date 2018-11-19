@@ -1,35 +1,32 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package io.undertow.protocols.ajp;
+package io.undertow.xnio.protocols.ajp;
 
-import static io.undertow.protocols.ajp.AjpConstants.ATTR_AUTH_TYPE;
-import static io.undertow.protocols.ajp.AjpConstants.ATTR_QUERY_STRING;
-import static io.undertow.protocols.ajp.AjpConstants.ATTR_REMOTE_USER;
-import static io.undertow.protocols.ajp.AjpConstants.ATTR_ROUTE;
-import static io.undertow.protocols.ajp.AjpConstants.ATTR_SECRET;
-import static io.undertow.protocols.ajp.AjpConstants.ATTR_SSL_CERT;
-import static io.undertow.protocols.ajp.AjpConstants.ATTR_SSL_CIPHER;
-import static io.undertow.protocols.ajp.AjpConstants.ATTR_SSL_KEY_SIZE;
-import static io.undertow.protocols.ajp.AjpConstants.ATTR_SSL_SESSION;
-import static io.undertow.protocols.ajp.AjpConstants.ATTR_STORED_METHOD;
-import static io.undertow.protocols.ajp.AjpUtils.notNull;
-import static io.undertow.protocols.ajp.AjpUtils.putString;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.ATTR_AUTH_TYPE;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.ATTR_QUERY_STRING;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.ATTR_REMOTE_USER;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.ATTR_ROUTE;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.ATTR_SECRET;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.ATTR_SSL_CERT;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.ATTR_SSL_CIPHER;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.ATTR_SSL_KEY_SIZE;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.ATTR_SSL_SESSION;
+import static io.undertow.xnio.protocols.ajp.AjpConstants.ATTR_STORED_METHOD;
+import static io.undertow.xnio.protocols.ajp.AjpUtils.notNull;
+import static io.undertow.xnio.protocols.ajp.AjpUtils.putString;
 
 import java.io.IOException;
 import java.nio.BufferOverflowException;
@@ -37,10 +34,9 @@ import java.nio.ByteBuffer;
 
 import org.xnio.ChannelListener;
 
-import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
-import io.undertow.client.ProxiedRequestAttachments;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.xnio.ProxiedRequestAttachments;
+import io.undertow.xnio.UndertowXnioMessages;
 import io.undertow.xnio.protocols.framed.SendFrameHeader;
 import io.undertow.util.Attachable;
 import io.undertow.util.FlexBase64;
@@ -103,15 +99,15 @@ public class AjpClientRequestClientStreamSinkChannel extends AbstractAjpClientSt
                 //we are waiting on a read body chunk
                 return new SendFrameHeader(dataInBuffer, null);
             }
-            int maxData = getChannel().getSettings().get(UndertowOptions.MAX_AJP_PACKET_SIZE, DEFAULT_MAX_DATA_SIZE) - 6;
-
+           // int maxData = getChannel().getSettings().get(UndertowOptions.MAX_AJP_PACKET_SIZE, DEFAULT_MAX_DATA_SIZE) - 6;
+            int maxData = DEFAULT_MAX_DATA_SIZE;
             if (!firstFrameWritten) {
                 String contentLength = headers.getFirst(Headers.CONTENT_LENGTH);
                 if (contentLength != null) {
                     dataSize = Long.parseLong(contentLength);
                     requestedChunkSize = maxData;
                     if (dataInBuffer > dataSize) {
-                        throw UndertowMessages.MESSAGES.fixedLengthOverflow();
+                        throw UndertowXnioMessages.MESSAGES.fixedLengthOverflow();
                     }
                 } else if (isWritesShutdown() && !headers.contains(Headers.TRANSFER_ENCODING)) {
                     //writes are shut down, go to fixed length

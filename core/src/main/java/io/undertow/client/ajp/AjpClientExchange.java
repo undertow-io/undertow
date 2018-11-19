@@ -34,8 +34,8 @@ import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.client.ContinueNotification;
 import io.undertow.client.PushCallback;
-import io.undertow.protocols.ajp.AjpClientRequestClientStreamSinkChannel;
-import io.undertow.protocols.ajp.AjpClientResponseStreamSourceChannel;
+import io.undertow.xnio.protocols.ajp.AjpClientRequestClientStreamSinkChannel;
+import io.undertow.xnio.protocols.ajp.AjpClientResponseStreamSourceChannel;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.Headers;
 

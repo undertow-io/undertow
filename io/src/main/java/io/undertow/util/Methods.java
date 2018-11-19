@@ -1,19 +1,16 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.undertow.util;
@@ -21,8 +18,6 @@ package io.undertow.util;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import io.undertow.server.Connectors;
 
 /**
  * NOTE: If you add a new method here you must also add it to {@link io.undertow.server.protocol.http.HttpRequestParser}
@@ -139,9 +134,9 @@ public final class Methods {
 
     public static HttpString fromString(String method) {
         HttpString res = METHODS.get(method);
-        if(res == null) {
+        if (res == null) {
             HttpString httpString = new HttpString(method);
-            Connectors.verifyToken(httpString);
+            HttpTokens.verifyToken(httpString);
             return httpString;
         }
         return res;

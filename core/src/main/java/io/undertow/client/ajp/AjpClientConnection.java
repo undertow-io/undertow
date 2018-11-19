@@ -58,12 +58,12 @@ import io.undertow.client.ClientResponse;
 import io.undertow.client.ClientStatistics;
 import io.undertow.client.UndertowClientMessages;
 import io.undertow.connector.ByteBufferPool;
-import io.undertow.protocols.ajp.AbstractAjpClientStreamSourceChannel;
-import io.undertow.protocols.ajp.AjpClientChannel;
-import io.undertow.protocols.ajp.AjpClientRequestClientStreamSinkChannel;
-import io.undertow.protocols.ajp.AjpClientResponseStreamSourceChannel;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.Protocols;
+import io.undertow.xnio.protocols.ajp.AbstractAjpClientStreamSourceChannel;
+import io.undertow.xnio.protocols.ajp.AjpClientChannel;
+import io.undertow.xnio.protocols.ajp.AjpClientRequestClientStreamSinkChannel;
+import io.undertow.xnio.protocols.ajp.AjpClientResponseStreamSourceChannel;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -74,7 +74,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
         @Override
         public void handleEvent(AjpClientRequestClientStreamSinkChannel channel) {
-            if(currentRequest != null) {
+            if (currentRequest != null) {
                 currentRequest.terminateRequest();
             }
         }
@@ -82,7 +82,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     public final ChannelListener<AjpClientResponseStreamSourceChannel> responseFinishedListener = new ChannelListener<AjpClientResponseStreamSourceChannel>() {
         @Override
         public void handleEvent(AjpClientResponseStreamSourceChannel channel) {
-            if(currentRequest != null) {
+            if (currentRequest != null) {
                 currentRequest.terminateResponse();
             }
         }
@@ -121,7 +121,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                 log.debugf("connection to %s closed", getPeerAddress());
                 AjpClientConnection.this.state |= CLOSED;
                 ChannelListeners.invokeChannelListener(AjpClientConnection.this, closeSetter.get());
-                for(ChannelListener<ClientConnection> listener : closeListeners) {
+                for (ChannelListener<ClientConnection> listener : closeListeners) {
                     listener.handleEvent(AjpClientConnection.this);
                 }
                 AjpClientExchange pending = pendingQueue.poll();
@@ -129,7 +129,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                     pending.setFailed(new ClosedChannelException());
                     pending = pendingQueue.poll();
                 }
-                if(currentRequest != null) {
+                if (currentRequest != null) {
                     currentRequest.setFailed(new ClosedChannelException());
                     currentRequest = null;
                 }
@@ -252,7 +252,17 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
     @Override
     public void sendPing(PingListener listener, long timeout, TimeUnit timeUnit) {
-        connection.sendPing(listener, timeout, timeUnit);
+        connection.sendPing(new AjpClientChannel.PingListener() {
+            @Override
+            public void acknowledged() {
+                listener.acknowledged();
+            }
+
+            @Override
+            public void failed(IOException e) {
+                listener.failed(e);
+            }
+        }, timeout, timeUnit);
 
     }
 
@@ -358,14 +368,14 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         public void handleEvent(AjpClientChannel channel) {
             try {
                 AbstractAjpClientStreamSourceChannel result = channel.receive();
-                if(result == null) {
-                    if(!channel.isOpen()) {
+                if (result == null) {
+                    if (!channel.isOpen()) {
                         //we execute this in a runnable
                         //as there may be close/data frames that need to be processed
                         getIoThread().execute(new Runnable() {
                             @Override
                             public void run() {
-                                if(currentRequest != null) {
+                                if (currentRequest != null) {
                                     currentRequest.setFailed(new ClosedChannelException());
                                 }
                             }
@@ -374,7 +384,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                     return;
                 }
 
-                if(result instanceof AjpClientResponseStreamSourceChannel) {
+                if (result instanceof AjpClientResponseStreamSourceChannel) {
                     AjpClientResponseStreamSourceChannel response = (AjpClientResponseStreamSourceChannel) result;
                     response.setFinishListener(responseFinishedListener);
                     ClientResponse cr = new ClientResponse(response.getStatusCode(), response.getReasonPhrase(), currentRequest.getRequest().getProtocol(), response.getHeaders());
@@ -392,7 +402,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
             } catch (Throwable e) {
                 UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
                 safeClose(connection);
-                if(currentRequest != null) {
+                if (currentRequest != null) {
                     currentRequest.setFailed(e instanceof IOException ? (IOException) e : new IOException(e));
                 }
             }

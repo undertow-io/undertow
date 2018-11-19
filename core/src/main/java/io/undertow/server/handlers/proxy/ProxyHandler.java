@@ -51,7 +51,7 @@ import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.client.ContinueNotification;
-import io.undertow.client.ProxiedRequestAttachments;
+import io.undertow.xnio.ProxiedRequestAttachments;
 import io.undertow.client.PushCallback;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
