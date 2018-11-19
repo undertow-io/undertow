@@ -23,12 +23,10 @@ import java.nio.ByteBuffer;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.Pool;
 import org.xnio.channels.StreamSourceChannel;
 
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.server.XnioByteBufferPool;
 import io.undertow.websockets.core.UTF8Output;
 
 /**
@@ -45,11 +43,6 @@ public abstract class StringReadChannelListener implements ChannelListener<Strea
 
     public StringReadChannelListener(final ByteBufferPool bufferPool) {
         this.bufferPool = bufferPool;
-    }
-
-    @Deprecated
-    public StringReadChannelListener(final Pool<ByteBuffer> bufferPool) {
-        this.bufferPool = new XnioByteBufferPool(bufferPool);
     }
 
     public void setup(final StreamSourceChannel channel) {

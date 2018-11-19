@@ -22,7 +22,6 @@ import static io.undertow.UndertowOptions.DECODE_URL;
 import static io.undertow.UndertowOptions.URL_CHARSET;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Set;
@@ -31,7 +30,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
 import io.undertow.UndertowLogger;
@@ -39,7 +37,6 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
-import io.undertow.xnio.conduits.IdleTimeoutConduit;
 import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
 import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
 import io.undertow.connector.ByteBufferPool;
@@ -49,7 +46,7 @@ import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
 import io.undertow.server.ServerConnection;
-import io.undertow.server.XnioByteBufferPool;
+import io.undertow.xnio.conduits.IdleTimeoutConduit;
 
 /**
  * @author Stuart Douglas
@@ -79,14 +76,6 @@ public class AjpOpenListener implements OpenListener {
         }
     };
 
-    public AjpOpenListener(final Pool<ByteBuffer> pool) {
-        this(pool, OptionMap.EMPTY);
-    }
-
-    public AjpOpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
-        this(new XnioByteBufferPool(pool), undertowOptions);
-    }
-
     public AjpOpenListener(final ByteBufferPool pool) {
         this(pool, OptionMap.EMPTY);
     }
@@ -112,7 +101,7 @@ public class AjpOpenListener implements OpenListener {
         try {
             Integer readTimeout = channel.getOption(Options.READ_TIMEOUT);
             Integer idle = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
-            if(idle != null) {
+            if (idle != null) {
                 IdleTimeoutConduit conduit = new IdleTimeoutConduit(channel);
                 channel.getSourceChannel().setConduit(conduit);
                 channel.getSinkChannel().setConduit(conduit);
@@ -128,7 +117,7 @@ public class AjpOpenListener implements OpenListener {
             IoUtils.safeClose(channel);
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
         }
-        if(statisticsEnabled) {
+        if (statisticsEnabled) {
             channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
             channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.receivedAccumulator()));
             connectorStatistics.incrementConnectionCount();
@@ -136,7 +125,7 @@ public class AjpOpenListener implements OpenListener {
 
         AjpServerConnection connection = new AjpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         AjpReadListener readListener = new AjpReadListener(connection, scheme, parser, statisticsEnabled ? connectorStatistics : null);
-        if(statisticsEnabled) {
+        if (statisticsEnabled) {
             connection.addCloseListener(closeListener);
         }
         connection.setAjpReadListener(readListener);
@@ -187,7 +176,7 @@ public class AjpOpenListener implements OpenListener {
 
     @Override
     public ConnectorStatistics getConnectorStatistics() {
-        if(statisticsEnabled) {
+        if (statisticsEnabled) {
             return connectorStatistics;
         }
         return null;
@@ -195,7 +184,7 @@ public class AjpOpenListener implements OpenListener {
 
     @Override
     public void closeConnections() {
-        for(AjpServerConnection i : connections) {
+        for (AjpServerConnection i : connections) {
             IoUtils.safeClose(i);
         }
     }

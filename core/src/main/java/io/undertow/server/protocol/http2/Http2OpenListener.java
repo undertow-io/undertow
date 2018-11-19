@@ -18,7 +18,6 @@
 
 package io.undertow.server.protocol.http2;
 
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
 import io.undertow.UndertowLogger;
@@ -41,7 +39,6 @@ import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.XnioByteBufferPool;
 
 
 /**
@@ -75,21 +72,6 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
     private final ConnectorStatisticsImpl connectorStatistics;
     private final String protocol;
 
-    @Deprecated
-    public Http2OpenListener(final Pool<ByteBuffer> pool) {
-        this(pool, OptionMap.EMPTY);
-    }
-
-    @Deprecated
-    public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
-        this(pool, undertowOptions, HTTP2);
-    }
-
-    @Deprecated
-    public Http2OpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions, String protocol) {
-        this(new XnioByteBufferPool(pool), undertowOptions, protocol);
-    }
-
     public Http2OpenListener(final ByteBufferPool pool) {
         this(pool, OptionMap.EMPTY);
     }
@@ -120,7 +102,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
         if (idleTimeout != null && idleTimeout > 0) {
             http2Channel.setIdleTimeout(idleTimeout);
         }
-        if(statisticsEnabled) {
+        if (statisticsEnabled) {
             channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
             channel.getSourceChannel().setConduit(new BytesReceivedStreamSourceConduit(channel.getSourceChannel().getConduit(), connectorStatistics.receivedAccumulator()));
             connectorStatistics.incrementConnectionCount();
@@ -141,7 +123,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
 
     @Override
     public ConnectorStatistics getConnectorStatistics() {
-        if(statisticsEnabled) {
+        if (statisticsEnabled) {
             return connectorStatistics;
         }
         return null;
@@ -149,7 +131,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
 
     @Override
     public void closeConnections() {
-        for(Http2Channel i : connections) {
+        for (Http2Channel i : connections) {
             IoUtils.safeClose(i);
         }
     }

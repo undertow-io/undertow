@@ -19,7 +19,6 @@
 package io.undertow.server.protocol.http;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,7 +35,6 @@ import javax.net.ssl.SSLEngine;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
-import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.ssl.SslConnection;
@@ -46,16 +44,15 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.protocols.alpn.ALPNManager;
 import io.undertow.connector.alpn.ALPNProvider;
-import io.undertow.xnio.protocols.ssl.SslConduit;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
+import io.undertow.protocols.alpn.ALPNManager;
 import io.undertow.server.AggregateConnectorStatistics;
 import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
-import io.undertow.server.XnioByteBufferPool;
+import io.undertow.xnio.protocols.ssl.SslConduit;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
  * Open listener adaptor for ALPN connections
@@ -84,18 +81,6 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
 
     private volatile boolean providerLogged;
     private volatile boolean alpnFailLogged;
-
-    public AlpnOpenListener(Pool<ByteBuffer> bufferPool, OptionMap undertowOptions, DelegateOpenListener httpListener) {
-        this(bufferPool, undertowOptions, "http/1.1", httpListener);
-    }
-
-    public AlpnOpenListener(Pool<ByteBuffer> bufferPool, OptionMap undertowOptions) {
-        this(bufferPool, undertowOptions, null, null);
-    }
-
-    public AlpnOpenListener(Pool<ByteBuffer> bufferPool, OptionMap undertowOptions, String fallbackProtocol, DelegateOpenListener fallbackListener) {
-        this(new XnioByteBufferPool(bufferPool), undertowOptions, fallbackProtocol, fallbackListener);
-    }
 
     public AlpnOpenListener(ByteBufferPool bufferPool, OptionMap undertowOptions, DelegateOpenListener httpListener) {
         this(bufferPool, undertowOptions, "http/1.1", httpListener);
@@ -171,7 +156,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
 
     @Override
     public void closeConnections() {
-        for(Map.Entry<String, ListenerEntry> i : listeners.entrySet()) {
+        for (Map.Entry<String, ListenerEntry> i : listeners.entrySet()) {
             i.getValue().listener.closeConnections();
         }
     }

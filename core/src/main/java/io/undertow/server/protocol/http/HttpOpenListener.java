@@ -19,7 +19,6 @@
 package io.undertow.server.protocol.http;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,7 +27,6 @@ import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
-import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
 import io.undertow.UndertowLogger;
@@ -36,7 +34,6 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
-import io.undertow.xnio.conduits.IdleTimeoutConduit;
 import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
 import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
 import io.undertow.connector.ByteBufferPool;
@@ -46,7 +43,7 @@ import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.ServerConnection;
-import io.undertow.server.XnioByteBufferPool;
+import io.undertow.xnio.conduits.IdleTimeoutConduit;
 
 /**
  * Open listener for HTTP server.  XNIO should be set up to chain the accept handler to post-accept open
@@ -69,16 +66,6 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
 
     private volatile boolean statisticsEnabled;
     private final ConnectorStatisticsImpl connectorStatistics;
-
-    @Deprecated
-    public HttpOpenListener(final Pool<ByteBuffer> pool) {
-        this(pool, OptionMap.EMPTY);
-    }
-
-    @Deprecated
-    public HttpOpenListener(final Pool<ByteBuffer> pool, final OptionMap undertowOptions) {
-        this(new XnioByteBufferPool(pool), undertowOptions);
-    }
 
     public HttpOpenListener(final ByteBufferPool pool) {
         this(pool, OptionMap.EMPTY);
@@ -202,7 +189,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
 
     @Override
     public void closeConnections() {
-        for(HttpServerConnection i : connections) {
+        for (HttpServerConnection i : connections) {
             IoUtils.safeClose(i);
         }
     }
