@@ -28,11 +28,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import org.xnio.OptionMap;
 import org.xnio.XnioIoThread;
 
 import io.undertow.UndertowLogger;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.proxy.ConnectionPoolManager;
 import io.undertow.server.handlers.proxy.ProxyConnectionPool;
@@ -230,7 +230,7 @@ class Node {
                     clearActivePing();
                 }
             }
-        }, healthChecker, ioThread, bufferPool, container.getClient(), container.getXnioSsl(), OptionMap.EMPTY);
+        }, healthChecker, ioThread, bufferPool, container.getClient(), container.getXnioSsl(), UndertowOptionMap.EMPTY);
     }
 
     /**

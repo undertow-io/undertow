@@ -25,14 +25,14 @@ import java.util.concurrent.TimeUnit;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 
-import io.undertow.xnio.client.ClientCallback;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.UndertowClient;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.util.AttachmentKey;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.UndertowClient;
 
 /**
  * Simple proxy client provider. This provider simply proxies to another server, using a a one to one
@@ -74,7 +74,7 @@ public class SimpleProxyClientProvider implements ProxyClient {
                 exchange.getConnection().removeAttachment(clientAttachmentKey);
             }
         }
-        client.connect(new ConnectNotifier(callback, exchange), uri, exchange.getIoThread(), exchange.getConnection().getByteBufferPool(), OptionMap.EMPTY);
+        client.connect(new ConnectNotifier(callback, exchange), uri, exchange.getIoThread(), exchange.getConnection().getByteBufferPool(), UndertowOptionMap.EMPTY);
     }
 
     private final class ConnectNotifier implements ClientCallback<ClientConnection> {

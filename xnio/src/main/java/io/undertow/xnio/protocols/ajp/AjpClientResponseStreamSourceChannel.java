@@ -20,8 +20,8 @@ import java.io.IOException;
 import org.xnio.ChannelListener;
 
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.xnio.protocols.framed.FrameHeaderData;
 import io.undertow.util.HeaderMap;
+import io.undertow.xnio.protocols.framed.FrameHeaderData;
 
 /**
  * @author Stuart Douglas

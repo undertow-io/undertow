@@ -28,7 +28,6 @@ import java.util.Set;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -36,15 +35,17 @@ import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowOptions;
-import io.undertow.xnio.client.ClientCallback;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.ClientProvider;
-import io.undertow.xnio.client.ClientStatistics;
 import io.undertow.conduits.ByteActivityCallback;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.protocols.http2.Http2Channel;
+import io.undertow.xnio.XnioUndertowOptions;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientProvider;
+import io.undertow.xnio.client.ClientStatistics;
 
 /**
  * HTTP2 client provider that connects to endpoints that are known to support HTTP2
@@ -53,15 +54,15 @@ import io.undertow.protocols.http2.Http2Channel;
  */
 public class Http2PriorKnowledgeClientProvider implements ClientProvider {
 
-    private static final byte[] PRI_REQUEST = {'P','R','I',' ','*',' ','H','T','T','P','/','2','.','0','\r','\n','\r','\n','S','M','\r','\n','\r','\n'};
+    private static final byte[] PRI_REQUEST = {'P', 'R', 'I', ' ', '*', ' ', 'H', 'T', 'T', 'P', '/', '2', '.', '0', '\r', '\n', '\r', '\n', 'S', 'M', '\r', '\n', '\r', '\n'};
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         connect(listener, null, uri, worker, ssl, bufferPool, options);
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         connect(listener, null, uri, ioThread, ssl, bufferPool, options);
     }
 
@@ -71,21 +72,22 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
 
         if (bindAddress == null) {
-            worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri.getHost()), options).addNotifier(createNotifier(listener), null);
+            worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri.getHost()), XnioUndertowOptions.map(options)).addNotifier(createNotifier(listener), null);
         } else {
-            worker.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri.getHost()), null, options).addNotifier(createNotifier(listener), null);
-        }}
+            worker.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri.getHost()), null, XnioUndertowOptions.map(options)).addNotifier(createNotifier(listener), null);
+        }
+    }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, final InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
 
         if (bindAddress == null) {
-            ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri.getHost()), options).addNotifier(createNotifier(listener), null);
+            ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri.getHost()), XnioUndertowOptions.map(options)).addNotifier(createNotifier(listener), null);
         } else {
-            ioThread.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri.getHost()), null, options).addNotifier(createNotifier(listener), null);
+            ioThread.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 80 : uri.getPort()), createOpenListener(listener, bufferPool, options, uri.getHost()), null, XnioUndertowOptions.map(options)).addNotifier(createNotifier(listener), null);
         }
     }
 
@@ -100,7 +102,7 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
         };
     }
 
-    private ChannelListener<StreamConnection> createOpenListener(final ClientCallback<ClientConnection> listener, final ByteBufferPool bufferPool, final OptionMap options, final String defaultHost) {
+    private ChannelListener<StreamConnection> createOpenListener(final ClientCallback<ClientConnection> listener, final ByteBufferPool bufferPool, final UndertowOptionMap options, final String defaultHost) {
         return new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
@@ -109,7 +111,7 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
         };
     }
 
-    private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final ByteBufferPool bufferPool, final OptionMap options, final String defaultHost) {
+    private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final ByteBufferPool bufferPool, final UndertowOptionMap options, final String defaultHost) {
         try {
 
             final ClientStatisticsImpl clientStatistics;
@@ -136,13 +138,13 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
             pri.flip();
             ConduitStreamSinkChannel sink = connection.getSinkChannel();
             sink.write(pri);
-            if(pri.hasRemaining()) {
+            if (pri.hasRemaining()) {
                 sink.setWriteListener(new ChannelListener<ConduitStreamSinkChannel>() {
                     @Override
                     public void handleEvent(ConduitStreamSinkChannel channel) {
                         try {
                             channel.write(pri);
-                            if(pri.hasRemaining()) {
+                            if (pri.hasRemaining()) {
                                 return;
                             }
                             listener.completed(new Http2ClientConnection(new Http2Channel(connection, null, bufferPool, null, true, false, options), false, defaultHost, clientStatistics, false));
@@ -160,8 +162,10 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
             listener.failed(e);
         }
     }
+
     private static class ClientStatisticsImpl implements ClientStatistics {
         private long requestCount, read, written;
+
         @Override
         public long getRequests() {
             return requestCount;

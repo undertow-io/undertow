@@ -41,16 +41,10 @@ import org.junit.runner.RunWith;
 import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
-import org.xnio.Options;
 
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
-import io.undertow.xnio.client.ClientCallback;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.ClientExchange;
-import io.undertow.xnio.client.ClientRequest;
-import io.undertow.xnio.client.UndertowClient;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http2.Http2ServerConnection;
@@ -62,6 +56,12 @@ import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.StringReadChannelListener;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientExchange;
+import io.undertow.xnio.client.ClientRequest;
+import io.undertow.xnio.client.UndertowClient;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
  * Tests the load balancing proxy
@@ -79,7 +79,7 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
                 .addHttpsListener(port + 1, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
-                .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setSocketOption(UndertowOptions.REUSE_ADDRESSES, true)
                 .setHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -96,7 +96,7 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
         server2 = Undertow.builder()
                 .addHttpsListener(port + 2, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
-                .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setSocketOption(UndertowOptions.REUSE_ADDRESSES, true)
                 .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setHandler(new HttpHandler() {
                     @Override
@@ -116,8 +116,8 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
 
         DefaultServer.setRootHandler(ProxyHandler.builder().setProxyClient(new LoadBalancingProxyClient()
                 .setConnectionsPerThread(4)
-                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true))
-                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2", ssl, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)))
+                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl, UndertowOptionMap.create(UndertowOptions.ENABLE_HTTP2, true))
+                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2", ssl, UndertowOptionMap.create(UndertowOptions.ENABLE_HTTP2, true)))
                 .setMaxRequestTime(10000)
                 .setMaxConnectionRetries(2).build());
     }
@@ -150,7 +150,7 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
         //but convent to put it here
         UndertowXnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, DefaultServer.createClientSslContext());
         final UndertowClient client = UndertowClient.getInstance();
-        final ClientConnection connection = client.connect(new URI("https", null, DefaultServer.getHostAddress(), DefaultServer.getHostPort() + 1, "/", null, null), DefaultServer.getWorker(), ssl, DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+        final ClientConnection connection = client.connect(new URI("https", null, DefaultServer.getHostAddress(), DefaultServer.getHostPort() + 1, "/", null, null), DefaultServer.getWorker(), ssl, DefaultServer.getBufferPool(), UndertowOptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
         final ExecutorService service = Executors.newFixedThreadPool(10);
         try {
             Deque<FutureResult<String>> futures = new ArrayDeque<>();

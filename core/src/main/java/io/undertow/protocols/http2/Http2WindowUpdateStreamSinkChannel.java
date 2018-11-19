@@ -20,8 +20,8 @@ package io.undertow.protocols.http2;
 
 import java.nio.ByteBuffer;
 
-import io.undertow.xnio.protocols.framed.SendFrameHeader;
 import io.undertow.util.ImmediatePooledByteBuffer;
+import io.undertow.xnio.protocols.framed.SendFrameHeader;
 
 /**
  * A window update frame.

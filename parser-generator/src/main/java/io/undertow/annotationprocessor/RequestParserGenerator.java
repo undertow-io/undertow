@@ -46,7 +46,7 @@ public class RequestParserGenerator extends AbstractParserGenerator {
     public static final int HEADER_VALUE = 7;
 
     public RequestParserGenerator(String existingClassName) {
-        super(PARSE_STATE_CLASS, HTTP_EXCHANGE_CLASS, "(Lorg/xnio/OptionMap;)V", existingClassName);
+        super(PARSE_STATE_CLASS, HTTP_EXCHANGE_CLASS, "(Lio/undertow/connector/UndertowOptionMap;)V", existingClassName);
     }
 
     protected void createStateMachines(final String[] httpVerbs, final String[] httpVersions, final String[] standardHeaders, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter) {

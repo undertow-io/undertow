@@ -21,12 +21,11 @@ import java.nio.ByteBuffer;
 import java.util.Set;
 
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.xnio.protocols.framed.AbstractFramedStreamSourceChannel;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
@@ -38,6 +37,7 @@ import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.extensions.ExtensionFunction;
+import io.undertow.xnio.protocols.framed.AbstractFramedStreamSourceChannel;
 
 
 /**
@@ -86,7 +86,7 @@ public class WebSocket07Channel extends WebSocketChannel {
      * @param wsUrl      The url for which the {@link WebSocket07Channel} was created.
      */
     public WebSocket07Channel(StreamConnection channel, ByteBufferPool bufferPool,
-                              String wsUrl, String subProtocol, final boolean client, boolean allowExtensions, final ExtensionFunction extensionFunction, Set<WebSocketChannel> openConnections, OptionMap options) {
+                              String wsUrl, String subProtocol, final boolean client, boolean allowExtensions, final ExtensionFunction extensionFunction, Set<WebSocketChannel> openConnections, UndertowOptionMap options) {
         super(channel, bufferPool, WebSocketVersion.V08, wsUrl, subProtocol, client, allowExtensions, extensionFunction, openConnections, options);
     }
 

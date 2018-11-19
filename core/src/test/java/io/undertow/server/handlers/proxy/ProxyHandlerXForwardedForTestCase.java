@@ -13,10 +13,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
-import org.xnio.Options;
 
 import io.undertow.Undertow;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
+import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
@@ -25,6 +24,7 @@ import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
  * Created by ivannagy on 8/26/14.
@@ -52,7 +52,7 @@ public class ProxyHandlerXForwardedForTestCase {
 
         server = Undertow.builder()
                 .addHttpsListener(handlerPort, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
-                .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setSocketOption(UndertowOptions.REUSE_ADDRESSES, true)
                 .setHandler(jvmRoute("JSESSIONID", "s1", path().addPrefixPath("/x-forwarded", new XForwardedHandler())))
                 .build();
 

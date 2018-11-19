@@ -20,13 +20,14 @@ package io.undertow.attribute;
 
 import java.util.concurrent.TimeUnit;
 
+import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 
 /**
  * The response time
  *
- * This will only work if {@link io.undertow.UndertowOptions#RECORD_REQUEST_START_TIME} has been set
+ * This will only work if {@link UndertowOptions#RECORD_REQUEST_START_TIME} has been set
  */
 public class ResponseTimeAttribute implements ExchangeAttribute {
 

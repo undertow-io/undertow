@@ -31,17 +31,17 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 
-import io.undertow.xnio.conduits.IdleTimeoutConduit;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.connector.UndertowOptionMap;
+import io.undertow.websockets.extensions.ExtensionFunction;
+import io.undertow.xnio.conduits.IdleTimeoutConduit;
 import io.undertow.xnio.protocols.framed.AbstractFramedChannel;
 import io.undertow.xnio.protocols.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.xnio.protocols.framed.FrameHeaderData;
-import io.undertow.websockets.extensions.ExtensionFunction;
 
 /**
  * A {@link org.xnio.channels.ConnectedChannel} which can be used to send and receive WebSocket Frames.
@@ -95,7 +95,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      * @param client
      * @param peerConnections        The concurrent set that is used to track open connections associtated with an endpoint
      */
-    protected WebSocketChannel(final StreamConnection connectedStreamChannel, ByteBufferPool bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported, final ExtensionFunction extensionFunction, Set<WebSocketChannel> peerConnections, OptionMap options) {
+    protected WebSocketChannel(final StreamConnection connectedStreamChannel, ByteBufferPool bufferPool, WebSocketVersion version, String wsUrl, String subProtocol, final boolean client, boolean extensionsSupported, final ExtensionFunction extensionFunction, Set<WebSocketChannel> peerConnections, UndertowOptionMap options) {
         super(connectedStreamChannel, bufferPool, new WebSocketFramePriority(), null, options);
         this.client = client;
         this.version = version;

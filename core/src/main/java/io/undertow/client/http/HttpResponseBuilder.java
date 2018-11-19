@@ -18,9 +18,9 @@
 
 package io.undertow.client.http;
 
-import io.undertow.xnio.client.ClientResponse;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.xnio.client.ClientResponse;
 
 /**
  * A pending http request.

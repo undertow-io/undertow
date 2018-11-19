@@ -13,10 +13,9 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.Options;
 
 import io.undertow.Undertow;
-import io.undertow.xnio.client.UndertowClient;
+import io.undertow.UndertowOptions;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
@@ -24,6 +23,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
+import io.undertow.xnio.client.UndertowClient;
 
 @RunWith(DefaultServer.class)
 public class LoadBalancingProxyWithCustomHostSelectorTestCase {
@@ -37,7 +37,7 @@ public class LoadBalancingProxyWithCustomHostSelectorTestCase {
         int port = DefaultServer.getHostPort("default");
         server1 = Undertow.builder()
                 .addHttpListener(port + 1, DefaultServer.getHostAddress("default"))
-                .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setSocketOption(UndertowOptions.REUSE_ADDRESSES, true)
                 .setHandler(jvmRoute("JSESSIONID", "s1", path()
                         .addPrefixPath("/session", new SessionAttachmentHandler(new AbstractLoadBalancingProxyTestCase.SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
                         .addPrefixPath("/name", new AbstractLoadBalancingProxyTestCase.StringSendHandler("server1"))))
@@ -45,7 +45,7 @@ public class LoadBalancingProxyWithCustomHostSelectorTestCase {
 
         server2 = Undertow.builder()
                 .addHttpListener(port + 2, DefaultServer.getHostAddress("default"))
-                .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setSocketOption(UndertowOptions.REUSE_ADDRESSES, true)
                 .setHandler(jvmRoute("JSESSIONID", "s2", path()
                         .addPrefixPath("/session", new SessionAttachmentHandler(new AbstractLoadBalancingProxyTestCase.SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
                         .addPrefixPath("/name", new AbstractLoadBalancingProxyTestCase.StringSendHandler("server2"))))

@@ -28,9 +28,9 @@ import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
 
 import io.undertow.UndertowOptions;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
@@ -136,14 +136,14 @@ public class LotsOfHeadersRequestTestCase {
 
     @Test @AjpIgnore
     public void testLotsOfHeadersInRequest_MaxHeaders_Ok() throws IOException {
-        OptionMap existing = DefaultServer.getUndertowOptions();
+        UndertowOptionMap existing = DefaultServer.getUndertowOptions();
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             for (int i = 0; i < getTestMaxHeaders(); ++i) {
                 get.addHeader(HEADER + i, MESSAGE + i);
             }
-            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_HEADERS, TEST_MAX_HEADERS));
+            DefaultServer.setUndertowOptions(UndertowOptionMap.create(UndertowOptions.MAX_HEADERS, TEST_MAX_HEADERS));
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             for (int i = 0; i < getTestMaxHeaders(); ++i) {
@@ -158,7 +158,7 @@ public class LotsOfHeadersRequestTestCase {
 
     @Test
     public void testLotsOfHeadersInRequest_MaxHeaders_BadRequest() throws IOException {
-        OptionMap existing = DefaultServer.getUndertowOptions();
+        UndertowOptionMap existing = DefaultServer.getUndertowOptions();
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
@@ -166,7 +166,7 @@ public class LotsOfHeadersRequestTestCase {
             for (int i = 0; i < (getTestMaxHeaders() + 1); ++i) {
                 get.addHeader(HEADER + i, MESSAGE + i);
             }
-            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_HEADERS, TEST_MAX_HEADERS));
+            DefaultServer.setUndertowOptions(UndertowOptionMap.create(UndertowOptions.MAX_HEADERS, TEST_MAX_HEADERS));
             HttpResponse result = client.execute(get);
             Assert.assertEquals(DefaultServer.isH2() ? StatusCodes.SERVICE_UNAVAILABLE : StatusCodes.BAD_REQUEST, result.getStatusLine().getStatusCode());
         } finally {

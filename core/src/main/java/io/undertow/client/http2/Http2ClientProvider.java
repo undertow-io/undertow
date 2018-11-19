@@ -38,16 +38,18 @@ import org.xnio.ssl.XnioSsl;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.conduits.ByteActivityCallback;
+import io.undertow.conduits.BytesReceivedStreamSourceConduit;
+import io.undertow.conduits.BytesSentStreamSinkConduit;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
+import io.undertow.protocols.http2.Http2Channel;
+import io.undertow.xnio.XnioUndertowOptions;
 import io.undertow.xnio.client.ALPNClientSelector;
 import io.undertow.xnio.client.ClientCallback;
 import io.undertow.xnio.client.ClientConnection;
 import io.undertow.xnio.client.ClientProvider;
 import io.undertow.xnio.client.ClientStatistics;
-import io.undertow.conduits.ByteActivityCallback;
-import io.undertow.conduits.BytesReceivedStreamSourceConduit;
-import io.undertow.conduits.BytesSentStreamSinkConduit;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.protocols.http2.Http2Channel;
 
 /**
  * Plaintext HTTP2 client provider that works using HTTP upgrade
@@ -68,12 +70,12 @@ public class Http2ClientProvider implements ClientProvider {
     };
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         connect(listener, null, uri, worker, ssl, bufferPool, options);
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         connect(listener, null, uri, ioThread, ssl, bufferPool, options);
     }
 
@@ -83,31 +85,30 @@ public class Http2ClientProvider implements ClientProvider {
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         if (ssl == null) {
             listener.failed(UndertowMessages.MESSAGES.sslWasNull());
             return;
         }
-        OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
-        if(bindAddress == null) {
-            ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
+        OptionMap tlsOptions = OptionMap.builder().addAll(XnioUndertowOptions.map(options)).set(Options.SSL_STARTTLS, true).getMap();
+        if (bindAddress == null) {
+            ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), tlsOptions).addNotifier(createNotifier(listener), null);
         } else {
-            ssl.openSslConnection(worker, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
+            ssl.openSslConnection(worker, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), tlsOptions).addNotifier(createNotifier(listener), null);
         }
 
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         if (ssl == null) {
             listener.failed(UndertowMessages.MESSAGES.sslWasNull());
             return;
         }
-        if(bindAddress == null) {
-            OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
-            ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, tlsOptions), options).addNotifier(createNotifier(listener), null);
+        if (bindAddress == null) {
+            ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), XnioUndertowOptions.map(options)).addNotifier(createNotifier(listener), null);
         } else {
-            ssl.openSslConnection(ioThread, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+            ssl.openSslConnection(ioThread, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), XnioUndertowOptions.map(options)).addNotifier(createNotifier(listener), null);
         }
 
     }
@@ -123,7 +124,7 @@ public class Http2ClientProvider implements ClientProvider {
         };
     }
 
-    private ChannelListener<StreamConnection> createOpenListener(final ClientCallback<ClientConnection> listener, final URI uri, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    private ChannelListener<StreamConnection> createOpenListener(final ClientCallback<ClientConnection> listener, final URI uri, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         return new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
@@ -132,20 +133,22 @@ public class Http2ClientProvider implements ClientProvider {
         };
     }
 
-    public static ALPNClientSelector.ALPNProtocol alpnProtocol(final ClientCallback<ClientConnection> listener, URI uri, ByteBufferPool bufferPool, OptionMap options) {
+    public static ALPNClientSelector.ALPNProtocol alpnProtocol(final ClientCallback<ClientConnection> listener, URI uri, ByteBufferPool bufferPool, UndertowOptionMap options) {
         return new ALPNClientSelector.ALPNProtocol(new ChannelListener<SslConnection>() {
             @Override
             public void handleEvent(SslConnection connection) {
                 listener.completed(createHttp2Channel(connection, bufferPool, options, uri.getHost()));
             }
         }, HTTP2);
-    };
+    }
 
-    private void handleConnected(StreamConnection connection, final ClientCallback<ClientConnection> listener, URI uri,ByteBufferPool bufferPool, OptionMap options) {
+    ;
+
+    private void handleConnected(StreamConnection connection, final ClientCallback<ClientConnection> listener, URI uri, ByteBufferPool bufferPool, UndertowOptionMap options) {
         ALPNClientSelector.runAlpn((SslConnection) connection, FAILED, listener, alpnProtocol(listener, uri, bufferPool, options));
     }
 
-    private static Http2ClientConnection createHttp2Channel(StreamConnection connection, ByteBufferPool bufferPool, OptionMap options, String defaultHost) {
+    private static Http2ClientConnection createHttp2Channel(StreamConnection connection, ByteBufferPool bufferPool, UndertowOptionMap options, String defaultHost) {
 
         final ClientStatisticsImpl clientStatistics;
         //first we set up statistics, if required
@@ -172,6 +175,7 @@ public class Http2ClientProvider implements ClientProvider {
 
     private static class ClientStatisticsImpl implements ClientStatistics {
         private long requestCount, read, written;
+
         @Override
         public long getRequests() {
             return requestCount;

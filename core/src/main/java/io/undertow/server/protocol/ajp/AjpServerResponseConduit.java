@@ -39,7 +39,6 @@ import org.xnio.conduits.WriteReadyHandler;
 
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
-import io.undertow.xnio.conduits.AbstractFramedStreamSinkConduit;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
@@ -49,6 +48,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
+import io.undertow.xnio.conduits.AbstractFramedStreamSinkConduit;
 
 /**
  * AJP response channel. For now we are going to assume that the buffers are sized to

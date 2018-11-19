@@ -42,9 +42,9 @@ import org.xnio.FinishedIoFuture;
 import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.AttachmentKey;
@@ -233,7 +233,7 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
     }
 
     @Override
-    public OptionMap getOptions() {
+    public UndertowOptionMap getOptions() {
         return exchange.getConnection().getUndertowOptions();
     }
 }

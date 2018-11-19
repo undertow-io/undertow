@@ -34,12 +34,12 @@ import org.xnio.conduits.AbstractStreamSinkConduit;
 import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
-import io.undertow.xnio.client.ClientRequest;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.TruncatedResponseException;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.xnio.client.ClientRequest;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>

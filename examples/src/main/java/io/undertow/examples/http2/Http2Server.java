@@ -34,15 +34,14 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 
-import org.xnio.OptionMap;
 import org.xnio.Xnio;
 
 import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.attribute.ExchangeAttributes;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.examples.UndertowExample;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.LearningPushHandler;
@@ -54,6 +53,7 @@ import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
  * @author Stuart Douglas
@@ -91,7 +91,7 @@ public class Http2Server {
 
         SSLContext clientSslContext = createSSLContext(loadKeyStore("client.keystore"), loadKeyStore("client.truststore"));
         LoadBalancingProxyClient proxy = new LoadBalancingProxyClient()
-                .addHost(new URI("https://localhost:8443"), null, new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, clientSslContext), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true))
+                .addHost(new URI("https://localhost:8443"), null, new UndertowXnioSsl(Xnio.getInstance(), UndertowOptionMap.EMPTY, clientSslContext), UndertowOptionMap.create(UndertowOptions.ENABLE_HTTP2, true))
                 .setConnectionsPerThread(20);
 
         Undertow reverseProxy = Undertow.builder()

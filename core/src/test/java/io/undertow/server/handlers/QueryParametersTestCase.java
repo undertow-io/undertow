@@ -28,9 +28,9 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
 
 import io.undertow.UndertowOptions;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
@@ -107,9 +107,9 @@ public class QueryParametersTestCase {
     @Test
     @ProxyIgnore
     public void testQueryParametersShiftJIS() throws IOException {
-        OptionMap old = DefaultServer.getUndertowOptions();
+        UndertowOptionMap old = DefaultServer.getUndertowOptions();
         try {
-            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.URL_CHARSET, "Shift_JIS"));
+            DefaultServer.setUndertowOptions(UndertowOptionMap.create(UndertowOptions.URL_CHARSET, "Shift_JIS"));
             TestHttpClient client = new TestHttpClient();
             try {
                 runTest(client, "{unicode=>テスト}", "/path?unicode=%83e%83X%83g");

@@ -40,12 +40,10 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
-import org.xnio.Options;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.Undertow;
-import io.undertow.xnio.client.UndertowClient;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
+import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.LocalNameResolvingHandler;
@@ -59,6 +57,8 @@ import io.undertow.server.session.SessionManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
+import io.undertow.xnio.client.UndertowClient;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
  * @author Emanuel Muckenhuber
@@ -306,7 +306,7 @@ public abstract class AbstractModClusterTestBase {
 
         config.setupHandlers(pathHandler); // Setup test handlers
 
-        builder.setSocketOption(Options.REUSE_ADDRESSES, true)
+        builder.setSocketOption(UndertowOptions.REUSE_ADDRESSES, true)
                .setHandler(jvmRoute("JSESSIONID", config.getJvmRoute(), pathHandler));
         return builder.build();
     }

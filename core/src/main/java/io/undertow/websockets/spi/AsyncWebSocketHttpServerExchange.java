@@ -36,12 +36,12 @@ import org.xnio.FinishedIoFuture;
 import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.channels.StreamSourceChannel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.security.api.SecurityContext;
@@ -299,7 +299,7 @@ public class AsyncWebSocketHttpServerExchange implements WebSocketHttpExchange {
     }
 
     @Override
-    public OptionMap getOptions() {
+    public UndertowOptionMap getOptions() {
         return exchange.getConnection().getUndertowOptions();
     }
 }

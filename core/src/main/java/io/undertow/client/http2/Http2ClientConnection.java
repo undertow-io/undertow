@@ -52,11 +52,6 @@ import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.xnio.client.ClientCallback;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.ClientExchange;
-import io.undertow.xnio.client.ClientRequest;
-import io.undertow.xnio.client.ClientStatistics;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.protocols.http2.AbstractHttp2StreamSourceChannel;
 import io.undertow.protocols.http2.Http2Channel;
@@ -74,6 +69,11 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientExchange;
+import io.undertow.xnio.client.ClientRequest;
+import io.undertow.xnio.client.ClientStatistics;
 
 /**
  * @author Stuart Douglas

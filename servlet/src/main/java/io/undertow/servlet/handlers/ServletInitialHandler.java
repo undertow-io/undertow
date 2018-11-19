@@ -33,7 +33,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.xnio.Option;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -45,6 +44,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.DefaultByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
@@ -438,8 +438,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         }
 
         @Override
-        public OptionMap getUndertowOptions() {
-            return OptionMap.EMPTY;
+        public UndertowOptionMap getUndertowOptions() {
+            return UndertowOptionMap.EMPTY;
         }
 
         @Override

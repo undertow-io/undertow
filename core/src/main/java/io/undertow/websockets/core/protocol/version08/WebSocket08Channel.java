@@ -19,10 +19,10 @@ package io.undertow.websockets.core.protocol.version08;
 
 import java.util.Set;
 
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.core.protocol.version07.WebSocket07Channel;
@@ -35,7 +35,7 @@ import io.undertow.websockets.extensions.ExtensionFunction;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public class WebSocket08Channel extends WebSocket07Channel {
-    public WebSocket08Channel(StreamConnection channel, ByteBufferPool bufferPool, String wsUrl, String subProtocols, final boolean client, boolean allowExtensions, final ExtensionFunction extensionFunction, Set<WebSocketChannel> openConnections, OptionMap options) {
+    public WebSocket08Channel(StreamConnection channel, ByteBufferPool bufferPool, String wsUrl, String subProtocols, final boolean client, boolean allowExtensions, final ExtensionFunction extensionFunction, Set<WebSocketChannel> openConnections, UndertowOptionMap options) {
         super(channel, bufferPool, wsUrl, subProtocols, client, allowExtensions, extensionFunction, openConnections, options);
     }
 

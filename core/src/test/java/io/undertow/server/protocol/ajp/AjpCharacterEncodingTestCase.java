@@ -27,10 +27,10 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
 
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.proxy.LoadBalancingProxyClient;
@@ -49,7 +49,7 @@ public class AjpCharacterEncodingTestCase {
     private static final int PORT = DefaultServer.getHostPort() + 10;
     private static Undertow undertow;
 
-    private static OptionMap old;
+    private static UndertowOptionMap old;
 
     @BeforeClass
     public static void setup() throws Exception {
@@ -72,7 +72,7 @@ public class AjpCharacterEncodingTestCase {
 
         DefaultServer.setRootHandler(ProxyHandler.builder().setProxyClient(new LoadBalancingProxyClient().addHost(new URI("ajp://" + DefaultServer.getHostAddress() + ":" + PORT))).build());
         old = DefaultServer.getUndertowOptions();
-        DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true, UndertowOptions.URL_CHARSET, "MS949"));
+        DefaultServer.setUndertowOptions(UndertowOptionMap.create(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true, UndertowOptions.URL_CHARSET, "MS949"));
     }
 
     @AfterClass

@@ -22,7 +22,6 @@ import static org.xnio.IoUtils.safeClose;
 
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.xnio.client.ClientConnection;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.proxy.ExclusivityChecker;
@@ -30,6 +29,7 @@ import io.undertow.server.handlers.proxy.ProxyCallback;
 import io.undertow.server.handlers.proxy.ProxyClient;
 import io.undertow.server.handlers.proxy.ProxyConnection;
 import io.undertow.util.AttachmentKey;
+import io.undertow.xnio.client.ClientConnection;
 
 class ModClusterProxyClient implements ProxyClient {
 

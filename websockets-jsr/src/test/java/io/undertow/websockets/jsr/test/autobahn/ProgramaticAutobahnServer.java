@@ -23,7 +23,6 @@ import javax.servlet.DispatcherType;
 
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
-import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
@@ -31,6 +30,7 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 
 import io.undertow.connector.DefaultByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -58,7 +58,7 @@ public class ProgramaticAutobahnServer implements Runnable {
         Xnio xnio = Xnio.getInstance();
         try {
 
-            XnioWorker worker = xnio.createWorker(OptionMap.builder()
+            XnioWorker worker = xnio.createWorker(UndertowOptionMap.builder()
                     .set(Options.CONNECTION_HIGH_WATER, 1000000)
                     .set(Options.CONNECTION_LOW_WATER, 1000000)
                     .set(Options.WORKER_TASK_CORE_THREADS, 10)
@@ -67,7 +67,7 @@ public class ProgramaticAutobahnServer implements Runnable {
                     .set(Options.CORK, true)
                     .getMap());
 
-            OptionMap serverOptions = OptionMap.builder()
+            UndertowOptionMap serverOptions = UndertowOptionMap.builder()
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
                     .getMap();

@@ -20,6 +20,7 @@ package io.undertow.server.handlers;
 
 import java.util.Date;
 
+import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
@@ -32,7 +33,7 @@ import io.undertow.util.Headers;
  * manner (i.e. it is possible for two thread to update it at once).
  * <p>
  * This handler is deprecated, the same functionality is achieved by using the
- * server option {@link io.undertow.UndertowOptions#ALWAYS_SET_DATE ALWAYS_SET_DATE}.
+ * server option {@link UndertowOptions#ALWAYS_SET_DATE ALWAYS_SET_DATE}.
  * It is enabled by default.
  *
  * @author Stuart Douglas

@@ -32,8 +32,8 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
 
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
@@ -111,7 +111,7 @@ public class JsrWebsocketExtensionTestCase {
         Set<ExtensionHandshake> extensionHandshakes = new HashSet<>();
         extensionHandshakes.add(new PerMessageDeflateHandshake(true));
 
-        final WebSocketChannel clientChannel = WebSocketClient.connect(DefaultServer.getWorker(), null, DefaultServer.getBufferPool(), OptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
+        final WebSocketChannel clientChannel = WebSocketClient.connect(DefaultServer.getWorker(), null, DefaultServer.getBufferPool(), UndertowOptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
 
         final LinkedBlockingDeque<String> resultQueue  = new LinkedBlockingDeque<>();
 
@@ -172,7 +172,7 @@ public class JsrWebsocketExtensionTestCase {
         Set<ExtensionHandshake> extensionHandshakes = new HashSet<>();
         extensionHandshakes.add(new PerMessageDeflateHandshake(true));
 
-        final WebSocketChannel clientChannel = WebSocketClient.connect(DefaultServer.getWorker(), null, DefaultServer.getBufferPool(), OptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
+        final WebSocketChannel clientChannel = WebSocketClient.connect(DefaultServer.getWorker(), null, DefaultServer.getBufferPool(), UndertowOptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<String> result = new AtomicReference<>();

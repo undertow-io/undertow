@@ -26,14 +26,14 @@ import java.nio.channels.FileChannel;
 import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.xnio.protocols.framed.AbstractFramedStreamSourceChannel;
-import io.undertow.xnio.protocols.framed.FrameHeaderData;
 import io.undertow.websockets.core.function.ChannelFunction;
 import io.undertow.websockets.core.function.ChannelFunctionFileChannel;
 import io.undertow.websockets.core.protocol.version07.Masker;
 import io.undertow.websockets.core.protocol.version07.UTF8Checker;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import io.undertow.websockets.extensions.NoopExtensionFunction;
+import io.undertow.xnio.protocols.framed.AbstractFramedStreamSourceChannel;
+import io.undertow.xnio.protocols.framed.FrameHeaderData;
 
 /**
  * Base class for processes Frame bases StreamSourceChannels.

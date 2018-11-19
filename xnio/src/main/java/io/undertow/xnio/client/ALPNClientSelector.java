@@ -29,8 +29,8 @@ import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.PushBackStreamSourceConduit;
 import org.xnio.ssl.SslConnection;
 
-import io.undertow.xnio.protocols.alpn.ALPNManager;
 import io.undertow.connector.alpn.ALPNProvider;
+import io.undertow.xnio.protocols.alpn.ALPNManager;
 import io.undertow.xnio.protocols.ssl.SslConduit;
 import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.xnio.util.ImmediatePooled;

@@ -38,15 +38,9 @@ import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
-import io.undertow.xnio.client.ClientCallback;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.ClientExchange;
-import io.undertow.xnio.client.ClientRequest;
-import io.undertow.xnio.client.ClientResponse;
-import io.undertow.xnio.client.UndertowClient;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
@@ -59,6 +53,13 @@ import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientExchange;
+import io.undertow.xnio.client.ClientRequest;
+import io.undertow.xnio.client.ClientResponse;
+import io.undertow.xnio.client.UndertowClient;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
  * @author Emanuel Muckenhuber
@@ -121,7 +122,7 @@ public class Http2ClientTestCase {
         server = Undertow.builder()
                 .addHttpsListener(port + 1, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
-                .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setSocketOption(UndertowOptions.REUSE_ADDRESSES, true)
                 .setHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -152,10 +153,10 @@ public class Http2ClientTestCase {
     }
 
     static UndertowClient createClient() {
-        return createClient(OptionMap.EMPTY);
+        return createClient(UndertowOptionMap.EMPTY);
     }
 
-    static UndertowClient createClient(final OptionMap options) {
+    static UndertowClient createClient(final UndertowOptionMap options) {
         return UndertowClient.getInstance();
     }
 
@@ -166,7 +167,7 @@ public class Http2ClientTestCase {
 
         final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
-        final ClientConnection connection = client.connect(ADDRESS, worker, new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()), DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()), DefaultServer.getBufferPool(), UndertowOptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -199,7 +200,7 @@ public class Http2ClientTestCase {
 
         final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
-        final ClientConnection connection = client.connect(ADDRESS, worker, new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()), DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()), DefaultServer.getBufferPool(), UndertowOptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -232,7 +233,7 @@ public class Http2ClientTestCase {
 
         final List<String> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
-        final ClientConnection connection = client.connect(ADDRESS, worker, new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()), DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()), DefaultServer.getBufferPool(), UndertowOptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override

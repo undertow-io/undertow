@@ -27,7 +27,6 @@ import javax.net.ssl.SSLSession;
 
 import org.xnio.ChannelListener;
 import org.xnio.Option;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -45,6 +44,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.protocols.http2.Http2DataStreamSinkChannel;
 import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
@@ -87,14 +87,14 @@ public class Http2ServerConnection extends ServerConnection {
     private final ConduitStreamSourceChannel conduitStreamSourceChannel;
     private final StreamSinkConduit originalSinkConduit;
     private final StreamSourceConduit originalSourceConduit;
-    private final OptionMap undertowOptions;
+    private final UndertowOptionMap undertowOptions;
     private final int bufferSize;
     private SSLSessionInfo sessionInfo;
     private final HttpHandler rootHandler;
     private HttpServerExchange exchange;
     private boolean continueSent = false;
 
-    public Http2ServerConnection(Http2Channel channel, Http2StreamSourceChannel requestChannel, OptionMap undertowOptions, int bufferSize, HttpHandler rootHandler) {
+    public Http2ServerConnection(Http2Channel channel, Http2StreamSourceChannel requestChannel, UndertowOptionMap undertowOptions, int bufferSize, HttpHandler rootHandler) {
         this.channel = channel;
         this.requestChannel = requestChannel;
         this.undertowOptions = undertowOptions;
@@ -118,7 +118,7 @@ public class Http2ServerConnection extends ServerConnection {
      * @param bufferSize
      * @param rootHandler
      */
-    public Http2ServerConnection(Http2Channel channel, Http2DataStreamSinkChannel sinkChannel, OptionMap undertowOptions, int bufferSize, HttpHandler rootHandler) {
+    public Http2ServerConnection(Http2Channel channel, Http2DataStreamSinkChannel sinkChannel, UndertowOptionMap undertowOptions, int bufferSize, HttpHandler rootHandler) {
         this.channel = channel;
         this.rootHandler = rootHandler;
         this.requestChannel = null;
@@ -261,7 +261,7 @@ public class Http2ServerConnection extends ServerConnection {
     }
 
     @Override
-    public OptionMap getUndertowOptions() {
+    public UndertowOptionMap getUndertowOptions() {
         return undertowOptions;
     }
 

@@ -26,7 +26,6 @@ import java.util.concurrent.Executor;
 import javax.net.ssl.SSLSession;
 
 import org.xnio.Option;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.conduits.ConduitStreamSinkChannel;
@@ -34,6 +33,7 @@ import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.StreamSinkConduit;
 
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
@@ -141,7 +141,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
 
     public abstract <A extends SocketAddress> A getLocalAddress(Class<A> type);
 
-    public abstract OptionMap getUndertowOptions();
+    public abstract UndertowOptionMap getUndertowOptions();
 
     public abstract int getBufferSize();
 

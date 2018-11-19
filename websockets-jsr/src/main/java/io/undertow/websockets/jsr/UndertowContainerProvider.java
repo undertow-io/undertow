@@ -29,13 +29,13 @@ import java.util.function.Supplier;
 import javax.websocket.ContainerProvider;
 import javax.websocket.WebSocketContainer;
 
-import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.DefaultByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.servlet.api.ClassIntrospecter;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.util.DefaultClassIntrospector;
@@ -99,7 +99,7 @@ public class UndertowContainerProvider extends ContainerProvider {
                             synchronized (this) {
                                 if(worker == null) {
                                     try {
-                                        worker = Xnio.getInstance().createWorker(OptionMap.create(Options.THREAD_DAEMON, true));
+                                        worker = Xnio.getInstance().createWorker(Undertow.create(Options.THREAD_DAEMON, true));
                                     } catch (IOException e) {
                                         throw new RuntimeException(e);
                                     }

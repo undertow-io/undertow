@@ -26,21 +26,22 @@ import java.util.Set;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowOptions;
-import io.undertow.xnio.client.ClientCallback;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.ClientProvider;
-import io.undertow.xnio.client.ClientStatistics;
 import io.undertow.conduits.ByteActivityCallback;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
+import io.undertow.xnio.XnioUndertowOptions;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientProvider;
+import io.undertow.xnio.client.ClientStatistics;
 import io.undertow.xnio.protocols.ajp.AjpClientChannel;
 
 /**
@@ -54,17 +55,17 @@ public class AjpClientProvider implements ClientProvider {
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         connect(listener, null, uri, worker, ssl, bufferPool, options);
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         connect(listener, null, uri, ioThread, ssl, bufferPool, options);
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         ChannelListener<StreamConnection> openListener = new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
@@ -80,14 +81,14 @@ public class AjpClientProvider implements ClientProvider {
             }
         };
         if(bindAddress == null) {
-            worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), openListener, options).addNotifier(notifier, null);
+            worker.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), openListener, XnioUndertowOptions.map(options)).addNotifier(notifier, null);
         } else {
-            worker.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), openListener, null, options).addNotifier(notifier, null);
+            worker.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), openListener, null, XnioUndertowOptions.map(options)).addNotifier(notifier, null);
         }
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress,final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress,final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         ChannelListener<StreamConnection> openListener = new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection connection) {
@@ -103,13 +104,13 @@ public class AjpClientProvider implements ClientProvider {
             }
         };
         if(bindAddress == null) {
-            ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), openListener, options).addNotifier(notifier, null);
+            ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), openListener, XnioUndertowOptions.map(options)).addNotifier(notifier, null);
         } else {
-            ioThread.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), openListener, null, options).addNotifier(notifier, null);
+            ioThread.openStreamConnection(bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 8009 : uri.getPort()), openListener, null, XnioUndertowOptions.map(options)).addNotifier(notifier, null);
         }
     }
 
-    private void handleConnected(StreamConnection connection, ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, ByteBufferPool bufferPool, OptionMap options) {
+    private void handleConnected(StreamConnection connection, ClientCallback<ClientConnection> listener, URI uri, XnioSsl ssl, ByteBufferPool bufferPool, UndertowOptionMap options) {
 
         final ClientStatisticsImpl clientStatistics;
         //first we set up statistics, if required

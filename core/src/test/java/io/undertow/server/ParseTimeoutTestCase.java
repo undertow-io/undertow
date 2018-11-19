@@ -31,9 +31,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 
 import io.undertow.UndertowOptions;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.ProxyIgnore;
@@ -57,17 +57,17 @@ public class ParseTimeoutTestCase {
 
     public void after() throws Exception {
         IoUtils.safeClose(client);
-        DefaultServer.setUndertowOptions(OptionMap.EMPTY);
+        DefaultServer.setUndertowOptions(UndertowOptionMap.EMPTY);
     }
 
     @BeforeClass
     public static void beforeClass() throws Exception {
-        DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.REQUEST_PARSE_TIMEOUT, 10));
+        DefaultServer.setUndertowOptions(UndertowOptionMap.create(UndertowOptions.REQUEST_PARSE_TIMEOUT, 10));
     }
 
     @AfterClass
     public static void afterClass() throws Exception {
-        DefaultServer.setUndertowOptions(OptionMap.EMPTY);
+        DefaultServer.setUndertowOptions(UndertowOptionMap.EMPTY);
     }
 
     @Test(timeout = 10000)

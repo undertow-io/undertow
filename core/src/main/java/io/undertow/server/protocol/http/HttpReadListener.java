@@ -42,7 +42,6 @@ import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
-import io.undertow.xnio.ParseTimeoutUpdater;
 import io.undertow.server.protocol.http2.Http2ReceiveListener;
 import io.undertow.util.ClosingChannelExceptionHandler;
 import io.undertow.util.ConnectionUtils;
@@ -52,6 +51,7 @@ import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.StringWriteChannelListener;
+import io.undertow.xnio.ParseTimeoutUpdater;
 
 /**
  * Listener which reads requests and headers off of an HTTP stream.

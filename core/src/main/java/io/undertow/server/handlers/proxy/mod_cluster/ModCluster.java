@@ -22,14 +22,14 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import org.xnio.OptionMap;
 import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
 
-import io.undertow.xnio.client.UndertowClient;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.ProxyHandler;
+import io.undertow.xnio.client.UndertowClient;
 
 /**
  * @author Emanuel Muckenhuber
@@ -227,7 +227,7 @@ public class ModCluster {
         private NodeHealthChecker healthChecker = NodeHealthChecker.NO_CHECK;
         private long healthCheckInterval = TimeUnit.SECONDS.toMillis(10);
         private long removeBrokenNodes = TimeUnit.MINUTES.toMillis(1);
-        private OptionMap clientOptions = OptionMap.EMPTY;
+        private UndertowOptionMap clientOptions = UndertowOptionMap.EMPTY;
         private int maxRetries;
         private boolean deterministicFailover = false;
 
@@ -303,7 +303,7 @@ public class ModCluster {
             return this;
         }
 
-        public Builder setClientOptions(OptionMap clientOptions) {
+        public Builder setClientOptions(UndertowOptionMap clientOptions) {
             this.clientOptions = clientOptions;
             return this;
         }

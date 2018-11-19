@@ -60,13 +60,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.xnio.OptionMap;
-import org.xnio.Options;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.Version;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -683,8 +683,8 @@ class MCMPHandler implements HttpHandler {
     protected void checkHostUp(final String scheme, final String host, final int port, final HttpServerExchange exchange, final NodePingUtil.PingCallback callback) {
 
         final XnioSsl xnioSsl = null; // TODO
-        final OptionMap options = OptionMap.builder()
-                .set(Options.TCP_NODELAY, true)
+        final UndertowOptionMap options = UndertowOptionMap.builder()
+                .set(UndertowOptions.TCP_NODELAY, true)
                 .getMap();
 
         try {

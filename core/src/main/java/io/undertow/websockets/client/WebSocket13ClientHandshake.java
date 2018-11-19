@@ -34,11 +34,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.http.ExtendedHandshakeChecker;
 
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketExtension;
@@ -72,7 +72,7 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
     }
 
     @Override
-    public WebSocketChannel createChannel(final StreamConnection channel, final String wsUri, final ByteBufferPool bufferPool, OptionMap options) {
+    public WebSocketChannel createChannel(final StreamConnection channel, final String wsUri, final ByteBufferPool bufferPool, UndertowOptionMap options) {
         if (negotiation != null && negotiation.getSelectedExtensions() != null && !negotiation.getSelectedExtensions().isEmpty()) {
 
             List<WebSocketExtension> selected = negotiation.getSelectedExtensions();

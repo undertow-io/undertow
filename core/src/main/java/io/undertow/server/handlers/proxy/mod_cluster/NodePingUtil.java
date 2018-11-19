@@ -28,7 +28,6 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
@@ -38,18 +37,20 @@ import org.xnio.channels.StreamSourceChannel;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowLogger;
-import io.undertow.xnio.client.ClientCallback;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.ClientExchange;
-import io.undertow.xnio.client.ClientRequest;
-import io.undertow.xnio.client.UndertowClient;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.proxy.ProxyCallback;
 import io.undertow.server.handlers.proxy.ProxyConnection;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.SameThreadExecutor;
+import io.undertow.xnio.XnioUndertowOptions;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientExchange;
+import io.undertow.xnio.client.ClientRequest;
+import io.undertow.xnio.client.UndertowClient;
 import io.undertow.xnio.util.WorkerUtils;
 
 /**
@@ -81,7 +82,7 @@ class NodePingUtil {
      * @param callback    the ping callback
      * @param options     the options
      */
-    static void pingHost(InetSocketAddress address, HttpServerExchange exchange, PingCallback callback, OptionMap options) {
+    static void pingHost(InetSocketAddress address, HttpServerExchange exchange, PingCallback callback, UndertowOptionMap options) {
 
         final XnioIoThread thread = exchange.getIoThread();
         final XnioWorker worker = thread.getWorker();
@@ -101,7 +102,7 @@ class NodePingUtil {
      * @param xnioSsl       the ssl setup
      * @param options       the options
      */
-    static void pingHttpClient(URI connection, PingCallback callback, HttpServerExchange exchange, UndertowClient client, XnioSsl xnioSsl, OptionMap options) {
+    static void pingHttpClient(URI connection, PingCallback callback, HttpServerExchange exchange, UndertowClient client, XnioSsl xnioSsl, UndertowOptionMap options) {
 
         final XnioIoThread thread = exchange.getIoThread();
         final RequestExchangeListener exchangeListener = new RequestExchangeListener(callback, NodeHealthChecker.NO_CHECK, true);
@@ -168,7 +169,7 @@ class NodePingUtil {
      * @param xnioSsl       the ssl setup
      * @param options       the options
      */
-    static void internalPingNode(Node node, PingCallback callback, NodeHealthChecker healthChecker, XnioIoThread ioThread, ByteBufferPool bufferPool, UndertowClient client, XnioSsl xnioSsl, OptionMap options) {
+    static void internalPingNode(Node node, PingCallback callback, NodeHealthChecker healthChecker, XnioIoThread ioThread, ByteBufferPool bufferPool, UndertowClient client, XnioSsl xnioSsl, UndertowOptionMap options) {
 
         final URI uri = node.getNodeConfig().getConnectionURI();
         final long timeout = node.getNodeConfig().getPing();
@@ -242,9 +243,9 @@ class NodePingUtil {
 
         private final InetSocketAddress address;
         private final XnioWorker worker;
-        private final OptionMap options;
+        private final UndertowOptionMap options;
 
-        HostPingTask(InetSocketAddress address, XnioWorker worker, PingCallback callback, OptionMap options) {
+        HostPingTask(InetSocketAddress address, XnioWorker worker, PingCallback callback, UndertowOptionMap options) {
             super(callback);
             this.address = address;
             this.worker = worker;
@@ -259,7 +260,7 @@ class NodePingUtil {
                     public void handleEvent(StreamConnection channel) {
                         IoUtils.safeClose(channel); // Close the channel right away
                     }
-                }, options);
+                }, XnioUndertowOptions.map(options));
 
                 future.addNotifier(new IoFuture.HandlingNotifier<StreamConnection, Void>() {
 
@@ -293,10 +294,10 @@ class NodePingUtil {
         private final UndertowClient client;
         private final XnioSsl xnioSsl;
         private final ByteBufferPool bufferPool;
-        private final OptionMap options;
+        private final UndertowOptionMap options;
         private final RequestExchangeListener exchangeListener;
 
-        HttpClientPingTask(URI connection, RequestExchangeListener exchangeListener, XnioIoThread thread, UndertowClient client, XnioSsl xnioSsl, ByteBufferPool bufferPool, OptionMap options) {
+        HttpClientPingTask(URI connection, RequestExchangeListener exchangeListener, XnioIoThread thread, UndertowClient client, XnioSsl xnioSsl, ByteBufferPool bufferPool, UndertowOptionMap options) {
             this.connection = connection;
             this.thread = thread;
             this.client = client;

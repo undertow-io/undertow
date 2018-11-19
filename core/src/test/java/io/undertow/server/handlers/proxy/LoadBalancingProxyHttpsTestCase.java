@@ -24,14 +24,13 @@ import java.net.URISyntaxException;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
-import org.xnio.Options;
 
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.ProxyIgnore;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
  * Tests the load balancing proxy
@@ -49,15 +48,14 @@ public class LoadBalancingProxyHttpsTestCase extends AbstractLoadBalancingProxyT
         int port = DefaultServer.getHostPort("default");
         server1 = Undertow.builder()
                 .addHttpsListener(port + 1, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
-                .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setSocketOption(UndertowOptions.REUSE_ADDRESSES, true)
                 .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setHandler(getRootHandler("s1", "server1"))
                 .build();
         server2 = Undertow.builder()
                 .addHttpsListener(port + 2, DefaultServer.getHostAddress("default"), DefaultServer.getServerSslContext())
-                .setServerOption(UndertowOptions.ENABLE_SPDY, false)
                 .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
-                .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setSocketOption(UndertowOptions.REUSE_ADDRESSES, true)
                 .setHandler(getRootHandler("s2", "server2"))
                 .build();
         server1.start();

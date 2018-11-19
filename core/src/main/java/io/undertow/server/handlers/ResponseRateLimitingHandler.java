@@ -27,13 +27,13 @@ import java.util.concurrent.TimeUnit;
 
 import org.xnio.conduits.StreamSinkConduit;
 
-import io.undertow.xnio.conduits.RateLimitingStreamSinkConduit;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.ConduitFactory;
+import io.undertow.xnio.conduits.RateLimitingStreamSinkConduit;
 
 /**
  * Handler that limits the download rate

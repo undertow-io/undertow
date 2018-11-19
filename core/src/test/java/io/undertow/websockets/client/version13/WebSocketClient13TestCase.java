@@ -38,7 +38,6 @@ import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 
 import io.undertow.Undertow;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ConnectHandler;
@@ -53,6 +52,7 @@ import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.protocol.server.AutobahnWebSocketServer;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 
 /**

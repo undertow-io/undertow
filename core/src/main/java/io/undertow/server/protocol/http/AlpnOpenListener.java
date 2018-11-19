@@ -34,7 +34,6 @@ import javax.net.ssl.SSLEngine;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.ssl.SslConnection;
@@ -44,13 +43,14 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.connector.alpn.ALPNProvider;
-import io.undertow.xnio.protocols.alpn.ALPNManager;
 import io.undertow.server.AggregateConnectorStatistics;
 import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
+import io.undertow.xnio.protocols.alpn.ALPNManager;
 import io.undertow.xnio.protocols.ssl.SslConduit;
 import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
@@ -76,29 +76,29 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
     private String[] protocols;
     private final String fallbackProtocol;
     private volatile HttpHandler rootHandler;
-    private volatile OptionMap undertowOptions;
+    private volatile UndertowOptionMap undertowOptions;
     private volatile boolean statisticsEnabled;
 
     private volatile boolean providerLogged;
     private volatile boolean alpnFailLogged;
 
-    public AlpnOpenListener(ByteBufferPool bufferPool, OptionMap undertowOptions, DelegateOpenListener httpListener) {
+    public AlpnOpenListener(ByteBufferPool bufferPool, UndertowOptionMap undertowOptions, DelegateOpenListener httpListener) {
         this(bufferPool, undertowOptions, "http/1.1", httpListener);
     }
 
     public AlpnOpenListener(ByteBufferPool bufferPool) {
-        this(bufferPool, OptionMap.EMPTY, null, null);
+        this(bufferPool, UndertowOptionMap.EMPTY, null, null);
     }
 
-    public AlpnOpenListener(ByteBufferPool bufferPool, OptionMap undertowOptions) {
+    public AlpnOpenListener(ByteBufferPool bufferPool, UndertowOptionMap undertowOptions) {
         this(bufferPool, undertowOptions, null, null);
     }
 
-    public AlpnOpenListener(ByteBufferPool bufferPool, OptionMap undertowOptions, String fallbackProtocol, DelegateOpenListener fallbackListener) {
+    public AlpnOpenListener(ByteBufferPool bufferPool, UndertowOptionMap undertowOptions, String fallbackProtocol, DelegateOpenListener fallbackListener) {
         this.bufferPool = bufferPool;
         this.undertowOptions = undertowOptions;
         this.fallbackProtocol = fallbackProtocol;
-        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_STATISTICS, false);
         if (fallbackProtocol != null && fallbackListener != null) {
             addProtocol(fallbackProtocol, fallbackListener, 0);
         }
@@ -118,12 +118,12 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
     }
 
     @Override
-    public OptionMap getUndertowOptions() {
+    public UndertowOptionMap getUndertowOptions() {
         return undertowOptions;
     }
 
     @Override
-    public void setUndertowOptions(OptionMap undertowOptions) {
+    public void setUndertowOptions(UndertowOptionMap undertowOptions) {
         if (undertowOptions == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
         }
@@ -131,7 +131,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         for (Map.Entry<String, ListenerEntry> delegate : listeners.entrySet()) {
             delegate.getValue().listener.setRootHandler(rootHandler);
         }
-        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_STATISTICS, false);
     }
 
     @Override

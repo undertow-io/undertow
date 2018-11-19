@@ -33,21 +33,21 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.xnio.client.ClientCallback;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.ClientStatistics;
-import io.undertow.xnio.client.UndertowClient;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientStatistics;
+import io.undertow.xnio.client.UndertowClient;
 import io.undertow.xnio.util.WorkerUtils;
 
 /**
@@ -71,7 +71,7 @@ public class ProxyConnectionPool implements Closeable {
 
     private final ConnectionPoolManager connectionPoolManager;
 
-    private final OptionMap options;
+    private final UndertowOptionMap options;
 
     /**
      * Set to true when the connection pool is closed.
@@ -125,19 +125,19 @@ public class ProxyConnectionPool implements Closeable {
 
     private final ConcurrentMap<XnioIoThread, HostThreadData> hostThreadData = new CopyOnWriteMap<>();
 
-    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, UndertowClient client, OptionMap options) {
+    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, UndertowClient client, UndertowOptionMap options) {
         this(connectionPoolManager, uri, null, client, options);
     }
 
-    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager,InetSocketAddress bindAddress, URI uri, UndertowClient client, OptionMap options) {
+    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager,InetSocketAddress bindAddress, URI uri, UndertowClient client, UndertowOptionMap options) {
         this(connectionPoolManager, bindAddress, uri, null, client, options);
     }
 
-    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, XnioSsl ssl, UndertowClient client, OptionMap options) {
+    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, URI uri, XnioSsl ssl, UndertowClient client, UndertowOptionMap options) {
         this(connectionPoolManager, null, uri, ssl, client, options);
     }
 
-    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, InetSocketAddress bindAddress,URI uri, XnioSsl ssl, UndertowClient client, OptionMap options) {
+    public ProxyConnectionPool(ConnectionPoolManager connectionPoolManager, InetSocketAddress bindAddress,URI uri, XnioSsl ssl, UndertowClient client, UndertowOptionMap options) {
         this.connectionPoolManager = connectionPoolManager;
         this.maxConnections = Math.max(connectionPoolManager.getMaxConnections(), 1);
         this.maxCachedConnections = Math.max(connectionPoolManager.getMaxCachedConnections(), 0);

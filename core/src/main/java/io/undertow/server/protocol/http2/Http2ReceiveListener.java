@@ -28,13 +28,13 @@ import javax.net.ssl.SSLSession;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.channels.Channels;
 import org.xnio.conduits.StreamSinkConduit;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.HeadStreamSinkConduit;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.protocols.http2.AbstractHttp2StreamSourceChannel;
 import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.protocols.http2.Http2DataStreamSinkChannel;
@@ -74,7 +74,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
     private final HttpHandler rootHandler;
     private final long maxEntitySize;
-    private final OptionMap undertowOptions;
+    private final UndertowOptionMap undertowOptions;
     private final String encoding;
     private final boolean decode;
     private final StringBuilder decodeBuffer = new StringBuilder();
@@ -95,7 +95,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
     private volatile int concurrentRequests;
 
 
-    public Http2ReceiveListener(HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize, ConnectorStatisticsImpl connectorStatistics) {
+    public Http2ReceiveListener(HttpHandler rootHandler, UndertowOptionMap undertowOptions, int bufferSize, ConnectorStatisticsImpl connectorStatistics) {
         this.rootHandler = rootHandler;
         this.undertowOptions = undertowOptions;
         this.bufferSize = bufferSize;

@@ -37,6 +37,7 @@ import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletContextListener;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
+import io.undertow.UndertowOptions;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.AuthenticationMode;
@@ -333,7 +334,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     /**
-     * Sets the URL encoding. This will only take effect if the {@link io.undertow.UndertowOptions#DECODE_URL}
+     * Sets the URL encoding. This will only take effect if the {@link UndertowOptions#DECODE_URL}
      * parameter has been set to false. This allows multiple deployments in the same server to use a different URL encoding
      *
      * @param urlEncoding The encoding to use

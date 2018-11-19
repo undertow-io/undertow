@@ -18,7 +18,6 @@
 
 package io.undertow.server.protocol.ajp;
 
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 import org.xnio.conduits.StreamSinkConduit;
@@ -26,6 +25,7 @@ import org.xnio.conduits.WriteReadyHandler;
 
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.BasicSSLSessionInfo;
 import io.undertow.server.HttpHandler;
@@ -45,7 +45,7 @@ public final class AjpServerConnection extends AbstractServerConnection {
     private WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel> writeReadyHandler;
     private AjpReadListener ajpReadListener;
 
-    public AjpServerConnection(StreamConnection channel, ByteBufferPool bufferPool, HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize) {
+    public AjpServerConnection(StreamConnection channel, ByteBufferPool bufferPool, HttpHandler rootHandler, UndertowOptionMap undertowOptions, int bufferSize) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<>(channel.getSinkChannel());
     }

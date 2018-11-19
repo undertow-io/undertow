@@ -24,9 +24,9 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
 
 import io.undertow.UndertowOptions;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
@@ -66,8 +66,8 @@ public class EncodedEncodedSlashTestCase {
     public void testSlashDecoded() throws Exception {
 
         final TestHttpClient client = new TestHttpClient();
-        OptionMap old = DefaultServer.getUndertowOptions();
-        DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true));
+        UndertowOptionMap old = DefaultServer.getUndertowOptions();
+        DefaultServer.setUndertowOptions(UndertowOptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true));
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/%2f%5c");
             HttpResponse result = client.execute(get);

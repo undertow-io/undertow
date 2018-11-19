@@ -26,9 +26,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xnio.IoFuture;
-import org.xnio.OptionMap;
 
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.AttachmentKey;
 import io.undertow.websockets.core.WebSocketChannel;
@@ -163,5 +163,5 @@ public interface WebSocketHttpExchange extends Closeable {
 
     Set<WebSocketChannel> getPeerConnections();
 
-    OptionMap getOptions();
+    UndertowOptionMap getOptions();
 }

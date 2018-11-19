@@ -23,9 +23,9 @@ import java.nio.ByteBuffer;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.xnio.OptionMap;
 
 import io.undertow.UndertowOptions;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.category.UnitTest;
 import io.undertow.util.BadRequestException;
@@ -42,7 +42,7 @@ import io.undertow.util.Protocols;
 public class ParserResumeTestCase {
 
     public static final String DATA = "GET http://www.somehost.net/apath%20with%20spaces%20and%20I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n?key1=value1&key2=I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
-    public static final HttpRequestParser PARSER = HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true));
+    public static final HttpRequestParser PARSER = HttpRequestParser.instance(UndertowOptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true));
 
     final ParseState context = new ParseState(10);
     @Test

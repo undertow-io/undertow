@@ -40,13 +40,13 @@ import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
 import org.xnio.ssl.SslConnection;
 
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.protocols.ssl.SslConduit;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.sse.ServerSentEventConnection;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.protocols.ssl.SslConduit;
 
 /**
  * log messages start at 5000

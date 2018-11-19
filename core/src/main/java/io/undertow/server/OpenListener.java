@@ -19,10 +19,10 @@
 package io.undertow.server;
 
 import org.xnio.ChannelListener;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 
 /**
  * Interface that represents an open listener, aka a connector.
@@ -48,13 +48,13 @@ public interface OpenListener extends ChannelListener<StreamConnection> {
      *
      * @return The connector options
      */
-    OptionMap getUndertowOptions();
+    UndertowOptionMap getUndertowOptions();
 
     /**
      *
      * @param undertowOptions The connector options
      */
-    void setUndertowOptions(OptionMap undertowOptions);
+    void setUndertowOptions(UndertowOptionMap undertowOptions);
 
     /**
      *

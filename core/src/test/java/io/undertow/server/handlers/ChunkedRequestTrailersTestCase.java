@@ -28,9 +28,9 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
 
 import io.undertow.UndertowOptions;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
@@ -51,13 +51,13 @@ public class ChunkedRequestTrailersTestCase {
 
     private static volatile ServerConnection connection;
 
-    private static OptionMap existing;
+    private static UndertowOptionMap existing;
 
     @BeforeClass
     public static void setup() {
         final BlockingHandler blockingHandler = new BlockingHandler();
         existing = DefaultServer.getUndertowOptions();
-        DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.ALWAYS_SET_DATE, false));
+        DefaultServer.setUndertowOptions(UndertowOptionMap.create(UndertowOptions.ALWAYS_SET_DATE, false));
         DefaultServer.setRootHandler(blockingHandler);
         blockingHandler.setRootHandler(new HttpHandler() {
             @Override

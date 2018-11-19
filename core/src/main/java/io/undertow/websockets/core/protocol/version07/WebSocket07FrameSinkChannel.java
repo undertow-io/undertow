@@ -23,13 +23,13 @@ import java.util.Random;
 
 import io.undertow.UndertowLogger;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.xnio.protocols.framed.SendFrameHeader;
 import io.undertow.util.ImmediatePooledByteBuffer;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import io.undertow.websockets.extensions.NoopExtensionFunction;
+import io.undertow.xnio.protocols.framed.SendFrameHeader;
 
 /**
  * {@link StreamSinkFrameChannel} implementation for writing WebSocket Frames on {@link io.undertow.websockets.core.WebSocketVersion#V08} connections

@@ -27,14 +27,13 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
-import org.xnio.OptionMap;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowLogger;
-import io.undertow.xnio.client.UndertowClient;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.cache.LRUCache;
@@ -42,6 +41,7 @@ import io.undertow.server.handlers.proxy.ProxyClient;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
 import io.undertow.util.PathMatcher;
+import io.undertow.xnio.client.UndertowClient;
 
 /**
  * @author Stuart Douglas
@@ -72,9 +72,9 @@ class ModClusterContainer implements ModClusterController {
     private final NodeHealthChecker healthChecker;
     private final long removeBrokenNodesThreshold;
 
-    private final OptionMap clientOptions;
+    private final UndertowOptionMap clientOptions;
 
-    ModClusterContainer(final ModCluster modCluster, final XnioSsl xnioSsl, final UndertowClient client, OptionMap clientOptions) {
+    ModClusterContainer(final ModCluster modCluster, final XnioSsl xnioSsl, final UndertowClient client, UndertowOptionMap clientOptions) {
         this.xnioSsl = xnioSsl;
         this.client = client;
         this.modCluster = modCluster;
@@ -502,7 +502,7 @@ class ModClusterContainer implements ModClusterController {
         return null;
     }
 
-    OptionMap getClientOptions() {
+    UndertowOptionMap getClientOptions() {
         return clientOptions;
     }
 

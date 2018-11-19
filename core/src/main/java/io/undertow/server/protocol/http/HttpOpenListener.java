@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.StreamConnection;
 
@@ -38,6 +37,7 @@ import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
 import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.DelegateOpenListener;
@@ -60,7 +60,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
 
     private volatile HttpHandler rootHandler;
 
-    private volatile OptionMap undertowOptions;
+    private volatile UndertowOptionMap undertowOptions;
 
     private volatile HttpRequestParser parser;
 
@@ -68,10 +68,10 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
     private final ConnectorStatisticsImpl connectorStatistics;
 
     public HttpOpenListener(final ByteBufferPool pool) {
-        this(pool, OptionMap.EMPTY);
+        this(pool, UndertowOptionMap.EMPTY);
     }
 
-    public HttpOpenListener(final ByteBufferPool pool, final OptionMap undertowOptions) {
+    public HttpOpenListener(final ByteBufferPool pool, final UndertowOptionMap undertowOptions) {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
         PooledByteBuffer buf = pool.allocate();
@@ -79,7 +79,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         buf.close();
         parser = HttpRequestParser.instance(undertowOptions);
         connectorStatistics = new ConnectorStatisticsImpl();
-        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_STATISTICS, false);
     }
 
     @Override
@@ -160,18 +160,18 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
     }
 
     @Override
-    public OptionMap getUndertowOptions() {
+    public UndertowOptionMap getUndertowOptions() {
         return undertowOptions;
     }
 
     @Override
-    public void setUndertowOptions(final OptionMap undertowOptions) {
+    public void setUndertowOptions(final UndertowOptionMap undertowOptions) {
         if (undertowOptions == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
         }
         this.undertowOptions = undertowOptions;
         this.parser = HttpRequestParser.instance(undertowOptions);
-        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_STATISTICS, false);
     }
 
     @Override

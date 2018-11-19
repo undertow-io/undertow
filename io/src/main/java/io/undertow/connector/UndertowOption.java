@@ -13,27 +13,27 @@
  * limitations under the License.
  */
 
-package io.undertow.xnio.protocols.ajp;
+package io.undertow.connector;
 
-import java.nio.ByteBuffer;
+public class UndertowOption<T> {
 
-import io.undertow.util.ImmediatePooledByteBuffer;
-import io.undertow.xnio.protocols.framed.SendFrameHeader;
+    private final String name;
+    private final Class<T> type;
 
-/**
- * @author Stuart Douglas
- */
-public class AjpClientCPingStreamSinkChannel extends AbstractAjpClientStreamSinkChannel {
-
-
-    private static final byte[] CPING = {0x12, 0x34, 0, 1, 10}; //CPONG response data
-
-    protected AjpClientCPingStreamSinkChannel(AjpClientChannel channel) {
-        super(channel);
+    UndertowOption(String name, Class<T> type) {
+        this.name = name;
+        this.type = type;
     }
 
-    @Override
-    protected final SendFrameHeader createFrameHeader() {
-        return new SendFrameHeader(new ImmediatePooledByteBuffer(ByteBuffer.wrap(CPING)));
+    public String getName() {
+        return name;
+    }
+
+    public Class<T> getType() {
+        return type;
+    }
+
+    public static <T> UndertowOption<T> create(String name, Class<T> type) {
+        return new UndertowOption<>(name, type);
     }
 }

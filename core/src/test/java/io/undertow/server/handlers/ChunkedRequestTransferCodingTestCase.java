@@ -32,9 +32,9 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
 
 import io.undertow.UndertowOptions;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
@@ -150,7 +150,7 @@ public class ChunkedRequestTransferCodingTestCase {
     @Ignore("sometimes the client attempts to re-use the same connection after the failure, but the server has already closed it")
     public void testMaxRequestSizeChunkedRequest() throws IOException {
         connection = null;
-        OptionMap existing = DefaultServer.getUndertowOptions();
+        UndertowOptionMap existing = DefaultServer.getUndertowOptions();
         HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
         post.setHeader(HttpHeaders.CONNECTION, "close");
         TestHttpClient client = new TestHttpClient();
@@ -162,12 +162,12 @@ public class ChunkedRequestTransferCodingTestCase {
                     return -1;
                 }
             });
-            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, 3L));
+            DefaultServer.setUndertowOptions(UndertowOptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, 3L));
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
             connection = null;
-            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) message.length()));
+            DefaultServer.setUndertowOptions(UndertowOptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) message.length()));
             result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);

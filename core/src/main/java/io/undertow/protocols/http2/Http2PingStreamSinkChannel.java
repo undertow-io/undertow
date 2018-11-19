@@ -23,8 +23,8 @@ import static io.undertow.protocols.http2.Http2Channel.PING_FRAME_LENGTH;
 import java.nio.ByteBuffer;
 
 import io.undertow.UndertowMessages;
-import io.undertow.xnio.protocols.framed.SendFrameHeader;
 import io.undertow.util.ImmediatePooledByteBuffer;
+import io.undertow.xnio.protocols.framed.SendFrameHeader;
 
 /**
  * @author Stuart Douglas

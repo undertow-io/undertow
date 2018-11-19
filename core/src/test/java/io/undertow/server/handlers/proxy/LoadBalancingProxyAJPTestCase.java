@@ -23,7 +23,6 @@ import java.net.URISyntaxException;
 
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
-import org.xnio.Options;
 
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
@@ -43,13 +42,13 @@ public class LoadBalancingProxyAJPTestCase extends AbstractLoadBalancingProxyTes
         int port = DefaultServer.getHostPort("default");
         server1 = Undertow.builder()
                 .addAjpListener(port + 1, DefaultServer.getHostAddress("default"))
-                .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setSocketOption(UndertowOptions.REUSE_ADDRESSES, true)
                 .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setHandler(getRootHandler("s1", "server1"))
                 .build();
         server2 = Undertow.builder()
                 .addAjpListener(port + 2, DefaultServer.getHostAddress("default"))
-                .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setSocketOption(UndertowOptions.REUSE_ADDRESSES, true)
                 .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setHandler(getRootHandler("s2", "server2"))
                 .build();

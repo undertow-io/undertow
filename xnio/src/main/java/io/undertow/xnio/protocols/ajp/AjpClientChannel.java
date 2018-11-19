@@ -34,11 +34,11 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.util.Attachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
@@ -77,7 +77,7 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
      *                               Be aware that it already must be "upgraded".
      * @param bufferPool             The {@link org.xnio.Pool} which will be used to acquire {@link java.nio.ByteBuffer}'s from.
      */
-    public AjpClientChannel(StreamConnection connectedStreamChannel, ByteBufferPool bufferPool, OptionMap settings) {
+    public AjpClientChannel(StreamConnection connectedStreamChannel, ByteBufferPool bufferPool, UndertowOptionMap settings) {
         super(connectedStreamChannel, bufferPool, AjpClientFramePriority.INSTANCE, null, settings);
         ajpParser = new AjpResponseParser();
     }
@@ -197,7 +197,7 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
         return Collections.<AbstractFramedStreamSourceChannel<AjpClientChannel, AbstractAjpClientStreamSourceChannel, AbstractAjpClientStreamSinkChannel>>singleton(source);
     }
 
-    protected OptionMap getSettings() {
+    protected UndertowOptionMap getSettings() {
         return super.getSettings();
     }
 

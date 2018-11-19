@@ -41,7 +41,6 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -50,6 +49,10 @@ import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.UndertowOptionMap;
+import io.undertow.util.AbstractAttachable;
+import io.undertow.util.Protocols;
 import io.undertow.xnio.client.ClientCallback;
 import io.undertow.xnio.client.ClientConnection;
 import io.undertow.xnio.client.ClientExchange;
@@ -57,9 +60,6 @@ import io.undertow.xnio.client.ClientRequest;
 import io.undertow.xnio.client.ClientResponse;
 import io.undertow.xnio.client.ClientStatistics;
 import io.undertow.xnio.client.UndertowClientMessages;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.util.AbstractAttachable;
-import io.undertow.util.Protocols;
 import io.undertow.xnio.protocols.ajp.AbstractAjpClientStreamSourceChannel;
 import io.undertow.xnio.protocols.ajp.AjpClientChannel;
 import io.undertow.xnio.protocols.ajp.AjpClientRequestClientStreamSinkChannel;
@@ -93,7 +93,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     private final Deque<AjpClientExchange> pendingQueue = new ArrayDeque<>();
     private AjpClientExchange currentRequest;
 
-    private final OptionMap options;
+    private final UndertowOptionMap options;
     private final AjpClientChannel connection;
 
     private final ByteBufferPool bufferPool;
@@ -109,7 +109,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     private final ClientStatistics clientStatistics;
     private final List<ChannelListener<ClientConnection>> closeListeners = new CopyOnWriteArrayList<>();
 
-    AjpClientConnection(final AjpClientChannel connection, final OptionMap options, final ByteBufferPool bufferPool, ClientStatistics clientStatistics) {
+    AjpClientConnection(final AjpClientChannel connection, final UndertowOptionMap options, final ByteBufferPool bufferPool, ClientStatistics clientStatistics) {
         this.clientStatistics = clientStatistics;
         this.options = options;
         this.connection = connection;

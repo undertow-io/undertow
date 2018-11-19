@@ -28,7 +28,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.StreamConnection;
 
@@ -41,6 +40,7 @@ import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
 import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.HttpHandler;
@@ -62,7 +62,7 @@ public class AjpOpenListener implements OpenListener {
 
     private volatile HttpHandler rootHandler;
 
-    private volatile OptionMap undertowOptions;
+    private volatile UndertowOptionMap undertowOptions;
 
     private volatile AjpRequestParser parser;
 
@@ -77,10 +77,10 @@ public class AjpOpenListener implements OpenListener {
     };
 
     public AjpOpenListener(final ByteBufferPool pool) {
-        this(pool, OptionMap.EMPTY);
+        this(pool, UndertowOptionMap.EMPTY);
     }
 
-    public AjpOpenListener(final ByteBufferPool pool, final OptionMap undertowOptions) {
+    public AjpOpenListener(final ByteBufferPool pool, final UndertowOptionMap undertowOptions) {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
         PooledByteBuffer buf = pool.allocate();
@@ -88,7 +88,7 @@ public class AjpOpenListener implements OpenListener {
         buf.close();
         parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, StandardCharsets.UTF_8.name()), undertowOptions.get(DECODE_URL, true), undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS), undertowOptions.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS), undertowOptions.get(UndertowOptions.ALLOW_ENCODED_SLASH, false), undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false));
         connectorStatistics = new ConnectorStatisticsImpl();
-        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_STATISTICS, false);
     }
 
     @Override
@@ -155,17 +155,17 @@ public class AjpOpenListener implements OpenListener {
     }
 
     @Override
-    public OptionMap getUndertowOptions() {
+    public UndertowOptionMap getUndertowOptions() {
         return undertowOptions;
     }
 
     @Override
-    public void setUndertowOptions(final OptionMap undertowOptions) {
+    public void setUndertowOptions(final UndertowOptionMap undertowOptions) {
         if (undertowOptions == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
         }
         this.undertowOptions = undertowOptions;
-        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_STATISTICS, false);
         parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, StandardCharsets.UTF_8.name()), undertowOptions.get(DECODE_URL, true), undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS), undertowOptions.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS), undertowOptions.get(UndertowOptions.ALLOW_ENCODED_SLASH, false), undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false));
     }
 

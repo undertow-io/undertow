@@ -79,11 +79,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.xnio.OptionMap;
-
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.annotationprocessor.HttpParserConfig;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.BadRequestException;
 import io.undertow.util.Headers;
@@ -202,7 +201,7 @@ public abstract class HttpRequestParser {
         }
     }
 
-    public HttpRequestParser(OptionMap options) {
+    public HttpRequestParser(UndertowOptionMap options) {
         maxParameters = options.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS);
         maxHeaders = options.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS);
         allowEncodedSlash = options.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
@@ -212,11 +211,11 @@ public abstract class HttpRequestParser {
         this.allowUnescapedCharactersInUrl = options.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
     }
 
-    public static final HttpRequestParser instance(final OptionMap options) {
+    public static final HttpRequestParser instance(final UndertowOptionMap options) {
         try {
             final Class<?> cls = Class.forName(HttpRequestParser.class.getName() + "$$generated", false, HttpRequestParser.class.getClassLoader());
 
-            Constructor<?> ctor = cls.getConstructor(OptionMap.class);
+            Constructor<?> ctor = cls.getConstructor(UndertowOptionMap.class);
             return (HttpRequestParser) ctor.newInstance(options);
         } catch (Exception e) {
             throw new RuntimeException(e);

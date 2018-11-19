@@ -23,6 +23,12 @@ import java.io.IOException;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
+import io.undertow.protocols.http2.Http2Channel;
+import io.undertow.protocols.http2.Http2StreamSinkChannel;
+import io.undertow.protocols.http2.Http2StreamSourceChannel;
+import io.undertow.util.AbstractAttachable;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.Protocols;
 import io.undertow.xnio.client.ClientCallback;
 import io.undertow.xnio.client.ClientConnection;
 import io.undertow.xnio.client.ClientExchange;
@@ -30,12 +36,6 @@ import io.undertow.xnio.client.ClientRequest;
 import io.undertow.xnio.client.ClientResponse;
 import io.undertow.xnio.client.ContinueNotification;
 import io.undertow.xnio.client.PushCallback;
-import io.undertow.protocols.http2.Http2Channel;
-import io.undertow.protocols.http2.Http2StreamSinkChannel;
-import io.undertow.protocols.http2.Http2StreamSourceChannel;
-import io.undertow.util.AbstractAttachable;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.Protocols;
 
 /**
  * @author Stuart Douglas

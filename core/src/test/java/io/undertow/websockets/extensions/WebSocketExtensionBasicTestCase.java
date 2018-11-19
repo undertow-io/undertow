@@ -37,6 +37,7 @@ import org.xnio.Options;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.StringWriteChannelListener;
@@ -107,7 +108,7 @@ public class WebSocketExtensionBasicTestCase {
         Set<ExtensionHandshake> extensionHandshakes = new HashSet<>();
         extensionHandshakes.add(new PerMessageDeflateHandshake(true));
 
-        final WebSocketChannel clientChannel = WebSocketClient.connect(client, null, DefaultServer.getBufferPool(), OptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
+        final WebSocketChannel clientChannel = WebSocketClient.connect(client, null, DefaultServer.getBufferPool(), UndertowOptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<String> result = new AtomicReference<>();
@@ -181,7 +182,7 @@ public class WebSocketExtensionBasicTestCase {
 
         final WebSocketClientNegotiation negotiation = null;
 
-        final WebSocketChannel clientChannel = WebSocketClient.connect(client, DefaultServer.getBufferPool(), OptionMap.EMPTY, new URI("http://localhost:8080"), WebSocketVersion.V13, negotiation).get();
+        final WebSocketChannel clientChannel = WebSocketClient.connect(client, DefaultServer.getBufferPool(), UndertowOptionMap.EMPTY, new URI("http://localhost:8080"), WebSocketVersion.V13, negotiation).get();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<String> result = new AtomicReference<>();
@@ -281,7 +282,7 @@ public class WebSocketExtensionBasicTestCase {
         Set<ExtensionHandshake> extensionHandshakes = new HashSet<>();
         extensionHandshakes.add(new PerMessageDeflateHandshake(true));
 
-        final WebSocketChannel clientChannel = WebSocketClient.connect(client, null, DefaultServer.getBufferPool(), OptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
+        final WebSocketChannel clientChannel = WebSocketClient.connect(client, null, DefaultServer.getBufferPool(), UndertowOptionMap.EMPTY, new URI(DefaultServer.getDefaultServerURL()), WebSocketVersion.V13, negotiation, extensionHandshakes).get();
 
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<String> result = new AtomicReference<>();

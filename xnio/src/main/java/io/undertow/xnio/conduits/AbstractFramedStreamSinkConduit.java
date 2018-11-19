@@ -32,8 +32,8 @@ import org.xnio.conduits.ConduitWritableByteChannel;
 import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
-import io.undertow.xnio.UndertowXnioMessages;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.xnio.UndertowXnioMessages;
 
 /**
  * Utility class to ease the implementation of framed protocols. This call provides a queue of frames, and a callback

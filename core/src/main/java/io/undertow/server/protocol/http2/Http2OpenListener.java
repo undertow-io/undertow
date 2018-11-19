@@ -24,7 +24,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 
 import io.undertow.UndertowLogger;
@@ -34,6 +33,7 @@ import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
@@ -67,20 +67,20 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
 
     private volatile HttpHandler rootHandler;
 
-    private volatile OptionMap undertowOptions;
+    private volatile UndertowOptionMap undertowOptions;
     private volatile boolean statisticsEnabled;
     private final ConnectorStatisticsImpl connectorStatistics;
     private final String protocol;
 
     public Http2OpenListener(final ByteBufferPool pool) {
-        this(pool, OptionMap.EMPTY);
+        this(pool, UndertowOptionMap.EMPTY);
     }
 
-    public Http2OpenListener(final ByteBufferPool pool, final OptionMap undertowOptions) {
+    public Http2OpenListener(final ByteBufferPool pool, final UndertowOptionMap undertowOptions) {
         this(pool, undertowOptions, HTTP2);
     }
 
-    public Http2OpenListener(final ByteBufferPool pool, final OptionMap undertowOptions, String protocol) {
+    public Http2OpenListener(final ByteBufferPool pool, final UndertowOptionMap undertowOptions, String protocol) {
         this.undertowOptions = undertowOptions;
         this.bufferPool = pool;
         PooledByteBuffer buf = pool.allocate();
@@ -147,17 +147,17 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
     }
 
     @Override
-    public OptionMap getUndertowOptions() {
+    public UndertowOptionMap getUndertowOptions() {
         return undertowOptions;
     }
 
     @Override
-    public void setUndertowOptions(final OptionMap undertowOptions) {
+    public void setUndertowOptions(final UndertowOptionMap undertowOptions) {
         if (undertowOptions == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
         }
         this.undertowOptions = undertowOptions;
-        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_STATISTICS, false);
     }
 
     @Override

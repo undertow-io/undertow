@@ -29,9 +29,9 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
 
 import io.undertow.UndertowOptions;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -70,7 +70,7 @@ public class MaxRequestSizeTestCase {
 
     @Test
     public void testMaxRequestHeaderSize() throws IOException {
-        OptionMap existing = DefaultServer.getUndertowOptions();
+        UndertowOptionMap existing = DefaultServer.getUndertowOptions();
         final TestHttpClient client = new TestHttpClient();
         try {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
@@ -80,7 +80,7 @@ public class MaxRequestSizeTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
-            OptionMap maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 10);
+            UndertowOptionMap maxSize = UndertowOptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 10);
             DefaultServer.setUndertowOptions(maxSize);
 
             try {
@@ -92,7 +92,7 @@ public class MaxRequestSizeTestCase {
                 //expected
             }
 
-            maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 1000);
+            maxSize = UndertowOptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 1000);
             DefaultServer.setUndertowOptions(maxSize);
             result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
@@ -106,7 +106,7 @@ public class MaxRequestSizeTestCase {
 
     @Test
     public void testMaxRequestEntitySize() throws IOException {
-        OptionMap existing = DefaultServer.getUndertowOptions();
+        UndertowOptionMap existing = DefaultServer.getUndertowOptions();
         final TestHttpClient client = new TestHttpClient();
         try {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
@@ -116,7 +116,7 @@ public class MaxRequestSizeTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
-            OptionMap maxSize = OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) A_MESSAGE.length() - 1);
+            UndertowOptionMap maxSize = UndertowOptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) A_MESSAGE.length() - 1);
             DefaultServer.setUndertowOptions(maxSize);
 
             post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
@@ -125,7 +125,7 @@ public class MaxRequestSizeTestCase {
             Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
-            maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 1000);
+            maxSize = UndertowOptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 1000);
             DefaultServer.setUndertowOptions(maxSize);
             post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));

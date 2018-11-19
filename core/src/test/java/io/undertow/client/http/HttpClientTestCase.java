@@ -42,15 +42,9 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.ssl.XnioSsl;
 
-import io.undertow.xnio.client.ClientCallback;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.ClientExchange;
-import io.undertow.xnio.client.ClientRequest;
-import io.undertow.xnio.client.ClientResponse;
-import io.undertow.xnio.client.UndertowClient;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
@@ -62,6 +56,13 @@ import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientExchange;
+import io.undertow.xnio.client.ClientRequest;
+import io.undertow.xnio.client.ClientResponse;
+import io.undertow.xnio.client.UndertowClient;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
  * @author Emanuel Muckenhuber
@@ -109,23 +110,23 @@ public class HttpClientTestCase {
         final XnioWorker xnioWorker = xnio.createWorker(null, DEFAULT_OPTIONS);
         worker = xnioWorker;
         DefaultServer.setRootHandler(new PathHandler()
-        .addExactPath(MESSAGE, new HttpHandler() {
-            @Override
-            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                sendMessage(exchange);
-            }
-        })
-        .addExactPath(POST, new HttpHandler() {
-            @Override
-            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.getRequestReceiver().receiveFullString(new Receiver.FullStringCallback() {
+                .addExactPath(MESSAGE, new HttpHandler() {
                     @Override
-                    public void handle(HttpServerExchange exchange, String message) {
-                        exchange.getResponseSender().send(message);
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        sendMessage(exchange);
                     }
-                });
-            }
-        }));
+                })
+                .addExactPath(POST, new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getRequestReceiver().receiveFullString(new Receiver.FullStringCallback() {
+                            @Override
+                            public void handle(HttpServerExchange exchange, String message) {
+                                exchange.getResponseSender().send(message);
+                            }
+                        });
+                    }
+                }));
     }
 
     @AfterClass
@@ -134,10 +135,10 @@ public class HttpClientTestCase {
     }
 
     static UndertowClient createClient() {
-        return createClient(OptionMap.EMPTY);
+        return createClient(UndertowOptionMap.EMPTY);
     }
 
-    static UndertowClient createClient(final OptionMap options) {
+    static UndertowClient createClient(final UndertowOptionMap options) {
         return UndertowClient.getInstance();
     }
 
@@ -148,7 +149,7 @@ public class HttpClientTestCase {
 
         final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
-        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), UndertowOptionMap.EMPTY).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -181,7 +182,7 @@ public class HttpClientTestCase {
 
         final List<String> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
-        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), UndertowOptionMap.EMPTY).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -255,7 +256,7 @@ public class HttpClientTestCase {
         SSLContext context = DefaultServer.getClientSSLContext();
         XnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, context);
 
-        final ClientConnection connection = client.connect(new URI(DefaultServer.getDefaultServerSSLAddress()), worker, ssl, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(new URI(DefaultServer.getDefaultServerSSLAddress()), worker, ssl, DefaultServer.getBufferPool(), UndertowOptionMap.EMPTY).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -293,7 +294,7 @@ public class HttpClientTestCase {
         final UndertowClient client = createClient();
 
         final CountDownLatch latch = new CountDownLatch(1);
-        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), UndertowOptionMap.EMPTY).get();
         try {
             ClientRequest request = new ClientRequest().setPath(MESSAGE).setMethod(Methods.GET);
             request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
@@ -344,7 +345,7 @@ public class HttpClientTestCase {
                 });
                 try {
                     result.getRequestChannel().shutdownWrites();
-                    if(!result.getRequestChannel().flush()) {
+                    if (!result.getRequestChannel().flush()) {
                         result.getRequestChannel().getWriteSetter().set(ChannelListeners.<StreamSinkChannel>flushingChannelListener(null, null));
                         result.getRequestChannel().resumeWrites();
                     }

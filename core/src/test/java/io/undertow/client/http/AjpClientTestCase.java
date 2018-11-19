@@ -41,12 +41,7 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.Undertow;
-import io.undertow.xnio.client.ClientCallback;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.ClientExchange;
-import io.undertow.xnio.client.ClientRequest;
-import io.undertow.xnio.client.ClientResponse;
-import io.undertow.xnio.client.UndertowClient;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
@@ -60,6 +55,12 @@ import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientExchange;
+import io.undertow.xnio.client.ClientRequest;
+import io.undertow.xnio.client.ClientResponse;
+import io.undertow.xnio.client.UndertowClient;
 
 /**
  * @author Emanuel Muckenhuber
@@ -138,10 +139,10 @@ public class AjpClientTestCase {
     }
 
     static UndertowClient createClient() {
-        return createClient(OptionMap.EMPTY);
+        return createClient(UndertowOptionMap.EMPTY);
     }
 
-    static UndertowClient createClient(final OptionMap options) {
+    static UndertowClient createClient(final UndertowOptionMap options) {
         return UndertowClient.getInstance();
     }
 
@@ -152,7 +153,7 @@ public class AjpClientTestCase {
 
         final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
-        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), UndertowOptionMap.EMPTY).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -186,7 +187,7 @@ public class AjpClientTestCase {
         final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
         final FutureResult<Boolean> result = new FutureResult<>();
         final CountDownLatch latch = new CountDownLatch(3);
-        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), UndertowOptionMap.EMPTY).get();
         Assert.assertTrue(connection.isPingSupported());
         try {
             connection.getIoThread().execute(new Runnable() {
@@ -267,7 +268,7 @@ public class AjpClientTestCase {
 
         final List<String> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
-        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), UndertowOptionMap.EMPTY).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -337,7 +338,7 @@ public class AjpClientTestCase {
         final UndertowClient client = createClient();
 
         final CountDownLatch latch = new CountDownLatch(1);
-        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), UndertowOptionMap.EMPTY).get();
         try {
             ClientRequest request = new ClientRequest().setPath(MESSAGE).setMethod(Methods.GET);
             request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());

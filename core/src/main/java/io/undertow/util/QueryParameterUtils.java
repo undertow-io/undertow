@@ -26,9 +26,8 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import org.xnio.OptionMap;
-
 import io.undertow.UndertowOptions;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -163,7 +162,7 @@ public class QueryParameterUtils {
 
     public static String getQueryParamEncoding(HttpServerExchange exchange) {
         String encoding = null;
-        OptionMap undertowOptions = exchange.getConnection().getUndertowOptions();
+        UndertowOptionMap undertowOptions = exchange.getConnection().getUndertowOptions();
         if(undertowOptions.get(UndertowOptions.DECODE_URL, true)) {
             encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
         }

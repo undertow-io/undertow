@@ -26,7 +26,6 @@ import java.util.concurrent.Executor;
 
 import org.xnio.ChannelListener;
 import org.xnio.Option;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.conduits.ConduitStreamSinkChannel;
@@ -38,13 +37,14 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.connector.UndertowOptionMap;
 
 public abstract class AbstractServerConnection extends ServerConnection {
     protected final StreamConnection channel;
     protected final CloseSetter closeSetter;
     protected final ByteBufferPool bufferPool;
     protected final HttpHandler rootHandler;
-    protected final OptionMap undertowOptions;
+    protected final UndertowOptionMap undertowOptions;
     protected final StreamSourceConduit originalSourceConduit;
     protected final StreamSinkConduit originalSinkConduit;
     protected final List<CloseListener> closeListeners = new LinkedList<>();
@@ -58,7 +58,7 @@ public abstract class AbstractServerConnection extends ServerConnection {
      */
     protected PooledByteBuffer extraBytes;
 
-    public AbstractServerConnection(StreamConnection channel, final ByteBufferPool bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize) {
+    public AbstractServerConnection(StreamConnection channel, final ByteBufferPool bufferPool, final HttpHandler rootHandler, final UndertowOptionMap undertowOptions, final int bufferSize) {
         this.channel = channel;
         this.bufferPool = bufferPool;
         this.rootHandler = rootHandler;
@@ -163,7 +163,7 @@ public abstract class AbstractServerConnection extends ServerConnection {
     }
 
     @Override
-    public OptionMap getUndertowOptions() {
+    public UndertowOptionMap getUndertowOptions() {
         return undertowOptions;
     }
 

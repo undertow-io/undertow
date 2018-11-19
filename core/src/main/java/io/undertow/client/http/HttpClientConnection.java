@@ -40,7 +40,6 @@ import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -54,13 +53,6 @@ import org.xnio.ssl.SslConnection;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
-import io.undertow.xnio.client.ClientCallback;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.ClientExchange;
-import io.undertow.xnio.client.ClientRequest;
-import io.undertow.xnio.client.ClientResponse;
-import io.undertow.xnio.client.ClientStatistics;
-import io.undertow.xnio.client.UndertowClientMessages;
 import io.undertow.client.http2.Http2ClearClientProvider;
 import io.undertow.client.http2.Http2ClientConnection;
 import io.undertow.conduits.ByteActivityCallback;
@@ -73,6 +65,7 @@ import io.undertow.conduits.FinishableStreamSourceConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.Connectors;
 import io.undertow.server.protocol.http.HttpContinue;
@@ -84,6 +77,13 @@ import io.undertow.util.Methods;
 import io.undertow.util.PooledAdaptor;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientExchange;
+import io.undertow.xnio.client.ClientRequest;
+import io.undertow.xnio.client.ClientResponse;
+import io.undertow.xnio.client.ClientStatistics;
+import io.undertow.xnio.client.UndertowClientMessages;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -113,7 +113,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     private HttpClientExchange currentRequest;
     private HttpResponseBuilder pendingResponse;
 
-    private final OptionMap options;
+    private final UndertowOptionMap options;
     private final StreamConnection connection;
     private final PushBackStreamSourceConduit pushBackStreamSourceConduit;
     private final ClientReadListener clientReadListener = new ClientReadListener();
@@ -142,7 +142,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     private ClientConnection http2Delegate;
     private final List<ChannelListener<ClientConnection>> closeListeners = new CopyOnWriteArrayList<>();
 
-    HttpClientConnection(final StreamConnection connection, final OptionMap options, final ByteBufferPool bufferPool) {
+    HttpClientConnection(final StreamConnection connection, final UndertowOptionMap options, final ByteBufferPool bufferPool) {
 
         //first we set up statistics, if required
         if(options.get(UndertowOptions.ENABLE_STATISTICS, false)) {

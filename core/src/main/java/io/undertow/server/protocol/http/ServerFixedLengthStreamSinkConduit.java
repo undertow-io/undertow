@@ -20,9 +20,9 @@ package io.undertow.server.protocol.http;
 
 import org.xnio.conduits.StreamSinkConduit;
 
-import io.undertow.xnio.conduits.AbstractFixedLengthStreamSinkConduit;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.xnio.conduits.AbstractFixedLengthStreamSinkConduit;
 
 /**
  * @author Stuart Douglas

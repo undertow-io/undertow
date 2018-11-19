@@ -26,6 +26,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -46,9 +47,10 @@ import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.JsseSslUtils;
 
 import io.undertow.connector.ByteBufferPool;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
-import io.undertow.server.ConnectorStatistics;
 import io.undertow.connector.DefaultByteBufferPool;
+import io.undertow.connector.UndertowOption;
+import io.undertow.connector.UndertowOptionMap;
+import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
 import io.undertow.server.protocol.ajp.AjpOpenListener;
@@ -57,6 +59,8 @@ import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.server.protocol.http2.Http2OpenListener;
 import io.undertow.server.protocol.http2.Http2UpgradeHandler;
 import io.undertow.server.protocol.proxy.ProxyProtocolOpenListener;
+import io.undertow.xnio.XnioUndertowOptions;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
  * Convenience class used to build an Undertow server.
@@ -73,9 +77,9 @@ public final class Undertow {
     private final List<ListenerConfig> listeners = new ArrayList<>();
     private volatile List<ListenerInfo> listenerInfo;
     private final HttpHandler rootHandler;
-    private final OptionMap workerOptions;
-    private final OptionMap socketOptions;
-    private final OptionMap serverOptions;
+    private final UndertowOptionMap workerOptions;
+    private final UndertowOptionMap socketOptions;
+    private final UndertowOptionMap serverOptions;
 
     /**
      * Will be true when a {@link XnioWorker} instance was NOT provided to the {@link Builder}.
@@ -121,29 +125,36 @@ public final class Undertow {
         channels = new ArrayList<>();
         try {
             if (internalWorker) {
-                worker = xnio.createWorker(OptionMap.builder()
+                OptionMap.Builder mapBuilder = OptionMap.builder()
                         .set(Options.WORKER_IO_THREADS, ioThreads)
                         .set(Options.CONNECTION_HIGH_WATER, 1000000)
                         .set(Options.CONNECTION_LOW_WATER, 1000000)
                         .set(Options.WORKER_TASK_CORE_THREADS, workerThreads)
                         .set(Options.WORKER_TASK_MAX_THREADS, workerThreads)
                         .set(Options.TCP_NODELAY, true)
-                        .set(Options.CORK, true)
-                        .addAll(workerOptions)
+                        .set(Options.CORK, true);
+                for(Map.Entry<UndertowOption<?>, Object> i : workerOptions) {
+                    mapBuilder.set((Option)XnioUndertowOptions.key(i.getKey()), i.getValue());
+                }
+                worker = xnio.createWorker(mapBuilder
                         .getMap());
             }
 
-            OptionMap socketOptions = OptionMap.builder()
+            OptionMap.Builder mapBuilder = OptionMap.builder()
                     .set(Options.WORKER_IO_THREADS, worker.getIoThreadCount())
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
                     .set(Options.BALANCING_TOKENS, 1)
                     .set(Options.BALANCING_CONNECTIONS, 2)
-                    .set(Options.BACKLOG, 1000)
-                    .addAll(this.socketOptions)
+                    .set(Options.BACKLOG, 1000);
+
+            for(Map.Entry<UndertowOption<?>, Object> i : this.socketOptions) {
+                mapBuilder.set((Option)XnioUndertowOptions.key(i.getKey()), i.getValue());
+            }
+            OptionMap socketOptions = mapBuilder
                     .getMap();
 
-            OptionMap serverOptions = OptionMap.builder()
+            UndertowOptionMap serverOptions = UndertowOptionMap.builder()
                     .set(UndertowOptions.NO_REQUEST_TIMEOUT, 60 * 1000)
                     .addAll(this.serverOptions)
                     .getMap();
@@ -164,18 +175,23 @@ public final class Undertow {
 
                     final ChannelListener<StreamConnection> finalListener;
                     if (listener.useProxyProtocol) {
-                        finalListener = new ProxyProtocolOpenListener(openListener, null, buffers, OptionMap.EMPTY);
+                        finalListener = new ProxyProtocolOpenListener(openListener, null, buffers, UndertowOptionMap.EMPTY);
                     } else {
                         finalListener = openListener;
                     }
                     ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(finalListener);
-                    OptionMap socketOptionsWithOverrides = OptionMap.builder().addAll(socketOptions).addAll(listener.overrideSocketOptions).getMap();
+                    OptionMap.Builder builder = OptionMap.builder().addAll(socketOptions);
+
+                    for(Map.Entry<UndertowOption<?>, Object> i : listener.overrideSocketOptions) {
+                        builder.set((Option)XnioUndertowOptions.key(i.getKey()), i.getValue());
+                    }
+                    OptionMap socketOptionsWithOverrides = builder.getMap();
                     AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptionsWithOverrides);
                     server.resumeAccepts();
                     channels.add(server);
                     listenerInfo.add(new ListenerInfo("ajp", server.getLocalAddress(), openListener, null, server));
                 } else {
-                    OptionMap undertowOptions = OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).addAll(serverOptions).getMap();
+                    UndertowOptionMap undertowOptions = UndertowOptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).addAll(serverOptions).getMap();
                     boolean http2 = serverOptions.get(UndertowOptions.ENABLE_HTTP2, false);
                     if (listener.type == ListenerType.HTTP) {
                         HttpOpenListener openListener = new HttpOpenListener(buffers, undertowOptions);
@@ -186,13 +202,18 @@ public final class Undertow {
                         openListener.setRootHandler(handler);
                         final ChannelListener<StreamConnection> finalListener;
                         if (listener.useProxyProtocol) {
-                            finalListener = new ProxyProtocolOpenListener(openListener, null, buffers, OptionMap.EMPTY);
+                            finalListener = new ProxyProtocolOpenListener(openListener, null, buffers, UndertowOptionMap.EMPTY);
                         } else {
                             finalListener = openListener;
                         }
 
                         ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(finalListener);
-                        OptionMap socketOptionsWithOverrides = OptionMap.builder().addAll(socketOptions).addAll(listener.overrideSocketOptions).getMap();
+                        OptionMap.Builder builder = OptionMap.builder().addAll(socketOptions);
+
+                        for(Map.Entry<UndertowOption<?>, Object> i : listener.overrideSocketOptions) {
+                            builder.set((Option)XnioUndertowOptions.key(i.getKey()), i.getValue());
+                        }
+                        OptionMap socketOptionsWithOverrides = builder.getMap();
                         AcceptingChannel<? extends StreamConnection> server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), acceptListener, socketOptionsWithOverrides);
                         server.resumeAccepts();
                         channels.add(server);
@@ -219,17 +240,25 @@ public final class Undertow {
                             xnioSsl = new UndertowXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), listener.sslContext);
                         } else {
                             OptionMap.Builder builder = OptionMap.builder();
-                            builder.addAll(listener.overrideSocketOptions);
-                            if (!listener.overrideSocketOptions.contains(Options.SSL_PROTOCOL)) {
+                            for(Map.Entry<UndertowOption<?>, Object> i : listener.overrideSocketOptions) {
+                                builder.set((Option)XnioUndertowOptions.key(i.getKey()), i.getValue());
+                            }
+                            if (!listener.overrideSocketOptions.contains(UndertowOptions.SSL_PROTOCOL)) {
                                 builder.set(Options.SSL_PROTOCOL, "TLSv1.2");
                             }
                             xnioSsl = new UndertowXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), JsseSslUtils.createSSLContext(listener.keyManagers, listener.trustManagers, new SecureRandom(), builder.getMap()));
                         }
 
-                        OptionMap socketOptionsWithOverrides = OptionMap.builder().addAll(socketOptions).addAll(listener.overrideSocketOptions).getMap();
+                        OptionMap.Builder builder = OptionMap.builder()
+                                .addAll(socketOptions);
+
+                        for(Map.Entry<UndertowOption<?>, Object> i : listener.overrideSocketOptions) {
+                            builder.set((Option)XnioUndertowOptions.key(i.getKey()), i.getValue());
+                        }
+                        OptionMap socketOptionsWithOverrides = builder.getMap();
                         AcceptingChannel<? extends StreamConnection> sslServer;
                         if (listener.useProxyProtocol) {
-                            ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(new ProxyProtocolOpenListener(openListener, xnioSsl, buffers, socketOptionsWithOverrides));
+                            ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(new ProxyProtocolOpenListener(openListener, xnioSsl, buffers, XnioUndertowOptions.map(socketOptionsWithOverrides)));
                             sslServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptionsWithOverrides);
                         } else {
                             ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
@@ -316,7 +345,7 @@ public final class Undertow {
         final TrustManager[] trustManagers;
         final SSLContext sslContext;
         final HttpHandler rootHandler;
-        final OptionMap overrideSocketOptions;
+        final UndertowOptionMap overrideSocketOptions;
         final boolean useProxyProtocol;
 
         private ListenerConfig(final ListenerType type, final int port, final String host, KeyManager[] keyManagers, TrustManager[] trustManagers, HttpHandler rootHandler) {
@@ -327,7 +356,7 @@ public final class Undertow {
             this.trustManagers = trustManagers;
             this.rootHandler = rootHandler;
             this.sslContext = null;
-            this.overrideSocketOptions = OptionMap.EMPTY;
+            this.overrideSocketOptions = UndertowOptionMap.EMPTY;
             this.useProxyProtocol = false;
         }
 
@@ -339,7 +368,7 @@ public final class Undertow {
             this.keyManagers = null;
             this.trustManagers = null;
             this.sslContext = sslContext;
-            this.overrideSocketOptions = OptionMap.EMPTY;
+            this.overrideSocketOptions = UndertowOptionMap.EMPTY;
             this.useProxyProtocol = false;
         }
 
@@ -365,7 +394,7 @@ public final class Undertow {
         TrustManager[] trustManagers;
         SSLContext sslContext;
         HttpHandler rootHandler;
-        OptionMap overrideSocketOptions = OptionMap.EMPTY;
+        UndertowOptionMap overrideSocketOptions = UndertowOptionMap.EMPTY;
         boolean useProxyProtocol;
 
         public ListenerBuilder setType(ListenerType type) {
@@ -403,7 +432,7 @@ public final class Undertow {
             return this;
         }
 
-        public ListenerBuilder setOverrideSocketOptions(OptionMap overrideSocketOptions) {
+        public ListenerBuilder setOverrideSocketOptions(UndertowOptionMap overrideSocketOptions) {
             this.overrideSocketOptions = overrideSocketOptions;
             return this;
         }
@@ -425,9 +454,9 @@ public final class Undertow {
         private XnioWorker worker;
         private ByteBufferPool byteBufferPool;
 
-        private final OptionMap.Builder workerOptions = OptionMap.builder();
-        private final OptionMap.Builder socketOptions = OptionMap.builder();
-        private final OptionMap.Builder serverOptions = OptionMap.builder();
+        private final UndertowOptionMap.Builder workerOptions = UndertowOptionMap.builder();
+        private final UndertowOptionMap.Builder socketOptions = UndertowOptionMap.builder();
+        private final UndertowOptionMap.Builder serverOptions = UndertowOptionMap.builder();
 
         private Builder() {
             ioThreads = Math.max(Runtime.getRuntime().availableProcessors(), 2);
@@ -542,17 +571,17 @@ public final class Undertow {
             return this;
         }
 
-        public <T> Builder setServerOption(final Option<T> option, final T value) {
+        public <T> Builder setServerOption(final UndertowOption<T> option, final T value) {
             serverOptions.set(option, value);
             return this;
         }
 
-        public <T> Builder setSocketOption(final Option<T> option, final T value) {
+        public <T> Builder setSocketOption(final UndertowOption<T> option, final T value) {
             socketOptions.set(option, value);
             return this;
         }
 
-        public <T> Builder setWorkerOption(final Option<T> option, final T value) {
+        public <T> Builder setWorkerOption(final UndertowOption<T> option, final T value) {
             workerOptions.set(option, value);
             return this;
         }
@@ -658,7 +687,7 @@ public final class Undertow {
             channel.setOption(option, value);
         }
 
-        public void setServerOptions(OptionMap options) {
+        public void setServerOptions(UndertowOptionMap options) {
             openListener.setUndertowOptions(options);
         }
 

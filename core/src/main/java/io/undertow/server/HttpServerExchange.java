@@ -57,9 +57,6 @@ import org.xnio.conduits.StreamSourceConduit;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
-import io.undertow.xnio.channels.DetachableStreamSinkChannel;
-import io.undertow.xnio.channels.DetachableStreamSourceChannel;
-import io.undertow.xnio.conduits.EmptyStreamSourceConduit;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.io.AsyncReceiverImpl;
 import io.undertow.io.AsyncSenderImpl;
@@ -83,6 +80,9 @@ import io.undertow.util.NetworkUtils;
 import io.undertow.util.Protocols;
 import io.undertow.util.Rfc6265CookieSupport;
 import io.undertow.util.StatusCodes;
+import io.undertow.xnio.channels.DetachableStreamSinkChannel;
+import io.undertow.xnio.channels.DetachableStreamSourceChannel;
+import io.undertow.xnio.conduits.EmptyStreamSourceConduit;
 
 /**
  * An HTTP server request/response exchange.  An instance of this class is constructed as soon as the request headers are
@@ -215,7 +215,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * The maximum entity size. This can be modified before the request stream is obtained, however once the request
      * stream is obtained this cannot be modified further.
      * <p>
-     * The default value for this is determined by the {@link io.undertow.UndertowOptions#MAX_ENTITY_SIZE} option. A value
+     * The default value for this is determined by the {@link UndertowOptions#MAX_ENTITY_SIZE} option. A value
      * of 0 indicates that this is unbounded.
      * <p>
      * If this entity size is exceeded the request channel will be forcibly closed.
@@ -223,7 +223,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * TODO: integrate this with HTTP 100-continue responses, to make it possible to send a 417 rather than just forcibly
      * closing the channel.
      *
-     * @see io.undertow.UndertowOptions#MAX_ENTITY_SIZE
+     * @see UndertowOptions#MAX_ENTITY_SIZE
      */
     private long maxEntitySize;
 

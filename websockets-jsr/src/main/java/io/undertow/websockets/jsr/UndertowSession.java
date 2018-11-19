@@ -44,11 +44,11 @@ import org.xnio.IoUtils;
 
 import io.undertow.server.session.SecureRandomSessionIdGenerator;
 import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.xnio.util.WorkerUtils;
 import io.undertow.websockets.client.WebSocketClient;
 import io.undertow.websockets.core.CloseMessage;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSockets;
+import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * {@link Session} implementation which makes use of the high-level WebSocket API of undertow under the hood.

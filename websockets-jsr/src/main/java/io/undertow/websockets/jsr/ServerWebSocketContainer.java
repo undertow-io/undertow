@@ -58,14 +58,13 @@ import javax.websocket.server.ServerEndpointConfig;
 
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioWorker;
 import org.xnio.http.UpgradeFailedException;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.connector.ByteBufferPool;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.servlet.api.ClassIntrospecter;
@@ -138,6 +137,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static java.lang.System.*;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 
 /**
@@ -266,7 +266,11 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
         if(ssl == null) {
             try {
+<<<<<<< HEAD
                 ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+=======
+                ssl = new UndertowXnioSsl(xnioWorker.getXnio(), UndertowOptionMap.EMPTY, SSLContext.getDefault());
+>>>>>>> Start to remove OptionMap
             } catch (NoSuchAlgorithmException e) {
                 //ignore
             }
@@ -314,7 +318,11 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             }
             if(ssl == null) {
                 try {
+<<<<<<< HEAD
                     ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+=======
+                    ssl = new UndertowXnioSsl(xnioWorker.getXnio(), UndertowOptionMap.EMPTY, SSLContext.getDefault());
+>>>>>>> Start to remove OptionMap
                 } catch (NoSuchAlgorithmException e) {
                     //ignore
                 }
@@ -340,7 +348,11 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
         if(ssl == null) {
             try {
+<<<<<<< HEAD
                 ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+=======
+                ssl = new UndertowXnioSsl(xnioWorker.getXnio(), UndertowOptionMap.EMPTY, SSLContext.getDefault());
+>>>>>>> Start to remove OptionMap
             } catch (NoSuchAlgorithmException e) {
                 //ignore
             }

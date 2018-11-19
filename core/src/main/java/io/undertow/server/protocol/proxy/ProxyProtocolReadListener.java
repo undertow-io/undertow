@@ -8,7 +8,6 @@ import java.nio.charset.StandardCharsets;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.PushBackStreamSourceConduit;
@@ -18,11 +17,13 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.OpenListener;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.PooledAdaptor;
+import io.undertow.xnio.XnioUndertowOptions;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
  * Implementation of version 1 of the proxy protocol (https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt)
@@ -45,7 +46,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     private final OpenListener openListener;
     private final UndertowXnioSsl ssl;
     private final ByteBufferPool bufferPool;
-    private final OptionMap sslOptionMap;
+    private final UndertowOptionMap sslUndertowOptionMap;
 
     private int byteCount;
     private String protocol;
@@ -58,12 +59,12 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     private boolean parsingUnknown = false;
 
 
-    ProxyProtocolReadListener(StreamConnection streamConnection, OpenListener openListener, UndertowXnioSsl ssl, ByteBufferPool bufferPool, OptionMap sslOptionMap) {
+    ProxyProtocolReadListener(StreamConnection streamConnection, OpenListener openListener, UndertowXnioSsl ssl, ByteBufferPool bufferPool, UndertowOptionMap sslUndertowOptionMap) {
         this.streamConnection = streamConnection;
         this.openListener = openListener;
         this.ssl = ssl;
         this.bufferPool = bufferPool;
-        this.sslOptionMap = sslOptionMap;
+        this.sslUndertowOptionMap = sslUndertowOptionMap;
         if (bufferPool.getBufferSize() < MAX_HEADER_LENGTH) {
             throw UndertowMessages.MESSAGES.bufferPoolTooSmall(MAX_HEADER_LENGTH);
         }
@@ -210,7 +211,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                 conduit.pushBack(new PooledAdaptor(additionalData));
                 streamConnection.getSourceChannel().setConduit(conduit);
             }
-            SslConnection sslConnection = ssl.wrapExistingConnection(streamConnection, sslOptionMap == null ? OptionMap.EMPTY : sslOptionMap, false);
+            SslConnection sslConnection = ssl.wrapExistingConnection(streamConnection, XnioUndertowOptions.map(sslUndertowOptionMap == null ? UndertowOptionMap.EMPTY : sslUndertowOptionMap), false);
             streamConnection = sslConnection;
 
             callOpenListener(streamConnection, null);

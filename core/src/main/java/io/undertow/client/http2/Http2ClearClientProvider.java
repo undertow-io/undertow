@@ -31,7 +31,6 @@ import java.util.Set;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -40,37 +39,37 @@ import org.xnio.http.HttpUpgrade;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowOptions;
-import io.undertow.xnio.client.ClientCallback;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.ClientProvider;
-import io.undertow.xnio.client.ClientStatistics;
 import io.undertow.conduits.ByteActivityCallback;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.protocols.http2.Http2Setting;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.Headers;
+import io.undertow.xnio.XnioUndertowOptions;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientProvider;
+import io.undertow.xnio.client.ClientStatistics;
 
 /**
  * HTTP2 client provider that uses HTTP upgrade rather than ALPN. This provider will only use h2c, and sends an initial
  * dummy request to do the initial upgrade.
- *
- *
  *
  * @author Stuart Douglas
  */
 public class Http2ClearClientProvider implements ClientProvider {
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         connect(listener, null, uri, worker, ssl, bufferPool, options);
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         connect(listener, null, uri, ioThread, ssl, bufferPool, options);
     }
 
@@ -80,7 +79,7 @@ public class Http2ClearClientProvider implements ClientProvider {
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, InetSocketAddress bindAddress, final URI uri, final XnioWorker worker, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         final URI upgradeUri;
         try {
             upgradeUri = new URI("http", uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
@@ -89,11 +88,11 @@ public class Http2ClearClientProvider implements ClientProvider {
             return;
         }
         Map<String, String> headers = createHeaders(options, bufferPool, uri);
-        HttpUpgrade.performUpgrade(worker, bindAddress, upgradeUri, headers, new Http2ClearOpenListener(bufferPool, options, listener, uri.getHost()), null, options, null).addNotifier(new FailedNotifier(listener), null);
+        HttpUpgrade.performUpgrade(worker, bindAddress, upgradeUri, headers, new Http2ClearOpenListener(bufferPool, options, listener, uri.getHost()), null, XnioUndertowOptions.map(options), null).addNotifier(new FailedNotifier(listener), null);
     }
 
     @Override
-    public void connect(final ClientCallback<ClientConnection> listener, final InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap options) {
+    public void connect(final ClientCallback<ClientConnection> listener, final InetSocketAddress bindAddress, final URI uri, final XnioIoThread ioThread, final XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap options) {
         final URI upgradeUri;
         try {
             upgradeUri = new URI("http", uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
@@ -114,7 +113,7 @@ public class Http2ClearClientProvider implements ClientProvider {
                 public void handleEvent(BoundChannel channel) {
 
                 }
-            }, options).addNotifier(new FailedNotifier(listener), null);
+            }, XnioUndertowOptions.map(options)).addNotifier(new FailedNotifier(listener), null);
         } else {
             ioThread.openStreamConnection(new InetSocketAddress(uri.getHost(), uri.getPort()), new ChannelListener<StreamConnection>() {
                 @Override
@@ -127,12 +126,12 @@ public class Http2ClearClientProvider implements ClientProvider {
                 public void handleEvent(BoundChannel channel) {
 
                 }
-            }, options).addNotifier(new FailedNotifier(listener), null);
+            }, XnioUndertowOptions.map(options)).addNotifier(new FailedNotifier(listener), null);
         }
 
     }
 
-    private Map<String, String> createHeaders(OptionMap options, ByteBufferPool bufferPool, URI uri) {
+    private Map<String, String> createHeaders(UndertowOptionMap options, ByteBufferPool bufferPool, URI uri) {
         Map<String, String> headers = new HashMap<>();
         headers.put("HTTP2-Settings", createSettingsFrame(options, bufferPool));
         headers.put(Headers.UPGRADE_STRING, Http2Channel.CLEARTEXT_UPGRADE_STRING);
@@ -143,7 +142,7 @@ public class Http2ClearClientProvider implements ClientProvider {
     }
 
 
-    public static String createSettingsFrame(OptionMap options, ByteBufferPool bufferPool) {
+    public static String createSettingsFrame(UndertowOptionMap options, ByteBufferPool bufferPool) {
         PooledByteBuffer b = bufferPool.allocate();
         try {
             ByteBuffer currentBuffer = b.getBuffer();
@@ -169,7 +168,7 @@ public class Http2ClearClientProvider implements ClientProvider {
 
             if (options.contains(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE)) {
                 pushOption(currentBuffer, Http2Setting.SETTINGS_MAX_HEADER_LIST_SIZE, options.get(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE));
-            } else if(options.contains(UndertowOptions.MAX_HEADER_SIZE)) {
+            } else if (options.contains(UndertowOptions.MAX_HEADER_SIZE)) {
                 pushOption(currentBuffer, Http2Setting.SETTINGS_MAX_HEADER_LIST_SIZE, options.get(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE));
             }
             currentBuffer.flip();
@@ -191,11 +190,11 @@ public class Http2ClearClientProvider implements ClientProvider {
     private static class Http2ClearOpenListener implements ChannelListener<StreamConnection> {
 
         private final ByteBufferPool bufferPool;
-        private final OptionMap options;
+        private final UndertowOptionMap options;
         private final ClientCallback<ClientConnection> listener;
         private final String defaultHost;
 
-        Http2ClearOpenListener(ByteBufferPool bufferPool, OptionMap options, ClientCallback<ClientConnection> listener, String defaultHost) {
+        Http2ClearOpenListener(ByteBufferPool bufferPool, UndertowOptionMap options, ClientCallback<ClientConnection> listener, String defaultHost) {
             this.bufferPool = bufferPool;
             this.options = options;
             this.listener = listener;
@@ -246,6 +245,7 @@ public class Http2ClearClientProvider implements ClientProvider {
             }
         }
     }
+
     private static class ClientStatisticsImpl implements ClientStatistics {
         private long requestCount, read, written;
 

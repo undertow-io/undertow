@@ -22,7 +22,6 @@ import java.nio.ByteBuffer;
 
 import javax.net.ssl.SSLSession;
 
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.channels.SslChannel;
 import org.xnio.conduits.StreamSinkConduit;
@@ -31,6 +30,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.conduits.ReadDataStreamSourceConduit;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.ConnectionSSLSessionInfo;
@@ -68,7 +68,7 @@ public final class HttpServerConnection extends AbstractServerConnection {
     private HttpUpgradeListener upgradeListener;
     private boolean connectHandled;
 
-    public HttpServerConnection(StreamConnection channel, final ByteBufferPool bufferPool, final HttpHandler rootHandler, final OptionMap undertowOptions, final int bufferSize, final ConnectorStatisticsImpl connectorStatistics) {
+    public HttpServerConnection(StreamConnection channel, final ByteBufferPool bufferPool, final HttpHandler rootHandler, final UndertowOptionMap undertowOptions, final int bufferSize, final ConnectorStatisticsImpl connectorStatistics) {
         super(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
         if (channel instanceof SslChannel) {
             sslSessionInfo = new ConnectionSSLSessionInfo(((SslChannel) channel), this);

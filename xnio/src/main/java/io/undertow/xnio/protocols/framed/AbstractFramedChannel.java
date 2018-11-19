@@ -43,7 +43,6 @@ import org.xnio.ChannelListener.Setter;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -55,6 +54,7 @@ import org.xnio.channels.SuspendableWriteChannel;
 
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.xnio.UndertowXnioLogger;
 import io.undertow.xnio.UndertowXnioMessages;
 import io.undertow.xnio.conduits.IdleTimeoutConduit;
@@ -134,7 +134,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             }
         }
     };
-    private final OptionMap settings;
+    private final UndertowOptionMap settings;
 
     /**
      * If this is true then the flush() method must be called to queue writes. This is provided to support batching
@@ -191,7 +191,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * @param framePriority
      * @param settings               The settings
      */
-    protected AbstractFramedChannel(final StreamConnection connectedStreamChannel, ByteBufferPool bufferPool, FramePriority<C, R, S> framePriority, final PooledByteBuffer readData, OptionMap settings) {
+    protected AbstractFramedChannel(final StreamConnection connectedStreamChannel, ByteBufferPool bufferPool, FramePriority<C, R, S> framePriority, final PooledByteBuffer readData, UndertowOptionMap settings) {
         this.framePriority = framePriority;
         //this.maxQueuedBuffers = settings.get(UndertowOptions.MAX_QUEUED_READ_BUFFERS, 10);
         this.maxQueuedBuffers = 10;
@@ -1119,7 +1119,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         this.requireExplicitFlush = requireExplicitFlush;
     }
 
-    protected OptionMap getSettings() {
+    protected UndertowOptionMap getSettings() {
         return settings;
     }
 }

@@ -26,6 +26,8 @@ import org.jboss.logging.Logger;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
+import io.undertow.util.AbstractAttachable;
+import io.undertow.util.Headers;
 import io.undertow.xnio.channels.DetachableStreamSinkChannel;
 import io.undertow.xnio.channels.DetachableStreamSourceChannel;
 import io.undertow.xnio.client.ClientCallback;
@@ -35,8 +37,6 @@ import io.undertow.xnio.client.ClientRequest;
 import io.undertow.xnio.client.ClientResponse;
 import io.undertow.xnio.client.ContinueNotification;
 import io.undertow.xnio.client.PushCallback;
-import io.undertow.util.AbstractAttachable;
-import io.undertow.util.Headers;
 
 /**
  * @author Stuart Douglas

@@ -26,11 +26,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
@@ -160,7 +160,7 @@ public class Http2UpgradeHandler implements HttpHandler {
         exchange.upgradeChannel(new HttpUpgradeListener() {
             @Override
             public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
-                OptionMap undertowOptions = exchange.getConnection().getUndertowOptions();
+                UndertowOptionMap undertowOptions = exchange.getConnection().getUndertowOptions();
                 Http2Channel channel = new Http2Channel(streamConnection, upgrade, exchange.getConnection().getByteBufferPool(), null, false, true, true, settingsFrame, undertowOptions);
                 Http2ReceiveListener receiveListener = new Http2ReceiveListener(new HttpHandler() {
                     @Override

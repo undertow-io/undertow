@@ -35,15 +35,15 @@ import java.nio.ByteBuffer;
 import org.xnio.ChannelListener;
 
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.xnio.ProxiedRequestAttachments;
-import io.undertow.xnio.UndertowXnioMessages;
-import io.undertow.xnio.protocols.framed.SendFrameHeader;
 import io.undertow.util.Attachable;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediatePooledByteBuffer;
+import io.undertow.xnio.ProxiedRequestAttachments;
+import io.undertow.xnio.UndertowXnioMessages;
+import io.undertow.xnio.protocols.framed.SendFrameHeader;
 
 /**
  * AJP stream sink channel that corresponds to a request send from the load balancer to the backend

@@ -32,18 +32,18 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.xnio.OptionMap;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowLogger;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.UndertowClient;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.CopyOnWriteMap;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.UndertowClient;
 
 /**
  * Initial implementation of a load balancing proxy client. This initial implementation is rather simplistic, and
@@ -182,7 +182,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
     public synchronized LoadBalancingProxyClient addHost(final URI host, String jvmRoute, XnioSsl ssl) {
 
-        Host h = new Host(jvmRoute, null, host, ssl, OptionMap.EMPTY);
+        Host h = new Host(jvmRoute, null, host, ssl, UndertowOptionMap.EMPTY);
         Host[] existing = hosts;
         Host[] newHosts = new Host[existing.length + 1];
         System.arraycopy(existing, 0, newHosts, 0, existing.length);
@@ -195,12 +195,12 @@ public class LoadBalancingProxyClient implements ProxyClient {
     }
 
 
-    public synchronized LoadBalancingProxyClient addHost(final URI host, String jvmRoute, XnioSsl ssl, OptionMap options) {
+    public synchronized LoadBalancingProxyClient addHost(final URI host, String jvmRoute, XnioSsl ssl, UndertowOptionMap options) {
         return addHost(null, host, jvmRoute, ssl, options);
     }
 
 
-    public synchronized LoadBalancingProxyClient addHost(final InetSocketAddress bindAddress, final URI host, String jvmRoute, XnioSsl ssl, OptionMap options) {
+    public synchronized LoadBalancingProxyClient addHost(final InetSocketAddress bindAddress, final URI host, String jvmRoute, XnioSsl ssl, UndertowOptionMap options) {
         Host h = new Host(jvmRoute, bindAddress, host, ssl, options);
         Host[] existing = hosts;
         Host[] newHosts = new Host[existing.length + 1];
@@ -388,7 +388,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         final URI uri;
         final XnioSsl ssl;
 
-        private Host(String jvmRoute, InetSocketAddress bindAddress, URI uri, XnioSsl ssl, OptionMap options) {
+        private Host(String jvmRoute, InetSocketAddress bindAddress, URI uri, XnioSsl ssl, UndertowOptionMap options) {
             this.connectionPool = new ProxyConnectionPool(this, bindAddress, uri, ssl, client, options);
             this.jvmRoute = jvmRoute;
             this.uri = uri;

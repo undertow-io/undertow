@@ -32,7 +32,6 @@ import org.xnio.Cancellable;
 import org.xnio.ChannelListener;
 import org.xnio.FutureResult;
 import org.xnio.IoFuture;
-import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 import org.xnio.XnioWorker;
 import org.xnio.http.HttpUpgrade;
@@ -40,13 +39,8 @@ import org.xnio.http.RedirectException;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowMessages;
-import io.undertow.xnio.client.ClientCallback;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.client.ClientExchange;
-import io.undertow.xnio.client.ClientRequest;
-import io.undertow.xnio.client.UndertowClient;
 import io.undertow.connector.ByteBufferPool;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
+import io.undertow.connector.UndertowOptionMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
@@ -54,6 +48,13 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketVersion;
 import io.undertow.websockets.extensions.ExtensionHandshake;
+import io.undertow.xnio.XnioUndertowOptions;
+import io.undertow.xnio.client.ClientCallback;
+import io.undertow.xnio.client.ClientConnection;
+import io.undertow.xnio.client.ClientExchange;
+import io.undertow.xnio.client.ClientRequest;
+import io.undertow.xnio.client.UndertowClient;
+import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**
  * The Web socket client.
@@ -67,35 +68,35 @@ public class WebSocketClient {
     private static final int MAX_REDIRECTS = Integer.getInteger("io.undertow.websockets.max-redirects", 5);
 
     @Deprecated
-    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, final ByteBufferPool bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version) {
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, final ByteBufferPool bufferPool, final UndertowOptionMap optionMap, final URI uri, WebSocketVersion version) {
         return connect(worker, bufferPool, optionMap, uri, version, null);
     }
 
     @Deprecated
-    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version) {
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap optionMap, final URI uri, WebSocketVersion version) {
         return connect(worker, ssl, bufferPool, optionMap, uri, version, null);
     }
 
     @Deprecated
-    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, final ByteBufferPool bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, final ByteBufferPool bufferPool, final UndertowOptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
         return connect(worker, null, bufferPool, optionMap, uri, version, clientNegotiation);
     }
 
     @Deprecated
-    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation) {
         return connect(worker, ssl, bufferPool, optionMap, uri, version, clientNegotiation, null);
     }
 
     @Deprecated
-    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation, Set<ExtensionHandshake> clientExtensions) {
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap optionMap, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation, Set<ExtensionHandshake> clientExtensions) {
         return connect(worker, ssl, bufferPool, optionMap, null, uri, version, clientNegotiation, clientExtensions);
     }
 
     @Deprecated
-    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final ByteBufferPool bufferPool, final OptionMap optionMap, InetSocketAddress bindAddress, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation, Set<ExtensionHandshake> clientExtensions) {
+    public static IoFuture<WebSocketChannel> connect(XnioWorker worker, XnioSsl ssl, final ByteBufferPool bufferPool, final UndertowOptionMap optionMap, InetSocketAddress bindAddress, final URI uri, WebSocketVersion version, WebSocketClientNegotiation clientNegotiation, Set<ExtensionHandshake> clientExtensions) {
         return connectionBuilder(worker, bufferPool, uri)
                 .setSsl(ssl)
-                .setOptionMap(optionMap)
+                .setUndertowOptionMap(optionMap)
                 .setBindAddress(bindAddress)
                 .setVersion(version)
                 .setClientNegotiation(clientNegotiation)
@@ -109,7 +110,7 @@ public class WebSocketClient {
         private final URI uri;
 
         private XnioSsl ssl;
-        private OptionMap optionMap = OptionMap.EMPTY;
+        private UndertowOptionMap optionMap = UndertowOptionMap.EMPTY;
         private InetSocketAddress bindAddress;
         private WebSocketVersion version = WebSocketVersion.V13;
         private WebSocketClientNegotiation clientNegotiation;
@@ -144,11 +145,11 @@ public class WebSocketClient {
             return bufferPool;
         }
 
-        public OptionMap getOptionMap() {
+        public UndertowOptionMap getUndertowOptionMap() {
             return optionMap;
         }
 
-        public ConnectionBuilder setOptionMap(OptionMap optionMap) {
+        public ConnectionBuilder setUndertowOptionMap(UndertowOptionMap optionMap) {
             this.optionMap = optionMap;
             return this;
         }
@@ -258,7 +259,7 @@ public class WebSocketClient {
                                                     StreamConnection targetConnection = connection.performUpgrade();
                                                     WebSocketLogger.REQUEST_LOGGER.debugf("Established websocket connection to %s", uri);
                                                     if (uri.getScheme().equals("wss") || uri.getScheme().equals("https")) {
-                                                        handleConnectionWithExistingConnection(((UndertowXnioSsl) ssl).wrapExistingConnection(targetConnection, optionMap));
+                                                        handleConnectionWithExistingConnection(((UndertowXnioSsl) ssl).wrapExistingConnection(targetConnection, XnioUndertowOptions.map(optionMap)));
                                                     } else {
                                                         handleConnectionWithExistingConnection(targetConnection);
                                                     }
@@ -318,9 +319,9 @@ public class WebSocketClient {
             } else {
                 final IoFuture<?> result;
                 if (ssl != null) {
-                    result = HttpUpgrade.performUpgrade(worker, ssl, toBind, newUri, headers, new WebsocketConnectionListener(optionMap, handshake, newUri, ioFuture), null, optionMap, handshake.handshakeChecker(newUri, headers));
+                    result = HttpUpgrade.performUpgrade(worker, ssl, toBind, newUri, headers, new WebsocketConnectionListener(optionMap, handshake, newUri, ioFuture), null, XnioUndertowOptions.map(optionMap), handshake.handshakeChecker(newUri, headers));
                 } else {
-                    result = HttpUpgrade.performUpgrade(worker, toBind, newUri, headers, new WebsocketConnectionListener(optionMap, handshake, newUri, ioFuture), null, optionMap, handshake.handshakeChecker(newUri, headers));
+                    result = HttpUpgrade.performUpgrade(worker, toBind, newUri, headers, new WebsocketConnectionListener(optionMap, handshake, newUri, ioFuture), null, XnioUndertowOptions.map(optionMap), handshake.handshakeChecker(newUri, headers));
                 }
                 result.addNotifier(new IoFuture.Notifier<Object, Object>() {
                     @Override
@@ -356,12 +357,12 @@ public class WebSocketClient {
         }
 
         private class WebsocketConnectionListener implements ChannelListener<StreamConnection> {
-            private final OptionMap options;
+            private final UndertowOptionMap options;
             private final WebSocketClientHandshake handshake;
             private final URI newUri;
             private final FutureResult<WebSocketChannel> ioFuture;
 
-            WebsocketConnectionListener(OptionMap options, WebSocketClientHandshake handshake, URI newUri, FutureResult<WebSocketChannel> ioFuture) {
+            WebsocketConnectionListener(UndertowOptionMap options, WebSocketClientHandshake handshake, URI newUri, FutureResult<WebSocketChannel> ioFuture) {
                 this.options = options;
                 this.handshake = handshake;
                 this.newUri = newUri;

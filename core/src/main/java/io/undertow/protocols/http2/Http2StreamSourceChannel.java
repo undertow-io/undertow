@@ -30,9 +30,9 @@ import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.connector.PooledByteBuffer;
-import io.undertow.xnio.protocols.framed.FrameHeaderData;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
+import io.undertow.xnio.protocols.framed.FrameHeaderData;
 
 /**
  * @author Stuart Douglas

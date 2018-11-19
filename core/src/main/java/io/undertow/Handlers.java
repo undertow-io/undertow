@@ -371,7 +371,7 @@ public class Handlers {
     /**
      * A handler that will decode the URL, query parameters and to the specified charset.
      * <p>
-     * If you are using this handler you must set the {@link io.undertow.UndertowOptions#DECODE_URL} parameter to false.
+     * If you are using this handler you must set the {@link UndertowOptions#DECODE_URL} parameter to false.
      * <p>
      * This is not as efficient as using the parsers built in UTF-8 decoder. Unless you need to decode to something other
      * than UTF-8 you should rely on the parsers decoding instead.

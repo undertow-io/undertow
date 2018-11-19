@@ -33,7 +33,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.Options;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -108,7 +107,7 @@ public class HTTP2ViaUpgradeTestCase {
         server = Undertow.builder()
                 .addHttpListener(port + 1, DefaultServer.getHostAddress("default"))
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
-                .setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setSocketOption(UndertowOptions.REUSE_ADDRESSES, true)
                 .setHandler(Handlers.header(new Http2UpgradeHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
