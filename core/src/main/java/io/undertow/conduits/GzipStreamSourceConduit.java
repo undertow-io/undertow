@@ -29,7 +29,7 @@ import org.xnio.conduits.StreamSourceConduit;
 import io.undertow.UndertowMessages;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConduitFactory;
+import io.undertow.xnio.util.ConduitFactory;
 import io.undertow.util.ObjectPool;
 
 /**

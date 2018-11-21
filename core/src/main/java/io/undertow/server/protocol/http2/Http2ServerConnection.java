@@ -61,7 +61,7 @@ import io.undertow.server.ServerConnection;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
-import io.undertow.util.ConduitFactory;
+import io.undertow.xnio.util.ConduitFactory;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;

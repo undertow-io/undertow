@@ -32,6 +32,7 @@ import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.IoSink;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -49,7 +50,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
     private final HttpServerExchange exchange;
     private ByteBuffer buffer;
     private PooledByteBuffer pooledBuffer;
-    private StreamSinkChannel channel;
+    private IoSink channel;
     private int state;
     private long written;
     private final long contentLength;
@@ -129,15 +130,16 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
                 //and put it in them
                 //if it still dopes not fit we loop, re-using these buffers
 
-                StreamSinkChannel channel = this.channel;
+                IoSink channel = this.channel;
                 if (channel == null) {
                     this.channel = channel = exchange.getResponseChannel();
                 }
                 final ByteBufferPool bufferPool = exchange.getConnection().getByteBufferPool();
                 ByteBuffer[] buffers = new ByteBuffer[MAX_BUFFERS_TO_ALLOCATE + 1];
-                PooledByteBuffer[] pooledBuffers = new PooledByteBuffer[MAX_BUFFERS_TO_ALLOCATE];
+                PooledByteBuffer[] pooledBuffers = new PooledByteBuffer[MAX_BUFFERS_TO_ALLOCATE + 1];
                 try {
                     buffers[0] = buffer;
+                    pooledBuffers[0] = pooledBuffer;
                     int bytesWritten = 0;
                     int rem = buffer.remaining();
                     buffer.put(b, bytesWritten + off, rem);
@@ -146,7 +148,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
                     int bufferCount = 1;
                     for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE; ++i) {
                         PooledByteBuffer pooled = bufferPool.allocate();
-                        pooledBuffers[bufferCount - 1] = pooled;
+                        pooledBuffers[bufferCount] = pooled;
                         buffers[bufferCount++] = pooled.getBuffer();
                         ByteBuffer cb = pooled.getBuffer();
                         int toWrite = len - bytesWritten;
@@ -162,7 +164,8 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
                             break;
                         }
                     }
-                    Channels.writeBlocking(channel, buffers, 0, bufferCount);
+                    channel.write(pooledBuffers).get();
+
                     while (bytesWritten < len) {
                         //ok, it did not fit, loop and loop and loop until it is done
                         bufferCount = 0;

@@ -33,7 +33,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ResponseCommitListener;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.ByteRange;
-import io.undertow.util.ConduitFactory;
+import io.undertow.xnio.util.ConduitFactory;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;

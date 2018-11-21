@@ -24,16 +24,15 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.function.BiConsumer;
 
 import org.xnio.Buffers;
-import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.connector.IoSink;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -43,7 +42,7 @@ import io.undertow.util.Headers;
  */
 public class AsyncSenderImpl implements Sender {
 
-    private StreamSinkChannel channel;
+    private IoSink channel;
     private final HttpServerExchange exchange;
     private ByteBuffer[] buffer;
     private PooledByteBuffer[] pooledBuffers = null;
@@ -135,7 +134,7 @@ public class AsyncSenderImpl implements Sender {
             invokeOnException(callback, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(buffer.remaining(), responseContentLength));
             return;
         }
-        StreamSinkChannel channel = this.channel;
+        IoSink channel = this.channel;
         if (channel == null) {
             if (callback == IoCallback.END_EXCHANGE) {
                 if (responseContentLength == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
@@ -208,7 +207,7 @@ public class AsyncSenderImpl implements Sender {
             return;
         }
 
-        StreamSinkChannel channel = this.channel;
+        IoSink channel = this.channel;
         if (channel == null) {
             if (callback == IoCallback.END_EXCHANGE) {
                 if (responseContentLength == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
@@ -341,51 +340,30 @@ public class AsyncSenderImpl implements Sender {
 
     @Override
     public void close(final IoCallback callback) {
-        try {
-            StreamSinkChannel channel = this.channel;
+        IoSink channel = this.channel;
+        if (channel == null) {
+            if (exchange.getResponseContentLength() == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
+                exchange.setResponseContentLength(0);
+            }
+            this.channel = channel = exchange.getResponseChannel();
             if (channel == null) {
-                if (exchange.getResponseContentLength() == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
-                    exchange.setResponseContentLength(0);
-                }
-                this.channel = channel = exchange.getResponseChannel();
-                if (channel == null) {
-                    throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
-                }
-            }
-            channel.shutdownWrites();
-            if (!channel.flush()) {
-                channel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
-                        new ChannelListener<StreamSinkChannel>() {
-                            @Override
-                            public void handleEvent(final StreamSinkChannel channel) {
-                                if(callback != null) {
-                                    callback.onComplete(exchange, AsyncSenderImpl.this);
-                                }
-                            }
-                        }, new ChannelExceptionHandler<StreamSinkChannel>() {
-                            @Override
-                            public void handleException(final StreamSinkChannel channel, final IOException exception) {
-                                try {
-                                    if(callback != null) {
-                                        invokeOnException(callback, exception);
-                                    }
-                                } finally {
-                                    IoUtils.safeClose(channel);
-                                }
-                            }
-                        }
-                ));
-                channel.resumeWrites();
-            } else {
-                if (callback != null) {
-                    callback.onComplete(exchange, this);
-                }
-            }
-        } catch (IOException e) {
-            if (callback != null) {
-                invokeOnException(callback, e);
+                throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
             }
         }
+        channel.close().whenComplete(new BiConsumer<Void, Throwable>() {
+            @Override
+            public void accept(Void aVoid, Throwable exception) {
+                if (exception != null) {
+                    if (callback != null) {
+                        invokeOnException(callback, new IOException(exception));
+                    }
+                } else {
+                    if (callback != null) {
+                        callback.onComplete(exchange, AsyncSenderImpl.this);
+                    }
+                }
+            }
+        });
     }
 
     @Override

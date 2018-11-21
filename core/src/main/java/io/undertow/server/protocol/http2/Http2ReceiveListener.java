@@ -47,7 +47,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.connector.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
-import io.undertow.util.ConduitFactory;
+import io.undertow.xnio.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;

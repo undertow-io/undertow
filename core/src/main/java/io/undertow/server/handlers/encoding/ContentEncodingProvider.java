@@ -22,7 +22,7 @@ import org.xnio.conduits.StreamSinkConduit;
 
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConduitFactory;
+import io.undertow.xnio.util.ConduitFactory;
 
 /**
  * @author Stuart Douglas

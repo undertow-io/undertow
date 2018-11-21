@@ -27,7 +27,7 @@ import io.undertow.conduits.DeflatingStreamSinkConduit;
 import io.undertow.conduits.GzipStreamSinkConduit;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConduitFactory;
+import io.undertow.xnio.util.ConduitFactory;
 import io.undertow.util.ObjectPool;
 
 /**

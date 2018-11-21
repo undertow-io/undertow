@@ -25,7 +25,7 @@ import org.xnio.conduits.StreamSinkConduit;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.ConduitFactory;
+import io.undertow.xnio.util.ConduitFactory;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;

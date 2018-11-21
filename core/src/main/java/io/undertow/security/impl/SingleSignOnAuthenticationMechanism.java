@@ -40,7 +40,7 @@ import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionListener;
 import io.undertow.server.session.SessionManager;
-import io.undertow.util.ConduitFactory;
+import io.undertow.xnio.util.ConduitFactory;
 import io.undertow.util.Sessions;
 
 /**

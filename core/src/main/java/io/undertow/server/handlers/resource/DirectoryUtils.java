@@ -162,19 +162,10 @@ public class DirectoryUtils {
 
         StringBuilder builder = renderDirectoryListing(requestPath, resource);
 
-        try {
-            ByteBuffer output = ByteBuffer.wrap(builder.toString().getBytes(StandardCharsets.UTF_8));
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/html; charset=UTF-8");
-            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, String.valueOf(output.limit()));
-            exchange.getResponseHeaders().put(Headers.LAST_MODIFIED, DateUtils.toDateString(new Date()));
-            exchange.getResponseHeaders().put(Headers.CACHE_CONTROL, "must-revalidate");
-            Channels.writeBlocking(exchange.getResponseChannel(), output);
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalStateException(e);
-        } catch (IOException e) {
-            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-            exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-        }
+        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/html; charset=UTF-8");
+        exchange.getResponseHeaders().put(Headers.LAST_MODIFIED, DateUtils.toDateString(new Date()));
+        exchange.getResponseHeaders().put(Headers.CACHE_CONTROL, "must-revalidate");
+        exchange.getResponseSender().send(builder.toString());
 
         exchange.endExchange();
     }

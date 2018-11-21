@@ -64,7 +64,6 @@ public class ReadTimeoutTestCase {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                final StreamSinkChannel response = exchange.getResponseChannel();
                 final StreamSourceChannel request = exchange.getRequestChannel();
                 try {
                     request.setOption(Options.READ_TIMEOUT, 100);
@@ -75,12 +74,7 @@ public class ReadTimeoutTestCase {
                 request.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE, new ChannelListener<Channel>() {
                             @Override
                             public void handleEvent(final Channel channel) {
-                                new StringWriteChannelListener("COMPLETED") {
-                                    @Override
-                                    protected void writeDone(final StreamSinkChannel channel) {
-                                        exchange.endExchange();
-                                    }
-                                }.setup(response);
+                                exchange.getResponseSender().send("COMPLETED");
                             }
                         }, new ChannelExceptionHandler<StreamSourceChannel>() {
                             @Override

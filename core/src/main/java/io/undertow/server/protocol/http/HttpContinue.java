@@ -19,21 +19,16 @@
 package io.undertow.server.protocol.http;
 
 import java.io.IOException;
-import java.nio.channels.Channel;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.channels.StreamSinkChannel;
+import java.util.function.BiConsumer;
 
 import io.undertow.UndertowMessages;
+import io.undertow.connector.IoResult;
+import io.undertow.connector.IoSink;
 import io.undertow.io.IoCallback;
-import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
@@ -113,26 +108,20 @@ public class HttpContinue {
      * @param exchange The exchange
      * @return The response sender
      */
-    public static ContinueResponseSender createResponseSender(final HttpServerExchange exchange) throws IOException {
+    public static IoResult<Void> createResponseSender(final HttpServerExchange exchange) throws IOException {
         if (!exchange.isResponseChannelAvailable()) {
             throw UndertowMessages.MESSAGES.cannotSendContinueResponse();
         }
-        if(exchange.getAttachment(ALREADY_SENT) != null) {
-
-            return new ContinueResponseSender() {
+        if (exchange.getAttachment(ALREADY_SENT) != null) {
+            return new IoResult<Void>() {
                 @Override
-                public boolean send() throws IOException {
-                    return true;
+                public Void get() throws IOException {
+                    return null;
                 }
 
                 @Override
-                public void awaitWritable() throws IOException {
-
-                }
-
-                @Override
-                public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
-
+                public void addNotifier(BiConsumer<Void, IOException> notifier) {
+                    notifier.accept(null, null);
                 }
             };
         }
@@ -141,29 +130,8 @@ public class HttpContinue {
         exchange.putAttachment(ALREADY_SENT, true);
         newExchange.setStatusCode(StatusCodes.CONTINUE);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
-        final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
-        return new ContinueResponseSender() {
-            boolean shutdown = false;
-
-            @Override
-            public boolean send() throws IOException {
-                if (!shutdown) {
-                    shutdown = true;
-                    responseChannel.shutdownWrites();
-                }
-                return responseChannel.flush();
-            }
-
-            @Override
-            public void awaitWritable() throws IOException {
-                responseChannel.awaitWritable();
-            }
-
-            @Override
-            public void awaitWritable(final long time, final TimeUnit timeUnit) throws IOException {
-                responseChannel.awaitWritable(time, timeUnit);
-            }
-        };
+        final IoSink responseChannel = newExchange.getResponseChannel();
+        return responseChannel.close();
     }
 
     /**
@@ -185,7 +153,7 @@ public class HttpContinue {
         if (!exchange.isResponseChannelAvailable()) {
             throw UndertowMessages.MESSAGES.cannotSendContinueResponse();
         }
-        if(exchange.getAttachment(ALREADY_SENT) != null) {
+        if (exchange.getAttachment(ALREADY_SENT) != null) {
             return;
         }
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
@@ -210,7 +178,7 @@ public class HttpContinue {
 
 
     private static void internalSendContinueResponse(final HttpServerExchange exchange, final IoCallback callback) {
-        if(exchange.getAttachment(ALREADY_SENT) != null) {
+        if (exchange.getAttachment(ALREADY_SENT) != null) {
             callback.onComplete(exchange, null);
             return;
         }
@@ -218,59 +186,9 @@ public class HttpContinue {
         exchange.putAttachment(ALREADY_SENT, true);
         newExchange.setStatusCode(StatusCodes.CONTINUE);
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
-        final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
-        try {
-            responseChannel.shutdownWrites();
-            if (!responseChannel.flush()) {
-                responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
-                        new ChannelListener<StreamSinkChannel>() {
-                            @Override
-                            public void handleEvent(StreamSinkChannel channel) {
-                                channel.suspendWrites();
-                                exchange.dispatch(new HttpHandler() {
-                                    @Override
-                                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                        callback.onComplete(exchange, null);
-                                    }
-                                });
-                            }
-                        }, new ChannelExceptionHandler<Channel>() {
-                            @Override
-                            public void handleException(Channel channel, final IOException e) {
-                                exchange.dispatch(new HttpHandler() {
-                                    @Override
-                                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                        callback.onException(exchange, null, e);
-                                    }
-                                });
-                            }
-                        }));
-                responseChannel.resumeWrites();
-                exchange.dispatch();
-            } else {
-                callback.onComplete(exchange, null);
-            }
-        } catch (IOException e) {
-            callback.onException(exchange, null, e);
-        }
+        final IoSink responseChannel = newExchange.getResponseChannel();
+        newExchange.getResponseSender().close(callback);
     }
 
-    /**
-     * A continue response that is in the process of being sent.
-     */
-    public interface ContinueResponseSender {
-
-        /**
-         * Continue sending the response.
-         *
-         * @return true if the response is fully sent, false otherwise.
-         */
-        boolean send() throws IOException;
-
-        void awaitWritable() throws IOException;
-
-        void awaitWritable(long time, final TimeUnit timeUnit) throws IOException;
-
-    }
 
 }

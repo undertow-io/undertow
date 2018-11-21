@@ -42,7 +42,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
-import io.undertow.util.ConduitFactory;
+import io.undertow.xnio.util.ConduitFactory;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediatePooledByteBuffer;

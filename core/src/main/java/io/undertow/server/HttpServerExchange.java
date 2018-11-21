@@ -56,6 +56,7 @@ import org.xnio.conduits.StreamSourceConduit;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.connector.IoSink;
 import io.undertow.connector.IoExecutor;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.io.AsyncReceiverImpl;
@@ -70,7 +71,8 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.ConduitFactory;
+import io.undertow.xnio.io.XnioIoSink;
+import io.undertow.xnio.util.ConduitFactory;
 import io.undertow.util.Cookies;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -1302,7 +1304,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @return the response channel, or {@code null} if another party already acquired the channel
      */
-    public StreamSinkChannel getResponseChannel() {
+    public IoSink getResponseChannel() {
         if (responseChannel != null) {
             return null;
         }
@@ -1320,7 +1322,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         this.responseChannel = new WriteDispatchChannel(sinkChannel);
         this.startResponse();
-        return responseChannel;
+        return new XnioIoSink(responseChannel);
     }
 
     /**

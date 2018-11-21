@@ -35,11 +35,10 @@ import java.util.Set;
 
 import org.jboss.logging.Logger;
 import org.xnio.IoUtils;
-import org.xnio.channels.Channels;
-import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.Handlers;
 import io.undertow.UndertowLogger;
+import io.undertow.connector.IoSink;
 import io.undertow.server.DefaultResponseListener;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HandlerWrapper;
@@ -119,9 +118,9 @@ public class FileErrorPageHandler implements HttpHandler {
     private void serveFile(final HttpServerExchange exchange) {
         String fileName = file.toString();
         int index = fileName.lastIndexOf(".");
-        if(index > 0) {
+        if (index > 0) {
             String contentType = mimeMappings.getMimeType(fileName.substring(index + 1));
-            if(contentType != null) {
+            if (contentType != null) {
                 exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, contentType);
             }
         }
@@ -149,7 +148,7 @@ public class FileErrorPageHandler implements HttpHandler {
                     throw new RuntimeException(e);
                 }
                 exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, size);
-                final StreamSinkChannel response = exchange.getResponseChannel();
+                final IoSink response = exchange.getResponseChannel();
                 exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
                     @Override
                     public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
@@ -158,22 +157,8 @@ public class FileErrorPageHandler implements HttpHandler {
                     }
                 });
 
-                try {
-                    log.tracef("Serving file %s (blocking)", fileChannel);
-                    Channels.transferBlocking(response, fileChannel, 0, Files.size(file));
-                    log.tracef("Finished serving %s, shutting down (blocking)", fileChannel);
-                    response.shutdownWrites();
-                    log.tracef("Finished serving %s, flushing (blocking)", fileChannel);
-                    Channels.flushBlocking(response);
-                    log.tracef("Finished serving %s (complete)", fileChannel);
-                    exchange.endExchange();
-                } catch (IOException ignored) {
-                    log.tracef("Failed to serve %s: %s", fileChannel, ignored);
-                    exchange.endExchange();
-                    IoUtils.safeClose(response);
-                } finally {
-                    IoUtils.safeClose(fileChannel);
-                }
+                log.tracef("Serving file %s (blocking)", fileChannel);
+                response.sendFile(fileChannel, true);
             }
         });
     }
@@ -242,7 +227,7 @@ public class FileErrorPageHandler implements HttpHandler {
 
         @Override
         public HandlerWrapper build(Map<String, Object> config) {
-            return new Wrapper((String)config.get("file"), (Integer[]) config.get("response-codes"));
+            return new Wrapper((String) config.get("file"), (Integer[]) config.get("response-codes"));
         }
 
     }

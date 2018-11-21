@@ -27,7 +27,7 @@ import org.xnio.conduits.StreamSinkConduit;
 
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.ConduitFactory;
+import io.undertow.xnio.util.ConduitFactory;
 
 /**
  *

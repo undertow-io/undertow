@@ -20,6 +20,8 @@ package io.undertow.util;
 
 import org.xnio.conduits.Conduit;
 
+import io.undertow.xnio.util.ConduitFactory;
+
 /**
  * @author Stuart Douglas
  */

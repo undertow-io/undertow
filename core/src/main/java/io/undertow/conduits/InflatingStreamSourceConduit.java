@@ -36,7 +36,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConduitFactory;
+import io.undertow.xnio.util.ConduitFactory;
 import io.undertow.util.NewInstanceObjectPool;
 import io.undertow.util.ObjectPool;
 import io.undertow.util.PooledObject;

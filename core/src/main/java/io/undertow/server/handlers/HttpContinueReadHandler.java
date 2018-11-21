@@ -27,12 +27,13 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.StreamSourceConduit;
 
+import io.undertow.connector.IoResult;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpContinue;
-import io.undertow.util.ConduitFactory;
 import io.undertow.util.StatusCodes;
+import io.undertow.xnio.util.ConduitFactory;
 
 /**
  * Handler for requests that require 100-continue responses. If an attempt is made to read from the source
@@ -45,7 +46,7 @@ public class HttpContinueReadHandler implements HttpHandler {
     private static final ConduitWrapper<StreamSourceConduit> WRAPPER = new ConduitWrapper<StreamSourceConduit>() {
         @Override
         public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> factory, final HttpServerExchange exchange) {
-            if(exchange.isRequestChannelAvailable() && !exchange.isResponseStarted()) {
+            if (exchange.isRequestChannelAvailable() && !exchange.isResponseStarted()) {
                 return new ContinueConduit(factory.create(), exchange);
             }
             return factory.create();
@@ -69,7 +70,7 @@ public class HttpContinueReadHandler implements HttpHandler {
     private static final class ContinueConduit extends AbstractStreamSourceConduit<StreamSourceConduit> implements StreamSourceConduit {
 
         private boolean sent = false;
-        private HttpContinue.ContinueResponseSender response = null;
+        private IoResult<Void> response = null;
         private final HttpServerExchange exchange;
 
 
@@ -89,7 +90,7 @@ public class HttpContinueReadHandler implements HttpHandler {
                 response = HttpContinue.createResponseSender(exchange);
             }
             if (response != null) {
-                if (!response.send()) {
+                if (!response.isComplete()) {
                     return 0;
                 }
                 response = null;
@@ -108,7 +109,7 @@ public class HttpContinueReadHandler implements HttpHandler {
                 response = HttpContinue.createResponseSender(exchange);
             }
             if (response != null) {
-                if (!response.send()) {
+                if (!response.isComplete()) {
                     return 0;
                 }
                 response = null;
@@ -127,7 +128,7 @@ public class HttpContinueReadHandler implements HttpHandler {
                 response = HttpContinue.createResponseSender(exchange);
             }
             if (response != null) {
-                if (!response.send()) {
+                if (!response.isComplete()) {
                     return 0;
                 }
                 response = null;
@@ -146,7 +147,7 @@ public class HttpContinueReadHandler implements HttpHandler {
                 response = HttpContinue.createResponseSender(exchange);
             }
             if (response != null) {
-                if (!response.send()) {
+                if (!response.isComplete()) {
                     return 0;
                 }
                 response = null;
@@ -166,12 +167,12 @@ public class HttpContinueReadHandler implements HttpHandler {
             }
             long exitTime = System.currentTimeMillis() + timeUnit.toMillis(time);
             if (response != null) {
-                while (!response.send()) {
+                while (!response.isComplete()) {
                     long currentTime = System.currentTimeMillis();
                     if (currentTime > exitTime) {
                         return;
                     }
-                    response.awaitWritable(exitTime - currentTime, TimeUnit.MILLISECONDS);
+                    response.get(exitTime - currentTime, TimeUnit.MILLISECONDS);
                 }
                 response = null;
             }
@@ -191,9 +192,7 @@ public class HttpContinueReadHandler implements HttpHandler {
                 response = HttpContinue.createResponseSender(exchange);
             }
             if (response != null) {
-                while (!response.send()) {
-                    response.awaitWritable();
-                }
+                response.get();
                 response = null;
             }
             super.awaitReadable();
