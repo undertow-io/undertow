@@ -22,6 +22,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 
+import io.netty.buffer.ByteBuf;
+
 /**
  * Sender interface that allows for callback based async IO.
  *
@@ -42,7 +44,7 @@ public interface Sender {
      * @param buffer   The buffer to send.
      * @param callback The callback
      */
-    void send(final ByteBuffer buffer, final IoCallback callback);
+    void send(final ByteBuf buffer, final IoCallback callback);
 
     /**
      * Write the given buffers using async IO, and calls the given callback on completion or error.
@@ -50,21 +52,21 @@ public interface Sender {
      * @param buffer   The buffers to send.
      * @param callback The callback
      */
-    void send(final ByteBuffer[] buffer, final IoCallback callback);
+    void send(final ByteBuf[] buffer, final IoCallback callback);
 
     /**
      * Write the given buffer using async IO, and ends the exchange when done
      *
      * @param buffer   The buffer to send.
      */
-    void send(final ByteBuffer buffer);
+    void send(final ByteBuf buffer);
 
     /**
      * Write the given buffers using async IO, and ends the exchange when done
      *
      * @param buffer   The buffers to send.
      */
-    void send(final ByteBuffer[] buffer);
+    void send(final ByteBuf[] buffer);
 
     /**
      * Write the given String using async IO, and calls the given callback on completion or error.

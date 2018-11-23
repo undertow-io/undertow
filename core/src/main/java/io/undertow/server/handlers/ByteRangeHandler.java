@@ -23,30 +23,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.xnio.conduits.StreamSinkConduit;
-
-import io.undertow.conduits.HeadStreamSinkConduit;
-import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ResponseCommitListener;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.ByteRange;
-import io.undertow.xnio.util.ConduitFactory;
-import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
-import io.undertow.util.Methods;
-import io.undertow.util.StatusCodes;
-import io.undertow.xnio.conduits.RangeStreamSinkConduit;
 
 /**
  * Handler for Range requests. This is a generic handler that can handle range requests to any resource
  * of a fixed content length i.e. any resource where the content-length header has been set.
- *
+ * <p>
  * Note that this is not necessarily the most efficient way to handle range requests, as the full content
  * will be generated and then discarded.
- *
+ * <p>
  * At present this handler can only handle simple (i.e. single range) requests. If multiple ranges are requested the
  * Range header will be ignored.
  *
@@ -60,7 +50,7 @@ public class ByteRangeHandler implements HttpHandler {
     private static final ResponseCommitListener ACCEPT_RANGE_LISTENER = new ResponseCommitListener() {
         @Override
         public void beforeCommit(HttpServerExchange exchange) {
-            if(!exchange.getResponseHeaders().contains(Headers.ACCEPT_RANGES)) {
+            if (!exchange.getResponseHeaders().contains(Headers.ACCEPT_RANGES)) {
                 if (exchange.getResponseHeaders().contains(Headers.CONTENT_LENGTH)) {
                     exchange.getResponseHeaders().put(Headers.ACCEPT_RANGES, "bytes");
                 } else {
@@ -79,46 +69,46 @@ public class ByteRangeHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        //range requests are only support for GET requests as per the RFC
-        if(!Methods.GET.equals(exchange.getRequestMethod()) && !Methods.HEAD.equals(exchange.getRequestMethod())) {
-            next.handleRequest(exchange);
-            return;
-        }
-        if (sendAcceptRanges) {
-            exchange.addResponseCommitListener(ACCEPT_RANGE_LISTENER);
-        }
-        final ByteRange range = ByteRange.parse(exchange.getRequestHeaders().getFirst(Headers.RANGE));
-        if (range != null && range.getRanges() == 1) {
-            exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
-                @Override
-                public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
-                    if(exchange.getStatusCode() != StatusCodes.OK ) {
-                        return factory.create();
-                    }
-                    String length = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LENGTH);
-                    if (length == null) {
-                        return factory.create();
-                    }
-                    long responseLength = Long.parseLong(length);
-                    String lastModified = exchange.getResponseHeaders().getFirst(Headers.LAST_MODIFIED);
-                    ByteRange.RangeResponseResult rangeResponse = range.getResponseResult(responseLength, exchange.getRequestHeaders().getFirst(Headers.IF_RANGE), lastModified == null ? null : DateUtils.parseDate(lastModified), exchange.getResponseHeaders().getFirst(Headers.ETAG));
-                    if(rangeResponse != null){
-                        long start = rangeResponse.getStart();
-                        long end = rangeResponse.getEnd();
-                        exchange.setStatusCode(rangeResponse.getStatusCode());
-                        exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, rangeResponse.getContentRange());
-                        exchange.setResponseContentLength(rangeResponse.getContentLength());
-                        if(rangeResponse.getStatusCode() == StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE) {
-                            return new HeadStreamSinkConduit(factory.create(), null, true);
-                        }
-                        return new RangeStreamSinkConduit(factory.create(), start, end, responseLength);
-                    } else {
-                        return factory.create();
-                    }
-                }
-            });
-        }
-        next.handleRequest(exchange);
+//        //range requests are only support for GET requests as per the RFC
+//        if(!Methods.GET.equals(exchange.getRequestMethod()) && !Methods.HEAD.equals(exchange.getRequestMethod())) {
+//            next.handleRequest(exchange);
+//            return;
+//        }
+//        if (sendAcceptRanges) {
+//            exchange.addResponseCommitListener(ACCEPT_RANGE_LISTENER);
+//        }
+//        final ByteRange range = ByteRange.parse(exchange.getRequestHeaders().getFirst(Headers.RANGE));
+//        if (range != null && range.getRanges() == 1) {
+//            exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
+//                @Override
+//                public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
+//                    if(exchange.getStatusCode() != StatusCodes.OK ) {
+//                        return factory.create();
+//                    }
+//                    String length = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LENGTH);
+//                    if (length == null) {
+//                        return factory.create();
+//                    }
+//                    long responseLength = Long.parseLong(length);
+//                    String lastModified = exchange.getResponseHeaders().getFirst(Headers.LAST_MODIFIED);
+//                    ByteRange.RangeResponseResult rangeResponse = range.getResponseResult(responseLength, exchange.getRequestHeaders().getFirst(Headers.IF_RANGE), lastModified == null ? null : DateUtils.parseDate(lastModified), exchange.getResponseHeaders().getFirst(Headers.ETAG));
+//                    if(rangeResponse != null){
+//                        long start = rangeResponse.getStart();
+//                        long end = rangeResponse.getEnd();
+//                        exchange.setStatusCode(rangeResponse.getStatusCode());
+//                        exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, rangeResponse.getContentRange());
+//                        exchange.setResponseContentLength(rangeResponse.getContentLength());
+//                        if(rangeResponse.getStatusCode() == StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE) {
+//                            return new HeadStreamSinkConduit(factory.create(), null, true);
+//                        }
+//                        return new RangeStreamSinkConduit(factory.create(), start, end, responseLength);
+//                    } else {
+//                        return factory.create();
+//                    }
+//                }
+//            });
+//        }
+//        next.handleRequest(exchange);
 
     }
 

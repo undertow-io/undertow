@@ -26,6 +26,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 
+import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
@@ -119,13 +120,16 @@ public class BlockingReceiverImpl implements Receiver {
             }
         }
         int s;
-        try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
-            while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
-                sb.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), s);
+        ByteBuf pooled = exchange.getConnection().getByteBufferPool().heapBuffer();
+        try {
+            while ((s = inputStream.read(pooled.array(), pooled.arrayOffset(), pooled.writableBytes())) > 0) {
+                sb.write(pooled.array(), pooled.arrayOffset(), s);
             }
             callback.handle(exchange, sb.toString(charset.name()));
         } catch (IOException e) {
             error.error(exchange, e);
+        } finally {
+            pooled.release();
         }
 
     }

@@ -59,20 +59,6 @@ public class CachingResourceManager implements ResourceManager {
         this.dataCache = dataCache;
         this.cache = new LRUCache<>(metadataCacheSize, maxAge);
         this.maxAge = maxAge;
-        if(underlyingResourceManager.isResourceChangeListenerSupported()) {
-            try {
-                underlyingResourceManager.registerResourceChangeListener(new ResourceChangeListener() {
-                    @Override
-                    public void handleChanges(Collection<ResourceChangeEvent> changes) {
-                        for(ResourceChangeEvent change : changes) {
-                            invalidate(change.getResource());
-                        }
-                    }
-                });
-            } catch (Exception e) {
-                UndertowLogger.ROOT_LOGGER.couldNotRegisterChangeListener(e);
-            }
-        }
     }
 
     @Override
@@ -119,21 +105,6 @@ public class CachingResourceManager implements ResourceManager {
         final CachedResource resource = new CachedResource(this, underlying, path);
         cache.add(path, resource);
         return resource;
-    }
-
-    @Override
-    public boolean isResourceChangeListenerSupported() {
-        return underlyingResourceManager.isResourceChangeListenerSupported();
-    }
-
-    @Override
-    public void registerResourceChangeListener(ResourceChangeListener listener) {
-        underlyingResourceManager.registerResourceChangeListener(listener);
-    }
-
-    @Override
-    public void removeResourceChangeListener(ResourceChangeListener listener) {
-        underlyingResourceManager.removeResourceChangeListener(listener);
     }
 
     public void invalidate(String path) {

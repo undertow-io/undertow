@@ -21,6 +21,7 @@ package io.undertow.server;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.FileChannel;
 import java.util.concurrent.Executor;
 
 import javax.net.ssl.SSLSession;
@@ -250,6 +251,9 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
     public abstract ChannelPromise createPromise();
 
     public abstract void runResumeReadWrite();
+
+    public abstract ChannelFuture writeFileAsync(FileChannel file, long position, long count, HttpServerExchange exchange);
+    public abstract void writeFileBlocking(FileChannel file, long position, long count, HttpServerExchange exchange) throws IOException;
 
     public interface CloseListener {
 

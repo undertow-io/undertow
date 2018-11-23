@@ -20,7 +20,6 @@ package io.undertow.server.handlers.cache;
 
 import static io.undertow.server.handlers.cache.LimitedBufferSlicePool.PooledByteBuffer;
 
-import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,19 +27,18 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import org.xnio.BufferAllocator;
-
+import io.netty.buffer.ByteBufAllocator;
 import io.undertow.util.ConcurrentDirectDeque;
 
 /**
  * A non-blocking buffer cache where entries are indexed by a path and are made up of a
  * subsequence of blocks in a fixed large direct buffer. An ideal application is
  * a file system cache, where the path corresponds to a file location.
- *
+ * <p>
  * <p>To reduce contention, entry allocation and eviction execute in a sampling
  * fashion (entry hits modulo N). Eviction follows an LRU approach (oldest sampled
  * entries are removed first) when the cache is out of capacity</p>
- *
+ * <p>
  * <p>In order to expedite reclamation, cache entries are reference counted as
  * opposed to garbage collected.</p>
  *
@@ -56,14 +54,14 @@ public class DirectBufferCache {
     private final int maxAge;
 
     public DirectBufferCache(int sliceSize, int slicesPerPage, int maxMemory) {
-        this(sliceSize, slicesPerPage, maxMemory, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR);
+        this(sliceSize, slicesPerPage, maxMemory, ByteBufAllocator.DEFAULT);
     }
 
-    public DirectBufferCache(int sliceSize, int slicesPerPage, int maxMemory, final BufferAllocator<ByteBuffer> bufferAllocator) {
+    public DirectBufferCache(int sliceSize, int slicesPerPage, int maxMemory, final ByteBufAllocator bufferAllocator) {
         this(sliceSize, slicesPerPage, maxMemory, bufferAllocator, -1);
     }
 
-    public DirectBufferCache(int sliceSize, int slicesPerPage, int maxMemory, final BufferAllocator<ByteBuffer> bufferAllocator, int maxAge) {
+    public DirectBufferCache(int sliceSize, int slicesPerPage, int maxMemory, final ByteBufAllocator bufferAllocator, int maxAge) {
         this.sliceSize = sliceSize;
         this.pool = new LimitedBufferSlicePool(bufferAllocator, sliceSize, sliceSize * slicesPerPage, maxMemory / (sliceSize * slicesPerPage));
         this.cache = new ConcurrentHashMap<>(16);
@@ -97,8 +95,8 @@ public class DirectBufferCache {
         }
 
         long expires = cacheEntry.getExpires();
-        if(expires != -1) {
-            if(System.currentTimeMillis() > expires) {
+        if (expires != -1) {
+            if (System.currentTimeMillis() > expires) {
                 remove(key);
                 return null;
             }
@@ -108,7 +106,7 @@ public class DirectBufferCache {
 
             bumpAccess(cacheEntry);
 
-            if (! cacheEntry.allocate()) {
+            if (!cacheEntry.allocate()) {
                 // Try and make room
                 int reclaimSize = cacheEntry.size();
                 for (CacheEntry oldest : accessQueue) {
@@ -159,7 +157,7 @@ public class DirectBufferCache {
                 // In case of disaster (OOME), we need to release the claim, so leave it aas null
             }
 
-            if (! cacheEntry.setToken(token) && token != null) { // Always set if null
+            if (!cacheEntry.setToken(token) && token != null) { // Always set if null
                 accessQueue.removeToken(token);
             }
         }
@@ -216,7 +214,7 @@ public class DirectBufferCache {
         }
 
         public int hit() {
-            for (;;) {
+            for (; ; ) {
                 int i = hits;
 
                 if (hitsUpdater.weakCompareAndSet(this, i, ++i)) {
@@ -235,7 +233,7 @@ public class DirectBufferCache {
         }
 
         public void enable() {
-            if(maxAge == -1) {
+            if (maxAge == -1) {
                 this.expires = -1;
             } else {
                 this.expires = System.currentTimeMillis() + maxAge;
@@ -252,7 +250,7 @@ public class DirectBufferCache {
         }
 
         public boolean reference() {
-            for(;;) {
+            for (; ; ) {
                 int refs = this.refs;
                 if (refs < 1) {
                     return false; // destroying
@@ -265,7 +263,7 @@ public class DirectBufferCache {
         }
 
         public boolean dereference() {
-            for(;;) {
+            for (; ; ) {
                 int refs = this.refs;
                 if (refs < 1) {
                     return false;  // destroying
@@ -284,7 +282,7 @@ public class DirectBufferCache {
             if (buffers.length > 0)
                 return true;
 
-            if (! bufsUpdater.compareAndSet(this, INIT_BUFFERS, EMPTY_BUFFERS)) {
+            if (!bufsUpdater.compareAndSet(this, INIT_BUFFERS, EMPTY_BUFFERS)) {
                 return true;
             }
 
@@ -297,7 +295,7 @@ public class DirectBufferCache {
 
             // Try to avoid mutations
             LimitedBufferSlicePool slicePool = bufferCache.pool;
-            if (! slicePool.canAllocate(n)) {
+            if (!slicePool.canAllocate(n)) {
                 this.buffers = INIT_BUFFERS;
                 return false;
             }
@@ -328,7 +326,7 @@ public class DirectBufferCache {
         }
 
         Object claimToken() {
-            for (;;) {
+            for (; ; ) {
                 Object current = this.accessToken;
                 if (current == CLAIM_TOKEN) {
                     return Boolean.FALSE;

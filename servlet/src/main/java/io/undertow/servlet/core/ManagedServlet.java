@@ -33,8 +33,6 @@ import javax.servlet.UnavailableException;
 import io.undertow.server.handlers.form.FormEncodedDataDefinition;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.server.handlers.form.MultiPartParserDefinition;
-import io.undertow.server.handlers.resource.ResourceChangeListener;
-import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.DeploymentManager;
@@ -274,7 +272,6 @@ public class ManagedServlet implements Lifecycle {
         private final ServletContextImpl servletContext;
         private volatile InstanceHandle<? extends Servlet> handle;
         private volatile Servlet instance;
-        private ResourceChangeListener changeListener;
         private final InstanceHandle<Servlet> instanceHandle = new InstanceHandle<Servlet>() {
             @Override
             public Servlet getInstance() {
@@ -301,20 +298,10 @@ public class ManagedServlet implements Lifecycle {
             }
             instance = handle.getInstance();
             new LifecyleInterceptorInvocation(servletContext.getDeployment().getDeploymentInfo().getLifecycleInterceptors(), servletInfo, instance, new ServletConfigImpl(servletInfo, servletContext)).proceed();
-
-            //if a servlet implements FileChangeCallback it will be notified of file change events
-            final ResourceManager resourceManager = servletContext.getDeployment().getDeploymentInfo().getResourceManager();
-            if(instance instanceof ResourceChangeListener && resourceManager.isResourceChangeListenerSupported()) {
-                resourceManager.registerResourceChangeListener(changeListener = (ResourceChangeListener) instance);
-            }
         }
 
         public synchronized void stop() {
             if (handle != null) {
-                final ResourceManager resourceManager = servletContext.getDeployment().getDeploymentInfo().getResourceManager();
-                if(changeListener != null) {
-                    resourceManager.removeResourceChangeListener(changeListener);
-                }
                 invokeDestroy();
                 handle.release();
             }

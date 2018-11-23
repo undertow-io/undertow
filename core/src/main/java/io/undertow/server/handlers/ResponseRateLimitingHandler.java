@@ -25,15 +25,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.xnio.conduits.StreamSinkConduit;
-
-import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.xnio.util.ConduitFactory;
-import io.undertow.xnio.conduits.RateLimitingStreamSinkConduit;
 
 /**
  * Handler that limits the download rate
@@ -45,13 +40,6 @@ public class ResponseRateLimitingHandler implements HttpHandler {
     private final long time;
     private final int bytes;
     private final HttpHandler next;
-
-    private final ConduitWrapper<StreamSinkConduit> WRAPPER = new ConduitWrapper<StreamSinkConduit>() {
-        @Override
-        public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
-            return new RateLimitingStreamSinkConduit(factory.create(), bytes, time, TimeUnit.MILLISECONDS);
-        }
-    };
 
     /**
      *
@@ -70,8 +58,8 @@ public class ResponseRateLimitingHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        exchange.addResponseWrapper(WRAPPER);
-        next.handleRequest(exchange);
+//        exchange.addResponseWrapper(WRAPPER);
+//        next.handleRequest(exchange);
     }
 
 

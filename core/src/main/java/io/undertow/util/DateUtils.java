@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * Utility for parsing and generating dates
@@ -253,7 +252,7 @@ public class DateUtils {
             long toGo = 1000 - mod;
             dateString = DateUtils.toDateString(new Date(realTime));
             if (cachedDateString.compareAndSet(null, dateString)) {
-                WorkerUtils.executeAfter(exchange.getIoThread(), INVALIDATE_TASK, toGo, TimeUnit.MILLISECONDS);
+                exchange.getIoThread().schedule(INVALIDATE_TASK, toGo, TimeUnit.MILLISECONDS);
             }
         }
         return dateString;

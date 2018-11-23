@@ -38,15 +38,12 @@ import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.LogMessage;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
-import org.xnio.ssl.SslConnection;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.sse.ServerSentEventConnection;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
-import io.undertow.xnio.client.ClientConnection;
-import io.undertow.xnio.protocols.ssl.SslConduit;
 
 /**
  * log messages start at 5000
@@ -54,10 +51,10 @@ import io.undertow.xnio.protocols.ssl.SslConduit;
  * @author Stuart Douglas
  */
 @MessageLogger(projectCode = "UT")
-public interface UndertowLogger extends BasicLogger {
+public interface
+UndertowLogger extends BasicLogger {
 
     UndertowLogger ROOT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName());
-    UndertowLogger CLIENT_LOGGER = Logger.getMessageLogger(UndertowLogger.class, ClientConnection.class.getPackage().getName());
 
     UndertowLogger REQUEST_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".request");
     UndertowLogger SESSION_LOGGER = Logger.getMessageLogger(UndertowLogger.class, UndertowLogger.class.getPackage().getName() + ".session");
@@ -213,7 +210,7 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = DEBUG)
     @Message(id = 5038, value = "Balancer created: id: %s, name: %s, stickySession: %s, stickySessionCookie: %s, stickySessionPath: %s, stickySessionRemove: %s, stickySessionForce: %s, waitWorker: %s, maxattempts: %s")
     void balancerCreated(int id, String name, boolean stickySession, String stickySessionCookie, String stickySessionPath, boolean stickySessionRemove,
-                                            boolean stickySessionForce, int waitWorker, int maxattempts);
+                         boolean stickySessionForce, int waitWorker, int maxattempts);
 
     @LogMessage(level = INFO)
     @Message(id = 5039, value = "Undertow starts mod_cluster proxy advertisements on %s with frequency %s ms")
@@ -303,7 +300,7 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5060, value = "Predicate %s uses old style square braces to define predicates, which will be removed in a future release. predicate[value] should be changed to predicate(value)")
     void oldStylePredicateSyntax(String string);
 
-    @Message(id=5061, value = "More than %s restarts detected, breaking assumed infinite loop")
+    @Message(id = 5061, value = "More than %s restarts detected, breaking assumed infinite loop")
     IllegalStateException maxRestartsExceeded(int maxRestarts);
 
     @LogMessage(level = ERROR)
@@ -361,21 +358,10 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5075, value = "Unable to resolve mod_cluster management host's address for '%s'")
     IllegalStateException unableToResolveModClusterManagementHost(String providedHost);
 
-    @LogMessage(level = ERROR)
-    @Message(id = 5076, value = "SSL read loop detected. This should not happen, please report this to the Undertow developers. Current state %s")
-    void sslReadLoopDetected(SslConduit sslConduit);
-
-    @LogMessage(level = ERROR)
-    @Message(id = 5077, value = "SSL unwrap buffer overflow detected. This should not happen, please report this to the Undertow developers. Current state %s")
-    void sslBufferOverflow(SslConduit sslConduit);
 
 //    @LogMessage(level = ERROR)
 //    @Message(id = 5078, value = "ALPN connection failed")
 //    void alpnConnectionFailed(@Cause Exception e);
-
-    @LogMessage(level = ERROR)
-    @Message(id = 5079, value = "ALPN negotiation on %s failed")
-    void alpnConnectionFailed(SslConnection connection);
 
     @LogMessage(level = ERROR)
     @Message(id = 5080, value = "HttpServerExchange cannot have both async IO resumed and dispatch() called in the same cycle")

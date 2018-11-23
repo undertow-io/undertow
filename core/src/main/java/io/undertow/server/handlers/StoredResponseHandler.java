@@ -22,15 +22,11 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
-import org.xnio.conduits.StreamSinkConduit;
-
 import io.undertow.conduits.StoredResponseStreamSinkConduit;
-import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.xnio.util.ConduitFactory;
 
 /**
  * A handler that buffers the full response and attaches it to the exchange. This makes use of
@@ -51,13 +47,13 @@ public class StoredResponseHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
-            @Override
-            public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
-                return new StoredResponseStreamSinkConduit(factory.create(), exchange);
-            }
-        });
-        next.handleRequest(exchange);
+//        exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
+//            @Override
+//            public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
+//                return new StoredResponseStreamSinkConduit(factory.create(), exchange);
+//            }
+//        });
+//        next.handleRequest(exchange);
     }
 
     public static class Builder implements HandlerBuilder {

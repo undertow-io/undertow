@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -15,9 +14,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.xnio.IoUtils;
-
-import io.undertow.UndertowLogger;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
@@ -115,142 +113,31 @@ public class PathResource implements RangeAwareResource {
         serveImpl(sender, exchange, start, end, callback, true);
 
     }
+
     private void serveImpl(final Sender sender, final HttpServerExchange exchange, final long start, final long end, final IoCallback callback, final boolean range) {
-
-
-        abstract class BaseFileTask implements Runnable {
-            protected volatile FileChannel fileChannel;
-
-            protected boolean openFile() {
-                try {
-                    fileChannel = FileChannel.open(file, StandardOpenOption.READ);
-                    if(range) {
-                        fileChannel.position(start);
-                    }
-                } catch (NoSuchFileException e) {
-                    exchange.setStatusCode(StatusCodes.NOT_FOUND);
-                    callback.onException(exchange, sender, e);
-                    return false;
-                } catch (IOException e) {
-                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                    callback.onException(exchange, sender, e);
-                    return false;
-                }
-                return true;
-            }
-        }
-
-        class ServerTask extends BaseFileTask implements IoCallback {
-
-            private PooledByteBuffer pooled;
-
-            long remaining = end - start + 1;
-
-            @Override
-            public void run() {
-                if(range && remaining == 0) {
-                    //we are done
-                    pooled.close();
-                    pooled = null;
-                    IoUtils.safeClose(fileChannel);
-                    callback.onComplete(exchange, sender);
-                    return;
-                }
-                if (fileChannel == null) {
-                    if (!openFile()) {
-                        return;
-                    }
-                    pooled = exchange.getConnection().getByteBufferPool().allocate();
-                }
-                if (pooled != null) {
-                    ByteBuffer buffer = pooled.getBuffer();
-                    try {
-                        buffer.clear();
-                        int res = fileChannel.read(buffer);
-                        if (res == -1) {
-                            //we are done
-                            pooled.close();
-                            IoUtils.safeClose(fileChannel);
-                            callback.onComplete(exchange, sender);
-                            return;
-                        }
-                        buffer.flip();
-                        if(range) {
-                            if(buffer.remaining() > remaining) {
-                                buffer.limit((int) (buffer.position() + remaining));
-                            }
-                            remaining -= buffer.remaining();
-                        }
-                        sender.send(buffer, this);
-                    } catch (IOException e) {
-                        onException(exchange, sender, e);
-                    }
-                }
-
-            }
-
-            @Override
-            public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-                if (exchange.isInIoThread()) {
-                    exchange.dispatch(this);
-                } else {
-                    run();
-                }
-            }
-
-            @Override
-            public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
-                UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
-                if (pooled != null) {
-                    pooled.close();
-                    pooled = null;
-                }
-                IoUtils.safeClose(fileChannel);
-                if (!exchange.isResponseStarted()) {
-                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                }
-                callback.onException(exchange, sender, exception);
-            }
-        }
-
-        class TransferTask extends BaseFileTask {
-
-            @Override
-            public void run() {
-                if (!openFile()) {
-                    return;
-                }
-                sender.transferFrom(fileChannel, new IoCallback() {
-                    @Override
-                    public void onComplete(HttpServerExchange exchange, Sender sender) {
-                        try {
-                            IoUtils.safeClose(fileChannel);
-                        } finally {
-                            callback.onComplete(exchange, sender);
-                        }
-                    }
-
-                    @Override
-                    public void onException(HttpServerExchange exchange, Sender sender, IOException exception) {
-                        try {
-                            IoUtils.safeClose(fileChannel);
-                        } finally {
-                            callback.onException(exchange, sender, exception);
-                        }
-                    }
-                });
-            }
-        }
-        BaseFileTask task;
+        FileChannel fileChannel;
         try {
-            task = manager.getTransferMinSize() > Files.size(file) || range ? new ServerTask() : new TransferTask();
+            //TODO: this is all broken, needs to be fixed
+            fileChannel = FileChannel.open(file, StandardOpenOption.READ);
+            exchange.writeFileAsync(fileChannel, start, end - start).addListener(new GenericFutureListener<Future<? super Void>>() {
+                @Override
+                public void operationComplete(Future<? super Void> future) throws Exception {
+                    if(future.isSuccess()) {
+                        callback.onComplete(exchange, sender);
+                    } else {
+                        callback.onException(exchange, sender, new IOException());
+                    }
+                }
+            });
+            if (range) {
+                fileChannel.position(start);
+            }
+        } catch (NoSuchFileException e) {
+            exchange.setStatusCode(StatusCodes.NOT_FOUND);
+            callback.onException(exchange, sender, e);
         } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        if (exchange.isInIoThread()) {
-            exchange.dispatch(task);
-        } else {
-            task.run();
+            exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+            callback.onException(exchange, sender, e);
         }
     }
 

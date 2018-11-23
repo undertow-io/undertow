@@ -8,16 +8,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.TreeSet;
 
 import org.jboss.logging.Logger;
-import org.xnio.FileChangeCallback;
-import org.xnio.FileChangeEvent;
-import org.xnio.FileSystemWatcher;
-import org.xnio.OptionMap;
-import org.xnio.Xnio;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -38,10 +32,6 @@ public class PathResourceManager implements ResourceManager  {
             return null;
         }
     };
-
-    private final List<ResourceChangeListener> listeners = new ArrayList<>();
-
-    private FileSystemWatcher fileSystemWatcher;
 
     protected volatile String base;
 
@@ -230,59 +220,12 @@ public class PathResourceManager implements ResourceManager  {
         }
     }
 
-    @Override
-    public boolean isResourceChangeListenerSupported() {
-        return allowResourceChangeListeners;
-    }
-
-    @Override
-    public synchronized void registerResourceChangeListener(ResourceChangeListener listener) {
-        if(!allowResourceChangeListeners) {
-            //by rights we should throw an exception here, but this works around a bug in Wildfly where it just assumes
-            //PathResourceManager supports this. This will be fixed in a later version
-            return;
-        }
-        listeners.add(listener);
-        if (fileSystemWatcher == null) {
-            fileSystemWatcher = Xnio.getInstance().createFileSystemWatcher("Watcher for " + base, OptionMap.EMPTY);
-            fileSystemWatcher.watchPath(new File(base), new FileChangeCallback() {
-                @Override
-                public void handleChanges(Collection<FileChangeEvent> changes) {
-                    synchronized (PathResourceManager.this) {
-                        final List<ResourceChangeEvent> events = new ArrayList<>();
-                        for (FileChangeEvent change : changes) {
-                            if (change.getFile().getAbsolutePath().startsWith(base)) {
-                                String path = change.getFile().getAbsolutePath().substring(base.length());
-                                events.add(new ResourceChangeEvent(path, ResourceChangeEvent.Type.valueOf(change.getType().name())));
-                            }
-                        }
-                        for (ResourceChangeListener listener : listeners) {
-                            listener.handleChanges(events);
-                        }
-                    }
-                }
-            });
-        }
-    }
-
-
-    @Override
-    public synchronized void removeResourceChangeListener(ResourceChangeListener listener) {
-        if(!allowResourceChangeListeners) {
-            return;
-        }
-        listeners.remove(listener);
-    }
-
     public long getTransferMinSize() {
         return transferMinSize;
     }
 
     @Override
     public synchronized void close() throws IOException {
-        if (fileSystemWatcher != null) {
-            fileSystemWatcher.close();
-        }
     }
 
     /**

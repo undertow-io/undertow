@@ -18,7 +18,6 @@
 
 package io.undertow.server.handlers.cache;
 
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Queue;
@@ -26,7 +25,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import org.xnio.BufferAllocator;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 
 /**
  * A limited buffer pooled allocator.  This pool uses a series of buffer regions to back the
@@ -40,7 +40,7 @@ public final class LimitedBufferSlicePool {
 
     private static final AtomicIntegerFieldUpdater regionUpdater = AtomicIntegerFieldUpdater.newUpdater(LimitedBufferSlicePool.class, "regionsUsed");
     private final Queue<Slice> sliceQueue = new ConcurrentLinkedQueue<>();
-    private final BufferAllocator<ByteBuffer> allocator;
+    private final ByteBufAllocator allocator;
     private final int bufferSize;
     private final int buffersPerRegion;
     private final int maxRegions;
@@ -50,12 +50,12 @@ public final class LimitedBufferSlicePool {
     /**
      * Construct a new instance.
      *
-     * @param allocator the buffer allocator to use
-     * @param bufferSize the size of each buffer
+     * @param allocator     the buffer allocator to use
+     * @param bufferSize    the size of each buffer
      * @param maxRegionSize the maximum region size for each backing buffer
-     * @param maxRegions the maximum regions to create, zero for unlimited
+     * @param maxRegions    the maximum regions to create, zero for unlimited
      */
-    public LimitedBufferSlicePool(final BufferAllocator<ByteBuffer> allocator, final int bufferSize, final int maxRegionSize, final int maxRegions) {
+    public LimitedBufferSlicePool(final ByteBufAllocator allocator, final int bufferSize, final int maxRegionSize, final int maxRegions) {
         if (bufferSize <= 0) {
             throw new IllegalArgumentException("Buffer size must be greater than zero");
         }
@@ -68,14 +68,14 @@ public final class LimitedBufferSlicePool {
         this.maxRegions = maxRegions;
     }
 
-     /**
+    /**
      * Construct a new instance.
      *
-     * @param allocator the buffer allocator to use
-     * @param bufferSize the size of each buffer
+     * @param allocator     the buffer allocator to use
+     * @param bufferSize    the size of each buffer
      * @param maxRegionSize the maximum region size for each backing buffer
      */
-    public LimitedBufferSlicePool(BufferAllocator<ByteBuffer> allocator, int bufferSize, int maxRegionSize) {
+    public LimitedBufferSlicePool(ByteBufAllocator allocator, int bufferSize, int maxRegionSize) {
         this(allocator, bufferSize, maxRegionSize, 0);
     }
 
@@ -83,11 +83,11 @@ public final class LimitedBufferSlicePool {
     /**
      * Construct a new instance, using a direct buffer allocator.
      *
-     * @param bufferSize the size of each buffer
+     * @param bufferSize    the size of each buffer
      * @param maxRegionSize the maximum region size for each backing buffer
      */
     public LimitedBufferSlicePool(final int bufferSize, final int maxRegionSize) {
-        this(BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, bufferSize, maxRegionSize);
+        this(ByteBufAllocator.DEFAULT, bufferSize, maxRegionSize);
     }
 
     /**
@@ -101,9 +101,9 @@ public final class LimitedBufferSlicePool {
         if (slice == null && (maxRegions <= 0 || regionUpdater.getAndIncrement(this) < maxRegions)) {
             final int bufferSize = this.bufferSize;
             final int buffersPerRegion = this.buffersPerRegion;
-            final ByteBuffer region = allocator.allocate(buffersPerRegion * bufferSize);
+            final ByteBuf region = allocator.buffer(buffersPerRegion * bufferSize);
             int idx = bufferSize;
-            for (int i = 1; i < buffersPerRegion; i ++) {
+            for (int i = 1; i < buffersPerRegion; i++) {
                 sliceQueue.add(new Slice(region, idx, bufferSize));
                 idx += bufferSize;
             }
@@ -125,7 +125,7 @@ public final class LimitedBufferSlicePool {
 
         Iterator iterator = sliceQueue.iterator();
         for (int i = 0; i < slices; i++) {
-            if (! iterator.hasNext()) {
+            if (!iterator.hasNext()) {
                 return false;
             }
             try {
@@ -141,11 +141,11 @@ public final class LimitedBufferSlicePool {
     public static final class PooledByteBuffer {
         private final Slice region;
         private final Queue<Slice> slices;
-        volatile ByteBuffer buffer;
+        volatile ByteBuf buffer;
 
-        private static final AtomicReferenceFieldUpdater<PooledByteBuffer, ByteBuffer> bufferUpdater = AtomicReferenceFieldUpdater.newUpdater(PooledByteBuffer.class, ByteBuffer.class, "buffer");
+        private static final AtomicReferenceFieldUpdater<PooledByteBuffer, ByteBuf> bufferUpdater = AtomicReferenceFieldUpdater.newUpdater(PooledByteBuffer.class, ByteBuf.class, "buffer");
 
-        private PooledByteBuffer(final Slice region, final ByteBuffer buffer, final Queue<Slice> slices) {
+        private PooledByteBuffer(final Slice region, final ByteBuf buffer, final Queue<Slice> slices) {
             this.region = region;
             this.buffer = buffer;
             this.slices = slices;
@@ -158,8 +158,8 @@ public final class LimitedBufferSlicePool {
             }
         }
 
-        public ByteBuffer getBuffer() {
-            final ByteBuffer buffer = this.buffer;
+        public ByteBuf getBuffer() {
+            final ByteBuf buffer = this.buffer;
             if (buffer == null) {
                 throw new IllegalStateException();
             }
@@ -172,18 +172,18 @@ public final class LimitedBufferSlicePool {
     }
 
     private static final class Slice {
-        private final ByteBuffer parent;
+        private final ByteBuf parent;
         private final int start;
         private final int size;
 
-        private Slice(final ByteBuffer parent, final int start, final int size) {
+        private Slice(final ByteBuf parent, final int start, final int size) {
             this.parent = parent;
             this.start = start;
             this.size = size;
         }
 
-        ByteBuffer slice() {
-            return ((ByteBuffer)parent.duplicate().position(start).limit(start+size)).slice();
+        ByteBuf slice() {
+            return parent.slice(start, start + size);
         }
     }
 }

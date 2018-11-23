@@ -42,45 +42,12 @@ public interface ResourceManager extends Closeable {
      */
     Resource getResource(final String path) throws IOException;
 
-    /**
-     *
-     * @return <code>true</code> if a resource change listener is supported
-     */
-    boolean isResourceChangeListenerSupported();
-
-    /**
-     * Registers a resource change listener, if the underlying resource manager support it
-     * @param listener The listener to register
-     * @throws IllegalArgumentException If resource change listeners are not supported
-     */
-    void registerResourceChangeListener(final ResourceChangeListener listener);
-
-    /**
-     * Removes a resource change listener
-     * @param listener
-     */
-    void removeResourceChangeListener(final ResourceChangeListener listener);
-
     ResourceManager EMPTY_RESOURCE_MANAGER = new ResourceManager() {
         @Override
         public Resource getResource(final String path){
             return null;
         }
 
-        @Override
-        public boolean isResourceChangeListenerSupported() {
-            return false;
-        }
-
-        @Override
-        public void registerResourceChangeListener(ResourceChangeListener listener) {
-            throw UndertowMessages.MESSAGES.resourceChangeListenerNotSupported();
-        }
-
-        @Override
-        public void removeResourceChangeListener(ResourceChangeListener listener) {
-            throw UndertowMessages.MESSAGES.resourceChangeListenerNotSupported();
-        }
 
         @Override
         public void close() throws IOException {

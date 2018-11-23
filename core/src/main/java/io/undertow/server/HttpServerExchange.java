@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
@@ -1159,6 +1160,34 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
         connection.writeBlocking(data, last, this);
+    }
+
+    public ChannelFuture writeFileAsync(FileChannel file, long position, long count) {
+        if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+            ChannelPromise promise = connection.createPromise();
+            promise.setFailure(UndertowMessages.MESSAGES.responseComplete());
+            return promise;
+        }
+        if (anyAreClear(state, FLAG_RESPONSE_SENT)) {
+            state |= FLAG_RESPONSE_SENT;
+            for (int i = responseCommitListenerCount - 1; i >= 0; --i) {
+                responseCommitListeners[i].beforeCommit(this);
+            }
+        }
+        return connection.writeFileAsync(file, position, count, this);
+    }
+
+    public void writeFileBlocking(FileChannel file, long position, long count) throws IOException {
+        if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+            throw UndertowMessages.MESSAGES.responseComplete();
+        }
+        if (anyAreClear(state, FLAG_RESPONSE_SENT)) {
+            state |= FLAG_RESPONSE_SENT;
+            for (int i = responseCommitListenerCount - 1; i >= 0; --i) {
+                responseCommitListeners[i].beforeCommit(this);
+            }
+        }
+        connection.writeFileBlocking(file, position, count, this);
     }
 
     /**

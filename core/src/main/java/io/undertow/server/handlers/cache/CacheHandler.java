@@ -18,17 +18,10 @@
 
 package io.undertow.server.handlers.cache;
 
-import static io.undertow.util.Headers.CONTENT_LENGTH;
-
-import org.xnio.conduits.StreamSinkConduit;
-
 import io.undertow.Handlers;
-import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.server.handlers.encoding.AllowedContentEncodings;
-import io.undertow.xnio.util.ConduitFactory;
 
 /**
  *
@@ -54,43 +47,43 @@ public class CacheHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        final ResponseCache responseCache = new ResponseCache(cache, exchange);
-        exchange.putAttachment(ResponseCache.ATTACHMENT_KEY, responseCache);
-        exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
-            @Override
-            public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
-                if(!responseCache.isResponseCachable()) {
-                    return factory.create();
-                }
-                final AllowedContentEncodings contentEncodings = exchange.getAttachment(AllowedContentEncodings.ATTACHMENT_KEY);
-                if(contentEncodings != null) {
-                    if(!contentEncodings.isIdentity()) {
-                        //we can't cache content encoded responses, as we have no idea how big they will end up being
-                        return factory.create();
-                    }
-                }
-                String lengthString = exchange.getResponseHeaders().getFirst(CONTENT_LENGTH);
-                if(lengthString == null) {
-                    //we don't cache chunked requests
-                    return factory.create();
-                }
-                int length = Integer.parseInt(lengthString);
-                final CachedHttpRequest key = new CachedHttpRequest(exchange);
-                final DirectBufferCache.CacheEntry entry = cache.add(key, length);
-
-                if (entry == null || entry.buffers().length == 0 || !entry.claimEnable()) {
-                    return factory.create();
-                }
-
-                if (!entry.reference()) {
-                    entry.disable();
-                    return factory.create();
-                }
-
-                return new ResponseCachingStreamSinkConduit(factory.create(), entry, length);
-            }
-        });
-        next.handleRequest(exchange);
+//        final ResponseCache responseCache = new ResponseCache(cache, exchange);
+//        exchange.putAttachment(ResponseCache.ATTACHMENT_KEY, responseCache);
+//        exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
+//            @Override
+//            public StreamSinkConduit wrap(final ConduitFactory<StreamSinkConduit> factory, final HttpServerExchange exchange) {
+//                if(!responseCache.isResponseCachable()) {
+//                    return factory.create();
+//                }
+//                final AllowedContentEncodings contentEncodings = exchange.getAttachment(AllowedContentEncodings.ATTACHMENT_KEY);
+//                if(contentEncodings != null) {
+//                    if(!contentEncodings.isIdentity()) {
+//                        //we can't cache content encoded responses, as we have no idea how big they will end up being
+//                        return factory.create();
+//                    }
+//                }
+//                String lengthString = exchange.getResponseHeaders().getFirst(CONTENT_LENGTH);
+//                if(lengthString == null) {
+//                    //we don't cache chunked requests
+//                    return factory.create();
+//                }
+//                int length = Integer.parseInt(lengthString);
+//                final CachedHttpRequest key = new CachedHttpRequest(exchange);
+//                final DirectBufferCache.CacheEntry entry = cache.add(key, length);
+//
+//                if (entry == null || entry.buffers().length == 0 || !entry.claimEnable()) {
+//                    return factory.create();
+//                }
+//
+//                if (!entry.reference()) {
+//                    entry.disable();
+//                    return factory.create();
+//                }
+//
+//                return new ResponseCachingStreamSinkConduit(factory.create(), entry, length);
+//            }
+//        });
+//        next.handleRequest(exchange);
     }
 
     public HttpHandler getNext() {

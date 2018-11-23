@@ -25,7 +25,6 @@ import java.util.Set;
 import java.util.WeakHashMap;
 
 import org.jboss.logging.Logger;
-import org.xnio.conduits.StreamSinkConduit;
 
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.NotificationReceiver;
@@ -33,14 +32,13 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.security.api.SecurityNotification;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
-import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ResponseCommitListener;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionListener;
 import io.undertow.server.session.SessionManager;
-import io.undertow.xnio.util.ConduitFactory;
 import io.undertow.util.Sessions;
 
 /**
@@ -90,12 +88,12 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
             log.tracef("Found SSO cookie %s", ssoId);
             try (SingleSignOn sso = this.singleSignOnManager.findSingleSignOn(ssoId)) {
                 if (sso != null) {
-                    if(log.isTraceEnabled()) {
+                    if (log.isTraceEnabled()) {
                         log.tracef("SSO session with ID: %s found.", ssoId);
                     }
                     Account verified = getIdentityManager(securityContext).verify(sso.getAccount());
                     if (verified == null) {
-                        if(log.isTraceEnabled()) {
+                        if (log.isTraceEnabled()) {
                             log.tracef("Account not found. Returning 'not attempted' here.");
                         }
                         //we return not attempted here to allow other mechanisms to proceed as normal
@@ -118,19 +116,19 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
             }
             clearSsoCookie(exchange);
         }
-        exchange.addResponseWrapper(responseListener);
+        exchange.addResponseCommitListener(responseListener);
         return AuthenticationMechanismOutcome.NOT_ATTEMPTED;
     }
 
     private void registerSessionIfRequired(SingleSignOn sso, Session session) {
         if (!sso.contains(session)) {
-            if(log.isTraceEnabled()) {
+            if (log.isTraceEnabled()) {
                 log.tracef("Session %s added to SSO %s", session.getId(), sso.getId());
             }
             sso.add(session);
         }
-        if(session.getAttribute(SSO_SESSION_ATTRIBUTE) == null) {
-            if(log.isTraceEnabled()) {
+        if (session.getAttribute(SSO_SESSION_ATTRIBUTE) == null) {
+            if (log.isTraceEnabled()) {
                 log.tracef("SSO_SESSION_ATTRIBUTE not found. Creating it with SSO ID %s as value.", sso.getId());
             }
             session.setAttribute(SSO_SESSION_ATTRIBUTE, sso.getId());
@@ -154,10 +152,11 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
         return Sessions.getOrCreateSession(exchange);
     }
 
-    final class ResponseListener implements ConduitWrapper<StreamSinkConduit> {
+    final class ResponseListener implements ResponseCommitListener {
 
         @Override
-        public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
+        public void beforeCommit(HttpServerExchange exchange) {
+
             SecurityContext sc = exchange.getSecurityContext();
             Account account = sc.getAuthenticatedAccount();
             if (account != null) {
@@ -167,7 +166,6 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
                     exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName, sso.getId()).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain).setPath(path));
                 }
             }
-            return factory.create();
         }
     }
 
@@ -182,7 +180,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
         public void sessionDestroyed(Session session, HttpServerExchange exchange, SessionDestroyedReason reason) {
             String ssoId = (String) session.getAttribute(SSO_SESSION_ATTRIBUTE);
             if (ssoId != null) {
-                if(log.isTraceEnabled()) {
+                if (log.isTraceEnabled()) {
                     log.tracef("Removing SSO ID %s from destroyed session %s.", ssoId, session.getId());
                 }
                 List<Session> sessionsToRemove = new LinkedList<>();
