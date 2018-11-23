@@ -32,7 +32,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
 
-import org.xnio.Bits;
+import io.undertow.util.Bits;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HandlerWrapper;

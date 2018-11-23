@@ -26,7 +26,7 @@ import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 
 import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
+import io.undertow.util.UndertowOptions;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.ProxyIgnore;

@@ -39,9 +39,9 @@ import org.xnio.Xnio;
 
 import io.undertow.Handlers;
 import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
+import io.undertow.util.UndertowOptions;
 import io.undertow.attribute.ExchangeAttributes;
-import io.undertow.connector.UndertowOptionMap;
+import io.undertow.util.UndertowOptionMap;
 import io.undertow.examples.UndertowExample;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;

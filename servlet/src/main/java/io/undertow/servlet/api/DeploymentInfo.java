@@ -37,7 +37,7 @@ import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletContextListener;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
-import io.undertow.UndertowOptions;
+import io.undertow.util.UndertowOptions;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.AuthenticationMode;

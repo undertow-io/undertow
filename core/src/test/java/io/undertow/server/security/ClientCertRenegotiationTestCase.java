@@ -37,7 +37,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 
-import io.undertow.connector.PooledByteBuffer;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.SecurityNotification.EventType;
 import io.undertow.security.impl.ClientCertAuthenticationMechanism;

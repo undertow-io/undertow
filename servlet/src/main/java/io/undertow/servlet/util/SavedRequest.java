@@ -32,7 +32,7 @@ import java.util.Map;
 import javax.servlet.http.HttpSession;
 
 import io.undertow.UndertowLogger;
-import io.undertow.UndertowOptions;
+import io.undertow.util.UndertowOptions;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;

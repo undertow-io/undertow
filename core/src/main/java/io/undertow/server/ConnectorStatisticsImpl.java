@@ -20,7 +20,7 @@ package io.undertow.server;
 
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
-import io.undertow.connector.ByteActivityCallback;
+import io.undertow.util.ByteActivityCallback;
 import io.undertow.util.StatusCodes;
 
 /**

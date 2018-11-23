@@ -43,7 +43,6 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
-import io.undertow.util.StringWriteChannelListener;
 
 /**
  *

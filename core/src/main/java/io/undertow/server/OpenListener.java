@@ -21,15 +21,14 @@ package io.undertow.server;
 import org.xnio.ChannelListener;
 import org.xnio.StreamConnection;
 
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.UndertowOptionMap;
+import io.undertow.util.UndertowOptionMap;
 
 /**
  * Interface that represents an open listener, aka a connector.
  *
  * @author Stuart Douglas
  */
-public interface OpenListener extends ChannelListener<StreamConnection> {
+public interface OpenListener  {
 
     /**
      *
@@ -60,7 +59,7 @@ public interface OpenListener extends ChannelListener<StreamConnection> {
      *
      * @return The buffer pool in use by this connector
      */
-    ByteBufferPool getBufferPool();
+    Buffe getBufferPool();
 
     /**
      *

@@ -31,7 +31,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.ClassPathResourceManager;
 import io.undertow.server.handlers.sse.ServerSentEventConnection;
 import io.undertow.server.handlers.sse.ServerSentEventHandler;
-import io.undertow.util.StringReadChannelListener;
 
 /**
  * @author Stuart Douglas

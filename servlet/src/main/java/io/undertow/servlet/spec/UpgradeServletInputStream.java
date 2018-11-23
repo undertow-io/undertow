@@ -18,8 +18,8 @@
 
 package io.undertow.servlet.spec;
 
-import static org.xnio.Bits.anyAreClear;
-import static org.xnio.Bits.anyAreSet;
+import static io.undertow.util.Bits.anyAreClear;
+import static io.undertow.util.Bits.anyAreSet;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,8 +34,6 @@ import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSourceChannel;
 
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
 import io.undertow.servlet.UndertowServletMessages;
 
 /**

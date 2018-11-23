@@ -20,8 +20,6 @@ package io.undertow.server;
 
 import org.xnio.StreamConnection;
 
-import io.undertow.connector.PooledByteBuffer;
-
 /**
  * An open listener that handles being delegated to, e.g. by NPN or ALPN
  *

@@ -43,7 +43,7 @@ import org.xnio.OptionMap;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
+import io.undertow.util.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.LocalNameResolvingHandler;

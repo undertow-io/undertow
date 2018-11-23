@@ -25,7 +25,7 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 
 import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
+import io.undertow.util.UndertowOptions;
 import io.undertow.predicate.Predicates;
 import io.undertow.server.handlers.encoding.ContentEncodingRepository;
 import io.undertow.server.handlers.encoding.EncodingHandler;

@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.connector.IoExecutor;
 import io.undertow.security.api.SessionNonceManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.FlexBase64;

@@ -35,7 +35,6 @@ import org.xnio.StreamConnection;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpUpgradeListener;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.util.StatusCodes;
 import io.undertow.websockets.WebSocketConnectionCallback;

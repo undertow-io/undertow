@@ -38,7 +38,6 @@ import io.undertow.util.BadRequestException;
 import io.undertow.util.HttpString;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.RequestTooBigException;
-import io.undertow.xnio.protocols.http2.HpackException;
 
 /**
  * @author Stuart Douglas
@@ -355,15 +354,6 @@ public interface UndertowMessages {
     @Message(id = 106, value = "HTTP2 continuation frame received without a corresponding headers or push promise frame")
     IOException http2ContinuationFrameNotExpected();
 
-    @Message(id = 107, value = "Huffman encoded value in HPACK headers did not end with EOS padding")
-    HpackException huffmanEncodedHpackValueDidNotEndWithEOS();
-
-    @Message(id = 108, value = "HPACK variable length integer encoded over too many octects, max is %s")
-    HpackException integerEncodedOverTooManyOctets(int maxIntegerOctets);
-
-    @Message(id = 109, value = "Zero is not a valid header table index")
-    HpackException zeroNotValidHeaderTableIndex();
-
 
     @Message(id = 110, value = "Cannot send 100-Continue, getResponseChannel() has already been called")
     IOException cannotSendContinueResponse();
@@ -431,9 +421,6 @@ public interface UndertowMessages {
     @Message(id = 131, value = "Buffer pool is closed")
     IllegalStateException poolIsClosed();
 
-    @Message(id = 132, value = "HPACK decode failed")
-    HpackException hpackFailed();
-
     @Message(id = 133, value = "Request did not contain an Upgrade header, upgrade is not permitted")
     IllegalStateException notAnUpgradeRequest();
 
@@ -479,8 +466,6 @@ public interface UndertowMessages {
     @Message(id = 147, value = "No host header in a HTTP/1.1 request")
     IOException noHostInHttp11Request();
 
-    @Message(id = 148, value = "Invalid HPack encoding. First byte: %s")
-    HpackException invalidHpackEncoding(byte b);
 
     @Message(id = 149, value = "HttpString is not allowed to contain newlines. value: %s")
     IllegalArgumentException newlineNotSupportedInHttpString(String value);
@@ -550,9 +535,6 @@ public interface UndertowMessages {
 
     @Message(id = 174, value = "An invalid escape character in cookie value")
     IllegalArgumentException invalidEscapeCharacter();
-
-    @Message(id = 175, value = "Invalid Hpack index %s")
-    HpackException invalidHpackIndex(int index);
 
     @Message(id = 178, value = "Buffer pool is too small, min size is %s")
     IllegalArgumentException bufferPoolTooSmall(int minSize);

@@ -32,8 +32,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.IoUtils;
 
-import io.undertow.UndertowOptions;
-import io.undertow.connector.UndertowOptionMap;
+import io.undertow.util.UndertowOptions;
+import io.undertow.util.UndertowOptionMap;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.ProxyIgnore;

@@ -34,14 +34,10 @@ import org.xnio.conduits.StreamSourceConduit;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.IoExecutor;
-import io.undertow.connector.PooledByteBuffer;
-import io.undertow.connector.UndertowOptionMap;
+import io.undertow.util.UndertowOptionMap;
 import io.undertow.xnio.protocols.XnioThread;
 
 public abstract class AbstractServerConnection extends ServerConnection {
-    protected final StreamConnection channel;
     protected final CloseSetter closeSetter;
     protected final ByteBufferPool bufferPool;
     protected final HttpHandler rootHandler;

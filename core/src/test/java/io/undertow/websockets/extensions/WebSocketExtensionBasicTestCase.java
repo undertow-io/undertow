@@ -37,10 +37,9 @@ import org.xnio.Options;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 
-import io.undertow.connector.UndertowOptionMap;
+import io.undertow.util.UndertowOptionMap;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
-import io.undertow.util.StringWriteChannelListener;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.WebSocketExtension;
 import io.undertow.websockets.WebSocketProtocolHandshakeHandler;

@@ -43,10 +43,8 @@ import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.UndertowOptionMap;
+import io.undertow.util.UndertowOptionMap;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.AttachmentKey;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.spi.WebSocketHttpExchange;

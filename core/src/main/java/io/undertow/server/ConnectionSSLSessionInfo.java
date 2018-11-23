@@ -36,8 +36,7 @@ import org.xnio.channels.SslChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
-import io.undertow.connector.PooledByteBuffer;
+import io.undertow.util.UndertowOptions;
 import io.undertow.server.protocol.http.HttpServerConnection;
 
 /**

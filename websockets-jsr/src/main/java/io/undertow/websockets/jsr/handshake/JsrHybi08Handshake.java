@@ -21,7 +21,6 @@ import java.util.Collections;
 
 import org.xnio.StreamConnection;
 
-import io.undertow.connector.ByteBufferPool;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.protocol.version08.Hybi08Handshake;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;

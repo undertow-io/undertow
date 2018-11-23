@@ -23,7 +23,7 @@ import java.nio.charset.StandardCharsets;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
-import io.undertow.UndertowOptions;
+import io.undertow.util.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;

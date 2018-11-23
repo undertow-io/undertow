@@ -25,7 +25,7 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 
 import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
+import io.undertow.util.UndertowOptions;
 import io.undertow.testutils.DefaultServer;
 
 /**

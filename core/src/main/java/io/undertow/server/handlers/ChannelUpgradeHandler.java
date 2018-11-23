@@ -29,7 +29,6 @@ import org.xnio.StreamConnection;
 import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;

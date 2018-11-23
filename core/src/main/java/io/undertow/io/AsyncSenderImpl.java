@@ -32,8 +32,6 @@ import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.connector.IoSink;
-import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 

@@ -44,7 +44,6 @@ import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.UndertowLogger;
-import io.undertow.connector.PooledByteBuffer;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;

@@ -58,10 +58,6 @@
 
         <dependency>
             <groupId>io.undertow</groupId>
-            <artifactId>undertow-xnio</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.undertow</groupId>
             <artifactId>undertow-io</artifactId>
         </dependency>
         <dependency>
@@ -76,17 +72,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.jboss.xnio</groupId>
-            <artifactId>xnio-api</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.jboss.xnio</groupId>
-            <artifactId>xnio-nio</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.eclipse.jetty.alpn</groupId>
             <artifactId>alpn-api</artifactId>
             <scope>provided</scope>
@@ -97,7 +82,6 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
-            <scope>test</scope>
         </dependency>
 
         <dependency>

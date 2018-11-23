@@ -26,8 +26,6 @@ import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import io.undertow.UndertowOptions;
-import io.undertow.connector.UndertowOptionMap;
 import io.undertow.server.HttpServerExchange;
 
 /**

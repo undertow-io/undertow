@@ -26,7 +26,6 @@ import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.xnio.util.WorkerUtils;
 

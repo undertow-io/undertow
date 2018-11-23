@@ -23,14 +23,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.xnio.conduits.StreamSinkConduit;
-
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.xnio.util.ConduitFactory;
 
 /**
- *
  * Handler that appends the JVM route to the session id.
  *
  * @author Stuart Douglas
@@ -59,14 +55,14 @@ public class JvmRouteHandler implements HttpHandler {
                 sessionId.setValue(sessionId.getValue().substring(0, part));
             }
         }
-        exchange.addResponseWrapper(wrapper);
+        exchange.addResponseCommitListener(wrapper);
         next.handleRequest(exchange);
     }
 
-    private class JvmRouteWrapper implements ConduitWrapper<StreamSinkConduit> {
+    private class JvmRouteWrapper implements ResponseCommitListener {
 
         @Override
-        public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
+        public void beforeCommit(HttpServerExchange exchange) {
 
             Map<String, Cookie> cookies = exchange.getResponseCookiesInternal();
             if (cookies != null) {
@@ -78,7 +74,6 @@ public class JvmRouteHandler implements HttpHandler {
                     sessionId.setValue(sb.toString());
                 }
             }
-            return factory.create();
         }
     }
 
@@ -112,7 +107,7 @@ public class JvmRouteHandler implements HttpHandler {
         public HandlerWrapper build(Map<String, Object> config) {
             String sessionCookieName = (String) config.get("session-cookie-name");
 
-            return new Wrapper((String)config.get("value"), sessionCookieName == null ? "JSESSIONID" : sessionCookieName);
+            return new Wrapper((String) config.get("value"), sessionCookieName == null ? "JSESSIONID" : sessionCookieName);
         }
 
     }

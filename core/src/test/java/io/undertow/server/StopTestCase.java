@@ -3,7 +3,7 @@ package io.undertow.server;
 import org.junit.Test;
 
 import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
+import io.undertow.util.UndertowOptions;
 
 public class StopTestCase {
 

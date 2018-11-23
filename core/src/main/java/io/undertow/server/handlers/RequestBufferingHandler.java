@@ -29,7 +29,6 @@ import org.xnio.IoUtils;
 import org.xnio.channels.StreamSourceChannel;
 
 import io.undertow.UndertowLogger;
-import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.Connectors;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;

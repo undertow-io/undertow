@@ -46,10 +46,8 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.JsseSslUtils;
 
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.DefaultByteBufferPool;
-import io.undertow.connector.UndertowOption;
-import io.undertow.connector.UndertowOptionMap;
+import io.undertow.util.UndertowOption;
+import io.undertow.util.UndertowOptionMap;
 import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
@@ -59,6 +57,7 @@ import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.server.protocol.http2.Http2OpenListener;
 import io.undertow.server.protocol.http2.Http2UpgradeHandler;
 import io.undertow.server.protocol.proxy.ProxyProtocolOpenListener;
+import io.undertow.util.UndertowOptions;
 import io.undertow.xnio.XnioUndertowOptions;
 import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 

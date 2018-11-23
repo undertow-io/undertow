@@ -37,11 +37,9 @@ import io.undertow.predicate.Predicate;
 import io.undertow.predicate.Predicates;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpUpgradeListener;
 import io.undertow.util.Methods;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
-import io.undertow.util.Transfer;
 import io.undertow.xnio.protocols.XnioThread;
 
 /**

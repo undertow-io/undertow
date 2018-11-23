@@ -53,14 +53,11 @@ import io.undertow.server.handlers.SetAttributeHandler;
 import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.URLDecodingHandler;
 import io.undertow.server.handlers.builder.PredicatedHandler;
-import io.undertow.server.handlers.proxy.ProxyClient;
-import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.server.handlers.sse.ServerSentEventConnectionCallback;
 import io.undertow.server.handlers.sse.ServerSentEventHandler;
-import io.undertow.websockets.WebSocketConnectionCallback;
-import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
+import io.undertow.util.UndertowOptions;
 
 /**
  * Utility class with convenience methods for dealing with handlers
@@ -89,7 +86,6 @@ public class Handlers {
     }
 
     /**
-     *
      * @return a new path template handler
      */
     public static PathTemplateHandler pathTemplate() {
@@ -97,7 +93,6 @@ public class Handlers {
     }
 
     /**
-     *
      * @param rewriteQueryParams If the query params should be rewritten
      * @return The routing handler
      */
@@ -106,7 +101,6 @@ public class Handlers {
     }
 
     /**
-     *
      * @return a new routing handler
      */
     public static RoutingHandler routing() {
@@ -114,7 +108,6 @@ public class Handlers {
     }
 
     /**
-     *
      * @param rewriteQueryParams If the query params should be rewritten
      * @return The path template handler
      */
@@ -169,25 +162,7 @@ public class Handlers {
     }
 
     /**
-     * @param sessionHandler The web socket session handler
-     * @return The web socket handler
-     */
-    public static WebSocketProtocolHandshakeHandler websocket(final WebSocketConnectionCallback sessionHandler) {
-        return new WebSocketProtocolHandshakeHandler(sessionHandler);
-    }
-
-    /**
-     * @param sessionHandler The web socket session handler
-     * @param next           The handler to invoke if the web socket connection fails
-     * @return The web socket handler
-     */
-    public static WebSocketProtocolHandshakeHandler websocket(final WebSocketConnectionCallback sessionHandler, final HttpHandler next) {
-        return new WebSocketProtocolHandshakeHandler(sessionHandler, next);
-    }
-
-    /**
      * A handler for server sent events
-     *
      *
      * @param callback The server sent events callback
      * @return A new server sent events handler
@@ -204,6 +179,7 @@ public class Handlers {
     public static ServerSentEventHandler serverSentEvents() {
         return new ServerSentEventHandler();
     }
+
     /**
      * Return a new resource handler
      *
@@ -240,7 +216,7 @@ public class Handlers {
 
     /**
      * Returns a new HTTP handler that sets the Date: header.
-     *
+     * <p>
      * This is no longer necessary, as it is handled by the connectors directly.
      *
      * @param next The next handler in the chain
@@ -276,7 +252,7 @@ public class Handlers {
 
     public static PredicatesHandler predicates(final List<PredicatedHandler> handlers, HttpHandler next) {
         final PredicatesHandler predicatesHandler = new PredicatesHandler(next);
-        for(PredicatedHandler handler : handlers) {
+        for (PredicatedHandler handler : handlers) {
             predicatesHandler.addPredicatedHandler(handler);
         }
         return predicatesHandler;
@@ -343,11 +319,11 @@ public class Handlers {
 
     /**
      * Returns a handler that sends back a HTTP 100 continue response if the given predicate resolves to true.
-     *
+     * <p>
      * This handler differs from the one returned by {@link #httpContinueRead(io.undertow.server.HttpHandler)} in
      * that it will eagerly send the response, and not wait for the first read attempt.
      *
-     * @param next The next handler
+     * @param next   The next handler
      * @param accept The predicate used to determine if the request should be accepted
      * @return The accepting handler
      */
@@ -357,7 +333,7 @@ public class Handlers {
 
     /**
      * Returns a handler that sends back a HTTP 100 continue response to all requests.
-     *
+     * <p>
      * This handler differs from the one returned by {@link #httpContinueRead(io.undertow.server.HttpHandler)} in
      * that it will eagerly send the response, and not wait for the first read attempt.
      *
@@ -400,9 +376,10 @@ public class Handlers {
 
     /**
      * Creates the set of handlers that are required to perform a simple rewrite.
+     *
      * @param condition The rewrite condition
-     * @param target The rewrite target if the condition matches
-     * @param next The next handler
+     * @param target    The rewrite target if the condition matches
+     * @param next      The next handler
      * @return
      */
     public static HttpHandler rewrite(final String condition, final String target, final ClassLoader classLoader, final HttpHandler next) {
@@ -415,7 +392,7 @@ public class Handlers {
      * {@link UndertowOptions#DECODE_URL} must have been set to false.
      *
      * @param charset The charset to decode
-     * @param next The next handler
+     * @param next    The next handler
      * @return A handler that decodes the URL
      */
     public static HttpHandler urlDecodingHandler(final String charset, final HttpHandler next) {
@@ -436,6 +413,7 @@ public class Handlers {
     /**
      * Returns a new handler that sets the peer address based on the X-Forwarded-For and
      * X-Forwarded-Proto header
+     *
      * @param next The next http handler
      * @return The handler
      */
@@ -445,9 +423,10 @@ public class Handlers {
 
     /**
      * Handler that appends the JVM route to the session cookie
+     *
      * @param sessionCookieName The session cookie name
-     * @param jvmRoute The JVM route to append
-     * @param next The next handler
+     * @param jvmRoute          The JVM route to append
+     * @param next              The next handler
      * @return The handler
      */
     public static JvmRouteHandler jvmRoute(final String sessionCookieName, final String jvmRoute, HttpHandler next) {
@@ -460,7 +439,7 @@ public class Handlers {
      * @param maxRequest The maximum number of requests
      * @param queueSize  The maximum number of queued requests
      * @param next       The next handler
-     * @return           The handler
+     * @return The handler
      */
     public static RequestLimitingHandler requestLimitingHandler(final int maxRequest, final int queueSize, HttpHandler next) {
         return new RequestLimitingHandler(maxRequest, queueSize, next);
@@ -471,46 +450,15 @@ public class Handlers {
      *
      * @param requestLimit The request limit object that can be shared between handlers, to apply the same limits across multiple handlers
      * @param next         The next handler
-     * @return             The handler
+     * @return The handler
      */
     public static RequestLimitingHandler requestLimitingHandler(final RequestLimit requestLimit, HttpHandler next) {
         return new RequestLimitingHandler(requestLimit, next);
     }
 
     /**
-     * Returns a handler that can act as a load balancing reverse proxy.
-     *
-     * @param proxyClient The proxy client to use to connect to the remote server
-     * @param maxRequestTime The maximum amount of time a request can be in progress before it is forcibly closed
-     * @param next The next handler to invoke if the proxy client does not know how to proxy the request
-     * @return The proxy handler
-     */
-    public static ProxyHandler proxyHandler(ProxyClient proxyClient, int maxRequestTime, HttpHandler next) {
-        return ProxyHandler.builder().setProxyClient(proxyClient).setNext(next).setMaxRequestTime(maxRequestTime).build();
-    }
-    /**
-     * Returns a handler that can act as a load balancing reverse proxy.
-     *
-     * @param proxyClient The proxy client to use to connect to the remote server
-     * @param next The next handler to invoke if the proxy client does not know how to proxy the request
-     * @return The proxy handler
-     */
-    public static ProxyHandler proxyHandler(ProxyClient proxyClient, HttpHandler next) {
-        return ProxyHandler.builder().setProxyClient(proxyClient).setNext(next).build();
-    }
-
-    /**
-     * Returns a handler that can act as a load balancing reverse proxy.
-     *
-     * @param proxyClient The proxy client to use to connect to the remote server
-     * @return The proxy handler
-     */
-    public static ProxyHandler proxyHandler(ProxyClient proxyClient) {
-        return ProxyHandler.builder().setProxyClient(proxyClient).build();
-    }
-
-    /**
      * Handler that sets the headers that disable caching of the response
+     *
      * @param next The next handler
      * @return The handler
      */
@@ -530,6 +478,7 @@ public class Handlers {
 
     /**
      * Returns a handler that maps exceptions to additional handlers
+     *
      * @param next The next handler
      * @return The exception handler
      */
@@ -538,15 +487,14 @@ public class Handlers {
     }
 
     /**
-     *
      * A handler that limits the download speed to a set number of bytes/period
      *
-     * @param next The next handler
-     * @param bytes The number of bytes per time period
-     * @param time The time period
+     * @param next     The next handler
+     * @param bytes    The number of bytes per time period
+     * @param time     The time period
      * @param timeUnit The units of the time period
      */
-    public static ResponseRateLimitingHandler responseRateLimitingHandler(HttpHandler next, int bytes,long time, TimeUnit timeUnit) {
+    public static ResponseRateLimitingHandler responseRateLimitingHandler(HttpHandler next, int bytes, long time, TimeUnit timeUnit) {
         return new ResponseRateLimitingHandler(next, bytes, time, timeUnit);
     }
 
@@ -554,8 +502,8 @@ public class Handlers {
      * Creates a handler that automatically learns which resources to push based on the referer header
      *
      * @param maxEntries The maximum number of entries to store
-     * @param maxAge The maximum age of the entries
-     * @param next The next handler
+     * @param maxAge     The maximum age of the entries
+     * @param next       The next handler
      * @return A caching push handler
      */
     public static LearningPushHandler learningPushHandler(int maxEntries, int maxAge, HttpHandler next) {
@@ -566,7 +514,7 @@ public class Handlers {
      * Creates a handler that automatically learns which resources to push based on the referer header
      *
      * @param maxEntries The maximum number of entries to store
-     * @param next The next handler
+     * @param next       The next handler
      * @return A caching push handler
      */
     public static LearningPushHandler learningPushHandler(int maxEntries, HttpHandler next) {

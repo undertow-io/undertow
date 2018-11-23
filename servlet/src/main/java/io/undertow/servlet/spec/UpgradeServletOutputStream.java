@@ -18,8 +18,8 @@
 
 package io.undertow.servlet.spec;
 
-import static org.xnio.Bits.anyAreClear;
-import static org.xnio.Bits.anyAreSet;
+import static io.undertow.util.Bits.anyAreClear;
+import static io.undertow.util.Bits.anyAreSet;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

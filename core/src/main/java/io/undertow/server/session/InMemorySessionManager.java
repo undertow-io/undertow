@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.connector.IoExecutor;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcurrentDirectDeque;

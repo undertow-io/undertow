@@ -24,8 +24,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import io.undertow.UndertowOptions;
-import io.undertow.connector.UndertowOptionMap;
+import io.undertow.util.UndertowOptions;
+import io.undertow.util.UndertowOptionMap;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.category.UnitTest;
 import io.undertow.util.BadRequestException;

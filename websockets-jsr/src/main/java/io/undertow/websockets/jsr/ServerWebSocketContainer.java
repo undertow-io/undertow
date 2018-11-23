@@ -64,9 +64,7 @@ import org.xnio.XnioWorker;
 import org.xnio.http.UpgradeFailedException;
 import org.xnio.ssl.XnioSsl;
 
-import io.undertow.connector.ByteBufferPool;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpUpgradeListener;
 import io.undertow.servlet.api.ClassIntrospecter;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;

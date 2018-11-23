@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import javax.net.ssl.SSLSession;
 
-import org.xnio.SslClientAuthMode;
+import io.netty.handler.ssl.ClientAuth;
 
 /**
  * SSL session information.
@@ -32,7 +32,6 @@ import org.xnio.SslClientAuthMode;
 public interface SSLSessionInfo {
 
     /**
-     *
      * @return The SSL session ID, or null if this could not be determined.
      */
     byte[] getSessionId();
@@ -44,7 +43,7 @@ public interface SSLSessionInfo {
      *
      * @return The peer certificates
      * @throws javax.net.ssl.SSLPeerUnverifiedException
-     * @throws RenegotiationRequiredException If the session
+     * @throws RenegotiationRequiredException           If the session
      */
     java.security.cert.Certificate[] getPeerCertificates() throws javax.net.ssl.SSLPeerUnverifiedException, RenegotiationRequiredException;
 
@@ -52,17 +51,16 @@ public interface SSLSessionInfo {
 
     /**
      * Renegotiate in a blocking manner. This will set the client aut
-     *
+     * <p>
      * TODO: we also need a non-blocking version
      *
-     * @throws IOException
-     * @param exchange The exchange
+     * @param exchange          The exchange
      * @param sslClientAuthMode The client cert mode to use when renegotiating
+     * @throws IOException
      */
-    void renegotiate(HttpServerExchange exchange, SslClientAuthMode sslClientAuthMode) throws IOException;
+    void renegotiate(HttpServerExchange exchange, ClientAuth sslClientAuthMode) throws IOException;
 
     /**
-     *
      * @return The SSL session, or null if it is not applicable
      */
     SSLSession getSSLSession();

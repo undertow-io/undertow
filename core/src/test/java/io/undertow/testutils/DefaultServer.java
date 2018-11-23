@@ -67,10 +67,8 @@ import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowLogger;
-import io.undertow.UndertowOptions;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.DefaultByteBufferPool;
-import io.undertow.connector.UndertowOptionMap;
+import io.undertow.util.UndertowOptions;
+import io.undertow.util.UndertowOptionMap;
 import io.undertow.connector.alpn.ALPNProvider;
 import io.undertow.security.impl.GSSAPIAuthenticationMechanism;
 import io.undertow.server.HttpHandler;

@@ -18,7 +18,6 @@ import java.util.List;
 import org.xnio.IoUtils;
 
 import io.undertow.UndertowLogger;
-import io.undertow.connector.PooledByteBuffer;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;

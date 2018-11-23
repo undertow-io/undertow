@@ -27,9 +27,8 @@ import java.util.concurrent.RejectedExecutionException;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 
+import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowLogger;
-import io.undertow.UndertowOptions;
-import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
@@ -39,6 +38,7 @@ import io.undertow.util.LegacyCookieSupport;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.URLUtils;
+import io.undertow.util.UndertowOptions;
 
 /**
  * This class provides the connector part of the {@link HttpServerExchange} API.
@@ -66,20 +66,24 @@ public class Connectors {
         }
     }
 
+    public static boolean isRunningHandlerChain(HttpServerExchange exchange) {
+        return exchange.isInCall();
+    }
+
     /**
      * Attached buffered data to the exchange. The will generally be used to allow data to be re-read.
      *
      * @param exchange The HTTP server exchange
      * @param buffers  The buffers to attach
      */
-    public static void ungetRequestBytes(final HttpServerExchange exchange, PooledByteBuffer... buffers) {
-        PooledByteBuffer[] existing = exchange.getAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA);
-        PooledByteBuffer[] newArray;
+    public static void ungetRequestBytes(final HttpServerExchange exchange, ByteBuf... buffers) {
+        ByteBuf[] existing = exchange.getAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA);
+        ByteBuf[] newArray;
         if (existing == null) {
-            newArray = new PooledByteBuffer[buffers.length];
+            newArray = new ByteBuf[buffers.length];
             System.arraycopy(buffers, 0, newArray, 0, buffers.length);
         } else {
-            newArray = new PooledByteBuffer[existing.length + buffers.length];
+            newArray = new ByteBuf[existing.length + buffers.length];
             System.arraycopy(existing, 0, newArray, 0, existing.length);
             System.arraycopy(buffers, 0, newArray, existing.length, buffers.length);
         }
@@ -87,11 +91,11 @@ public class Connectors {
         exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
             @Override
             public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-                PooledByteBuffer[] bufs = exchange.getAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA);
+                ByteBuf[] bufs = exchange.getAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA);
                 if (bufs != null) {
-                    for (PooledByteBuffer i : bufs) {
-                        if(i != null) {
-                            i.close();
+                    for (ByteBuf i : bufs) {
+                        if (i != null) {
+                            i.release();
                         }
                     }
                 }
@@ -113,7 +117,7 @@ public class Connectors {
     }
 
     private static String getCookieString(final Cookie cookie, boolean enableRfc6265Validation) {
-        if(enableRfc6265Validation) {
+        if (enableRfc6265Validation) {
             return addRfc6265ResponseCookieToExchange(cookie);
         } else {
             switch (LegacyCookieSupport.adjustedCookieVersion(cookie)) {
@@ -137,7 +141,7 @@ public class Connectors {
     private static String addRfc6265ResponseCookieToExchange(final Cookie cookie) {
         final StringBuilder header = new StringBuilder(cookie.getName());
         header.append("=");
-        if(cookie.getValue() != null) {
+        if (cookie.getValue() != null) {
             header.append(cookie.getValue());
         }
         if (cookie.getPath() != null) {
@@ -202,7 +206,7 @@ public class Connectors {
     private static String addVersion0ResponseCookieToExchange(final Cookie cookie) {
         final StringBuilder header = new StringBuilder(cookie.getName());
         header.append("=");
-        if(cookie.getValue() != null) {
+        if (cookie.getValue() != null) {
             LegacyCookieSupport.maybeQuote(header, cookie.getValue());
         }
 
@@ -256,7 +260,7 @@ public class Connectors {
 
         final StringBuilder header = new StringBuilder(cookie.getName());
         header.append("=");
-        if(cookie.getValue() != null) {
+        if (cookie.getValue() != null) {
             LegacyCookieSupport.maybeQuote(header, cookie.getValue());
         }
         header.append("; Version=1");
@@ -349,7 +353,7 @@ public class Connectors {
             } else if (!resumed) {
                 exchange.endExchange();
             } else {
-                exchange.runResumeReadWrite();
+                exchange.getConnection().runResumeReadWrite();
             }
         } catch (Throwable t) {
             exchange.putAttachment(DefaultResponseListener.EXCEPTION, t);
@@ -357,7 +361,7 @@ public class Connectors {
             if (!exchange.isResponseStarted()) {
                 exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
             }
-            if(t instanceof IOException) {
+            if (t instanceof IOException) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) t);
             } else {
                 UndertowLogger.REQUEST_LOGGER.undertowRequestFailed(t, exchange);
@@ -370,7 +374,7 @@ public class Connectors {
      * Sets the request path and query parameters, decoding to the requested charset.
      *
      * @param exchange    The exchange
-     * @param encodedPath        The encoded path
+     * @param encodedPath The encoded path
      * @param charset     The charset
      */
     @Deprecated
@@ -381,13 +385,14 @@ public class Connectors {
             throw new RuntimeException(e);
         }
     }
-        /**
-         * Sets the request path and query parameters, decoding to the requested charset.
-         *
-         * @param exchange    The exchange
-         * @param encodedPath        The encoded path
-         * @param charset     The charset
-         */
+
+    /**
+     * Sets the request path and query parameters, decoding to the requested charset.
+     *
+     * @param exchange    The exchange
+     * @param encodedPath The encoded path
+     * @param charset     The charset
+     */
     public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean allowEncodedSlash, StringBuilder decodeBuffer, int maxParameters) throws ParameterLimitException {
         boolean requiresDecode = false;
         for (int i = 0; i < encodedPath.length(); ++i) {
@@ -396,7 +401,7 @@ public class Connectors {
                 String part;
                 String encodedPart = encodedPath.substring(0, i);
                 if (requiresDecode) {
-                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash,false, decodeBuffer);
+                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash, false, decodeBuffer);
                 } else {
                     part = encodedPart;
                 }
@@ -407,7 +412,7 @@ public class Connectors {
                 exchange.setQueryString(qs);
                 URLUtils.parseQueryString(qs, exchange, charset, decode, maxParameters);
                 return;
-            } else if(c == ';') {
+            } else if (c == ';') {
                 String part;
                 String encodedPart = encodedPath.substring(0, i);
                 if (requiresDecode) {
@@ -417,7 +422,7 @@ public class Connectors {
                 }
                 exchange.setRequestPath(part);
                 exchange.setRelativePath(part);
-                for(int j = i; j < encodedPath.length(); ++j) {
+                for (int j = i; j < encodedPath.length(); ++j) {
                     if (encodedPath.charAt(j) == '?') {
                         exchange.setRequestURI(encodedPath.substring(0, j));
                         String pathParams = encodedPath.substring(i + 1, j);
@@ -431,7 +436,7 @@ public class Connectors {
                 exchange.setRequestURI(encodedPath);
                 URLUtils.parsePathParams(encodedPath.substring(i + 1), exchange, charset, decode, maxParameters);
                 return;
-            } else if(c == '%' || c == '+') {
+            } else if (c == '%' || c == '+') {
                 requiresDecode = decode;
             }
         }
@@ -457,16 +462,16 @@ public class Connectors {
         return exchange.requestChannel;
     }
 
-    public static boolean isEntityBodyAllowed(HttpServerExchange exchange){
+    public static boolean isEntityBodyAllowed(HttpServerExchange exchange) {
         int code = exchange.getStatusCode();
         return isEntityBodyAllowed(code);
     }
 
     public static boolean isEntityBodyAllowed(int code) {
-        if(code >= 100 && code < 200) {
+        if (code >= 100 && code < 200) {
             return false;
         }
-        if(code == 204 || code == 304) {
+        if (code == 204 || code == 304) {
             return false;
         }
         return true;
@@ -487,11 +492,11 @@ public class Connectors {
     public static boolean areRequestHeadersValid(HeaderMap headers) {
         HeaderValues te = headers.get(Headers.TRANSFER_ENCODING);
         HeaderValues cl = headers.get(Headers.CONTENT_LENGTH);
-        if(te != null && cl != null) {
+        if (te != null && cl != null) {
             return false;
-        } else if(te != null && te.size() > 1) {
+        } else if (te != null && te.size() > 1) {
             return false;
-        } else if(cl != null && cl.size() > 1) {
+        } else if (cl != null && cl.size() > 1) {
             return false;
         }
         return true;

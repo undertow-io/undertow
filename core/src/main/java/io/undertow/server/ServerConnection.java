@@ -25,15 +25,13 @@ import java.util.concurrent.Executor;
 
 import javax.net.ssl.SSLSession;
 
-import org.xnio.Option;
-import org.xnio.StreamConnection;
-import org.xnio.conduits.ConduitStreamSinkChannel;
-import org.xnio.conduits.ConduitStreamSourceChannel;
-import org.xnio.conduits.StreamSinkConduit;
 
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.IoExecutor;
-import io.undertow.connector.UndertowOptionMap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.EventExecutor;
+import io.undertow.util.UndertowOptionMap;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
@@ -49,7 +47,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      *
      * @return The connections buffer pool
      */
-    public abstract ByteBufferPool getByteBufferPool();
+    public abstract ByteBufAllocator getByteBufferPool();
 
     /**
      *
@@ -61,7 +59,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      *
      * @return The IO thread associated with the connection
      */
-    public abstract IoExecutor getIoThread();
+    public abstract EventExecutor getIoThread();
 
     /**
      * Sends an out of band response, such as a HTTP 100-continue response.
@@ -75,6 +73,11 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      * @param exchange The current exchange
      */
     public abstract HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange);
+
+
+    public abstract void writeBlocking(ByteBuf data, boolean last, HttpServerExchange exchange) throws IOException;
+
+    public abstract ChannelFuture writeAsync(ByteBuf data, boolean last, HttpServerExchange exchange);
 
     /**
      *
@@ -91,19 +94,13 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      *
      * @param exchange           The current exchange.
      */
-    public abstract void terminateRequestChannel(HttpServerExchange exchange);
+    public abstract ChannelFuture endExchange(HttpServerExchange exchange);
 
     /**
      *
      * @return true if the connection is open
      */
     public abstract boolean isOpen();
-
-    public abstract boolean supportsOption(Option<?> option);
-
-    public abstract <T> T getOption(Option<T> option) throws IOException;
-
-    public abstract <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException;
 
     public abstract void close() throws IOException;
 
@@ -175,30 +172,6 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
     public abstract void addCloseListener(CloseListener listener);
 
     /**
-     * Upgrade the connection, if allowed
-     * @return The StreamConnection that should be passed to the upgrade handler
-     */
-    protected abstract StreamConnection upgradeChannel();
-
-    protected abstract ConduitStreamSinkChannel getSinkChannel();
-
-    protected abstract ConduitStreamSourceChannel getSourceChannel();
-
-    /**
-     * Gets the sink conduit that should be used for this request.
-     *
-     * This allows the connection to apply any per-request conduit wrapping
-     * that is required, without adding to the response wrappers array.
-     *
-     * There is no corresponding method for source conduits, as in general
-     * conduits can be directly inserted into the connection after the
-     * request has been read.
-     *
-     * @return The source conduit
-     */
-    protected abstract StreamSinkConduit getSinkConduit(HttpServerExchange exchange, final StreamSinkConduit conduit);
-
-    /**
      *
      * @return true if this connection supports HTTP upgrade
      */
@@ -214,10 +187,10 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      * Invoked when the exchange is complete.
      */
     protected abstract void exchangeComplete(HttpServerExchange exchange);
-
-    protected abstract void setUpgradeListener(HttpUpgradeListener upgradeListener);
-
-    protected abstract void setConnectListener(HttpUpgradeListener connectListener);
+//
+//    protected abstract void setUpgradeListener(HttpUpgradeListener upgradeListener);
+//
+//    protected abstract void setConnectListener(HttpUpgradeListener connectListener);
 
     /**
      * Callback that is invoked if the max entity size is updated.
@@ -273,6 +246,10 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
     }
 
     public abstract boolean isRequestTrailerFieldsSupported();
+
+    public abstract ChannelPromise createPromise();
+
+    public abstract void runResumeReadWrite();
 
     public interface CloseListener {
 

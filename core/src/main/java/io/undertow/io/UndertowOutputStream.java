@@ -18,22 +18,14 @@
 
 package io.undertow.io;
 
-import static org.xnio.Bits.anyAreClear;
-import static org.xnio.Bits.anyAreSet;
+import static io.undertow.util.Bits.anyAreClear;
+import static io.undertow.util.Bits.anyAreSet;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 
-import org.xnio.Buffers;
-import org.xnio.channels.Channels;
-import org.xnio.channels.StreamSinkChannel;
-
+import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowMessages;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.IoSink;
-import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 
@@ -45,20 +37,16 @@ import io.undertow.util.Headers;
  *
  * @author Stuart Douglas
  */
-public class UndertowOutputStream extends OutputStream implements BufferWritableOutputStream {
+public class UndertowOutputStream extends OutputStream {
 
     private final HttpServerExchange exchange;
-    private ByteBuffer buffer;
-    private PooledByteBuffer pooledBuffer;
-    private IoSink channel;
+    private ByteBuf pooledBuffer;
     private int state;
     private long written;
     private final long contentLength;
 
     private static final int FLAG_CLOSED = 1;
     private static final int FLAG_WRITE_STARTED = 1 << 1;
-
-    private static final int MAX_BUFFERS_TO_ALLOCATE = 10;
 
     /**
      * Construct a new instance.  No write timeout is configured.
@@ -70,24 +58,6 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         this.contentLength = exchange.getResponseContentLength();
     }
 
-
-    /**
-     * If the response has not yet been written to the client this method will clear the streams buffer,
-     * invalidating any content that has already been written. If any content has already been sent to the client then
-     * this method will throw and IllegalStateException
-     *
-     * @throws java.lang.IllegalStateException If the response has been commited
-     */
-    public void resetBuffer() {
-        if(anyAreSet(state, FLAG_WRITE_STARTED)) {
-            throw UndertowMessages.MESSAGES.cannotResetBuffer();
-        }
-        if(pooledBuffer != null) {
-            pooledBuffer.close();
-            pooledBuffer = null;
-        }
-
-    }
 
     public long getBytesWritten() {
         return written;
@@ -114,153 +84,37 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         if (len < 1) {
             return;
         }
-        if(exchange.getIoThread().isCurrentThread()) {
+        if (exchange.getIoThread().inEventLoop()) {
             throw UndertowMessages.MESSAGES.blockingIoFromIOThread();
         }
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
-        //if this is the last of the content
-        ByteBuffer buffer = buffer();
-        if (len == contentLength - written || buffer.remaining() < len) {
-            if (buffer.remaining() < len) {
 
-                //so what we have will not fit.
-                //We allocate multiple buffers up to MAX_BUFFERS_TO_ALLOCATE
-                //and put it in them
-                //if it still dopes not fit we loop, re-using these buffers
-
-                IoSink channel = this.channel;
-                if (channel == null) {
-                    this.channel = channel = exchange.getResponseChannel();
-                }
-                final ByteBufferPool bufferPool = exchange.getConnection().getByteBufferPool();
-                ByteBuffer[] buffers = new ByteBuffer[MAX_BUFFERS_TO_ALLOCATE + 1];
-                PooledByteBuffer[] pooledBuffers = new PooledByteBuffer[MAX_BUFFERS_TO_ALLOCATE + 1];
-                try {
-                    buffers[0] = buffer;
-                    pooledBuffers[0] = pooledBuffer;
-                    int bytesWritten = 0;
-                    int rem = buffer.remaining();
-                    buffer.put(b, bytesWritten + off, rem);
-                    buffer.flip();
-                    bytesWritten += rem;
-                    int bufferCount = 1;
-                    for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE; ++i) {
-                        PooledByteBuffer pooled = bufferPool.allocate();
-                        pooledBuffers[bufferCount] = pooled;
-                        buffers[bufferCount++] = pooled.getBuffer();
-                        ByteBuffer cb = pooled.getBuffer();
-                        int toWrite = len - bytesWritten;
-                        if (toWrite > cb.remaining()) {
-                            rem = cb.remaining();
-                            cb.put(b, bytesWritten + off, rem);
-                            cb.flip();
-                            bytesWritten += rem;
-                        } else {
-                            cb.put(b, bytesWritten + off, len - bytesWritten);
-                            bytesWritten = len;
-                            cb.flip();
-                            break;
-                        }
-                    }
-                    channel.write(pooledBuffers).get();
-
-                    while (bytesWritten < len) {
-                        //ok, it did not fit, loop and loop and loop until it is done
-                        bufferCount = 0;
-                        for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE + 1; ++i) {
-                            ByteBuffer cb = buffers[i];
-                            cb.clear();
-                            bufferCount++;
-                            int toWrite = len - bytesWritten;
-                            if (toWrite > cb.remaining()) {
-                                rem = cb.remaining();
-                                cb.put(b, bytesWritten + off, rem);
-                                cb.flip();
-                                bytesWritten += rem;
-                            } else {
-                                cb.put(b, bytesWritten + off, len - bytesWritten);
-                                bytesWritten = len;
-                                cb.flip();
-                                break;
-                            }
-                        }
-                        Channels.writeBlocking(channel, buffers, 0, bufferCount);
-                    }
-                    buffer.clear();
-                } finally {
-                    for (int i = 0; i < pooledBuffers.length; ++i) {
-                        PooledByteBuffer p = pooledBuffers[i];
-                        if (p == null) {
-                            break;
-                        }
-                        p.close();
-                    }
-                }
-            } else {
-                buffer.put(b, off, len);
-                if (buffer.remaining() == 0) {
-                    writeBufferBlocking(false);
+        int rem = len;
+        int idx = off;
+        ByteBuf buffer = pooledBuffer;
+        try {
+            if (buffer == null) {
+                buffer = exchange.getConnection().getByteBufferPool().buffer();
+            }
+            while (rem > 0) {
+                int toWrite = Math.min(rem, buffer.writableBytes());
+                buffer.writeBytes(b, idx, toWrite);
+                rem -= toWrite;
+                idx += toWrite;
+                if (!buffer.isWritable()) {
+                    exchange.writeBlocking(buffer, false);
+                    this.pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
                 }
             }
-        } else {
-            buffer.put(b, off, len);
-            if (buffer.remaining() == 0) {
-                writeBufferBlocking(false);
+        } catch (Exception e) {
+            if (buffer != null) {
+                buffer.release();
             }
+            throw new IOException(e);
         }
         updateWritten(len);
-    }
-
-    @Override
-    public void write(ByteBuffer[] buffers) throws IOException {
-        if (anyAreSet(state, FLAG_CLOSED)) {
-            throw UndertowMessages.MESSAGES.streamIsClosed();
-        }
-        int len = 0;
-        for (ByteBuffer buf : buffers) {
-            len += buf.remaining();
-        }
-        if (len < 1) {
-            return;
-        }
-
-        //if we have received the exact amount of content write it out in one go
-        //this is a common case when writing directly from a buffer cache.
-        if (this.written == 0 && len == contentLength) {
-            if (channel == null) {
-                channel = exchange.getResponseChannel();
-            }
-            Channels.writeBlocking(channel, buffers, 0, buffers.length);
-            state |= FLAG_WRITE_STARTED;
-        } else {
-            ByteBuffer buffer = buffer();
-            if (len < buffer.remaining()) {
-                Buffers.copy(buffer, buffers, 0, buffers.length);
-            } else {
-                if (channel == null) {
-                    channel = exchange.getResponseChannel();
-                }
-                if (buffer.position() == 0) {
-                    Channels.writeBlocking(channel, buffers, 0, buffers.length);
-                } else {
-                    final ByteBuffer[] newBuffers = new ByteBuffer[buffers.length + 1];
-                    buffer.flip();
-                    newBuffers[0] = buffer;
-                    System.arraycopy(buffers, 0, newBuffers, 1, buffers.length);
-                    Channels.writeBlocking(channel, newBuffers, 0, newBuffers.length);
-                    buffer.clear();
-                }
-                state |= FLAG_WRITE_STARTED;
-            }
-        }
-        updateWritten(len);
-    }
-
-    @Override
-    public void write(ByteBuffer byteBuffer) throws IOException {
-        write(new ByteBuffer[]{byteBuffer});
     }
 
     void updateWritten(final long len) throws IOException {
@@ -278,49 +132,18 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
-        if (buffer != null && buffer.position() != 0) {
-            writeBufferBlocking(false);
-        }
-        if (channel == null) {
-            channel = exchange.getResponseChannel();
-        }
-        Channels.flushBlocking(channel);
-    }
-
-    private void writeBufferBlocking(final boolean writeFinal) throws IOException {
-        if (channel == null) {
-            channel = exchange.getResponseChannel();
-        }
-        buffer.flip();
-
-        while (buffer.hasRemaining()) {
-            if(writeFinal) {
-                channel.writeFinal(buffer);
-            } else {
-                channel.write(buffer);
+        try {
+            if (pooledBuffer != null) {
+                exchange.writeBlocking(pooledBuffer, false);
+                pooledBuffer = null;
             }
-            if(buffer.hasRemaining()) {
-                channel.awaitWritable();
+        } catch (Exception e) {
+            if (pooledBuffer != null) {
+                pooledBuffer.release();
+                pooledBuffer = null;
             }
+            throw new IOException(e);
         }
-        buffer.clear();
-        state |= FLAG_WRITE_STARTED;
-    }
-    @Override
-    public void transferFrom(FileChannel source) throws IOException {
-        if (anyAreSet(state, FLAG_CLOSED)) {
-            throw UndertowMessages.MESSAGES.streamIsClosed();
-        }
-        if (buffer != null && buffer.position() != 0) {
-            writeBufferBlocking(false);
-        }
-        if (channel == null) {
-            channel = exchange.getResponseChannel();
-        }
-        long position = source.position();
-        long size = source.size();
-        Channels.transferBlocking(channel, source, position, size);
-        updateWritten(size - position);
     }
 
     /**
@@ -328,45 +151,21 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
      */
     public void close() throws IOException {
         if (anyAreSet(state, FLAG_CLOSED)) return;
-        try {
-            state |= FLAG_CLOSED;
-            if (anyAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
-                if (buffer == null) {
-                    exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
-                } else {
-                    exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + buffer.position());
-                }
-            }
-            if (buffer != null) {
-                writeBufferBlocking(true);
-            }
-            if (channel == null) {
-                channel = exchange.getResponseChannel();
-            }
-            if(channel == null) {
-                return;
-            }
-            StreamSinkChannel channel = this.channel;
-            channel.shutdownWrites();
-            Channels.flushBlocking(channel);
-        } finally {
-            if (pooledBuffer != null) {
-                pooledBuffer.close();
-                buffer = null;
+        state |= FLAG_CLOSED;
+        if (anyAreClear(state, FLAG_WRITE_STARTED)) {
+            if (pooledBuffer == null) {
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
             } else {
-                buffer = null;
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + pooledBuffer.readableBytes());
             }
         }
-    }
-
-    private ByteBuffer buffer() {
-        ByteBuffer buffer = this.buffer;
-        if (buffer != null) {
-            return buffer;
+        try {
+            exchange.writeBlocking(pooledBuffer, true);
+        } catch (Exception e) {
+            throw new IOException(e);
+        } finally {
+            pooledBuffer = null;
         }
-        this.pooledBuffer = exchange.getConnection().getByteBufferPool().allocate();
-        this.buffer = pooledBuffer.getBuffer();
-        return this.buffer;
     }
 
 }

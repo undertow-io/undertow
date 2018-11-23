@@ -31,10 +31,8 @@ import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 
-import io.undertow.connector.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.protocol.http.HttpOpenListener;
-import io.undertow.util.Transfer;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.core.StreamSinkFrameChannel;

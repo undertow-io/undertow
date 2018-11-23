@@ -43,8 +43,8 @@ import org.xnio.IoFuture;
 import org.xnio.OptionMap;
 
 import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
-import io.undertow.connector.UndertowOptionMap;
+import io.undertow.util.UndertowOptions;
+import io.undertow.util.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http2.Http2ServerConnection;
@@ -55,7 +55,6 @@ import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
-import io.undertow.util.StringReadChannelListener;
 import io.undertow.xnio.client.ClientCallback;
 import io.undertow.xnio.client.ClientConnection;
 import io.undertow.xnio.client.ClientExchange;

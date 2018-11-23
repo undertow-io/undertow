@@ -18,47 +18,31 @@
 
 package io.undertow.server;
 
-import static org.xnio.Bits.allAreSet;
-import static org.xnio.Bits.anyAreClear;
-import static org.xnio.Bits.anyAreSet;
-import static org.xnio.Bits.intBitMask;
+import static io.undertow.util.Bits.allAreSet;
+import static io.undertow.util.Bits.anyAreClear;
+import static io.undertow.util.Bits.anyAreSet;
+import static io.undertow.util.Bits.intBitMask;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channel;
-import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 
 import org.jboss.logging.Logger;
-import org.xnio.Buffers;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.channels.Channels;
-import org.xnio.channels.Configurable;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.Conduit;
-import org.xnio.conduits.ConduitStreamSinkChannel;
-import org.xnio.conduits.ConduitStreamSourceChannel;
-import org.xnio.conduits.StreamSinkConduit;
-import org.xnio.conduits.StreamSourceConduit;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
-import io.undertow.connector.IoSink;
-import io.undertow.connector.IoExecutor;
-import io.undertow.connector.PooledByteBuffer;
 import io.undertow.io.AsyncReceiverImpl;
 import io.undertow.io.AsyncSenderImpl;
 import io.undertow.io.BlockingReceiverImpl;
@@ -71,21 +55,17 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.AttachmentKey;
-import io.undertow.xnio.io.XnioIoSink;
-import io.undertow.xnio.util.ConduitFactory;
 import io.undertow.util.Cookies;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.IoUtils;
 import io.undertow.util.Methods;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.Protocols;
 import io.undertow.util.Rfc6265CookieSupport;
 import io.undertow.util.StatusCodes;
-import io.undertow.xnio.channels.DetachableStreamSinkChannel;
-import io.undertow.xnio.channels.DetachableStreamSourceChannel;
-import io.undertow.xnio.conduits.EmptyStreamSourceConduit;
-import io.undertow.xnio.protocols.XnioThread;
+import io.undertow.util.UndertowOptions;
 
 /**
  * An HTTP server request/response exchange.  An instance of this class is constructed as soon as the request headers are
@@ -112,7 +92,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * The attachment key that buffered request data is attached under.
      */
-    static final AttachmentKey<PooledByteBuffer[]> BUFFERED_REQUEST_DATA = AttachmentKey.create(PooledByteBuffer[].class);
+    static final AttachmentKey<ByteBuf[]> BUFFERED_REQUEST_DATA = AttachmentKey.create(ByteBuf[].class);
 
     /**
      * Attachment key that can be used to hold additional request attributes
@@ -132,20 +112,15 @@ public final class HttpServerExchange extends AbstractAttachable {
     private ExchangeCompletionListener[] exchangeCompleteListeners;
     private DefaultResponseListener[] defaultResponseListeners;
 
+
+    private int responseCommitListenerCount;
+    private ResponseCommitListener[] responseCommitListeners;
+
     private Map<String, Deque<String>> queryParameters;
     private Map<String, Deque<String>> pathParameters;
 
     private Map<String, Cookie> requestCookies;
     private Map<String, Cookie> responseCookies;
-
-    /**
-     * The actual response channel. May be null if it has not been created yet.
-     */
-    private WriteDispatchChannel responseChannel;
-    /**
-     * The actual request channel. May be null if it has not been created yet.
-     */
-    protected ReadDispatchChannel requestChannel;
 
     private BlockingHttpExchange blockingHttpExchange;
 
@@ -201,12 +176,6 @@ public final class HttpServerExchange extends AbstractAttachable {
      * the query string
      */
     private String queryString = "";
-
-    private int requestWrapperCount = 0;
-    private ConduitWrapper<StreamSourceConduit>[] requestWrappers; //we don't allocate these by default, as for get requests they are not used
-
-    private int responseWrapperCount = 0;
-    private ConduitWrapper<StreamSinkConduit>[] responseWrappers;
 
     private Sender sender;
     private Receiver receiver;
@@ -312,9 +281,9 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_SHOULD_RESUME_WRITES = 1 << 19;
 
     /**
-     * Flag that indicates that the request channel has been reset, and {@link #getRequestChannel()} can be called again
+     * Flag that indicates the user has started to read data from the request
      */
-    private static final int FLAG_REQUEST_RESET= 1 << 20;
+    private static final int FLAG_REQUEST_READ = 1 << 20;
 
     /**
      * The source address for the request. If this is null then the actual source address from the channel is used
@@ -334,7 +303,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         this(connection, 0);
     }
 
-    public HttpServerExchange(final ServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders,  long maxEntitySize) {
+    public HttpServerExchange(final ServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, long maxEntitySize) {
         this.connection = connection;
         this.maxEntitySize = maxEntitySize;
         this.requestHeaders = requestHeaders;
@@ -360,36 +329,9 @@ public final class HttpServerExchange extends AbstractAttachable {
         return this;
     }
 
-    /**
-     * Determine whether this request conforms to HTTP 0.9.
-     *
-     * @return {@code true} if the request protocol is equal to {@link Protocols#HTTP_0_9}, {@code false} otherwise
-     */
-    public boolean isHttp09() {
-        return protocol.equals(Protocols.HTTP_0_9);
-    }
-
-    /**
-     * Determine whether this request conforms to HTTP 1.0.
-     *
-     * @return {@code true} if the request protocol is equal to {@link Protocols#HTTP_1_0}, {@code false} otherwise
-     */
-    public boolean isHttp10() {
-        return protocol.equals(Protocols.HTTP_1_0);
-    }
-
-    /**
-     * Determine whether this request conforms to HTTP 1.1.
-     *
-     * @return {@code true} if the request protocol is equal to {@link Protocols#HTTP_1_1}, {@code false} otherwise
-     */
-    public boolean isHttp11() {
-        return protocol.equals(Protocols.HTTP_1_1);
-    }
-
     public boolean isSecure() {
         Boolean secure = getAttachment(SECURE_REQUEST);
-        if(secure != null && secure) {
+        if (secure != null && secure) {
             return true;
         }
         String scheme = getRequestScheme();
@@ -556,7 +498,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     *
      * @return The query string, without the leading ?
      */
     public String getQueryString() {
@@ -680,7 +621,8 @@ public final class HttpServerExchange extends AbstractAttachable {
             if (colonIndex != -1) {
                 try {
                     return Integer.parseInt(host.substring(colonIndex + 1));
-                } catch (NumberFormatException ignore) {}
+                } catch (NumberFormatException ignore) {
+                }
             }
             if (getRequestScheme().equals("https")) {
                 return 443;
@@ -706,15 +648,13 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     *
      * @return <code>true</code> If the current thread in the IO thread for the exchange
      */
     public boolean isInIoThread() {
-        return getIoThread().isCurrentThread();
+        return getIoThread().inEventLoop();
     }
 
     /**
-     *
      * @return True if this exchange represents an upgrade response
      */
     public boolean isUpgrade() {
@@ -722,11 +662,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     *
      * @return The number of bytes sent in the entity body
      */
     public long getResponseBytesSent() {
-        if(Connectors.isEntityBodyAllowed(this) && !getRequestMethod().equals(Methods.HEAD)) {
+        if (Connectors.isEntityBodyAllowed(this) && !getRequestMethod().equals(Methods.HEAD)) {
             return responseBytesSent;
         } else {
             return 0; //body is not allowed, even if we attempt to write it will be ignored
@@ -735,10 +674,11 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * Updates the number of response bytes sent. Used when compression is in use
+     *
      * @param bytes The number of bytes to increase the response size by. May be negative
      */
     void updateBytesSent(long bytes) {
-        if(Connectors.isEntityBodyAllowed(this) && !getRequestMethod().equals(Methods.HEAD)) {
+        if (Connectors.isEntityBodyAllowed(this) && !getRequestMethod().equals(Methods.HEAD)) {
             responseBytesSent += bytes;
         }
     }
@@ -764,7 +704,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * {@link #dispatch(Executor, Runnable)} should be used instead of this method, as it is hard to use safely.
-     *
+     * <p>
      * Use {@link io.undertow.util.SameThreadExecutor#INSTANCE} if you do not want to dispatch to another thread.
      *
      * @return this exchange
@@ -808,7 +748,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 this.dispatchExecutor = executor;
             }
             state |= FLAG_DISPATCHED;
-            if(anyAreSet(state, FLAG_SHOULD_RESUME_READS | FLAG_SHOULD_RESUME_WRITES)) {
+            if (anyAreSet(state, FLAG_SHOULD_RESUME_READS | FLAG_SHOULD_RESUME_WRITES)) {
                 throw UndertowMessages.MESSAGES.resumedAndDispatched();
             }
             this.dispatchTask = runnable;
@@ -882,66 +822,66 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
 
-    /**
-     * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the
-     * request and response as terminated, which means that once the current request is completed the raw channel
-     * can be obtained from {@link io.undertow.server.protocol.http.HttpServerConnection#getChannel()}
-     *
-     * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
-     *                               read
-     */
-    public HttpServerExchange upgradeChannel(final HttpUpgradeListener listener) {
-        if (!connection.isUpgradeSupported()) {
-            throw UndertowMessages.MESSAGES.upgradeNotSupported();
-        }
-        if(!getRequestHeaders().contains(Headers.UPGRADE)) {
-            throw UndertowMessages.MESSAGES.notAnUpgradeRequest();
-        }
-        UndertowLogger.REQUEST_LOGGER.debugf("Upgrading request %s", this);
-        connection.setUpgradeListener(listener);
-        setStatusCode(StatusCodes.SWITCHING_PROTOCOLS);
-        getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);
-        return this;
-    }
-
-    /**
-     * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the
-     * request and response as terminated, which means that once the current request is completed the raw channel
-     * can be obtained from {@link io.undertow.server.protocol.http.HttpServerConnection#getChannel()}
-     *
-     * @param productName the product name to report to the client
-     * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
-     *                               read
-     */
-    public HttpServerExchange upgradeChannel(String productName, final HttpUpgradeListener listener) {
-        if (!connection.isUpgradeSupported()) {
-            throw UndertowMessages.MESSAGES.upgradeNotSupported();
-        }
-        UndertowLogger.REQUEST_LOGGER.debugf("Upgrading request %s", this);
-        connection.setUpgradeListener(listener);
-        setStatusCode(StatusCodes.SWITCHING_PROTOCOLS);
-        final HeaderMap headers = getResponseHeaders();
-        headers.put(Headers.UPGRADE, productName);
-        headers.put(Headers.CONNECTION, Headers.UPGRADE_STRING);
-        return this;
-    }
-
-    /**
-     *
-     * @param connectListener
-     * @return
-     */
-    public HttpServerExchange acceptConnectRequest(HttpUpgradeListener connectListener) {
-        if(!getRequestMethod().equals(Methods.CONNECT)) {
-            throw UndertowMessages.MESSAGES.notAConnectRequest();
-        }
-        connection.setConnectListener(connectListener);
-        return this;
-    }
+//    /**
+//     * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the
+//     * request and response as terminated, which means that once the current request is completed the raw channel
+//     * can be obtained from {@link io.undertow.server.protocol.http.HttpServerConnection#getChannel()}
+//     *
+//     * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
+//     *                               read
+//     */
+//    public HttpServerExchange upgradeChannel(final HttpUpgradeListener listener) {
+//        if (!connection.isUpgradeSupported()) {
+//            throw UndertowMessages.MESSAGES.upgradeNotSupported();
+//        }
+//        if(!getRequestHeaders().contains(Headers.UPGRADE)) {
+//            throw UndertowMessages.MESSAGES.notAnUpgradeRequest();
+//        }
+//        UndertowLogger.REQUEST_LOGGER.debugf("Upgrading request %s", this);
+//        connection.setUpgradeListener(listener);
+//        setStatusCode(StatusCodes.SWITCHING_PROTOCOLS);
+//        getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);
+//        return this;
+//    }
+//
+//    /**
+//     * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the
+//     * request and response as terminated, which means that once the current request is completed the raw channel
+//     * can be obtained from {@link io.undertow.server.protocol.http.HttpServerConnection#getChannel()}
+//     *
+//     * @param productName the product name to report to the client
+//     * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
+//     *                               read
+//     */
+//    public HttpServerExchange upgradeChannel(String productName, final HttpUpgradeListener listener) {
+//        if (!connection.isUpgradeSupported()) {
+//            throw UndertowMessages.MESSAGES.upgradeNotSupported();
+//        }
+//        UndertowLogger.REQUEST_LOGGER.debugf("Upgrading request %s", this);
+//        connection.setUpgradeListener(listener);
+//        setStatusCode(StatusCodes.SWITCHING_PROTOCOLS);
+//        final HeaderMap headers = getResponseHeaders();
+//        headers.put(Headers.UPGRADE, productName);
+//        headers.put(Headers.CONNECTION, Headers.UPGRADE_STRING);
+//        return this;
+//    }
+//
+//    /**
+//     *
+//     * @param connectListener
+//     * @return
+//     */
+//    public HttpServerExchange acceptConnectRequest(HttpUpgradeListener connectListener) {
+//        if(!getRequestMethod().equals(Methods.CONNECT)) {
+//            throw UndertowMessages.MESSAGES.notAConnectRequest();
+//        }
+//        connection.setConnectListener(connectListener);
+//        return this;
+//    }
 
 
     public HttpServerExchange addExchangeCompleteListener(final ExchangeCompletionListener listener) {
-        if(isComplete() || this.exchangeCompletionListenersCount == -1) {
+        if (isComplete() || this.exchangeCompletionListenersCount == -1) {
             throw UndertowMessages.MESSAGES.exchangeAlreadyComplete();
         }
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
@@ -949,7 +889,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (exchangeCompleteListeners == null || exchangeCompleteListeners.length == exchangeCompletionListenersCount) {
             ExchangeCompletionListener[] old = exchangeCompleteListeners;
             this.exchangeCompleteListeners = exchangeCompleteListeners = new ExchangeCompletionListener[exchangeCompletionListenersCount + 2];
-            if(old != null) {
+            if (old != null) {
                 System.arraycopy(old, 0, exchangeCompleteListeners, 0, exchangeCompletionListenersCount);
             }
         }
@@ -959,7 +899,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public HttpServerExchange addDefaultResponseListener(final DefaultResponseListener listener) {
         int i = 0;
-        if(defaultResponseListeners == null) {
+        if (defaultResponseListeners == null) {
             defaultResponseListeners = new DefaultResponseListener[2];
         } else {
             while (i != defaultResponseListeners.length && defaultResponseListeners[i] != null) {
@@ -1143,7 +1083,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param cookie The cookie
      */
     public HttpServerExchange setResponseCookie(final Cookie cookie) {
-        if(getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION)) {
+        if (getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION)) {
             if (cookie.getValue() != null && !cookie.getValue().isEmpty()) {
                 Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
             }
@@ -1187,41 +1127,38 @@ public final class HttpServerExchange extends AbstractAttachable {
         return allAreSet(state, FLAG_RESPONSE_SENT);
     }
 
-    /**
-     * Get the inbound request.  If there is no request body, calling this method
-     * may cause the next request to immediately be processed.  The {@link StreamSourceChannel#close()} or {@link StreamSourceChannel#shutdownReads()}
-     * method must be called at some point after the request is processed to prevent resource leakage and to allow
-     * the next request to proceed.  Any unread content will be discarded.
-     *
-     * @return the channel for the inbound request, or {@code null} if another party already acquired the channel
-     */
-    public StreamSourceChannel getRequestChannel() {
-        if (requestChannel != null) {
-            if(anyAreSet(state, FLAG_REQUEST_RESET)) {
-                state &= ~FLAG_REQUEST_RESET;
-                return requestChannel;
+    public ChannelFuture writeAsync(ByteBuf data, boolean last) {
+        if (data == null && !last) {
+            throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
+        }
+        if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+            ChannelPromise promise = connection.createPromise();
+            promise.setFailure(UndertowMessages.MESSAGES.responseComplete());
+            return promise;
+        }
+        if (anyAreClear(state, FLAG_RESPONSE_SENT)) {
+            state |= FLAG_RESPONSE_SENT;
+            for (int i = responseCommitListenerCount - 1; i >= 0; --i) {
+                responseCommitListeners[i].beforeCommit(this);
             }
-            return null;
         }
-        if (anyAreSet(state, FLAG_REQUEST_TERMINATED)) {
-            return requestChannel = new ReadDispatchChannel(new ConduitStreamSourceChannel(Configurable.EMPTY, new EmptyStreamSourceConduit(((XnioThread)getIoThread()).getIoThread())));
-        }
-        final ConduitWrapper<StreamSourceConduit>[] wrappers = this.requestWrappers;
-        final ConduitStreamSourceChannel sourceChannel = connection.getSourceChannel();
-        if (wrappers != null) {
-            this.requestWrappers = null;
-            final WrapperConduitFactory<StreamSourceConduit> factory = new WrapperConduitFactory<>(wrappers, requestWrapperCount, sourceChannel.getConduit(), this);
-            sourceChannel.setConduit(factory.create());
-        }
-        return requestChannel = new ReadDispatchChannel(sourceChannel);
+        return connection.writeAsync(data, last, this);
     }
 
-    void resetRequestChannel() {
-        state |= FLAG_REQUEST_RESET;
-    }
-
-    public boolean isRequestChannelAvailable() {
-        return requestChannel == null || anyAreSet(state, FLAG_REQUEST_RESET);
+    public void writeBlocking(ByteBuf data, boolean last) throws IOException {
+        if (data == null && !last) {
+            throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
+        }
+        if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+            throw UndertowMessages.MESSAGES.responseComplete();
+        }
+        if (anyAreClear(state, FLAG_RESPONSE_SENT)) {
+            state |= FLAG_RESPONSE_SENT;
+            for (int i = responseCommitListenerCount - 1; i >= 0; --i) {
+                responseCommitListeners[i].beforeCommit(this);
+            }
+        }
+        connection.writeBlocking(data, last, this);
     }
 
     /**
@@ -1239,8 +1176,8 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return true if the request is complete
      */
     public boolean isRequestComplete() {
-        PooledByteBuffer[] data = getAttachment(BUFFERED_REQUEST_DATA);
-        if(data != null) {
+        ByteBuf[] data = getAttachment(BUFFERED_REQUEST_DATA);
+        if (data != null) {
             return false;
         }
         return allAreSet(state, FLAG_REQUEST_TERMINATED);
@@ -1263,9 +1200,6 @@ public final class HttpServerExchange extends AbstractAttachable {
             // idempotent
             return;
         }
-        if (requestChannel != null) {
-            requestChannel.requestDone();
-        }
         this.state = oldVal | FLAG_REQUEST_TERMINATED;
         if (anyAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
             invokeExchangeCompleteListeners();
@@ -1284,46 +1218,6 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
     }
 
-    /**
-     * Get the response channel. The channel must be closed and fully flushed before the next response can be started.
-     * In order to close the channel you must first call {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()},
-     * and then call {@link org.xnio.channels.StreamSinkChannel#flush()} until it returns true. Alternatively you can
-     * call {@link #endExchange()}, which will close the channel as part of its cleanup.
-     * <p>
-     * Closing a fixed-length response before the corresponding number of bytes has been written will cause the connection
-     * to be reset and subsequent requests to fail; thus it is important to ensure that the proper content length is
-     * delivered when one is specified.  The response channel may not be writable until after the response headers have
-     * been sent.
-     * <p>
-     * If this method is not called then an empty or default response body will be used, depending on the response code set.
-     * <p>
-     * The returned channel will begin to write out headers when the first write request is initiated, or when
-     * {@link org.xnio.channels.StreamSinkChannel#shutdownWrites()} is called on the channel with no content being written.
-     * Once the channel is acquired, however, the response code and headers may not be modified.
-     * <p>
-     *
-     * @return the response channel, or {@code null} if another party already acquired the channel
-     */
-    public IoSink getResponseChannel() {
-        if (responseChannel != null) {
-            return null;
-        }
-        final ConduitWrapper<StreamSinkConduit>[] wrappers = responseWrappers;
-        this.responseWrappers = null;
-        final ConduitStreamSinkChannel sinkChannel = connection.getSinkChannel();
-        if (sinkChannel == null) {
-            return null;
-        }
-        if(wrappers != null) {
-            final WrapperStreamSinkConduitFactory factory = new WrapperStreamSinkConduitFactory(wrappers, responseWrapperCount, this, sinkChannel.getConduit());
-            sinkChannel.setConduit(factory.create());
-        } else {
-            sinkChannel.setConduit(connection.getSinkConduit(this, sinkChannel.getConduit()));
-        }
-        this.responseChannel = new WriteDispatchChannel(sinkChannel);
-        this.startResponse();
-        return new XnioIoSink(responseChannel);
-    }
 
     /**
      * Get the response sender.
@@ -1344,28 +1238,20 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     public Receiver getRequestReceiver() {
-        if(blockingHttpExchange != null) {
+        if (blockingHttpExchange != null) {
             return blockingHttpExchange.getReceiver();
         }
-        if(receiver != null) {
+        if (receiver != null) {
             return receiver;
         }
         return receiver = new AsyncReceiverImpl(this);
     }
 
     /**
-     * @return <code>true</code> if {@link #getResponseChannel()} has not been called
-     */
-    public boolean isResponseChannelAvailable() {
-        return responseChannel == null;
-    }
-
-
-    /**
      * Get the status code.
      *
-     * @see #getStatusCode()
      * @return the status code
+     * @see #getStatusCode()
      */
     @Deprecated
     public int getResponseCode() {
@@ -1376,9 +1262,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Change the status code for this response.  If not specified, the code will be a {@code 200}.  Setting
      * the status code after the response headers have been transmitted has no effect.
      *
-     * @see #setStatusCode(int)
      * @param statusCode the new code
      * @throws IllegalStateException if a response or upgrade was already sent
+     * @see #setStatusCode(int)
      */
     @Deprecated
     public HttpServerExchange setResponseCode(final int statusCode) {
@@ -1409,8 +1295,8 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
             throw UndertowMessages.MESSAGES.responseAlreadyStarted();
         }
-        if(statusCode >= 500) {
-            if(UndertowLogger.ERROR_RESPONSE.isDebugEnabled()) {
+        if (statusCode >= 500) {
+            if (UndertowLogger.ERROR_RESPONSE.isDebugEnabled()) {
                 UndertowLogger.ERROR_RESPONSE.debugf(new RuntimeException(), "Setting error code %s for exchange %s", statusCode, this);
             }
         }
@@ -1421,7 +1307,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Sets the HTTP reason phrase. Depending on the protocol this may or may not be honoured. In particular HTTP2
      * has removed support for the reason phrase.
-     *
+     * <p>
      * This method should only be used to interact with legacy frameworks that give special meaning to the reason phrase.
      *
      * @param message The status message
@@ -1433,54 +1319,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     *
      * @return The current reason phrase
      */
     public String getReasonPhrase() {
         return getAttachment(REASON_PHRASE);
     }
 
-    /**
-     * Adds a {@link ConduitWrapper} to the request wrapper chain.
-     *
-     * @param wrapper the wrapper
-     */
-    public HttpServerExchange addRequestWrapper(final ConduitWrapper<StreamSourceConduit> wrapper) {
-        ConduitWrapper<StreamSourceConduit>[] wrappers = requestWrappers;
-        if (requestChannel != null) {
-            throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
-        }
-        if (wrappers == null) {
-            wrappers = requestWrappers = new ConduitWrapper[2];
-        } else if (wrappers.length == requestWrapperCount) {
-            requestWrappers = new ConduitWrapper[wrappers.length + 2];
-            System.arraycopy(wrappers, 0, requestWrappers, 0, wrappers.length);
-            wrappers = requestWrappers;
-        }
-        wrappers[requestWrapperCount++] = wrapper;
-        return this;
-    }
-
-    /**
-     * Adds a {@link ConduitWrapper} to the response wrapper chain.
-     *
-     * @param wrapper the wrapper
-     */
-    public HttpServerExchange addResponseWrapper(final ConduitWrapper<StreamSinkConduit> wrapper) {
-        ConduitWrapper<StreamSinkConduit>[] wrappers = responseWrappers;
-        if (responseChannel != null) {
-            throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
-        }
-        if(wrappers == null) {
-            this.responseWrappers = wrappers = new ConduitWrapper[2];
-        } else if (wrappers.length == responseWrapperCount) {
-            responseWrappers = new ConduitWrapper[wrappers.length + 2];
-            System.arraycopy(wrappers, 0, responseWrappers, 0, wrappers.length);
-            wrappers = responseWrappers;
-        }
-        wrappers[responseWrapperCount++] = wrapper;
-        return this;
-    }
 
     /**
      * Calling this method puts the exchange in blocking mode, and creates a
@@ -1559,9 +1403,6 @@ public final class HttpServerExchange extends AbstractAttachable {
             // idempotent
             return this;
         }
-        if(responseChannel != null) {
-            responseChannel.responseDone();
-        }
         this.state = oldVal | FLAG_RESPONSE_TERMINATED;
         if (anyAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
             invokeExchangeCompleteListeners();
@@ -1570,7 +1411,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     *
      * @return The request start time, or -1 if this was not recorded
      */
     public long getRequestStartTime() {
@@ -1594,13 +1434,13 @@ public final class HttpServerExchange extends AbstractAttachable {
     public HttpServerExchange endExchange() {
         final int state = this.state;
         if (allAreSet(state, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
-            if(blockingHttpExchange != null) {
+            if (blockingHttpExchange != null) {
                 //we still have to close the blocking exchange in this case,
                 IoUtils.safeClose(blockingHttpExchange);
             }
             return this;
         }
-        if(defaultResponseListeners != null) {
+        if (defaultResponseListeners != null) {
             int i = defaultResponseListeners.length - 1;
             while (i >= 0) {
                 DefaultResponseListener listener = defaultResponseListeners[i];
@@ -1618,13 +1458,10 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
 
-        if (anyAreClear(state, FLAG_REQUEST_TERMINATED)) {
-            connection.terminateRequestChannel(this);
-        }
-
         if (blockingHttpExchange != null) {
             try {
                 //TODO: can we end up in this situation in a IO thread?
+                //this will end the exchange in a blocking manner
                 blockingHttpExchange.close();
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
@@ -1635,133 +1472,15 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
 
-        //417 means that we are rejecting the request
-        //so the client should not actually send any data
-        if (anyAreClear(state, FLAG_REQUEST_TERMINATED)) {
-
-            //not really sure what the best thing to do here is
-            //for now we are just going to drain the channel
-            if (requestChannel == null) {
-                getRequestChannel();
+        connection.endExchange(this).addListener(new GenericFutureListener<Future<? super Void>>() {
+            @Override
+            public void operationComplete(Future<? super Void> future) throws Exception {
+                invokeExchangeCompleteListeners();
             }
-            int totalRead = 0;
-            for (; ; ) {
-                try {
-                    long read = Channels.drain(requestChannel, Long.MAX_VALUE);
-                    totalRead += read;
-                    if (read == 0) {
-                        //if the response code is 417 this is a rejected continuation request.
-                        //however there is a chance the client could have sent the data anyway
-                        //so we attempt to drain, and if we have not drained anything then we
-                        //assume the server has not sent any data
-
-                        if (getStatusCode() != StatusCodes.EXPECTATION_FAILED || totalRead > 0) {
-                            requestChannel.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE,
-                                    new ChannelListener<StreamSourceChannel>() {
-                                        @Override
-                                        public void handleEvent(final StreamSourceChannel channel) {
-                                            if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
-                                                closeAndFlushResponse();
-                                            }
-                                        }
-                                    }, new ChannelExceptionHandler<StreamSourceChannel>() {
-                                        @Override
-                                        public void handleException(final StreamSourceChannel channel, final IOException e) {
-
-                                            //make sure the listeners have been invoked
-                                            //unless the connection has been killed this is a no-op
-                                            invokeExchangeCompleteListeners();
-                                            UndertowLogger.REQUEST_LOGGER.debug("Exception draining request stream", e);
-                                            IoUtils.safeClose(connection);
-                                        }
-                                    }
-                            ));
-                            requestChannel.resumeReads();
-                            return this;
-                        } else {
-                            break;
-                        }
-                    } else if (read == -1) {
-                        break;
-                    }
-                } catch (Throwable t) {
-                    if (t instanceof IOException) {
-                        UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) t);
-                    } else {
-                        UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
-                    }
-                    invokeExchangeCompleteListeners();
-                    IoUtils.safeClose(connection);
-                    return this;
-                }
-
-            }
-        }
-        if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
-            closeAndFlushResponse();
-        }
+        });
         return this;
     }
 
-    private void closeAndFlushResponse() {
-        if(!connection.isOpen()) {
-            //not much point trying to flush
-
-            //make sure the listeners have been invoked
-            invokeExchangeCompleteListeners();
-            return;
-        }
-        try {
-            if (isResponseChannelAvailable()) {
-                if(!getRequestMethod().equals(Methods.CONNECT) && !(getRequestMethod().equals(Methods.HEAD) && getResponseHeaders().contains(Headers.CONTENT_LENGTH)) && Connectors.isEntityBodyAllowed(this)) {
-                    //according to
-                    getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
-                }
-                getResponseChannel();
-            }
-            responseChannel.shutdownWrites();
-            if (!responseChannel.flush()) {
-                responseChannel.getWriteSetter().set(ChannelListeners.flushingChannelListener(
-                        new ChannelListener<StreamSinkChannel>() {
-                            @Override
-                            public void handleEvent(final StreamSinkChannel channel) {
-                                channel.suspendWrites();
-                                channel.getWriteSetter().set(null);
-                                //defensive programming, should never happen
-                                if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
-                                    UndertowLogger.ROOT_LOGGER.responseWasNotTerminated(connection, HttpServerExchange.this);
-                                    IoUtils.safeClose(connection);
-                                }
-                            }
-                        }, new ChannelExceptionHandler<Channel>() {
-                            @Override
-                            public void handleException(final Channel channel, final IOException exception) {
-                                //make sure the listeners have been invoked
-                                invokeExchangeCompleteListeners();
-                                UndertowLogger.REQUEST_LOGGER.debug("Exception ending request", exception);
-                                IoUtils.safeClose(connection);
-                            }
-                        }
-                ));
-                responseChannel.resumeWrites();
-            } else {
-                //defensive programming, should never happen
-                if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
-                    UndertowLogger.ROOT_LOGGER.responseWasNotTerminated(connection, this);
-                    IoUtils.safeClose(connection);
-                }
-            }
-        } catch (Throwable t) {
-            if (t instanceof IOException) {
-                UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) t);
-            } else {
-                UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
-            }
-            invokeExchangeCompleteListeners();
-
-            IoUtils.safeClose(connection);
-        }
-    }
 
     /**
      * Transmit the response headers. After this method successfully returns,
@@ -1793,7 +1512,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         return this;
     }
 
-    public IoExecutor getIoThread() {
+    public EventExecutor getIoThread() {
         return connection.getIoThread();
     }
 
@@ -1810,7 +1529,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param maxEntitySize The max entity size
      */
     public HttpServerExchange setMaxEntitySize(final long maxEntitySize) {
-        if (!isRequestChannelAvailable()) {
+        if (anyAreSet(state, FLAG_REQUEST_READ)) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
         this.maxEntitySize = maxEntitySize;
@@ -1824,7 +1543,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public void setSecurityContext(SecurityContext securityContext) {
         SecurityManager sm = System.getSecurityManager();
-        if(sm != null) {
+        if (sm != null) {
             sm.checkPermission(SET_SECURITY_CONTEXT);
         }
         this.securityContext = securityContext;
@@ -1836,36 +1555,21 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param listener The response listener
      */
     public void addResponseCommitListener(final ResponseCommitListener listener) {
-
-        //technically it is possible to modify the exchange after the response conduit has been created
-        //as the response channel should not be retrieved until it is about to be written to
-        //if we get complaints about this we can add support for it, however it makes the exchange bigger and the connectors more complex
-        addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
-            @Override
-            public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
-                listener.beforeCommit(exchange);
-                return factory.create();
+        if (isComplete() || this.responseCommitListenerCount == -1) {
+            throw UndertowMessages.MESSAGES.responseAlreadyStarted();
+        }
+        final int responseCommitListenerCount = this.responseCommitListenerCount++;
+        ResponseCommitListener[] responseCommitListeners = this.responseCommitListeners;
+        if (responseCommitListeners == null || responseCommitListeners.length == responseCommitListenerCount) {
+            ResponseCommitListener[] old = responseCommitListeners;
+            this.responseCommitListeners = responseCommitListeners = new ResponseCommitListener[responseCommitListenerCount + 2];
+            if (old != null) {
+                System.arraycopy(old, 0, responseCommitListeners, 0, responseCommitListenerCount);
             }
-        });
+        }
+        responseCommitListeners[responseCommitListenerCount] = listener;
     }
 
-    /**
-     * Actually resumes reads or writes, if the relevant method has been called.
-     *
-     * @return <code>true</code> if reads or writes were resumed
-     */
-    boolean runResumeReadWrite() {
-        boolean ret = false;
-        if(anyAreSet(state, FLAG_SHOULD_RESUME_WRITES)) {
-            responseChannel.runResume();
-            ret = true;
-        }
-        if(anyAreSet(state, FLAG_SHOULD_RESUME_READS)) {
-            requestChannel.runResume();
-            ret = true;
-        }
-        return ret;
-    }
 
     boolean isResumed() {
         return anyAreSet(state, FLAG_SHOULD_RESUME_WRITES | FLAG_SHOULD_RESUME_READS);
@@ -1887,7 +1591,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             if (--i >= 0) {
                 final ExchangeCompletionListener next = list[i];
                 next.exchangeEvent(exchange, this);
-            } else if(i == -1) {
+            } else if (i == -1) {
                 exchange.connection.exchangeComplete(exchange);
             }
         }
@@ -1938,508 +1642,6 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public Receiver getReceiver() {
             return new BlockingReceiverImpl(exchange, getInputStream());
-        }
-    }
-
-    /**
-     * Channel implementation that is actually provided to clients of the exchange.
-     * <p/>
-     * We do not provide the underlying conduit channel, as this is shared between requests, so we need to make sure that after this request
-     * is done the the channel cannot affect the next request.
-     * <p/>
-     * It also delays a wakeup/resumesWrites calls until the current call stack has returned, thus ensuring that only 1 thread is
-     * active in the exchange at any one time.
-     */
-    private class WriteDispatchChannel extends DetachableStreamSinkChannel implements StreamSinkChannel {
-
-        private boolean wakeup;
-
-        WriteDispatchChannel(final ConduitStreamSinkChannel delegate) {
-            super(delegate);
-        }
-
-        @Override
-        protected boolean isFinished() {
-            return allAreSet(state, FLAG_RESPONSE_TERMINATED);
-        }
-
-        @Override
-        public void resumeWrites() {
-            if (isInCall()) {
-                state |= FLAG_SHOULD_RESUME_WRITES;
-                if(anyAreSet(state, FLAG_DISPATCHED)) {
-                    throw UndertowMessages.MESSAGES.resumedAndDispatched();
-                }
-            } else if(!isFinished()){
-                delegate.resumeWrites();
-            }
-        }
-
-        @Override
-        public void suspendWrites() {
-            state &= ~FLAG_SHOULD_RESUME_WRITES;
-            super.suspendWrites();
-        }
-
-        @Override
-        public void wakeupWrites() {
-            if (isFinished()) {
-                return;
-            }
-            if (isInCall()) {
-                wakeup = true;
-                state |= FLAG_SHOULD_RESUME_WRITES;
-                if(anyAreSet(state, FLAG_DISPATCHED)) {
-                    throw UndertowMessages.MESSAGES.resumedAndDispatched();
-                }
-            } else {
-                delegate.wakeupWrites();
-            }
-        }
-
-        @Override
-        public boolean isWriteResumed() {
-            return anyAreSet(state, FLAG_SHOULD_RESUME_WRITES) || super.isWriteResumed();
-        }
-
-        public void runResume() {
-            if (isWriteResumed()) {
-                if(isFinished()) {
-                    invokeListener();
-                } else {
-                    if (wakeup) {
-                        wakeup = false;
-                        state &= ~FLAG_SHOULD_RESUME_WRITES;
-                        delegate.wakeupWrites();
-                    } else {
-                        state &= ~FLAG_SHOULD_RESUME_WRITES;
-                        delegate.resumeWrites();
-                    }
-                }
-            } else if(wakeup) {
-                wakeup = false;
-                invokeListener();
-            }
-        }
-
-        private void invokeListener() {
-            if(writeSetter != null) {
-                super.getIoThread().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        ChannelListeners.invokeChannelListener(WriteDispatchChannel.this, writeSetter.get());
-                    }
-                });
-            }
-        }
-
-        @Override
-        public void awaitWritable() throws IOException {
-            if(Thread.currentThread() == super.getIoThread()) {
-                throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
-            }
-            super.awaitWritable();
-        }
-
-        @Override
-        public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
-            if(Thread.currentThread() == super.getIoThread()) {
-                throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
-            }
-            super.awaitWritable(time, timeUnit);
-        }
-
-        @Override
-        public long transferFrom(FileChannel src, long position, long count) throws IOException {
-            long l = super.transferFrom(src, position, count);
-            if(l > 0) {
-                responseBytesSent += l;
-            }
-            return l;
-        }
-
-        @Override
-        public long transferFrom(StreamSourceChannel source, long count, ByteBuffer throughBuffer) throws IOException {
-            long l = super.transferFrom(source, count, throughBuffer);
-            if(l > 0) {
-                responseBytesSent += l;
-            }
-            return l;
-        }
-
-        @Override
-        public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
-            long l = super.write(srcs, offset, length);
-            responseBytesSent += l;
-            return l;
-        }
-
-        @Override
-        public long write(ByteBuffer[] srcs) throws IOException {
-            long l = super.write(srcs);
-            responseBytesSent += l;
-            return l;
-        }
-
-        @Override
-        public int writeFinal(ByteBuffer src) throws IOException {
-            int l = super.writeFinal(src);
-            responseBytesSent += l;
-            return l;
-        }
-
-        @Override
-        public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
-            long l = super.writeFinal(srcs, offset, length);
-            responseBytesSent += l;
-            return l;
-        }
-
-        @Override
-        public long writeFinal(ByteBuffer[] srcs) throws IOException {
-            long l = super.writeFinal(srcs);
-            responseBytesSent += l;
-            return l;
-        }
-
-        @Override
-        public int write(ByteBuffer src) throws IOException {
-            int l = super.write(src);
-            responseBytesSent += l;
-            return l;
-        }
-    }
-
-    /**
-     * Channel implementation that is actually provided to clients of the exchange. We do not provide the underlying
-     * conduit channel, as this will become the next requests conduit channel, so if a thread is still hanging onto this
-     * exchange it can result in problems.
-     * <p/>
-     * It also delays a readResume call until the current call stack has returned, thus ensuring that only 1 thread is
-     * active in the exchange at any one time.
-     * <p/>
-     * It also handles buffered request data.
-     */
-    private final class ReadDispatchChannel extends DetachableStreamSourceChannel implements StreamSourceChannel {
-
-        private boolean wakeup = true;
-        private boolean readsResumed = false;
-
-
-        ReadDispatchChannel(final ConduitStreamSourceChannel delegate) {
-            super(delegate);
-        }
-
-        @Override
-        protected boolean isFinished() {
-            return allAreSet(state, FLAG_REQUEST_TERMINATED);
-        }
-
-        @Override
-        public void resumeReads() {
-            readsResumed = true;
-            if (isInCall()) {
-                state |= FLAG_SHOULD_RESUME_READS;
-                if(anyAreSet(state, FLAG_DISPATCHED)) {
-                    throw UndertowMessages.MESSAGES.resumedAndDispatched();
-                }
-            } else if (!isFinished()) {
-                delegate.resumeReads();
-            }
-
-        }
-
-        public void wakeupReads() {
-            if (isInCall()) {
-                wakeup = true;
-                state |= FLAG_SHOULD_RESUME_READS;
-                if(anyAreSet(state, FLAG_DISPATCHED)) {
-                    throw UndertowMessages.MESSAGES.resumedAndDispatched();
-                }
-            } else {
-                if(isFinished()) {
-                    invokeListener();
-                } else {
-                    delegate.wakeupReads();
-                }
-            }
-        }
-
-        private void invokeListener() {
-            if(readSetter != null) {
-                super.getIoThread().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        ChannelListeners.invokeChannelListener(ReadDispatchChannel.this, readSetter.get());
-                    }
-                });
-            }
-        }
-
-        public void requestDone() {
-            if(delegate instanceof ConduitStreamSourceChannel) {
-                ((ConduitStreamSourceChannel)delegate).setReadListener(null);
-                ((ConduitStreamSourceChannel)delegate).setCloseListener(null);
-            } else {
-                delegate.getReadSetter().set(null);
-                delegate.getCloseSetter().set(null);
-            }
-        }
-
-        @Override
-        public long transferTo(long position, long count, FileChannel target) throws IOException {
-            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
-            if (buffered == null) {
-                return super.transferTo(position, count, target);
-            }
-            return target.transferFrom(this, position, count);
-        }
-
-        @Override
-        public void awaitReadable() throws IOException {
-            if(Thread.currentThread() == super.getIoThread()) {
-                throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
-            }
-            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
-            if (buffered == null) {
-                super.awaitReadable();
-            }
-        }
-
-        @Override
-        public void suspendReads() {
-            readsResumed = false;
-            state &= ~(FLAG_SHOULD_RESUME_READS);
-            super.suspendReads();
-        }
-
-        @Override
-        public long transferTo(long count, ByteBuffer throughBuffer, StreamSinkChannel target) throws IOException {
-            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
-            if (buffered == null) {
-                return super.transferTo(count, throughBuffer, target);
-            }
-            //make sure there is no garbage in throughBuffer
-            throughBuffer.position(0);
-            throughBuffer.limit(0);
-            long copied = 0;
-            for (int i = 0; i < buffered.length; ++i) {
-                PooledByteBuffer pooled = buffered[i];
-                if (pooled != null) {
-                    final ByteBuffer buf = pooled.getBuffer();
-                    if (buf.hasRemaining()) {
-                        int res = target.write(buf);
-
-                        if (!buf.hasRemaining()) {
-                            pooled.close();
-                            buffered[i] = null;
-                        }
-                        if (res == 0) {
-                            return copied;
-                        } else {
-                            copied += res;
-                        }
-                    } else {
-                        pooled.close();
-                        buffered[i] = null;
-                    }
-                }
-            }
-            removeAttachment(BUFFERED_REQUEST_DATA);
-            if (copied == 0) {
-                return super.transferTo(count, throughBuffer, target);
-            } else {
-                return copied;
-            }
-        }
-
-        @Override
-        public void awaitReadable(long time, TimeUnit timeUnit) throws IOException {
-            if(Thread.currentThread() == super.getIoThread()) {
-                throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
-            }
-            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
-            if (buffered == null) {
-                super.awaitReadable(time, timeUnit);
-            }
-        }
-
-        @Override
-        public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
-            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
-            if (buffered == null) {
-                return super.read(dsts, offset, length);
-            }
-            long copied = 0;
-            for (int i = 0; i < buffered.length; ++i) {
-                PooledByteBuffer pooled = buffered[i];
-                if (pooled != null) {
-                    final ByteBuffer buf = pooled.getBuffer();
-                    if (buf.hasRemaining()) {
-                        copied += Buffers.copy(dsts, offset, length, buf);
-                        if (!buf.hasRemaining()) {
-                            pooled.close();
-                            buffered[i] = null;
-                        }
-                        if (!Buffers.hasRemaining(dsts, offset, length)) {
-                            return copied;
-                        }
-                    } else {
-                        pooled.close();
-                        buffered[i] = null;
-                    }
-                }
-            }
-            removeAttachment(BUFFERED_REQUEST_DATA);
-            if (copied == 0) {
-                return super.read(dsts, offset, length);
-            } else {
-                return copied;
-            }
-        }
-
-        @Override
-        public long read(ByteBuffer[] dsts) throws IOException {
-            return read(dsts, 0, dsts.length);
-        }
-
-        @Override
-        public boolean isOpen() {
-            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
-            if (buffered != null) {
-                return true;
-            }
-            return super.isOpen();
-        }
-
-        @Override
-        public void close() throws IOException {
-            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
-            if (buffered != null) {
-                for (PooledByteBuffer pooled : buffered) {
-                    if (pooled != null) {
-                        pooled.close();
-                    }
-                }
-            }
-            removeAttachment(BUFFERED_REQUEST_DATA);
-            super.close();
-        }
-
-        @Override
-        public boolean isReadResumed() {
-            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
-            if (buffered != null) {
-                return readsResumed;
-            }
-            if(isFinished()) {
-                return false;
-            }
-            return anyAreSet(state, FLAG_SHOULD_RESUME_READS) || super.isReadResumed();
-        }
-
-        @Override
-        public int read(ByteBuffer dst) throws IOException {
-            PooledByteBuffer[] buffered = getAttachment(BUFFERED_REQUEST_DATA);
-            if (buffered == null) {
-                return super.read(dst);
-            }
-            int copied = 0;
-            for (int i = 0; i < buffered.length; ++i) {
-                PooledByteBuffer pooled = buffered[i];
-                if (pooled != null) {
-                    final ByteBuffer buf = pooled.getBuffer();
-                    if (buf.hasRemaining()) {
-                        copied += Buffers.copy(dst, buf);
-                        if (!buf.hasRemaining()) {
-                            pooled.close();
-                            buffered[i] = null;
-                        }
-                        if (!dst.hasRemaining()) {
-                            return copied;
-                        }
-                    } else {
-                        pooled.close();
-                        buffered[i] = null;
-                    }
-                }
-            }
-            removeAttachment(BUFFERED_REQUEST_DATA);
-            if (copied == 0) {
-                return super.read(dst);
-            } else {
-                return copied;
-            }
-        }
-
-        public void runResume() {
-            if (isReadResumed()) {
-                if(isFinished()) {
-                    invokeListener();
-                } else {
-                    if (wakeup) {
-                        wakeup = false;
-                        state &= ~FLAG_SHOULD_RESUME_READS;
-                        delegate.wakeupReads();
-                    } else {
-                        state &= ~FLAG_SHOULD_RESUME_READS;
-                        delegate.resumeReads();
-                    }
-                }
-            } else if(wakeup) {
-                wakeup = false;
-                invokeListener();
-            }
-        }
-    }
-
-    public static class WrapperStreamSinkConduitFactory implements ConduitFactory<StreamSinkConduit> {
-
-        private final HttpServerExchange exchange;
-        private final ConduitWrapper<StreamSinkConduit>[] wrappers;
-        private int position;
-        private final StreamSinkConduit first;
-
-
-        public WrapperStreamSinkConduitFactory(ConduitWrapper<StreamSinkConduit>[] wrappers, int wrapperCount, HttpServerExchange exchange, StreamSinkConduit first) {
-            this.wrappers = wrappers;
-            this.exchange = exchange;
-            this.first = first;
-            this.position = wrapperCount - 1;
-        }
-
-        @Override
-        public StreamSinkConduit create() {
-            if (position == -1) {
-                return exchange.getConnection().getSinkConduit(exchange, first);
-            } else {
-                return wrappers[position--].wrap(this, exchange);
-            }
-        }
-    }
-
-    public static class WrapperConduitFactory<T extends Conduit> implements ConduitFactory<T> {
-
-        private final HttpServerExchange exchange;
-        private final ConduitWrapper<T>[] wrappers;
-        private int position;
-        private T first;
-
-
-        public WrapperConduitFactory(ConduitWrapper<T>[] wrappers, int wrapperCount, T first, HttpServerExchange exchange) {
-            this.wrappers = wrappers;
-            this.exchange = exchange;
-            this.position = wrapperCount - 1;
-            this.first = first;
-        }
-
-        @Override
-        public T create() {
-            if (position == -1) {
-                return first;
-            } else {
-                return wrappers[position--].wrap(this, exchange);
-            }
         }
     }
 

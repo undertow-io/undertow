@@ -29,8 +29,6 @@ import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.StreamConnection;
 
-import io.undertow.connector.ByteBufferPool;
-
 /**
  * @author Stuart Douglas
  */

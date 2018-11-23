@@ -38,7 +38,6 @@ import org.xnio.IoUtils;
 
 import io.undertow.Handlers;
 import io.undertow.UndertowLogger;
-import io.undertow.connector.IoSink;
 import io.undertow.server.DefaultResponseListener;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HandlerWrapper;

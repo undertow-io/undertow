@@ -20,7 +20,7 @@ package io.undertow.server.handlers;
 
 import java.util.Date;
 
-import io.undertow.UndertowOptions;
+import io.undertow.util.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;

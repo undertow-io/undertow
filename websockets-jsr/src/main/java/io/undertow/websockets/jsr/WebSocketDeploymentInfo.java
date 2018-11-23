@@ -27,7 +27,6 @@ import javax.websocket.server.ServerEndpointConfig;
 
 import org.xnio.XnioWorker;
 
-import io.undertow.connector.ByteBufferPool;
 import io.undertow.websockets.extensions.ExtensionHandshake;
 
 /**

@@ -28,7 +28,6 @@ import org.xnio.ChannelListener;
 import org.xnio.StreamConnection;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpUpgradeListener;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ThreadSetupHandler;

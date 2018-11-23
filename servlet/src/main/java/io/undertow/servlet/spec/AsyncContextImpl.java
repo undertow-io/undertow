@@ -43,7 +43,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.xnio.IoUtils;
 
 import io.undertow.UndertowLogger;
-import io.undertow.connector.IoExecutor;
 import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;

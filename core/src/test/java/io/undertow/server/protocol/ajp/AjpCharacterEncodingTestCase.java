@@ -29,8 +29,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
-import io.undertow.connector.UndertowOptionMap;
+import io.undertow.util.UndertowOptions;
+import io.undertow.util.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.proxy.LoadBalancingProxyClient;

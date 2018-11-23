@@ -28,7 +28,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import io.undertow.connector.DefaultByteBufferPool;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.category.UnitTest;
 

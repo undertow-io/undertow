@@ -38,7 +38,7 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 
 import io.undertow.Undertow;
-import io.undertow.connector.UndertowOptionMap;
+import io.undertow.util.UndertowOptionMap;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
@@ -50,8 +50,6 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
-import io.undertow.util.StringReadChannelListener;
-import io.undertow.util.StringWriteChannelListener;
 import io.undertow.xnio.client.ClientCallback;
 import io.undertow.xnio.client.ClientConnection;
 import io.undertow.xnio.client.ClientExchange;
