@@ -18,6 +18,7 @@ package io.undertow.protocol.http;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.FileChannel;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
@@ -255,6 +256,11 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         return write(data, last, exchange);
     }
 
+    @Override
+    public ChannelFuture writeAsync(ByteBuf[] data, boolean last, HttpServerExchange exchange) {
+        return null;
+    }
+
     public void writeBlocking(ByteBuf data, boolean last, HttpServerExchange exchange) throws IOException {
         ChannelFuture write = write(data, last, exchange);
         try {
@@ -267,6 +273,11 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             }
             throw new IOException(e);
         }
+    }
+
+    @Override
+    public void writeBlocking(ByteBuf[] data, boolean last, HttpServerExchange exchange) throws IOException {
+
     }
 
     public ChannelFuture write(ByteBuf data, boolean last, HttpServerExchange exchange) {
@@ -308,6 +319,16 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     @Override
     public void runResumeReadWrite() {
+
+    }
+
+    @Override
+    public ChannelFuture writeFileAsync(FileChannel file, long position, long count, HttpServerExchange exchange) {
+        return null;
+    }
+
+    @Override
+    public void writeFileBlocking(FileChannel file, long position, long count, HttpServerExchange exchange) throws IOException {
 
     }
 

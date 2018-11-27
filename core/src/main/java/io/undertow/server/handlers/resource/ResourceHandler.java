@@ -42,8 +42,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.server.handlers.cache.ResponseCache;
-import io.undertow.server.handlers.encoding.ContentEncodedResource;
-import io.undertow.server.handlers.encoding.ContentEncodedResourceManager;
 import io.undertow.util.ByteRange;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
@@ -108,8 +106,6 @@ public class ResourceHandler implements HttpHandler {
      * This will only be used if the {@link #cachable} predicate returns true
      */
     private volatile Integer cacheTime;
-
-    private volatile ContentEncodedResourceManager contentEncodedResourceManager;
 
     /**
      * Handler that is called if no resource is found
@@ -244,7 +240,7 @@ public class ResourceHandler implements HttpHandler {
                         return;
                     }
                     resource = indexResource;
-                } else if(exchange.getRelativePath().endsWith("/")) {
+                } else if (exchange.getRelativePath().endsWith("/")) {
                     //UNDERTOW-432
                     exchange.setStatusCode(StatusCodes.NOT_FOUND);
                     exchange.endExchange();
@@ -265,7 +261,6 @@ public class ResourceHandler implements HttpHandler {
                     exchange.endExchange();
                     return;
                 }
-                final ContentEncodedResourceManager contentEncodedResourceManager = ResourceHandler.this.contentEncodedResourceManager;
                 Long contentLength = resource.getContentLength();
 
                 if (contentLength != null && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
@@ -273,21 +268,21 @@ public class ResourceHandler implements HttpHandler {
                 }
                 ByteRange.RangeResponseResult rangeResponse = null;
                 long start = -1, end = -1;
-                if(resource instanceof RangeAwareResource && ((RangeAwareResource)resource).isRangeSupported() && contentLength != null && contentEncodedResourceManager == null) {
+                if (resource instanceof RangeAwareResource && ((RangeAwareResource) resource).isRangeSupported() && contentLength != null) {
 
                     exchange.getResponseHeaders().put(Headers.ACCEPT_RANGES, "bytes");
                     //TODO: figure out what to do with the content encoded resource manager
                     ByteRange range = ByteRange.parse(exchange.getRequestHeaders().getFirst(Headers.RANGE));
-                    if(range != null && range.getRanges() == 1 && resource.getContentLength() != null) {
+                    if (range != null && range.getRanges() == 1 && resource.getContentLength() != null) {
                         rangeResponse = range.getResponseResult(resource.getContentLength(), exchange.getRequestHeaders().getFirst(Headers.IF_RANGE), resource.getLastModified(), resource.getETag() == null ? null : resource.getETag().getTag());
-                        if(rangeResponse != null){
+                        if (rangeResponse != null) {
                             start = rangeResponse.getStart();
                             end = rangeResponse.getEnd();
                             exchange.setStatusCode(rangeResponse.getStatusCode());
                             exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, rangeResponse.getContentRange());
                             long length = rangeResponse.getContentLength();
                             exchange.setResponseContentLength(length);
-                            if(rangeResponse.getStatusCode() == StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE) {
+                            if (rangeResponse.getStatusCode() == StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE) {
                                 return;
                             }
                         }
@@ -310,35 +305,16 @@ public class ResourceHandler implements HttpHandler {
                     exchange.getResponseHeaders().put(Headers.ETAG, etag.toString());
                 }
 
-                if (contentEncodedResourceManager != null) {
-                    try {
-                        ContentEncodedResource encoded = contentEncodedResourceManager.getResource(resource, exchange);
-                        if (encoded != null) {
-                            exchange.getResponseHeaders().put(Headers.CONTENT_ENCODING, encoded.getContentEncoding());
-                            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, encoded.getResource().getContentLength());
-                            encoded.getResource().serve(exchange.getResponseSender(), exchange, IoCallback.END_EXCHANGE);
-                            return;
-                        }
-
-                    } catch (IOException e) {
-                        //TODO: should this be fatal
-                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                        exchange.endExchange();
-                        return;
-                    }
-                }
-
                 if (!sendContent) {
                     exchange.endExchange();
-                } else if(rangeResponse != null) {
-                    ((RangeAwareResource)resource).serveRange(exchange.getResponseSender(), exchange, start, end, IoCallback.END_EXCHANGE);
+                } else if (rangeResponse != null) {
+                    ((RangeAwareResource) resource).serveRange(exchange.getResponseSender(), exchange, start, end, IoCallback.END_EXCHANGE);
                 } else {
                     resource.serve(exchange.getResponseSender(), exchange, IoCallback.END_EXCHANGE);
                 }
             }
         };
-        if(exchange.isInIoThread()) {
+        if (exchange.isInIoThread()) {
             exchange.dispatch(dispatchTask);
         } else {
             dispatchTask.handleRequest(exchange);
@@ -367,7 +343,7 @@ public class ResourceHandler implements HttpHandler {
     }
 
     private String canonicalize(String s) {
-        if(canonicalizePaths) {
+        if (canonicalizePaths) {
             return CanonicalPathUtils.canonicalize(s);
         }
         return s;
@@ -449,25 +425,17 @@ public class ResourceHandler implements HttpHandler {
         return this;
     }
 
-    public ContentEncodedResourceManager getContentEncodedResourceManager() {
-        return contentEncodedResourceManager;
-    }
-
-    public ResourceHandler setContentEncodedResourceManager(ContentEncodedResourceManager contentEncodedResourceManager) {
-        this.contentEncodedResourceManager = contentEncodedResourceManager;
-        return this;
-    }
-
     public boolean isCanonicalizePaths() {
         return canonicalizePaths;
     }
 
     /**
      * If this handler should use canonicalized paths.
-     *
+     * <p>
      * WARNING: If this is not true and {@link io.undertow.server.handlers.CanonicalPathHandler} is not installed in
      * the handler chain then is may be possible to perform a directory traversal attack. If you set this to false make
      * sure you have some kind of check in place to control the path.
+     *
      * @param canonicalizePaths If paths should be canonicalized
      */
     public void setCanonicalizePaths(boolean canonicalizePaths) {
@@ -501,7 +469,7 @@ public class ResourceHandler implements HttpHandler {
 
         @Override
         public HandlerWrapper build(Map<String, Object> config) {
-            return new Wrapper((String)config.get("location"), (Boolean) config.get("allow-listing"));
+            return new Wrapper((String) config.get("location"), (Boolean) config.get("allow-listing"));
         }
 
     }

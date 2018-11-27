@@ -30,6 +30,10 @@ import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.channels.StreamSinkChannel;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
@@ -40,72 +44,11 @@ import io.undertow.util.Headers;
  */
 public class AsyncSenderImpl implements Sender {
 
-    private IoSink channel;
     private final HttpServerExchange exchange;
-    private ByteBuffer[] buffer;
-    private PooledByteBuffer[] pooledBuffers = null;
+    private ByteBuf[] pooledBuffers = null;
     private FileChannel fileChannel;
     private IoCallback callback;
     private boolean inCallback;
-
-    private ChannelListener<StreamSinkChannel> writeListener;
-
-    public class TransferTask implements Runnable, ChannelListener<StreamSinkChannel> {
-        public boolean run(boolean complete) {
-            try {
-                FileChannel source = fileChannel;
-                long pos = source.position();
-                long size = source.size();
-
-                StreamSinkChannel dest = channel;
-                if (dest == null) {
-                    if (callback == IoCallback.END_EXCHANGE) {
-                        if (exchange.getResponseContentLength() == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
-                            exchange.setResponseContentLength(size);
-                        }
-                    }
-                    channel = dest = exchange.getResponseChannel();
-                    if (dest == null) {
-                        throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
-                    }
-                }
-
-                while (size - pos > 0) {
-                    long ret = dest.transferFrom(source, pos, size - pos);
-                    pos += ret;
-                    if (ret == 0) {
-                        source.position(pos);
-                        dest.getWriteSetter().set(this);
-                        dest.resumeWrites();
-                        return false;
-                    }
-                }
-
-                if (complete) {
-                    invokeOnComplete();
-                }
-            } catch (IOException e) {
-                invokeOnException(callback, e);
-            }
-
-            return true;
-        }
-
-        @Override
-        public void handleEvent(StreamSinkChannel channel) {
-            channel.suspendWrites();
-            channel.getWriteSetter().set(null);
-            exchange.dispatch(this);
-        }
-
-        @Override
-        public void run() {
-            run(true);
-        }
-    }
-
-    private TransferTask transferTask;
-
 
     public AsyncSenderImpl(final HttpServerExchange exchange) {
         this.exchange = exchange;
@@ -113,94 +56,70 @@ public class AsyncSenderImpl implements Sender {
 
 
     @Override
-    public void send(final ByteBuffer buffer, final IoCallback callback) {
+    public void send(final ByteBuf buffer, final IoCallback callback) {
         if (callback == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
         }
-        if(!exchange.getConnection().isOpen()) {
+        if (!exchange.getConnection().isOpen()) {
             invokeOnException(callback, new ClosedChannelException());
             return;
         }
-        if(exchange.isResponseComplete()) {
+        if (exchange.isResponseComplete()) {
             invokeOnException(callback, new IOException(UndertowMessages.MESSAGES.responseComplete()));
         }
-        if (this.buffer != null || this.fileChannel != null) {
+        if (this.pooledBuffers != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
         long responseContentLength = exchange.getResponseContentLength();
-        if(responseContentLength > 0 && buffer.remaining() > responseContentLength) {
-            invokeOnException(callback, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(buffer.remaining(), responseContentLength));
+        if (responseContentLength > 0 && buffer.readableBytes() > responseContentLength) {
+            invokeOnException(callback, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(buffer.readableBytes(), responseContentLength));
             return;
         }
-        IoSink channel = this.channel;
-        if (channel == null) {
-            if (callback == IoCallback.END_EXCHANGE) {
-                if (responseContentLength == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
-                    exchange.setResponseContentLength(buffer.remaining());
-                }
-            }
-            this.channel = channel = exchange.getResponseChannel();
-            if (channel == null) {
-                throw UndertowMessages.MESSAGES.responseChannelAlreadyProvided();
-            }
-        }
+
+
         this.callback = callback;
         if (inCallback) {
-            this.buffer = new ByteBuffer[]{buffer};
+            this.pooledBuffers = new ByteBuf[]{buffer};
             return;
         }
-        try {
-            do {
-                if (buffer.remaining() == 0) {
-                    callback.onComplete(exchange, this);
-                    return;
-                }
-                int res = channel.write(buffer);
-                if (res == 0) {
-                    this.buffer = new ByteBuffer[]{buffer};
-                    this.callback = callback;
-
-                    if(writeListener == null) {
-                        initWriteListener();
+        exchange.writeAsync(buffer, callback == IoCallback.END_EXCHANGE)
+                .addListener(new GenericFutureListener<Future<? super Void>>() {
+                    @Override
+                    public void operationComplete(Future<? super Void> future) throws Exception {
+                        if (future.isSuccess()) {
+                            invokeOnComplete();
+                        } else {
+                            invokeOnException(callback, new IOException(future.cause()));
+                        }
                     }
-                    channel.getWriteSetter().set(writeListener);
-                    channel.resumeWrites();
-                    return;
-                }
-            } while (buffer.hasRemaining());
-            invokeOnComplete();
-
-        } catch (IOException e) {
-
-            invokeOnException(callback, e);
-        }
+                });
     }
 
     @Override
-    public void send(final ByteBuffer[] buffer, final IoCallback callback) {
+    public void send(final ByteBuf[] buffer, final IoCallback callback) {
         if (callback == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
         }
 
-        if(!exchange.getConnection().isOpen()) {
+        if (!exchange.getConnection().isOpen()) {
             invokeOnException(callback, new ClosedChannelException());
             return;
         }
-        if(exchange.isResponseComplete()) {
+        if (exchange.isResponseComplete()) {
             invokeOnException(callback, new IOException(UndertowMessages.MESSAGES.responseComplete()));
         }
-        if (this.buffer != null) {
+        if (this.pooledBuffers != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
         this.callback = callback;
         if (inCallback) {
-            this.buffer = buffer;
+            this.pooledBuffers = buffer;
             return;
         }
 
-        long totalToWrite = Buffers.remaining(buffer);
+        long totalToWrite = ByteBufUtil.re.remaining(buffer);
         long responseContentLength = exchange.getResponseContentLength();
-        if(responseContentLength > 0 && totalToWrite > responseContentLength) {
+        if (responseContentLength > 0 && totalToWrite > responseContentLength) {
             invokeOnException(callback, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(totalToWrite, responseContentLength));
             return;
         }
@@ -229,7 +148,7 @@ public class AsyncSenderImpl implements Sender {
                     this.buffer = buffer;
                     this.callback = callback;
 
-                    if(writeListener == null) {
+                    if (writeListener == null) {
                         initWriteListener();
                     }
                     channel.getWriteSetter().set(writeListener);
@@ -251,11 +170,11 @@ public class AsyncSenderImpl implements Sender {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
         }
 
-        if(!exchange.getConnection().isOpen()) {
+        if (!exchange.getConnection().isOpen()) {
             invokeOnException(callback, new ClosedChannelException());
             return;
         }
-        if(exchange.isResponseComplete()) {
+        if (exchange.isResponseComplete()) {
             invokeOnException(callback, new IOException(UndertowMessages.MESSAGES.responseComplete()));
         }
         if (this.fileChannel != null || this.buffer != null) {
@@ -267,7 +186,7 @@ public class AsyncSenderImpl implements Sender {
         if (inCallback) {
             return;
         }
-        if(transferTask == null) {
+        if (transferTask == null) {
             transferTask = new TransferTask();
         }
         if (exchange.isInIoThread()) {
@@ -296,11 +215,11 @@ public class AsyncSenderImpl implements Sender {
     @Override
     public void send(final String data, final Charset charset, final IoCallback callback) {
 
-        if(!exchange.getConnection().isOpen()) {
+        if (!exchange.getConnection().isOpen()) {
             invokeOnException(callback, new ClosedChannelException());
             return;
         }
-        if(exchange.isResponseComplete()) {
+        if (exchange.isResponseComplete()) {
             invokeOnException(callback, new IOException(UndertowMessages.MESSAGES.responseComplete()));
         }
         ByteBuffer bytes = ByteBuffer.wrap(data.getBytes(charset));
@@ -403,7 +322,7 @@ public class AsyncSenderImpl implements Sender {
                         long res = channel.write(buffer);
                         written += res;
                         if (res == 0) {
-                            if(writeListener == null) {
+                            if (writeListener == null) {
                                 initWriteListener();
                             }
                             channel.getWriteSetter().set(writeListener);
@@ -416,7 +335,7 @@ public class AsyncSenderImpl implements Sender {
                     invokeOnException(callback, e);
                 }
             } else if (this.fileChannel != null) {
-                if(transferTask == null) {
+                if (transferTask == null) {
                     transferTask = new TransferTask();
                 }
                 if (!transferTask.run(false)) {

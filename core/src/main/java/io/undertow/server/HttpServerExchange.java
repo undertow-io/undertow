@@ -1128,6 +1128,21 @@ public final class HttpServerExchange extends AbstractAttachable {
         return allAreSet(state, FLAG_RESPONSE_SENT);
     }
 
+
+    /**
+     * Reads some data. If all data has been read it will return null.
+     *
+     * @return
+     * @throws IOException on failure
+     */
+    public ByteBuf readBlocking() throws IOException {
+        if(anyAreSet(state, FLAG_REQUEST_TERMINATED)) {
+            return null;
+        }
+
+    }
+
+
     public ChannelFuture writeAsync(ByteBuf data, boolean last) {
         if (data == null && !last) {
             throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
@@ -1143,6 +1158,32 @@ public final class HttpServerExchange extends AbstractAttachable {
                 responseCommitListeners[i].beforeCommit(this);
             }
         }
+        return connection.writeAsync(data, last, this);
+    }
+
+    public ChannelFuture writeAsync(ByteBuf[] data, boolean last) {
+        if (data == null && !last) {
+            throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
+        }
+        if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+            ChannelPromise promise = connection.createPromise();
+            promise.setFailure(UndertowMessages.MESSAGES.responseComplete());
+            return promise;
+        }
+        if (anyAreClear(state, FLAG_RESPONSE_SENT)) {
+            state |= FLAG_RESPONSE_SENT;
+            for (int i = responseCommitListenerCount - 1; i >= 0; --i) {
+                responseCommitListeners[i].beforeCommit(this);
+            }
+        }
+        if(data.length == 0) {
+            if(last) {
+                return connection.writeAsync(null, true, this);
+            } else {
+                return new Suce
+            }
+        }
+        for(int i = 0; i < data.length)
         return connection.writeAsync(data, last, this);
     }
 

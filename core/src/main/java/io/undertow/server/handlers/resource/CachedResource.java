@@ -26,6 +26,7 @@ import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
 
+import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
@@ -169,11 +170,11 @@ public class CachedResource implements Resource, RangeAwareResource {
         } else {
             UndertowLogger.REQUEST_LOGGER.tracef("Serving resource %s from the buffer cache to %s", name, exchange);
             //serve straight from the cache
-            ByteBuffer[] buffers;
+            ByteBuf[] buffers;
             boolean ok = false;
             try {
                 LimitedBufferSlicePool.PooledByteBuffer[] pooled = existing.buffers();
-                buffers = new ByteBuffer[pooled.length];
+                buffers = new ByteBuf[pooled.length];
                 for (int i = 0; i < buffers.length; i++) {
                     // Keep position from mutating
                     buffers[i] = pooled[i].getBuffer().duplicate();
@@ -256,11 +257,11 @@ public class CachedResource implements Resource, RangeAwareResource {
             ((RangeAwareResource)underlyingResource).serveRange(sender, exchange, start, end, completionCallback);
         } else {
             //serve straight from the cache
-            ByteBuffer[] buffers;
+            ByteBuf[] buffers;
             boolean ok = false;
             try {
                 LimitedBufferSlicePool.PooledByteBuffer[] pooled = existing.buffers();
-                buffers = new ByteBuffer[pooled.length];
+                buffers = new ByteBuf[pooled.length];
                 for (int i = 0; i < buffers.length; i++) {
                     // Keep position from mutating
                     buffers[i] = pooled[i].getBuffer().duplicate();
@@ -275,22 +276,22 @@ public class CachedResource implements Resource, RangeAwareResource {
                 long startDec = start;
                 long endCount = 0;
                 //handle the start of the range
-                for(ByteBuffer b : buffers) {
+                for(ByteBuf b : buffers) {
                     if(endCount == end) {
-                        b.limit(b.position());
+                        b.clear();
                         continue;
-                    } else if(endCount + b.remaining() < end) {
-                        endCount += b.remaining();
+                    } else if(endCount + b.readableBytes() < end) {
+                        endCount += b.readableBytes();
                     } else {
-                        b.limit((int) (b.position() + (end - endCount)));
+                        b.writerIndex((int) (b.readerIndex() + (end - endCount)));
                         endCount = end;
                     }
-                    if(b.remaining() >= startDec) {
+                    if(b.readableBytes() >= startDec) {
                         startDec = 0;
-                        b.position((int) (b.position() + startDec));
+                        b.readerIndex((int) (b.readerIndex() + startDec));
                     } else {
-                        startDec -= b.remaining();
-                        b.position(b.limit());
+                        startDec -= b.readableBytes();
+                        b.clear();
                     }
                 }
             }

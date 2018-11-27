@@ -26,6 +26,7 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
@@ -40,8 +41,8 @@ public class BlockingSenderImpl implements Sender {
 
     private final HttpServerExchange exchange;
     private final OutputStream outputStream;
+    private ByteBuf[] next;
     private boolean inCall;
-    private ByteBuffer[] next;
     private FileChannel pendingFile;
     private IoCallback queuedCallback;
 
@@ -51,7 +52,14 @@ public class BlockingSenderImpl implements Sender {
     }
 
     @Override
-    public void send(final ByteBuffer buffer, final IoCallback callback) {
+    public void send(final ByteBuf buffer, final IoCallback callback) {
+        try {
+            inCalll
+            exchange.writeBlocking(buffer, callback == IoCallback.END_EXCHANGE);
+            callback.onComplete(exchange, this);
+        } catch (IOException e) {
+            callback.onException(exchange, this, e);
+        }
         if (inCall) {
             queue(new ByteBuffer[]{buffer}, callback);
             return;
@@ -74,7 +82,7 @@ public class BlockingSenderImpl implements Sender {
 
 
     @Override
-    public void send(final ByteBuffer[] buffer, final IoCallback callback) {
+    public void send(final ByteBuf[] buffer, final IoCallback callback) {
         if (inCall) {
             queue(buffer, callback);
             return;
@@ -97,12 +105,12 @@ public class BlockingSenderImpl implements Sender {
     }
 
     @Override
-    public void send(final ByteBuffer buffer) {
+    public void send(final ByteBuf buffer) {
         send(buffer, IoCallback.END_EXCHANGE);
     }
 
     @Override
-    public void send(final ByteBuffer[] buffer) {
+    public void send(final ByteBuf[] buffer) {
         send(buffer, IoCallback.END_EXCHANGE);
     }
 

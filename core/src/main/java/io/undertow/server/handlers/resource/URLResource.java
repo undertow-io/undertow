@@ -25,7 +25,6 @@ import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.nio.ByteBuffer;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,14 +33,14 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.xnio.IoUtils;
-
+import io.netty.buffer.Unpooled;
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
+import io.undertow.util.IoUtils;
 import io.undertow.util.MimeMappings;
 import io.undertow.util.StatusCodes;
 
@@ -234,7 +233,7 @@ public class URLResource implements Resource, RangeAwareResource {
                     if (range && length > remaining) {
                         length = (int) remaining;
                     }
-                    sender.send(ByteBuffer.wrap(buffer, bufferStart, length), this);
+                    sender.send(Unpooled.wrappedBuffer(buffer, bufferStart, length), this);
                 } catch (IOException e) {
                     onException(exchange, sender, e);
                 }
