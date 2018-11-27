@@ -32,8 +32,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -318,8 +318,8 @@ public abstract class AbstractParserGenerator {
         c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
         c.dup();
         c.dup();
-        final Set<BranchEnd> prefixHandleSpace = new HashSet<BranchEnd>();
-        final Set<BranchEnd> badPrefixHandleSpace = new HashSet<BranchEnd>();
+        final Set<BranchEnd> prefixHandleSpace = new LinkedHashSet<BranchEnd>();
+        final Set<BranchEnd> badPrefixHandleSpace = new LinkedHashSet<BranchEnd>();
         if (stateMachine.isHeader()) {
             c.iconst(':');
             prefixHandleSpace.add(c.ifIcmpeq());
@@ -443,8 +443,8 @@ public abstract class AbstractParserGenerator {
         c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
         c.dup();
 
-        final Set<BranchEnd> nostateHandleSpace = new HashSet<BranchEnd>();
-        final Set<BranchEnd> badNostateHandleSpace = new HashSet<BranchEnd>();
+        final Set<BranchEnd> nostateHandleSpace = new LinkedHashSet<BranchEnd>();
+        final Set<BranchEnd> badNostateHandleSpace = new LinkedHashSet<BranchEnd>();
         if (stateMachine.isHeader()) {
             c.iconst(':');
             nostateHandleSpace.add(c.ifIcmpeq());
@@ -588,8 +588,8 @@ public abstract class AbstractParserGenerator {
         }
 
         c.dup();
-        final Set<BranchEnd> tokenEnds = new HashSet<>();
-        final Set<BranchEnd> badTokenEnds = new HashSet<>();
+        final Set<BranchEnd> tokenEnds = new LinkedHashSet<>();
+        final Set<BranchEnd> badTokenEnds = new LinkedHashSet<>();
         final Map<State, BranchEnd> ends = new IdentityHashMap<State, BranchEnd>();
         for (State state : currentState.next.values()) {
             c.iconst(state.value);
@@ -741,8 +741,8 @@ public abstract class AbstractParserGenerator {
         String httpStringFieldName;
         final byte value;
         final String soFar;
-        final Map<Byte, State> next = new HashMap<Byte, State>();
-        private final Set<BranchEnd> branchEnds = new HashSet<BranchEnd>();
+        final Map<Byte, State> next = new LinkedHashMap<Byte, State>();
+        private final Set<BranchEnd> branchEnds = new LinkedHashSet<BranchEnd>();
         private CodeLocation location;
 
         private State(final byte value, final String soFar) {
