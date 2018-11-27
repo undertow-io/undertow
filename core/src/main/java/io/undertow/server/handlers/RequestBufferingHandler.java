@@ -98,7 +98,12 @@ public class RequestBufferingHandler implements HttpHandler {
                                             Connectors.resetRequestChannel(exchange);
                                             channel.getReadSetter().set(null);
                                             channel.suspendReads();
-                                            Connectors.executeRootHandler(next, exchange);
+                                            exchange.getIoThread().execute(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    Connectors.executeRootHandler(next, exchange);
+                                                }
+                                            });
                                             return;
                                         } else if (r == 0) {
                                             return;
@@ -110,7 +115,12 @@ public class RequestBufferingHandler implements HttpHandler {
                                                 Connectors.resetRequestChannel(exchange);
                                                 channel.getReadSetter().set(null);
                                                 channel.suspendReads();
-                                                Connectors.executeRootHandler(next, exchange);
+                                                exchange.getIoThread().execute(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        Connectors.executeRootHandler(next, exchange);
+                                                    }
+                                                });
                                                 return;
                                             }
                                             buffer = exchange.getConnection().getByteBufferPool().allocate();
