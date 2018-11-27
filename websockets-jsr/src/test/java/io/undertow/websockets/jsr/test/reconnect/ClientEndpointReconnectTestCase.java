@@ -64,7 +64,7 @@ public class ClientEndpointReconnectTestCase {
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
                                 .setBuffers(new DefaultByteBufferPool(true, 8192))
-                                .setWorker(DefaultServer.getWorker())
+                                .setWorker(DefaultServer.getWorkerSupplier())
                                 .addEndpoint(DisconnectServerEndpoint.class)
                                 .addEndpoint(AnnotatedClientReconnectEndpoint.class)
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {

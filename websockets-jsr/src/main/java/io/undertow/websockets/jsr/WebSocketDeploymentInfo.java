@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * Web socket deployment information
@@ -39,7 +40,18 @@ public class WebSocketDeploymentInfo implements Cloneable {
 
     public static final String ATTRIBUTE_NAME = "io.undertow.websockets.jsr.WebSocketDeploymentInfo";
 
-    private XnioWorker worker;
+    private Supplier<XnioWorker> worker = new Supplier<XnioWorker>() {
+
+        volatile XnioWorker worker;
+
+        @Override
+        public XnioWorker get() {
+            if(worker != null) {
+                return worker;
+            }
+            return worker = UndertowContainerProvider.getDefaultContainer().getXnioWorker();
+        }
+    };
     private ByteBufferPool buffers;
     private boolean dispatchToWorkerThread = false;
     private final List<Class<?>> annotatedEndpoints = new ArrayList<>();
@@ -49,12 +61,22 @@ public class WebSocketDeploymentInfo implements Cloneable {
     private String clientBindAddress = null;
     private WebSocketReconnectHandler reconnectHandler;
 
-    public XnioWorker getWorker() {
+    public Supplier<XnioWorker> getWorker() {
         return worker;
     }
 
-    public WebSocketDeploymentInfo setWorker(XnioWorker worker) {
+    public WebSocketDeploymentInfo setWorker(Supplier<XnioWorker> worker) {
         this.worker = worker;
+        return this;
+    }
+
+    public WebSocketDeploymentInfo setWorker(XnioWorker worker) {
+        this.worker = new Supplier<XnioWorker>() {
+            @Override
+            public XnioWorker get() {
+                return worker;
+            }
+        };
         return this;
     }
 

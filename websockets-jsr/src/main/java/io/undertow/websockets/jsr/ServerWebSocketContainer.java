@@ -87,6 +87,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static java.lang.System.*;
 
@@ -114,7 +115,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
      */
     private final TreeSet<PathTemplate> seenPaths = new TreeSet<>();
 
-    private final XnioWorker xnioWorker;
+    private final Supplier<XnioWorker> xnioWorker;
     private final ByteBufferPool bufferPool;
     private final boolean dispatchToWorker;
     private final InetSocketAddress clientBindAddress;
@@ -137,19 +138,19 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     private volatile boolean closed = false;
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final XnioWorker xnioWorker, ByteBufferPool bufferPool, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker, boolean clientMode) {
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final Supplier<XnioWorker> xnioWorker, ByteBufferPool bufferPool, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker, boolean clientMode) {
         this(classIntrospecter, ServerWebSocketContainer.class.getClassLoader(), xnioWorker, bufferPool, threadSetupHandlers, dispatchToWorker, null, null);
     }
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, ByteBufferPool bufferPool, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker) {
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, Supplier<XnioWorker> xnioWorker, ByteBufferPool bufferPool, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker) {
         this(classIntrospecter, classLoader, xnioWorker, bufferPool, threadSetupHandlers, dispatchToWorker, null, null);
     }
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, ByteBufferPool bufferPool, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker, InetSocketAddress clientBindAddress, WebSocketReconnectHandler reconnectHandler) {
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, Supplier<XnioWorker> xnioWorker, ByteBufferPool bufferPool, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker, InetSocketAddress clientBindAddress, WebSocketReconnectHandler reconnectHandler) {
         this(classIntrospecter, classLoader, xnioWorker, bufferPool, threadSetupHandlers, dispatchToWorker, clientBindAddress, reconnectHandler, Collections.emptyList());
     }
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, XnioWorker xnioWorker, ByteBufferPool bufferPool, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker, InetSocketAddress clientBindAddress, WebSocketReconnectHandler reconnectHandler, List<Extension> installedExtensions) {
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, Supplier<XnioWorker> xnioWorker, ByteBufferPool bufferPool, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker, InetSocketAddress clientBindAddress, WebSocketReconnectHandler reconnectHandler, List<Extension> installedExtensions) {
         this.classIntrospecter = classIntrospecter;
         this.bufferPool = bufferPool;
         this.xnioWorker = xnioWorker;
@@ -210,14 +211,14 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         Endpoint instance = config.getFactory().createInstance(new ImmediateInstanceHandle<>(annotatedEndpointInstance));
         XnioSsl ssl = null;
         for (WebsocketClientSslProvider provider : clientSslProviders) {
-            ssl = provider.getSsl(xnioWorker, annotatedEndpointInstance, path);
+            ssl = provider.getSsl(xnioWorker.get(), annotatedEndpointInstance, path);
             if (ssl != null) {
                 break;
             }
         }
         if(ssl == null) {
             try {
-                ssl = new UndertowXnioSsl(xnioWorker.getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+                ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
             } catch (NoSuchAlgorithmException e) {
                 //ignore
             }
@@ -258,14 +259,14 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             InstanceHandle<?> instance = config.getInstanceFactory().createInstance();
             XnioSsl ssl = null;
             for (WebsocketClientSslProvider provider : clientSslProviders) {
-                ssl = provider.getSsl(xnioWorker, aClass, uri);
+                ssl = provider.getSsl(xnioWorker.get(), aClass, uri);
                 if (ssl != null) {
                     break;
                 }
             }
             if(ssl == null) {
                 try {
-                    ssl = new UndertowXnioSsl(xnioWorker.getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+                    ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
                 } catch (NoSuchAlgorithmException e) {
                     //ignore
                 }
@@ -284,14 +285,14 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         ClientEndpointConfig cec = config != null ? config : ClientEndpointConfig.Builder.create().build();
         XnioSsl ssl = null;
         for (WebsocketClientSslProvider provider : clientSslProviders) {
-            ssl = provider.getSsl(xnioWorker, endpointInstance, cec, path);
+            ssl = provider.getSsl(xnioWorker.get(), endpointInstance, cec, path);
             if (ssl != null) {
                 break;
             }
         }
         if(ssl == null) {
             try {
-                ssl = new UndertowXnioSsl(xnioWorker.getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+                ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
             } catch (NoSuchAlgorithmException e) {
                 //ignore
             }
@@ -300,7 +301,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getPreferredSubprotocols(), toExtensionList(cec.getExtensions()), cec);
 
 
-        WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(xnioWorker, bufferPool, path)
+        WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(xnioWorker.get(), bufferPool, path)
                 .setSsl(ssl)
                 .setBindAddress(clientBindAddress)
                 .setClientNegotiation(clientNegotiation);
@@ -478,7 +479,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getConfig().getPreferredSubprotocols(), toExtensionList(cec.getConfig().getExtensions()), cec.getConfig());
 
 
-        WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(xnioWorker, bufferPool, path)
+        WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(xnioWorker.get(), bufferPool, path)
                 .setSsl(ssl)
                 .setBindAddress(clientBindAddress)
                 .setClientNegotiation(clientNegotiation);
@@ -840,7 +841,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     }
 
     public XnioWorker getXnioWorker() {
-        return xnioWorker;
+        return xnioWorker.get();
     }
 
     private static List<WebSocketExtension> toExtensionList(final List<Extension> extensions) {

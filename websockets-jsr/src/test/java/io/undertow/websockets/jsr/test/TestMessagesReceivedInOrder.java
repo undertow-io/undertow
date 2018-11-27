@@ -78,7 +78,7 @@ public class TestMessagesReceivedInOrder {
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
                                 .setBuffers(DefaultServer.getBufferPool())
-                                .setWorker(DefaultServer.getWorker())
+                                .setWorker(DefaultServer.getWorkerSupplier())
                                 .addEndpoint(EchoSocket.class)
                 )
                 .setDeploymentName("servletContext.war");
