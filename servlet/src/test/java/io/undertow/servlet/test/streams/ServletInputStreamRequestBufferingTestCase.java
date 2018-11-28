@@ -23,7 +23,6 @@ import javax.servlet.ServletContext;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 
-import io.undertow.server.handlers.RequestBufferingHandler;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ServletInfo;

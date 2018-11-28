@@ -35,7 +35,6 @@ import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
-import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.HttpString;
 
 /**
@@ -67,15 +66,15 @@ public class GenericHeaderAuthenticationMechanism implements AuthenticationMecha
     @Override
     public AuthenticationMechanismOutcome authenticate(HttpServerExchange exchange, SecurityContext securityContext) {
         String principal = getPrincipal(exchange);
-        if(principal == null) {
+        if (principal == null) {
             return NOT_ATTEMPTED;
         }
         String session = getSession(exchange);
-        if(session == null) {
+        if (session == null) {
             return NOT_ATTEMPTED;
         }
         Account account = identityManager.verify(principal, new PasswordCredential(session.toCharArray()));
-        if(account == null) {
+        if (account == null) {
             securityContext.authenticationFailed(UndertowMessages.MESSAGES.authenticationFailed(principal), mechanismName);
             return NOT_AUTHENTICATED;
         }
@@ -84,9 +83,9 @@ public class GenericHeaderAuthenticationMechanism implements AuthenticationMecha
     }
 
     private String getSession(HttpServerExchange exchange) {
-        for(String header : sessionCookieNames) {
+        for (String header : sessionCookieNames) {
             Cookie cookie = exchange.getRequestCookies().get(header);
-            if(cookie != null) {
+            if (cookie != null) {
                 return cookie.getValue();
             }
         }
@@ -94,9 +93,9 @@ public class GenericHeaderAuthenticationMechanism implements AuthenticationMecha
     }
 
     private String getPrincipal(HttpServerExchange exchange) {
-        for(HttpString header : identityHeaders) {
+        for (HttpString header : identityHeaders) {
             String res = exchange.getRequestHeaders().getFirst(header);
-            if(res != null) {
+            if (res != null) {
                 return res;
             }
         }
@@ -120,21 +119,21 @@ public class GenericHeaderAuthenticationMechanism implements AuthenticationMecha
         }
 
         @Override
-        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, Map<String, String> properties) {
             String identity = properties.get(IDENTITY_HEADER);
-            if(identity == null) {
+            if (identity == null) {
                 throw UndertowMessages.MESSAGES.authenticationPropertyNotSet(mechanismName, IDENTITY_HEADER);
             }
             String session = properties.get(SESSION_HEADER);
-            if(session == null) {
+            if (session == null) {
                 throw UndertowMessages.MESSAGES.authenticationPropertyNotSet(mechanismName, SESSION_HEADER);
             }
             List<HttpString> ids = new ArrayList<>();
-            for(String s : identity.split(",")) {
+            for (String s : identity.split(",")) {
                 ids.add(new HttpString(s));
             }
             List<String> sessions = new ArrayList<>();
-            for(String s : session.split(",")) {
+            for (String s : session.split(",")) {
                 sessions.add(s);
             }
             return new GenericHeaderAuthenticationMechanism(mechanismName, ids, sessions, identityManager);

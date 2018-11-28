@@ -44,10 +44,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
-import io.undertow.io.AsyncReceiverImpl;
-import io.undertow.io.AsyncSenderImpl;
-import io.undertow.io.BlockingReceiverImpl;
-import io.undertow.io.BlockingSenderImpl;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
 import io.undertow.io.UndertowInputStream;
@@ -1139,9 +1135,8 @@ public final class HttpServerExchange extends AbstractAttachable {
         if(anyAreSet(state, FLAG_REQUEST_TERMINATED)) {
             return null;
         }
-
+        return null;
     }
-
 
     public ChannelFuture writeAsync(ByteBuf data, boolean last) {
         if (data == null && !last) {
@@ -1180,11 +1175,15 @@ public final class HttpServerExchange extends AbstractAttachable {
             if(last) {
                 return connection.writeAsync(null, true, this);
             } else {
-                return new Suce
+                ChannelPromise promise = connection.createPromise();
+                promise.setSuccess();
+                return promise;
             }
         }
-        for(int i = 0; i < data.length)
-        return connection.writeAsync(data, last, this);
+        for(int i = 0; i < data.length - 1; ++i) {
+            connection.writeAsync(data[i], false, this);
+        }
+        return connection.writeAsync(data[data.length - 1], last, this);
     }
 
     public void writeBlocking(ByteBuf data, boolean last) throws IOException {
@@ -1304,7 +1303,8 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (sender != null) {
             return sender;
         }
-        return sender = new AsyncSenderImpl(this);
+        throw new RuntimeException("NYI");
+        //return sender = new AsyncSenderImpl(this);
     }
 
     public Receiver getRequestReceiver() {
@@ -1314,7 +1314,8 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (receiver != null) {
             return receiver;
         }
-        return receiver = new AsyncReceiverImpl(this);
+        throw new RuntimeException("NYI");
+        //return receiver = new AsyncReceiverImpl(this);
     }
 
     /**
@@ -1695,7 +1696,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public Sender getSender() {
             if (sender == null) {
-                sender = new BlockingSenderImpl(exchange, getOutputStream());
+               // sender = new BlockingSenderImpl(exchange, getOutputStream());
             }
             return sender;
         }
@@ -1711,7 +1712,8 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public Receiver getReceiver() {
-            return new BlockingReceiverImpl(exchange, getInputStream());
+            //return new BlockingReceiverImpl(exchange, getInputStream());
+            throw new RuntimeException("NYI");
         }
     }
 

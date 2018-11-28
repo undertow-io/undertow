@@ -24,8 +24,6 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.ConduitStreamSinkChannel;
 
 import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowLogger;
@@ -110,10 +108,6 @@ public class Connectors {
 
     public static void terminateResponse(final HttpServerExchange exchange) {
         exchange.terminateResponse();
-    }
-
-    public static void resetRequestChannel(final HttpServerExchange exchange) {
-        exchange.resetRequestChannel();
     }
 
     private static String getCookieString(final Cookie cookie, boolean enableRfc6265Validation) {
@@ -452,16 +446,6 @@ public class Connectors {
         exchange.setRequestURI(encodedPath);
     }
 
-
-    /**
-     * Returns the existing request channel, if it exists. Otherwise returns null
-     *
-     * @param exchange The http server exchange
-     */
-    public static StreamSourceChannel getExistingRequestChannel(final HttpServerExchange exchange) {
-        return exchange.requestChannel;
-    }
-
     public static boolean isEntityBodyAllowed(HttpServerExchange exchange) {
         int code = exchange.getStatusCode();
         return isEntityBodyAllowed(code);
@@ -479,10 +463,6 @@ public class Connectors {
 
     public static void updateResponseBytesSent(HttpServerExchange exchange, long bytes) {
         exchange.updateBytesSent(bytes);
-    }
-
-    public static ConduitStreamSinkChannel getConduitSinkChannel(HttpServerExchange exchange) {
-        return exchange.getConnection().getSinkChannel();
     }
 
     /**

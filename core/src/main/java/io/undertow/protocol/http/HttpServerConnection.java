@@ -35,6 +35,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.util.concurrent.EventExecutor;
@@ -60,6 +61,8 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     volatile HttpServerExchange currentExchange;
     private boolean responseCommited;
     private boolean responseComplete;
+
+
 
 
     public HttpServerConnection(ChannelHandlerContext ctx) {
@@ -255,12 +258,6 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         }
         return write(data, last, exchange);
     }
-
-    @Override
-    public ChannelFuture writeAsync(ByteBuf[] data, boolean last, HttpServerExchange exchange) {
-        return null;
-    }
-
     public void writeBlocking(ByteBuf data, boolean last, HttpServerExchange exchange) throws IOException {
         ChannelFuture write = write(data, last, exchange);
         try {
@@ -273,11 +270,6 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             }
             throw new IOException(e);
         }
-    }
-
-    @Override
-    public void writeBlocking(ByteBuf[] data, boolean last, HttpServerExchange exchange) throws IOException {
-
     }
 
     public ChannelFuture write(ByteBuf data, boolean last, HttpServerExchange exchange) {
@@ -338,4 +330,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         this.currentExchange = exchange;
     }
 
+    public void queueContent(HttpContent msg) {
+
+    }
 }

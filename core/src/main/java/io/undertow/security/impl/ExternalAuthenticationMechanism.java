@@ -27,7 +27,6 @@ import io.undertow.security.idm.Account;
 import io.undertow.security.idm.ExternalCredential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.AttachmentKey;
 
 /**
@@ -98,7 +97,7 @@ public class ExternalAuthenticationMechanism implements AuthenticationMechanism 
         public Factory() {}
 
         @Override
-        public AuthenticationMechanism create(String mechanismName,IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName,IdentityManager identityManager, Map<String, String> properties) {
             return new ExternalAuthenticationMechanism(mechanismName, identityManager);
         }
     }

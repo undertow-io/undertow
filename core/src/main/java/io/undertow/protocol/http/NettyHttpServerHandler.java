@@ -14,18 +14,18 @@
  */
 package io.undertow.protocol.http;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.undertow.server.Connectors;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
@@ -44,6 +44,7 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
     }
 
     private HttpServerConnection connection;
+    private HttpHandler rootHandler;
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
@@ -52,7 +53,6 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) {
-        ctx.
         if (msg instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) msg;
             if(connection == null) {

@@ -47,7 +47,6 @@ import io.undertow.security.idm.DigestAlgorithm;
 import io.undertow.security.idm.DigestCredential;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -654,7 +653,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         public Factory() {}
 
         @Override
-        public AuthenticationMechanism create(String mechanismName,IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName,IdentityManager identityManager, Map<String, String> properties) {
             return new DigestAuthenticationMechanism(properties.get(REALM), properties.get(CONTEXT_PATH), mechanismName, identityManager);
         }
     }

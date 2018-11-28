@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.Set;
 
 import io.undertow.UndertowLogger;
-import io.undertow.attribute.StoredResponse;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HandlerWrapper;

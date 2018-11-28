@@ -24,8 +24,8 @@ import java.util.Map;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 
-import org.xnio.SslClientAuthMode;
 
+import io.netty.handler.ssl.ClientAuth;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.SecurityContext;
@@ -36,7 +36,6 @@ import io.undertow.security.idm.X509CertificateCredential;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
-import io.undertow.server.handlers.form.FormParserFactory;
 
 /**
  * The Client Cert based authentication mechanism.
@@ -124,7 +123,7 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
             //we only renegotiate if authentication is required
             if (forceRenegotiation && securityContext.isAuthenticationRequired()) {
                 try {
-                    sslSession.renegotiate(exchange, SslClientAuthMode.REQUESTED);
+                    sslSession.renegotiate(exchange, ClientAuth.OPTIONAL);
                     return sslSession.getPeerCertificates();
 
                 } catch (IOException e1) {
@@ -150,7 +149,7 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
         public Factory() {}
 
         @Override
-        public AuthenticationMechanism create(String mechanismName,IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName,IdentityManager identityManager, Map<String, String> properties) {
             String forceRenegotiation = properties.get(FORCE_RENEGOTIATION);
             return new ClientCertAuthenticationMechanism(mechanismName, forceRenegotiation == null ? true : "true".equals(forceRenegotiation), identityManager);
         }

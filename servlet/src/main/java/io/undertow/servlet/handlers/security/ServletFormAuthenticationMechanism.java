@@ -248,12 +248,12 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         public Factory() {}
 
         @Override
-        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, Map<String, String> properties) {
             boolean saveOriginal = true;
             if(properties.containsKey(SAVE_ORIGINAL_REQUEST)) {
                 saveOriginal = Boolean.parseBoolean(properties.get(SAVE_ORIGINAL_REQUEST));
             }
-            return new ServletFormAuthenticationMechanism(formParserFactory, mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE), identityManager, saveOriginal);
+            return new ServletFormAuthenticationMechanism( mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE), identityManager, saveOriginal);
         }
     }
 

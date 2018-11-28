@@ -25,8 +25,6 @@ import java.io.OutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
-import io.undertow.io.BlockingReceiverImpl;
-import io.undertow.io.BlockingSenderImpl;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
 import io.undertow.server.BlockingHttpExchange;
