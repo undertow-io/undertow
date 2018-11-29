@@ -33,7 +33,6 @@ import org.jboss.logging.annotations.MessageBundle;
 import io.undertow.predicate.PredicateBuilder;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import io.undertow.util.BadRequestException;
 import io.undertow.util.HttpString;
 import io.undertow.util.ParameterLimitException;
@@ -193,9 +192,9 @@ public interface UndertowMessages {
 
     @Message(id = 53, value = "Listener %s already registered")
     IllegalArgumentException listenerAlreadyRegistered(String name);
-
-    @Message(id = 54, value = "The maximum size %s for an individual file in a multipart request was exceeded")
-    MultiPartParserDefinition.FileTooLargeException maxFileSizeExceeded(long maxIndividualFileSize);
+//
+//    @Message(id = 54, value = "The maximum size %s for an individual file in a multipart request was exceeded")
+//    MultiPartParserDefinition.FileTooLargeException maxFileSizeExceeded(long maxIndividualFileSize);
 
     @Message(id = 55, value = "Could not set attribute %s to %s as it is read only")
     String couldNotSetAttribute(String attributeName, String newValue);

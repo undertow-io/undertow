@@ -34,12 +34,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ScheduledFuture;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConcurrentDirectDeque;
-import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * The default in memory session manager. This basically just stores sessions in an in memory hash map.
@@ -138,7 +139,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     @Override
     public Session createSession(final HttpServerExchange serverExchange, final SessionConfig config) {
         if (maxSize > 0) {
-            if(expireOldestUnusedSessionOnMax) {
+            if (expireOldestUnusedSessionOnMax) {
                 while (sessions.size() >= maxSize && !evictionQueue.isEmpty()) {
 
                     String key = evictionQueue.poll();
@@ -148,8 +149,8 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                         toRemove.invalidate(null, SessionListener.SessionDestroyedReason.TIMEOUT); //todo: better reason
                     }
                 }
-            } else if(sessions.size() >= maxSize) {
-                if(statisticsEnabled) {
+            } else if (sessions.size() >= maxSize) {
+                if (statisticsEnabled) {
                     rejectedSessionCount.incrementAndGet();
                 }
                 throw UndertowMessages.MESSAGES.tooManySessions(maxSize);
@@ -162,10 +163,10 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         int count = 0;
         while (sessionID == null) {
             sessionID = sessionIdGenerator.createSessionId();
-            if(sessions.containsKey(sessionID)) {
+            if (sessions.containsKey(sessionID)) {
                 sessionID = null;
             }
-            if(count++ == 100) {
+            if (count++ == 100) {
                 //this should never happen
                 //but we guard against pathalogical session id generators to prevent an infinite loop
                 throw UndertowMessages.MESSAGES.couldNotGenerateUniqueSessionId();
@@ -186,14 +187,14 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         sessionListeners.sessionCreated(session, serverExchange);
         serverExchange.putAttachment(NEW_SESSION, session);
 
-        if(statisticsEnabled) {
+        if (statisticsEnabled) {
             createdSessionCount.incrementAndGet();
             int highest;
             int sessionSize;
             do {
                 highest = highestSessionCount.get();
                 sessionSize = sessions.size();
-                if(sessionSize <= highest) {
+                if (sessionSize <= highest) {
                     break;
                 }
             } while (!highestSessionCount.compareAndSet(highest, sessionSize));
@@ -205,13 +206,13 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     public Session getSession(final HttpServerExchange serverExchange, final SessionConfig config) {
         if (serverExchange != null) {
             SessionImpl newSession = serverExchange.getAttachment(NEW_SESSION);
-            if(newSession != null) {
+            if (newSession != null) {
                 return newSession;
             }
         }
         String sessionId = config.findSessionId(serverExchange);
         InMemorySessionManager.SessionImpl session = (SessionImpl) getSession(sessionId);
-        if(session != null && serverExchange != null) {
+        if (session != null && serverExchange != null) {
             session.requestStarted(serverExchange);
         }
         return session;
@@ -324,7 +325,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     @Override
     public synchronized long getAverageSessionAliveTime() {
         //this method needs to be synchronised to make sure the session count and the total are in sync
-        if(expiredSessionCount == 0) {
+        if (expiredSessionCount == 0) {
             return 0;
         }
         return new BigDecimal(totalSessionLifetime).divide(BigDecimal.valueOf(expiredSessionCount), MathContext.DECIMAL128).longValue();
@@ -350,6 +351,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         volatile int maxInactiveInterval;
 
         static volatile AtomicReferenceFieldUpdater<SessionImpl, Object> evictionTokenUpdater;
+
         static {
             //this is needed in case there is unprivileged code on the stack
             //it needs to delegate to the createTokenUpdater() method otherwise the creation will fail
@@ -374,10 +376,10 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         private volatile boolean invalid = false;
         private volatile boolean invalidationStarted = false;
 
-        final IoExecutor executor;
+        final EventExecutor executor;
         final Executor worker;
 
-        IoExecutor.Key timerCancelKey;
+        ScheduledFuture<?> timerCancelKey;
 
         Runnable cancelTask = new Runnable() {
             @Override
@@ -386,17 +388,17 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                     @Override
                     public void run() {
                         long currentTime = System.currentTimeMillis();
-                        if(currentTime >= expireTime) {
+                        if (currentTime >= expireTime) {
                             invalidate(null, SessionListener.SessionDestroyedReason.TIMEOUT);
                         } else {
-                            timerCancelKey = WorkerUtils.executeAfter(executor, cancelTask, expireTime - currentTime, TimeUnit.MILLISECONDS);
+                            timerCancelKey = executor.schedule(cancelTask, expireTime - currentTime, TimeUnit.MILLISECONDS);
                         }
                     }
                 });
             }
         };
 
-        private SessionImpl(final InMemorySessionManager sessionManager, final String sessionId, final SessionConfig sessionCookieConfig, final IoExecutor executor, final Executor worker, final Object evictionToken, final int maxInactiveInterval) {
+        private SessionImpl(final InMemorySessionManager sessionManager, final String sessionId, final SessionConfig sessionCookieConfig, final EventExecutor executor, final Executor worker, final Object evictionToken, final int maxInactiveInterval) {
             this.sessionManager = sessionManager;
             this.sessionId = sessionId;
             this.sessionCookieConfig = sessionCookieConfig;
@@ -408,32 +410,32 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         }
 
         synchronized void bumpTimeout() {
-            if(invalidationStarted) {
+            if (invalidationStarted) {
                 return;
             }
 
             final int maxInactiveInterval = getMaxInactiveInterval();
             if (maxInactiveInterval > 0) {
                 long newExpireTime = System.currentTimeMillis() + (maxInactiveInterval * 1000L);
-                if(timerCancelKey != null && (newExpireTime < expireTime)) {
+                if (timerCancelKey != null && (newExpireTime < expireTime)) {
                     // We have to re-schedule as the new maxInactiveInterval is lower than the old one
-                    if (!timerCancelKey.remove()) {
+                    if (!timerCancelKey.cancel(false)) {
                         return;
                     }
                     timerCancelKey = null;
                 }
                 expireTime = newExpireTime;
                 UndertowLogger.SESSION_LOGGER.tracef("Bumping timeout for session %s to %s", sessionId, expireTime);
-                if(timerCancelKey == null) {
+                if (timerCancelKey == null) {
                     //+1, to make sure that the time has actually expired
                     //we don't re-schedule every time, as it is expensive
                     //instead when it expires we check if the timeout has been bumped, and if so we re-schedule
-                    timerCancelKey = executor.executeAfter(cancelTask, (maxInactiveInterval * 1000L) + 1L, TimeUnit.MILLISECONDS);
+                    timerCancelKey = executor.schedule(cancelTask, (maxInactiveInterval * 1000L) + 1L, TimeUnit.MILLISECONDS);
                 }
             } else {
                 expireTime = -1;
-                if(timerCancelKey != null) {
-                    timerCancelKey.remove();
+                if (timerCancelKey != null) {
+                    timerCancelKey.cancel(false);
                     timerCancelKey = null;
                 }
             }
@@ -454,7 +456,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
         void requestStarted(HttpServerExchange serverExchange) {
             Long existing = serverExchange.getAttachment(FIRST_REQUEST_ACCESS);
-            if(existing == null) {
+            if (existing == null) {
                 if (!invalid) {
                     serverExchange.putAttachment(FIRST_REQUEST_ACCESS, System.currentTimeMillis());
                 }
@@ -464,7 +466,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public void requestDone(final HttpServerExchange serverExchange) {
             Long existing = serverExchange.getAttachment(FIRST_REQUEST_ACCESS);
-            if(existing != null) {
+            if (existing != null) {
                 lastAccessed = existing;
             }
         }
@@ -533,7 +535,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             if (existing == null) {
                 sessionManager.sessionListeners.attributeAdded(this, name, value);
             } else {
-               sessionManager.sessionListeners.attributeUpdated(this, name, value, existing);
+                sessionManager.sessionListeners.attributeUpdated(this, name, value, existing);
             }
             bumpTimeout();
             UndertowLogger.SESSION_LOGGER.tracef("Setting session attribute %s to %s for session %s", name, value, sessionId);
@@ -555,19 +557,19 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public void invalidate(final HttpServerExchange exchange) {
             invalidate(exchange, SessionListener.SessionDestroyedReason.INVALIDATED);
-            if(exchange != null) {
+            if (exchange != null) {
                 exchange.removeAttachment(sessionManager.NEW_SESSION);
             }
             Object evictionToken = this.evictionToken;
-            if(evictionToken != null) {
+            if (evictionToken != null) {
                 sessionManager.evictionQueue.removeToken(evictionToken);
             }
         }
 
         void invalidate(final HttpServerExchange exchange, SessionListener.SessionDestroyedReason reason) {
-            synchronized(SessionImpl.this) {
+            synchronized (SessionImpl.this) {
                 if (timerCancelKey != null) {
-                    timerCancelKey.remove();
+                    timerCancelKey.cancel(false);
                 }
                 SessionImpl sess = sessionManager.sessions.remove(sessionId);
                 if (sess == null) {
@@ -583,12 +585,12 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             sessionManager.sessionListeners.sessionDestroyed(this, exchange, reason);
             invalid = true;
 
-            if(sessionManager.statisticsEnabled) {
+            if (sessionManager.statisticsEnabled) {
                 long life = System.currentTimeMillis() - creationTime;
                 synchronized (sessionManager) {
                     sessionManager.expiredSessionCount++;
                     sessionManager.totalSessionLifetime = sessionManager.totalSessionLifetime.add(BigInteger.valueOf(life));
-                    if(sessionManager.longestSessionLifetime < life) {
+                    if (sessionManager.longestSessionLifetime < life) {
                         sessionManager.longestSessionLifetime = life;
                     }
                 }
@@ -608,7 +610,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             final String oldId = sessionId;
             String newId = sessionManager.sessionIdGenerator.createSessionId();
             this.sessionId = newId;
-            if(!invalid) {
+            if (!invalid) {
                 sessionManager.sessions.put(newId, this);
                 config.setSessionId(exchange, this.getId());
             }
@@ -621,7 +623,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
         private synchronized void destroy() {
             if (timerCancelKey != null) {
-                timerCancelKey.remove();
+                timerCancelKey.cancel(false);
             }
             cancelTask = null;
         }

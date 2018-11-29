@@ -24,6 +24,7 @@ import static io.undertow.util.Methods.HEAD;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
@@ -171,13 +172,13 @@ public class ResponseCache {
             return true;
         }
 
-        final ByteBuffer[] buffers;
+        final ByteBuf[] buffers;
 
 
         boolean ok = false;
         try {
             LimitedBufferSlicePool.PooledByteBuffer[] pooled = entry.buffers();
-            buffers = new ByteBuffer[pooled.length];
+            buffers = new ByteBuf[pooled.length];
             for (int i = 0; i < buffers.length; i++) {
                 // Keep position from mutating
                 buffers[i] = pooled[i].getBuffer().duplicate();

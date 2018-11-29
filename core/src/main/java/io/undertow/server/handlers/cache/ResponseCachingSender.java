@@ -18,13 +18,12 @@
 
 package io.undertow.server.handlers.cache;
 
-import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import org.xnio.Buffers;
-
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 
@@ -45,65 +44,61 @@ public class ResponseCachingSender implements Sender {
     }
 
     @Override
-    public void send(final ByteBuffer src, final IoCallback callback) {
-        ByteBuffer origSrc = src.duplicate();
+    public void send(final ByteBuf src, final IoCallback callback) {
+        ByteBuf origSrc = src.duplicate();
         handleUpdate(origSrc);
         delegate.send(src, callback);
     }
 
 
     @Override
-    public void send(final ByteBuffer[] srcs, final IoCallback callback) {
-        ByteBuffer[] origSrc = new ByteBuffer[srcs.length];
-        long total = 0;
+    public void send(final ByteBuf[] srcs, final IoCallback callback) {
+        ByteBuf[] origSrc = new ByteBuf[srcs.length];
         for (int i = 0; i < srcs.length; i++) {
             origSrc[i] = srcs[i].duplicate();
-            total += origSrc[i].remaining();
         }
-        handleUpdate(origSrc, total);
+        handleUpdate(origSrc);
         delegate.send(srcs, callback);
     }
 
     @Override
-    public void send(final ByteBuffer src) {
-        ByteBuffer origSrc = src.duplicate();
+    public void send(final ByteBuf src) {
+        ByteBuf origSrc = src.duplicate();
         handleUpdate(origSrc);
         delegate.send(src);
     }
 
     @Override
-    public void send(final ByteBuffer[] srcs) {
-        ByteBuffer[] origSrc = new ByteBuffer[srcs.length];
-        long total = 0;
+    public void send(final ByteBuf[] srcs) {
+        ByteBuf[] origSrc = new ByteBuf[srcs.length];
         for (int i = 0; i < srcs.length; i++) {
             origSrc[i] = srcs[i].duplicate();
-            total += origSrc[i].remaining();
         }
-        handleUpdate(origSrc, total);
+        handleUpdate(origSrc);
         delegate.send(srcs);
     }
 
     @Override
     public void send(final String data, final IoCallback callback) {
-        handleUpdate(ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8)));
+        handleUpdate(Unpooled.copiedBuffer(data, StandardCharsets.UTF_8));
         delegate.send(data, callback);
     }
 
     @Override
     public void send(final String data, final Charset charset, final IoCallback callback) {
-        handleUpdate(ByteBuffer.wrap(data.getBytes(charset)));
+        handleUpdate(Unpooled.copiedBuffer(data, charset));
         delegate.send(data, charset, callback);
     }
 
     @Override
     public void send(final String data) {
-        handleUpdate(ByteBuffer.wrap(data.getBytes(StandardCharsets.UTF_8)));
+        handleUpdate(Unpooled.copiedBuffer(data, StandardCharsets.UTF_8));
         delegate.send(data);
     }
 
     @Override
     public void send(final String data, final Charset charset) {
-        handleUpdate(ByteBuffer.wrap(data.getBytes(charset)));
+        handleUpdate(Unpooled.copiedBuffer(data, StandardCharsets.UTF_8));
         delegate.send(data, charset);
     }
 
@@ -131,47 +126,21 @@ public class ResponseCachingSender implements Sender {
         delegate.close();
     }
 
-    private void handleUpdate(final ByteBuffer origSrc) {
+    private void handleUpdate(final ByteBuf origSrc) {
         LimitedBufferSlicePool.PooledByteBuffer[] pooled = cacheEntry.buffers();
-        ByteBuffer[] buffers = new ByteBuffer[pooled.length];
-        for (int i = 0; i < buffers.length; i++) {
-            buffers[i] = pooled[i].getBuffer();
+        for (int i = 0; i < pooled.length; i++) {
+            int written = Math.min(pooled[i].buffer.writableBytes(), origSrc.writableBytes());
+            this.written += written;
+            pooled[i].buffer.writeBytes(origSrc, written);
         }
-        written += Buffers.copy(buffers, 0, buffers.length, origSrc);
         if (written == length) {
-            for (ByteBuffer buffer : buffers) {
-                //prepare buffers for reading
-                buffer.flip();
-            }
             cacheEntry.enable();
         }
     }
 
-    private void handleUpdate(final ByteBuffer[] origSrc, long totalWritten) {
-        LimitedBufferSlicePool.PooledByteBuffer[] pooled = cacheEntry.buffers();
-        ByteBuffer[] buffers = new ByteBuffer[pooled.length];
-        for (int i = 0; i < buffers.length; i++) {
-            buffers[i] = pooled[i].getBuffer();
-        }
-        long leftToCopy = totalWritten;
-        for (int i = 0; i < origSrc.length; ++i) {
-            ByteBuffer buf = origSrc[i];
-            if (buf.remaining() > leftToCopy) {
-                buf.limit((int) (buf.position() + leftToCopy));
-            }
-            leftToCopy -= buf.remaining();
-            Buffers.copy(buffers, 0, buffers.length, buf);
-            if (leftToCopy == 0) {
-                break;
-            }
-        }
-        written += totalWritten;
-        if (written == length) {
-            for (ByteBuffer buffer : buffers) {
-                //prepare buffers for reading
-                buffer.flip();
-            }
-            cacheEntry.enable();
+    private void handleUpdate(final ByteBuf[] origSrc) {
+        for (ByteBuf i : origSrc) {
+            handleUpdate(i);
         }
     }
 }

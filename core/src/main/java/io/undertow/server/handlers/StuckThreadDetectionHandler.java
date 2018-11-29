@@ -26,15 +26,16 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * This valve allows to detect requests that take a long time to process, which might
@@ -72,7 +73,7 @@ public class StuckThreadDetectionHandler implements HttpHandler {
 
     private final HttpHandler next;
 
-    private volatile IoExecutor.Key timerKey;
+    private volatile ScheduledFuture<?> timerKey;
 
     public StuckThreadDetectionHandler(HttpHandler next) {
         this(DEFAULT_THRESHOLD, next);
@@ -122,7 +123,7 @@ public class StuckThreadDetectionHandler implements HttpHandler {
         if (timerKey == null) {
             synchronized (this) {
                 if (timerKey == null) {
-                    timerKey = exchange.getIoThread().executeAfter(new StuckThreadTask(exchange.getIoThread()), 1, TimeUnit.SECONDS);
+                    timerKey = exchange.getIoThread().schedule(new StuckThreadTask(exchange.getIoThread()), 1, TimeUnit.SECONDS);
                 }
             }
         }
@@ -284,9 +285,9 @@ public class StuckThreadDetectionHandler implements HttpHandler {
 
     private class StuckThreadTask implements Runnable {
 
-        final IoExecutor thread;
+        final EventExecutor thread;
 
-        private StuckThreadTask(IoExecutor thread) {
+        private StuckThreadTask(EventExecutor thread) {
             this.thread = thread;
         }
 
@@ -315,7 +316,7 @@ public class StuckThreadDetectionHandler implements HttpHandler {
                 if (activeThreads.isEmpty()) {
                     timerKey = null;
                 } else {
-                    timerKey = WorkerUtils.executeAfter(thread, this, 1, TimeUnit.SECONDS);
+                    timerKey = thread.schedule(this, 1, TimeUnit.SECONDS);
                 }
             }
         }

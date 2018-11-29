@@ -46,8 +46,6 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
-import io.undertow.io.UndertowInputStream;
-import io.undertow.io.UndertowOutputStream;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.util.AbstractAttachable;
@@ -1138,7 +1136,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         return null;
     }
 
-    public ChannelFuture writeAsync(ByteBuf data, boolean last) {
+    ChannelFuture writeAsync(ByteBuf data, boolean last) {
         if (data == null && !last) {
             throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
         }
@@ -1156,7 +1154,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         return connection.writeAsync(data, last, this);
     }
 
-    public ChannelFuture writeAsync(ByteBuf[] data, boolean last) {
+    ChannelFuture writeAsync(ByteBuf[] data, boolean last) {
         if (data == null && !last) {
             throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
         }
@@ -1186,7 +1184,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         return connection.writeAsync(data[data.length - 1], last, this);
     }
 
-    public void writeBlocking(ByteBuf data, boolean last) throws IOException {
+    void writeBlocking(ByteBuf data, boolean last) throws IOException {
         if (data == null && !last) {
             throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
         }
@@ -1202,7 +1200,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         connection.writeBlocking(data, last, this);
     }
 
-    public ChannelFuture writeFileAsync(FileChannel file, long position, long count) {
+    ChannelFuture writeFileAsync(FileChannel file, long position, long count) {
         if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
             ChannelPromise promise = connection.createPromise();
             promise.setFailure(UndertowMessages.MESSAGES.responseComplete());
@@ -1217,7 +1215,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         return connection.writeFileAsync(file, position, count, this);
     }
 
-    public void writeFileBlocking(FileChannel file, long position, long count) throws IOException {
+    void writeFileBlocking(FileChannel file, long position, long count) throws IOException {
         if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
             throw UndertowMessages.MESSAGES.responseComplete();
         }
@@ -1644,6 +1642,21 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     boolean isResumed() {
         return anyAreSet(state, FLAG_SHOULD_RESUME_WRITES | FLAG_SHOULD_RESUME_READS);
+    }
+
+    boolean isReadDataAvailable() {
+        return false;
+    }
+
+    /**
+     * Reads some data from the exchange. Can only be called if {@link #isReadDataAvailable()} returns true.
+     *
+     * Returns null when all data is full read
+     * @return
+     * @throws IOException
+     */
+    ByteBuf readAsync() throws IOException {
+        return null;
     }
 
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {

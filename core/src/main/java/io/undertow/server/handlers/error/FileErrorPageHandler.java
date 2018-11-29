@@ -34,10 +34,11 @@ import java.util.Map;
 import java.util.Set;
 
 import org.jboss.logging.Logger;
-import org.xnio.IoUtils;
 
 import io.undertow.Handlers;
 import io.undertow.UndertowLogger;
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
 import io.undertow.server.DefaultResponseListener;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HandlerWrapper;
@@ -46,6 +47,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.Headers;
+import io.undertow.util.IoUtils;
 import io.undertow.util.MimeMappings;
 
 /**
@@ -147,7 +149,7 @@ public class FileErrorPageHandler implements HttpHandler {
                     throw new RuntimeException(e);
                 }
                 exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, size);
-                final IoSink response = exchange.getResponseChannel();
+                final Sender response = exchange.getResponseSender();
                 exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
                     @Override
                     public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
@@ -157,7 +159,7 @@ public class FileErrorPageHandler implements HttpHandler {
                 });
 
                 log.tracef("Serving file %s (blocking)", fileChannel);
-                response.sendFile(fileChannel, true);
+                response.transferFrom(fileChannel, IoCallback.END_EXCHANGE);
             }
         });
     }

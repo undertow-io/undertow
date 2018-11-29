@@ -20,7 +20,9 @@ package io.undertow.io;
 
 import java.io.IOException;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.IoUtils;
 
 /**
  * @author Stuart Douglas
@@ -34,6 +36,21 @@ public interface IoCallback {
     /**
      * A default callback that simply ends the exchange.
      */
-    IoCallback END_EXCHANGE = new DefaultIoCallback();
+    IoCallback END_EXCHANGE = new IoCallback() {
+        @Override
+        public void onComplete(HttpServerExchange exchange, Sender sender) {
+            exchange.endExchange();
+        }
+
+        @Override
+        public void onException(HttpServerExchange exchange, Sender sender, IOException exception) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
+            try {
+                exchange.endExchange();
+            } finally {
+                IoUtils.safeClose(exchange.getConnection());
+            }
+        }
+    };
 
 }

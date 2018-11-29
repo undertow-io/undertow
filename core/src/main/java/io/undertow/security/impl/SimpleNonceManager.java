@@ -32,23 +32,24 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.util.concurrent.EventExecutor;
 import io.undertow.security.api.SessionNonceManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.FlexBase64;
-import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * A default {@link io.undertow.security.api.NonceManager} implementation to provide reasonable single host management of nonces.
- *
+ * <p>
  * This {@link io.undertow.security.api.NonceManager} manages nonces in two groups, the first is the group that are allocated to new requests, this group
  * is a problem as we want to be able to limit how many we distribute so we don't have a DOS storing too many but we also don't
  * a high number of requests to to push the other valid nonces out faster than they can be used.
- *
+ * <p>
  * The second group is the set of nonces actively in use - these should be maintained as we can also maintain the nonce count
  * and even track the next nonce once invalid.
- *
+ * <p>
  * Maybe group one should be a timestamp and private key hashed together, if used with a nonce count they move to be tracked to
  * ensure the same count is not used again - if successfully used without a nonce count add to a blacklist until expiration? A
  * nonce used without a nonce count will essentially be single use with each request getting a new nonce.
@@ -61,7 +62,7 @@ public class SimpleNonceManager implements SessionNonceManager {
 
     /**
      * List of invalid nonces, this list contains the nonces that have been used without a nonce count.
-     *
+     * <p>
      * In that situation they are considered single use and must not be used again.
      */
     private final Set<String> invalidNonces = Collections.synchronizedSet(new HashSet<String>());
@@ -75,11 +76,11 @@ public class SimpleNonceManager implements SessionNonceManager {
     /**
      * A WeakHashMap to map expired nonces to their replacement nonce. For an item to be added to this Collection the value will
      * have been removed from the knownNonces map.
-     *
+     * <p>
      * A replacement nonce will have been added to knownNonces that references the key used here - once the replacement nonce is
      * removed from knownNonces then the key will be eligible for garbage collection allowing it to be removed from this map as
      * well.
-     *
+     * <p>
      * The value in this Map is a plain String, this is to avoid inadvertently creating a long term reference to the key we
      * expect to be garbage collected at some point in the future.
      */
@@ -107,10 +108,10 @@ public class SimpleNonceManager implements SessionNonceManager {
 
     /**
      * A previously used nonce will be allowed to remain in the knownNonces list for up to 5 minutes.
-     *
+     * <p>
      * The nonce will be accepted during this 5 minute window but will immediately be replaced causing any additional requests
      * to be forced to use the new nonce.
-     *
+     * <p>
      * This is primarily for session based digests where loosing the cached session key would be bad.
      */
     private static final long cacheTimePostExpiry = 5 * 60 * 1000;
@@ -142,7 +143,6 @@ public class SimpleNonceManager implements SessionNonceManager {
     }
 
     /**
-     *
      * @see io.undertow.security.api.NonceManager#nextNonce(java.lang.String, io.undertow.server.HttpServerExchange)
      */
     public String nextNonce(String lastNonce, HttpServerExchange exchange) {
@@ -180,7 +180,7 @@ public class SimpleNonceManager implements SessionNonceManager {
                         Nonce replacement = createNewNonce(holder);
                         if (value.executorKey != null) {
                             // The outcome doesn't matter - if we have the value we have all we need.
-                            value.executorKey.remove();
+                            value.executorKey.cancel(false);
                         }
 
                         nonce = replacement.nonce;
@@ -198,7 +198,7 @@ public class SimpleNonceManager implements SessionNonceManager {
                         knownNonces.put(nonce, replacement);
                         earliestAccepted = now - (overallTimeOut + cacheTimePostExpiry);
                         long timeTillExpiry = replacement.timeStamp - earliestAccepted;
-                        replacement.executorKey = WorkerUtils.executeAfter(exchange.getIoThread(), new KnownNonceCleaner(nonce), timeTillExpiry,
+                        replacement.executorKey = exchange.getIoThread().schedule(new KnownNonceCleaner(nonce), timeTillExpiry,
                                 TimeUnit.MILLISECONDS);
 
                     }
@@ -225,7 +225,6 @@ public class SimpleNonceManager implements SessionNonceManager {
     }
 
     /**
-     *
      * @see io.undertow.security.api.NonceManager#validateNonce(java.lang.String, int, io.undertow.server.HttpServerExchange)
      */
     @Override
@@ -270,7 +269,7 @@ public class SimpleNonceManager implements SessionNonceManager {
         }
     }
 
-    private boolean validateNonceWithCount(Nonce nonce, int nonceCount, final IoExecutor executor) {
+    private boolean validateNonceWithCount(Nonce nonce, int nonceCount, final EventExecutor executor) {
         // This point could have been reached either because the knownNonces map contained the key or because
         // it didn't and a count was supplied - either way need to double check the contents of knownNonces once
         // the lock is in place.
@@ -289,7 +288,7 @@ public class SimpleNonceManager implements SessionNonceManager {
                 if (nonce.timeStamp > earliestAccepted && nonce.timeStamp <= now) {
                     knownNonces.put(nonce.nonce, nonce);
                     long timeTillExpiry = nonce.timeStamp - earliestAccepted;
-                    nonce.executorKey = WorkerUtils.executeAfter(executor, new KnownNonceCleaner(nonce.nonce), timeTillExpiry,
+                    nonce.executorKey = executor.schedule(new KnownNonceCleaner(nonce.nonce), timeTillExpiry,
                             TimeUnit.MILLISECONDS);
                     return true;
                 }
@@ -314,14 +313,14 @@ public class SimpleNonceManager implements SessionNonceManager {
 
     }
 
-    private boolean addInvalidNonce(final Nonce nonce, final IoExecutor executor) {
+    private boolean addInvalidNonce(final Nonce nonce, final EventExecutor executor) {
         long now = System.currentTimeMillis();
         long invalidBefore = now - firstUseTimeOut;
 
         long timeTillInvalid = nonce.timeStamp - invalidBefore;
         if (timeTillInvalid > 0) {
             if (invalidNonces.add(nonce.nonce)) {
-                executor.executeAfter(new InvalidNonceCleaner(nonce.nonce), timeTillInvalid, TimeUnit.MILLISECONDS);
+                executor.schedule(new InvalidNonceCleaner(nonce.nonce), timeTillInvalid, TimeUnit.MILLISECONDS);
                 return true;
             } else {
                 return false;
@@ -335,14 +334,14 @@ public class SimpleNonceManager implements SessionNonceManager {
 
     /**
      * Verify a previously unknown nonce and return the {@link NonceKey} representation for the nonce.
-     *
+     * <p>
      * Later when a nonce is re-used we can match based on the String alone - the information embedded within the nonce will be
      * cached with it.
-     *
+     * <p>
      * This stage of the verification simply extracts the prefix and the embedded timestamp and recreates a new hashed and
      * Base64 nonce based on the local secret - if the newly generated nonce matches the supplied one we accept it was created
      * by this nonce manager.
-     *
+     * <p>
      * This verification does not validate that the timestamp is within a valid time period.
      *
      * @param nonce -
@@ -446,7 +445,7 @@ public class SimpleNonceManager implements SessionNonceManager {
 
     /**
      * The state associated with a nonce.
-     *
+     * <p>
      * A NonceKey for a preciously valid nonce is also referenced, this is so that a WeakHashMap can be used to maintain a
      * mapping from the original NonceKey to the new nonce value.
      */
@@ -461,7 +460,7 @@ public class SimpleNonceManager implements SessionNonceManager {
         @SuppressWarnings("unused")
         private final NonceHolder previousNonce;
         private byte[] sessionKey;
-        private IoExecutor.Key executorKey;
+        private ScheduledFuture<?> executorKey;
 
         private Nonce(final String nonce) {
             this(nonce, -1, -1);

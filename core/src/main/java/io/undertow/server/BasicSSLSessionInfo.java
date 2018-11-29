@@ -29,8 +29,7 @@ import javax.net.ssl.SSLSession;
 import javax.security.cert.CertificateException;
 import javax.security.cert.X509Certificate;
 
-import org.xnio.SslClientAuthMode;
-
+import io.netty.handler.ssl.ClientAuth;
 import io.undertow.UndertowMessages;
 import io.undertow.util.FlexBase64;
 
@@ -47,12 +46,11 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
     private final X509Certificate[] certificate;
 
     /**
-     *
-     * @param sessionId The SSL session ID
+     * @param sessionId   The SSL session ID
      * @param cypherSuite The cypher suite name
      * @param certificate A string representation of the client certificate
      * @throws java.security.cert.CertificateException If the client cert could not be decoded
-     * @throws CertificateException If the client cert could not be decoded
+     * @throws CertificateException                    If the client cert could not be decoded
      */
     public BasicSSLSessionInfo(byte[] sessionId, String cypherSuite, String certificate) throws java.security.cert.CertificateException, CertificateException {
         this.sessionId = sessionId;
@@ -65,8 +63,8 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
             Collection<? extends java.security.cert.Certificate> certCol = cf.generateCertificates(stream);
             this.peerCertificate = new java.security.cert.Certificate[certCol.size()];
             this.certificate = new X509Certificate[certCol.size()];
-            int i=0;
-            for(java.security.cert.Certificate cert : certCol) {
+            int i = 0;
+            for (java.security.cert.Certificate cert : certCol) {
                 this.peerCertificate[i] = cert;
                 this.certificate[i++] = X509Certificate.getInstance(cert.getEncoded());
             }
@@ -75,13 +73,13 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
             this.certificate = null;
         }
     }
+
     /**
-     *
-     * @param sessionId The Base64 encoded SSL session ID
+     * @param sessionId   The Base64 encoded SSL session ID
      * @param cypherSuite The cypher suite name
      * @param certificate A string representation of the client certificate
      * @throws java.security.cert.CertificateException If the client cert could not be decoded
-     * @throws CertificateException If the client cert could not be decoded
+     * @throws CertificateException                    If the client cert could not be decoded
      */
     public BasicSSLSessionInfo(String sessionId, String cypherSuite, String certificate) throws java.security.cert.CertificateException, CertificateException {
         this(sessionId == null ? null : base64Decode(sessionId), cypherSuite, certificate);
@@ -89,7 +87,7 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
 
     @Override
     public byte[] getSessionId() {
-        if(sessionId == null) {
+        if (sessionId == null) {
             return null;
         }
         final byte[] copy = new byte[sessionId.length];
@@ -119,7 +117,7 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
     }
 
     @Override
-    public void renegotiate(HttpServerExchange exchange, SslClientAuthMode sslClientAuthMode) throws IOException {
+    public void renegotiate(HttpServerExchange exchange, ClientAuth sslClientAuthMode) throws IOException {
         throw UndertowMessages.MESSAGES.renegotiationNotSupported();
     }
 
