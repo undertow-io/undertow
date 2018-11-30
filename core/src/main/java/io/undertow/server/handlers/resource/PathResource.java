@@ -119,16 +119,7 @@ public class PathResource implements RangeAwareResource {
         try {
             //TODO: this is all broken, needs to be fixed
             fileChannel = FileChannel.open(file, StandardOpenOption.READ);
-            exchange.writeFileAsync(fileChannel, start, end - start).addListener(new GenericFutureListener<Future<? super Void>>() {
-                @Override
-                public void operationComplete(Future<? super Void> future) throws Exception {
-                    if(future.isSuccess()) {
-                        callback.onComplete(exchange, sender);
-                    } else {
-                        callback.onException(exchange, sender, new IOException());
-                    }
-                }
-            });
+            sender.transferFrom(fileChannel, start, end - start, callback);
             if (range) {
                 fileChannel.position(start);
             }

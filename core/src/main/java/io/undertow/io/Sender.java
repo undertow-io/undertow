@@ -113,6 +113,13 @@ public interface Sender {
     void transferFrom(final FileChannel channel, final IoCallback callback);
 
     /**
+     * Transfers all content from the specified file
+     *
+     * @param channel  the file channel to transfer
+     * @param callback The callback
+     */
+    void transferFrom(final FileChannel channel, long start, long length, final IoCallback callback);
+    /**
      * Closes this sender asynchronously. The given callback is notified on completion
      *
      * @param callback The callback that is notified when all data has been flushed and the channel is closed

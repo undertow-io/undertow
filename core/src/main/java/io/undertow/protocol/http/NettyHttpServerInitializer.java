@@ -14,18 +14,25 @@
  */
 package io.undertow.protocol.http;
 
+import java.util.concurrent.ExecutorService;
+
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerExpectContinueHandler;
 import io.netty.handler.ssl.SslContext;
+import io.undertow.server.HttpHandler;
 
 public class NettyHttpServerInitializer extends ChannelInitializer<SocketChannel> {
 
+    private final ExecutorService blockingExecutor;
+    private final HttpHandler rootHandler;
     private final SslContext sslCtx;
 
-    public NettyHttpServerInitializer(SslContext sslCtx) {
+    public NettyHttpServerInitializer(ExecutorService blockingExecutor, HttpHandler rootHandler, SslContext sslCtx) {
+        this.blockingExecutor = blockingExecutor;
+        this.rootHandler = rootHandler;
         this.sslCtx = sslCtx;
     }
 
@@ -37,6 +44,6 @@ public class NettyHttpServerInitializer extends ChannelInitializer<SocketChannel
         }
         p.addLast(new HttpServerCodec());
         p.addLast(new HttpServerExpectContinueHandler());
-        p.addLast(new NettyHttpServerHandler());
+        p.addLast(new NettyHttpServerHandler(blockingExecutor, rootHandler));
     }
 }

@@ -18,9 +18,8 @@
 
 package io.undertow.server;
 
-import org.xnio.ChannelListener;
-import org.xnio.StreamConnection;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.undertow.util.UndertowOptionMap;
 
 /**
@@ -59,7 +58,7 @@ public interface OpenListener  {
      *
      * @return The buffer pool in use by this connector
      */
-    Buffe getBufferPool();
+    ByteBufAllocator getBufferPool();
 
     /**
      *

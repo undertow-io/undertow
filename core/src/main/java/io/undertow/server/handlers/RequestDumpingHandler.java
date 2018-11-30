@@ -31,8 +31,6 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.server.handlers.form.FormData;
-import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.LocaleUtils;
@@ -142,11 +140,11 @@ public class RequestDumpingHandler implements HttpHandler {
                     }
                 }
                 sb.append("            status=" + exchange.getStatusCode() + "\n");
-                String storedResponse = StoredResponse.INSTANCE.readAttribute(exchange);
-                if (storedResponse != null) {
-                    sb.append("body=\n");
-                    sb.append(storedResponse);
-                }
+//                String storedResponse = StoredResponse.INSTANCE.readAttribute(exchange);
+//                if (storedResponse != null) {
+//                    sb.append("body=\n");
+//                    sb.append(storedResponse);
+//                }
 
                 sb.append("\n==============================================================");
 
@@ -162,34 +160,34 @@ public class RequestDumpingHandler implements HttpHandler {
     }
 
     private void dumpRequestBody(HttpServerExchange exchange, StringBuilder sb) {
-        try {
-            FormData formData = exchange.getAttachment(FormDataParser.FORM_DATA);
-            if (formData != null) {
-                sb.append("body=\n");
-
-                for (String formField : formData) {
-                    Deque<FormData.FormValue> formValues = formData.get(formField);
-
-                    sb.append(formField)
-                            .append("=");
-                    for (FormData.FormValue formValue : formValues) {
-                        sb.append(formValue.isFileItem() ? "[file-content]" : formValue.getValue());
-                        sb.append("\n");
-
-                        if (formValue.getHeaders() != null) {
-                            sb.append("headers=\n");
-                            for (HeaderValues header : formValue.getHeaders()) {
-                                sb.append("\t")
-                                        .append(header.getHeaderName()).append("=").append(header.getFirst()).append("\n");
-
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            FormData formData = exchange.getAttachment(FormDataParser.FORM_DATA);
+//            if (formData != null) {
+//                sb.append("body=\n");
+//
+//                for (String formField : formData) {
+//                    Deque<FormData.FormValue> formValues = formData.get(formField);
+//
+//                    sb.append(formField)
+//                            .append("=");
+//                    for (FormData.FormValue formValue : formValues) {
+//                        sb.append(formValue.isFileItem() ? "[file-content]" : formValue.getValue());
+//                        sb.append("\n");
+//
+//                        if (formValue.getHeaders() != null) {
+//                            sb.append("headers=\n");
+//                            for (HeaderValues header : formValue.getHeaders()) {
+//                                sb.append("\t")
+//                                        .append(header.getHeaderName()).append("=").append(header.getFirst()).append("\n");
+//
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        } catch (Exception e) {
+//            throw new RuntimeException(e);
+//        }
     }
 
 

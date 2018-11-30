@@ -62,11 +62,11 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     private boolean responseCommited;
     private boolean responseComplete;
 
+    private final Executor executor;
 
-
-
-    public HttpServerConnection(ChannelHandlerContext ctx) {
+    public HttpServerConnection(ChannelHandlerContext ctx, Executor executor) {
         this.ctx = ctx;
+        this.executor = executor;
     }
 
     @Override
@@ -78,8 +78,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
      * @return The connections worker
      */
     public Executor getWorker() {
-        //TODO: this is single threaded
-        return GlobalEventExecutor.INSTANCE;
+        return executor;
     }
 
     /**

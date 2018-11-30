@@ -21,7 +21,6 @@ package io.undertow.security.api;
 import java.util.Map;
 
 import io.undertow.security.idm.IdentityManager;
-import io.undertow.server.handlers.form.FormParserFactory;
 
 /**
  *

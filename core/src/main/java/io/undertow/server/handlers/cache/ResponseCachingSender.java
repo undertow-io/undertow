@@ -109,6 +109,11 @@ public class ResponseCachingSender implements Sender {
     }
 
     @Override
+    public void transferFrom(FileChannel channel, long start, long length, IoCallback callback) {
+        delegate.transferFrom(channel, start, length, callback);
+    }
+
+    @Override
     public void close(final IoCallback callback) {
         if (written != length) {
             cacheEntry.disable();

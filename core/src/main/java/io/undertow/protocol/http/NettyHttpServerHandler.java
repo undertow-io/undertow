@@ -16,7 +16,6 @@ package io.undertow.protocol.http;
 
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -32,19 +31,16 @@ import io.undertow.util.Protocols;
 
 public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
 
-    static final ExecutorService blockingExecutor = Executors.newFixedThreadPool(64);
+    private final ExecutorService blockingExecutor;
+    private final HttpHandler rootHandler;
 
-    static String data;
-    static {
-        StringBuilder sb = new StringBuilder();
-        for(int i = 0; i < 1000; ++i) {
-            sb.append("hello world");
-        }
-        data = sb.toString();
-    }
 
     private HttpServerConnection connection;
-    private HttpHandler rootHandler;
+
+    public NettyHttpServerHandler(ExecutorService blockingExecutor, HttpHandler rootHandler) {
+        this.blockingExecutor = blockingExecutor;
+        this.rootHandler = rootHandler;
+    }
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
@@ -56,7 +52,7 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
         if (msg instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) msg;
             if(connection == null) {
-                connection = new HttpServerConnection(ctx);
+                connection = new HttpServerConnection(ctx, blockingExecutor);
             }
             HttpServerExchange exchange = new HttpServerExchange(connection);
             connection.setExchange(exchange);
@@ -74,12 +70,7 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
             if(msg instanceof LastHttpContent) {
                 Connectors.terminateRequest(exchange);
             }
-            blockingExecutor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    Connectors.executeRootHandler(rootHandler, exchange);
-                }
-            });
+            Connectors.executeRootHandler(rootHandler, exchange);
         } else if(msg instanceof HttpContent) {
 
         }
