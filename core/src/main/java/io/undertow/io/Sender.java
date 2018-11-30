@@ -20,6 +20,7 @@ package io.undertow.io;
 
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import io.netty.buffer.ByteBuf;
 
@@ -57,14 +58,18 @@ public interface Sender {
      *
      * @param buffer The buffer to send.
      */
-    void send(final ByteBuf buffer);
+    default void send(final ByteBuf buffer) {
+        send(buffer, IoCallback.END_EXCHANGE);
+    }
 
     /**
      * Write the given buffers using async IO, and ends the exchange when done
      *
      * @param buffer The buffers to send.
      */
-    void send(final ByteBuf[] buffer);
+    default void send(final ByteBuf[] buffer) {
+        send(buffer, IoCallback.END_EXCHANGE);
+    }
 
     /**
      * Write the given String using async IO, and calls the given callback on completion or error.
@@ -74,7 +79,9 @@ public interface Sender {
      * @param data     The data to send
      * @param callback The callback
      */
-    void send(final String data, final IoCallback callback);
+    default void send(final String data, final IoCallback callback){
+        send(data, StandardCharsets.UTF_8, callback);
+    }
 
     /**
      * Write the given String using async IO, and calls the given callback on completion or error.
@@ -93,7 +100,9 @@ public interface Sender {
      *
      * @param data The data to send
      */
-    void send(final String data);
+    default void send(final String data) {
+        send(data, StandardCharsets.UTF_8, IoCallback.END_EXCHANGE);
+    }
 
     /**
      * Write the given String using async IO, and ends the exchange when done
@@ -101,7 +110,9 @@ public interface Sender {
      * @param data    The buffer to end.
      * @param charset The charset to use
      */
-    void send(final String data, final Charset charset);
+    default void send(final String data, final Charset charset) {
+        send(data, charset, IoCallback.END_EXCHANGE);
+    }
 
 
     /**
@@ -129,5 +140,7 @@ public interface Sender {
     /**
      * Closes this sender asynchronously
      */
-    void close();
+    default void close() {
+        close(IoCallback.END_EXCHANGE);
+    }
 }

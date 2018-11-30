@@ -95,7 +95,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      *
      * @param exchange           The current exchange.
      */
-    public abstract ChannelFuture endExchange(HttpServerExchange exchange);
+    public abstract void endExchange(HttpServerExchange exchange);
 
     /**
      *

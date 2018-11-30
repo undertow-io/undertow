@@ -1301,8 +1301,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (sender != null) {
             return sender;
         }
-        throw new RuntimeException("NYI");
-        //return sender = new AsyncSenderImpl(this);
+        return sender = new AsyncSenderImpl(this);
     }
 
     public Receiver getRequestReceiver() {
@@ -1541,12 +1540,8 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
 
-        connection.endExchange(this).addListener(new GenericFutureListener<Future<? super Void>>() {
-            @Override
-            public void operationComplete(Future<? super Void> future) throws Exception {
-                invokeExchangeCompleteListeners();
-            }
-        });
+        connection.endExchange(this);
+        invokeExchangeCompleteListeners();
         return this;
     }
 

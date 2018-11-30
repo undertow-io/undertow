@@ -64,6 +64,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     private final Executor executor;
 
+
     public HttpServerConnection(ChannelHandlerContext ctx, Executor executor) {
         this.ctx = ctx;
         this.executor = executor;
@@ -111,9 +112,8 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     }
 
     @Override
-    public ChannelFuture endExchange(HttpServerExchange exchange) {
-        //TODO
-        return null;
+    public void endExchange(HttpServerExchange exchange) {
+        currentExchange = null;
     }
 
     /**
