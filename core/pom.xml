@@ -71,12 +71,12 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Test dependencies -->
-
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
         </dependency>
+        <!-- Test dependencies -->
+
 
         <dependency>
             <groupId>com.twitter</groupId>

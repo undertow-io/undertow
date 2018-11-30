@@ -4,7 +4,6 @@ io.undertow.server.handlers.SetAttributeHandler$ClearBuilder
 io.undertow.server.handlers.builder.ResponseCodeHandlerBuilder
 io.undertow.server.handlers.DisableCacheHandler$Builder
 io.undertow.server.handlers.ProxyPeerAddressHandler$Builder
-io.undertow.server.handlers.proxy.ProxyHandlerBuilder
 io.undertow.server.handlers.RedirectHandler$Builder
 io.undertow.server.handlers.accesslog.AccessLogHandler$Builder
 io.undertow.server.handlers.AllowedMethodsHandler$Builder
@@ -24,12 +23,10 @@ io.undertow.server.handlers.URLDecodingHandler$Builder
 io.undertow.server.handlers.PathSeparatorHandler$Builder
 io.undertow.server.handlers.IPAddressAccessControlHandler$Builder
 io.undertow.server.handlers.ByteRangeHandler$Builder
-io.undertow.server.handlers.encoding.EncodingHandler$Builder
 io.undertow.server.handlers.LearningPushHandler$Builder
 io.undertow.server.handlers.SetHeaderHandler$Builder
 io.undertow.predicate.PredicatesHandler$DoneHandlerBuilder
 io.undertow.predicate.PredicatesHandler$RestartHandlerBuilder
-io.undertow.server.handlers.RequestBufferingHandler$Builder
 io.undertow.server.handlers.StuckThreadDetectionHandler$Builder
 io.undertow.server.handlers.AccessControlListHandler$Builder
 io.undertow.server.handlers.JDBCLogHandler$Builder
@@ -37,5 +34,3 @@ io.undertow.server.handlers.LocalNameResolvingHandler$Builder
 io.undertow.server.handlers.StoredResponseHandler$Builder
 io.undertow.server.handlers.SecureCookieHandler$Builder
 io.undertow.server.handlers.ForwardedHandler$Builder
-io.undertow.server.handlers.HttpContinueAcceptingHandler$Builder
-io.undertow.server.handlers.form.EagerFormParsingHandler$Builder

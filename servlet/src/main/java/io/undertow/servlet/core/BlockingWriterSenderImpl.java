@@ -25,17 +25,19 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
-import java.nio.charset.CharsetDecoder;
 
 import javax.servlet.DispatcherType;
 
 import org.xnio.IoUtils;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.util.IoUtils;
 
 /**
  * A sender that uses a print writer.
@@ -52,7 +54,7 @@ public class BlockingWriterSenderImpl implements Sender {
      */
     public static final int BUFFER_SIZE = 128;
 
-    private final CharsetDecoder charsetDecoder;
+    private final Charset charset;
     private final HttpServerExchange exchange;
     private final PrintWriter writer;
 
@@ -64,13 +66,13 @@ public class BlockingWriterSenderImpl implements Sender {
     public BlockingWriterSenderImpl(final HttpServerExchange exchange, final PrintWriter writer, final String charset) {
         this.exchange = exchange;
         this.writer = writer;
-        this.charsetDecoder = Charset.forName(charset).newDecoder();
+        this.charset = Charset.forName(charset);
     }
 
     @Override
-    public void send(final ByteBuffer buffer, final IoCallback callback) {
+    public void send(final ByteBuf buffer, final IoCallback callback) {
         if (inCall) {
-            queue(new ByteBuffer[]{buffer}, callback);
+            queue(new ByteBuf[]{buffer}, callback);
             return;
         }
         if (writeBuffer(buffer, callback)) {
@@ -80,12 +82,12 @@ public class BlockingWriterSenderImpl implements Sender {
 
 
     @Override
-    public void send(final ByteBuffer[] buffer, final IoCallback callback) {
+    public void send(final ByteBuf[] buffer, final IoCallback callback) {
         if (inCall) {
             queue(buffer, callback);
             return;
         }
-        for (ByteBuffer b : buffer) {
+        for (ByteBuf b : buffer) {
             if (!writeBuffer(b, callback)) {
                 return;
             }
@@ -109,19 +111,9 @@ public class BlockingWriterSenderImpl implements Sender {
     }
 
     @Override
-    public void send(final ByteBuffer buffer) {
-        send(buffer, IoCallback.END_EXCHANGE);
-    }
-
-    @Override
-    public void send(final ByteBuffer[] buffer) {
-        send(buffer, IoCallback.END_EXCHANGE);
-    }
-
-    @Override
     public void send(final String data, final Charset charset, final IoCallback callback) {
         if (inCall) {
-            queue(new ByteBuffer[]{ByteBuffer.wrap(data.getBytes(charset))}, callback);
+            queue(new ByteBuf[]{Unpooled.copiedBuffer(data, charset)}, callback);
             return;
         }
         writer.write(data);
@@ -133,22 +125,17 @@ public class BlockingWriterSenderImpl implements Sender {
     }
 
     @Override
-    public void send(final String data) {
-        send(data, IoCallback.END_EXCHANGE);
-    }
-
-    @Override
-    public void send(final String data, final Charset charset) {
-        send(data, charset, IoCallback.END_EXCHANGE);
-    }
-
-    @Override
     public void transferFrom(FileChannel source, IoCallback callback) {
         if (inCall) {
             queue(source, callback);
             return;
         }
         performTransfer(source, callback);
+    }
+
+    @Override
+    public void transferFrom(FileChannel channel, long start, long length, IoCallback callback) {
+        throw new RuntimeException("NYI");
     }
 
     private void performTransfer(FileChannel source, IoCallback callback) {
@@ -195,10 +182,10 @@ public class BlockingWriterSenderImpl implements Sender {
     }
 
 
-    private boolean writeBuffer(final ByteBuffer buffer, final IoCallback callback) {
+    private boolean writeBuffer(final ByteBuf buffer, final IoCallback callback) {
         StringBuilder builder = new StringBuilder();
         try {
-            builder.append(charsetDecoder.decode(buffer));
+            builder.append(buffer.readCharSequence(buffer.readableBytes(), charset));
         } catch (CharacterCodingException e) {
             callback.onException(exchange, this, e);
             return false;
@@ -239,15 +226,15 @@ public class BlockingWriterSenderImpl implements Sender {
         }
     }
 
-    private void queue(final ByteBuffer[] byteBuffers, final IoCallback ioCallback) {
+    private void queue(final ByteBuf[] byteBuffers, final IoCallback ioCallback) {
         //if data is sent from withing the callback we queue it, to prevent the stack growing indefinitely
         if (next != null || pendingFile != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
         StringBuilder builder = new StringBuilder();
-        for (ByteBuffer buffer : byteBuffers) {
+        for (ByteBuf buffer : byteBuffers) {
             try {
-                builder.append(charsetDecoder.decode(buffer));
+                builder.append(charset.decode(buffer));
             } catch (CharacterCodingException e) {
                 ioCallback.onException(exchange, this, e);
                 return;
