@@ -107,6 +107,7 @@
         <module>servlet</module>
         <module>examples</module>
         <module>websockets-jsr</module>
+        <module>tmp-tests</module>
         <!--<module>karaf</module>-->
     </modules>
 

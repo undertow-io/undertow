@@ -116,7 +116,7 @@ public final class Undertow {
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new NettyHttpServerInitializer(worker, rootHandler, null));
 
-
+            channels = new ArrayList<>();
             listenerInfo = new ArrayList<>();
             for (ListenerConfig listener : listeners) {
                 UndertowLogger.ROOT_LOGGER.debugf("Configuring listener with protocol %s for interface %s and port %s", listener.type, listener.host, listener.port);

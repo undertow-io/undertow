@@ -59,6 +59,7 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
             for(Map.Entry<String, String> header : request.headers()) {
                 exchange.getRequestHeaders().put(new HttpString(header.getKey()), header.getValue());
             }
+            exchange.setRequestMethod(new HttpString(request.method().name()));
             exchange.setRelativePath(request.uri());
             exchange.setRequestPath(request.uri());
             exchange.setRequestURI(request.uri());

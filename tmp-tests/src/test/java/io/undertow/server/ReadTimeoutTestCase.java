@@ -36,7 +36,6 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Options;
 import org.xnio.channels.ReadTimeoutException;
-import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import io.undertow.testutils.DefaultServer;
