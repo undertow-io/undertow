@@ -45,6 +45,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
 import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
 import io.undertow.util.UndertowOptionMap;
 
 /**
@@ -168,7 +169,8 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     @Override
     public UndertowOptionMap getUndertowOptions() {
-        return null;
+        //TODO
+        return UndertowOptionMap.EMPTY;
     }
 
     @Override
@@ -286,7 +288,9 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
                 for (HeaderValues i : exchange.getResponseHeaders()) {
                     response.headers().add(i.getHeaderName().toString(), i.getFirst());
                 }
-                response.headers().add("content-length", data == null ? 0 : data.readableBytes());
+                if(!response.headers().contains(Headers.CONTENT_LENGTH_STRING)) {
+                    response.headers().add(Headers.CONTENT_LENGTH_STRING, data == null ? 0 : data.readableBytes());
+                }
                 return ctx.writeAndFlush(response);
             }
         }

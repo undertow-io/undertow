@@ -1145,12 +1145,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             promise.setFailure(UndertowMessages.MESSAGES.responseComplete());
             return promise;
         }
-        if (anyAreClear(state, FLAG_RESPONSE_SENT)) {
-            state |= FLAG_RESPONSE_SENT;
-            for (int i = responseCommitListenerCount - 1; i >= 0; --i) {
-                responseCommitListeners[i].beforeCommit(this);
-            }
-        }
+        handleFirstData();
         return connection.writeAsync(data, last, this);
     }
 
@@ -1163,12 +1158,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             promise.setFailure(UndertowMessages.MESSAGES.responseComplete());
             return promise;
         }
-        if (anyAreClear(state, FLAG_RESPONSE_SENT)) {
-            state |= FLAG_RESPONSE_SENT;
-            for (int i = responseCommitListenerCount - 1; i >= 0; --i) {
-                responseCommitListeners[i].beforeCommit(this);
-            }
-        }
+        handleFirstData();
         if(data.length == 0) {
             if(last) {
                 return connection.writeAsync(null, true, this);
@@ -1191,13 +1181,18 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
             throw UndertowMessages.MESSAGES.responseComplete();
         }
+        handleFirstData();
+        connection.writeBlocking(data, last, this);
+    }
+
+    private void handleFirstData() {
         if (anyAreClear(state, FLAG_RESPONSE_SENT)) {
             state |= FLAG_RESPONSE_SENT;
+            Connectors.flattenCookies(this);
             for (int i = responseCommitListenerCount - 1; i >= 0; --i) {
                 responseCommitListeners[i].beforeCommit(this);
             }
         }
-        connection.writeBlocking(data, last, this);
     }
 
     ChannelFuture writeFileAsync(FileChannel file, long position, long count) {
@@ -1206,12 +1201,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             promise.setFailure(UndertowMessages.MESSAGES.responseComplete());
             return promise;
         }
-        if (anyAreClear(state, FLAG_RESPONSE_SENT)) {
-            state |= FLAG_RESPONSE_SENT;
-            for (int i = responseCommitListenerCount - 1; i >= 0; --i) {
-                responseCommitListeners[i].beforeCommit(this);
-            }
-        }
+        handleFirstData();
         return connection.writeFileAsync(file, position, count, this);
     }
 
@@ -1219,12 +1209,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
             throw UndertowMessages.MESSAGES.responseComplete();
         }
-        if (anyAreClear(state, FLAG_RESPONSE_SENT)) {
-            state |= FLAG_RESPONSE_SENT;
-            for (int i = responseCommitListenerCount - 1; i >= 0; --i) {
-                responseCommitListeners[i].beforeCommit(this);
-            }
-        }
+        handleFirstData();
         connection.writeFileBlocking(file, position, count, this);
     }
 
@@ -1540,6 +1525,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
 
+        if(!isResponseComplete()) {
+            writeAsync((ByteBuf) null, true);
+        }
         connection.endExchange(this);
         invokeExchangeCompleteListeners();
         return this;
