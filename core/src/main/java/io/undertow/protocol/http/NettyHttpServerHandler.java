@@ -17,30 +17,36 @@ package io.undertow.protocol.http;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSession;
+
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.undertow.server.BasicSSLSessionInfo;
+import io.undertow.server.ConnectionSSLSessionInfo;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
-import io.undertow.util.QueryParameterUtils;
 
 public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
 
     private final ExecutorService blockingExecutor;
     private final HttpHandler rootHandler;
+    private final SSLEngine engine;
 
 
     private HttpServerConnection connection;
 
-    public NettyHttpServerHandler(ExecutorService blockingExecutor, HttpHandler rootHandler) {
+    public NettyHttpServerHandler(ExecutorService blockingExecutor, HttpHandler rootHandler, SSLEngine engine) {
         this.blockingExecutor = blockingExecutor;
         this.rootHandler = rootHandler;
+        this.engine = engine;
     }
 
     @Override
@@ -54,6 +60,10 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
             HttpRequest request = (HttpRequest) msg;
             if(connection == null) {
                 connection = new HttpServerConnection(ctx, blockingExecutor);
+                if(engine != null) {
+
+                    connection.setSslSessionInfo(new ConnectionSSLSessionInfo(engine.getSession()));
+                }
             }
             HttpServerExchange exchange = new HttpServerExchange(connection);
             connection.setExchange(exchange);
@@ -62,7 +72,11 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
             }
             Connectors.setExchangeRequestPath(exchange, request.uri(), "UTF-8", true, false, new StringBuilder());
             exchange.setRequestMethod(new HttpString(request.method().name()));
-            exchange.setRequestScheme("https");
+            if(engine == null) {
+                exchange.setRequestScheme("http");
+            } else {
+                exchange.setRequestScheme("https");
+            }
             exchange.setProtocol(Protocols.HTTP_1_1);
             if(msg instanceof HttpContent) {
                 connection.addData((HttpContent)msg);

@@ -16,21 +16,27 @@ package io.undertow.protocol.http;
 
 import java.util.concurrent.ExecutorService;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
+
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerExpectContinueHandler;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.SslProvider;
 import io.undertow.server.HttpHandler;
 
 public class NettyHttpServerInitializer extends ChannelInitializer<SocketChannel> {
 
     private final ExecutorService blockingExecutor;
     private final HttpHandler rootHandler;
-    private final SslContext sslCtx;
+    private final SSLContext sslCtx;
 
-    public NettyHttpServerInitializer(ExecutorService blockingExecutor, HttpHandler rootHandler, SslContext sslCtx) {
+    public NettyHttpServerInitializer(ExecutorService blockingExecutor, HttpHandler rootHandler, SSLContext sslCtx) {
         this.blockingExecutor = blockingExecutor;
         this.rootHandler = rootHandler;
         this.sslCtx = sslCtx;
@@ -39,11 +45,16 @@ public class NettyHttpServerInitializer extends ChannelInitializer<SocketChannel
     @Override
     public void initChannel(SocketChannel ch) {
         ChannelPipeline p = ch.pipeline();
+        SSLEngine engine = null;
         if (sslCtx != null) {
-            p.addLast(sslCtx.newHandler(ch.alloc()));
+            SSLEngine sslEngine = sslCtx.createSSLEngine();
+            sslEngine.setUseClientMode(false);
+            SslHandler sslHandler = new SslHandler(sslEngine);
+            engine = sslHandler.engine();
+            p.addLast(sslHandler);
         }
         p.addLast(new HttpServerCodec());
         p.addLast(new HttpServerExpectContinueHandler());
-        p.addLast(new NettyHttpServerHandler(blockingExecutor, rootHandler));
+        p.addLast(new NettyHttpServerHandler(blockingExecutor, rootHandler, engine));
     }
 }

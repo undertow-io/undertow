@@ -19,9 +19,11 @@
 package io.undertow;
 
 import java.net.SocketAddress;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -109,12 +111,6 @@ public final class Undertow {
             // Configure the server.
             bossGroup = new NioEventLoopGroup(1);
             workerGroup = new NioEventLoopGroup();
-            ServerBootstrap b = new ServerBootstrap();
-            b.option(ChannelOption.SO_BACKLOG, 1024);
-            b.group(bossGroup, workerGroup)
-                    .channel(NioServerSocketChannel.class)
-                    .handler(new LoggingHandler(LogLevel.INFO))
-                    .childHandler(new NettyHttpServerInitializer(worker, rootHandler, null));
 
             channels = new ArrayList<>();
             listenerInfo = new ArrayList<>();
@@ -145,61 +141,37 @@ public final class Undertow {
 //                    listenerInfo.add(new ListenerInfo("ajp", server.getLocalAddress(), openListener, null, server));
                 } else if (listener.type == ListenerType.HTTP) {
 
+                    ServerBootstrap b = new ServerBootstrap();
+                    b.option(ChannelOption.SO_BACKLOG, 1024);
+                    b.group(bossGroup, workerGroup)
+                            .channel(NioServerSocketChannel.class)
+                            .handler(new LoggingHandler(LogLevel.INFO))
+                            .childHandler(new NettyHttpServerInitializer(worker, rootHandler, null));
                     Channel ch = b.bind(listener.host, listener.port).sync().channel();
 
                     channels.add(ch);
                     listenerInfo.add(new ListenerInfo("http", ch.localAddress(), null));
                 } else if (listener.type == ListenerType.HTTPS) {
-                    throw new RuntimeException("NYI");
-//                        OpenListener openListener;
-//
-//                        HttpOpenListener httpOpenListener = new HttpOpenListener(buffers, undertowOptions);
-//                        httpOpenListener.setRootHandler(rootHandler);
-//
-//                        if (http2) {
-//                            AlpnOpenListener alpn = new AlpnOpenListener(buffers, undertowOptions, httpOpenListener);
-//                            Http2OpenListener http2Listener = new Http2OpenListener(buffers, undertowOptions);
-//                            http2Listener.setRootHandler(rootHandler);
-//                            alpn.addProtocol(Http2OpenListener.HTTP2, http2Listener, 10);
-//                            alpn.addProtocol(Http2OpenListener.HTTP2_14, http2Listener, 7);
-//                            openListener = alpn;
-//                        } else {
-//                            openListener = httpOpenListener;
-//                        }
-//
-//                        UndertowXnioSsl xnioSsl;
-//                        if (listener.sslContext != null) {
-//                            xnioSsl = new UndertowXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), listener.sslContext);
-//                        } else {
-//                            OptionMap.Builder builder = OptionMap.builder();
-//                            for (Map.Entry<UndertowOption<?>, Object> i : listener.overrideSocketOptions) {
-//                                builder.set((Option) XnioUndertowOptions.key(i.getKey()), i.getValue());
-//                            }
-//                            if (!listener.overrideSocketOptions.contains(UndertowOptions.SSL_PROTOCOL)) {
-//                                builder.set(Options.SSL_PROTOCOL, "TLSv1.2");
-//                            }
-//                            xnioSsl = new UndertowXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), JsseSslUtils.createSSLContext(listener.keyManagers, listener.trustManagers, new SecureRandom(), builder.getMap()));
-//                        }
-//
-//                        OptionMap.Builder builder = OptionMap.builder()
-//                                .addAll(socketOptions);
-//
-//                        for (Map.Entry<UndertowOption<?>, Object> i : listener.overrideSocketOptions) {
-//                            builder.set((Option) XnioUndertowOptions.key(i.getKey()), i.getValue());
-//                        }
-//                        OptionMap socketOptionsWithOverrides = builder.getMap();
-//                        AcceptingChannel<? extends StreamConnection> sslServer;
-//                        if (listener.useProxyProtocol) {
-//                            ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(new ProxyProtocolOpenListener(openListener, xnioSsl, buffers, XnioUndertowOptions.map(socketOptionsWithOverrides)));
-//                            sslServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptionsWithOverrides);
-//                        } else {
-//                            ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
-//                            sslServer = xnioSsl.createSslConnectionServer(worker, new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptionsWithOverrides);
-//                        }
-//
-//                        sslServer.resumeAccepts();
-//                        channels.add(sslServer);
-//                        listenerInfo.add(new ListenerInfo("https", sslServer.getLocalAddress(), openListener, xnioSsl, sslServer));
+
+                    SSLContext sslCtx;
+                    if (listener.sslContext != null) {
+                        sslCtx = listener.sslContext;
+                    } else {
+                        sslCtx = SSLContext.getInstance("TLS");
+                        sslCtx.init(listener.keyManagers, listener.trustManagers, new SecureRandom());
+                    }
+                    ServerBootstrap b = new ServerBootstrap();
+                    b.option(ChannelOption.SO_BACKLOG, 1024);
+                    b.group(bossGroup, workerGroup)
+                            .channel(NioServerSocketChannel.class)
+                            .handler(new LoggingHandler(LogLevel.INFO))
+                            .childHandler(new NettyHttpServerInitializer(worker, rootHandler, sslCtx));
+                    Channel ch = b.bind(listener.host, listener.port).sync().channel();
+
+                    channels.add(ch);
+                    listenerInfo.add(new ListenerInfo("https", ch.localAddress(), null));
+
+
                 }
             }
 

@@ -36,7 +36,6 @@ import org.junit.Assume;
 import org.junit.Ignore;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
-import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.BlockJUnit4ClassRunner;
@@ -88,6 +87,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static OpenListener proxyOpenListener;
     private static SSLContext clientSslContext;
     private static Undertow undertow;
+    private static Undertow sslUndertow;
 
     private static final String SERVER_KEY_STORE = "server.keystore";
     private static final String SERVER_TRUST_STORE = "server.truststore";
@@ -396,6 +396,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     public static void startSSLServer() throws IOException {
         SSLContext serverContext = getServerSslContext();
         getClientSSLContext();
+        sslUndertow = Undertow.builder()
+                .setWorker(undertow.getWorker())
+                .setHandler(rootHandler)
+                .addHttpsListener(getHostSSLPort(DEFAULT), getHostAddress(), serverContext).build();
+        sslUndertow.start();
 
 //        startSSLServer(serverContext, OptionMap.create(Options.SSL_CLIENT_AUTH_MODE, SslClientAuthMode.REQUESTED, Options.SSL_ENABLED_PROTOCOLS, Sequence.of("TLSv1.2")));
     }
@@ -489,6 +494,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * cause an error.
      */
     public static void stopSSLServer() throws IOException {
+        if (sslUndertow != null) {
+
+            sslUndertow.stop();
+            sslUndertow = null;
+        }
 //        if (sslServer != null) {
 //            sslServer.close();
 //            sslServer = null;
