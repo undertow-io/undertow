@@ -298,6 +298,8 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
                 }
                 if(!response.headers().contains(Headers.CONTENT_LENGTH_STRING)) {
                     response.headers().add(Headers.CONTENT_LENGTH_STRING, data == null ? 0 : data.readableBytes());
+                } else {
+                    response.headers().set(Headers.TRANSFER_ENCODING_STRING, "chunked");
                 }
                 return ctx.writeAndFlush(response);
             }
@@ -310,6 +312,8 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             for (HeaderValues i : exchange.getResponseHeaders()) {
                 response.headers().add(i.getHeaderName().toString(), i.getFirst());
             }
+            response.headers().set(Headers.TRANSFER_ENCODING_STRING, "chunked");
+
             ctx.write(response);
             return ctx.writeAndFlush(new DefaultHttpContent(data));
         }
