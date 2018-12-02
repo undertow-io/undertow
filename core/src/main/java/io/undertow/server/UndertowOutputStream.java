@@ -92,7 +92,7 @@ public class UndertowOutputStream extends OutputStream {
         ByteBuf buffer = pooledBuffer;
         try {
             if (buffer == null) {
-                buffer = exchange.getConnection().getByteBufferPool().buffer();
+                pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
             }
             while (rem > 0) {
                 int toWrite = Math.min(rem, buffer.writableBytes());

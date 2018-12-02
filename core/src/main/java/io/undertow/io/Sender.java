@@ -23,6 +23,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * Sender interface that allows for callback based async IO.
@@ -51,7 +52,9 @@ public interface Sender {
      * @param buffer   The buffers to send.
      * @param callback The callback
      */
-    void send(final ByteBuf[] buffer, final IoCallback callback);
+    default void send(final ByteBuf[] buffer, final IoCallback callback) {
+        send(Unpooled.wrappedBuffer(buffer), callback);
+    }
 
     /**
      * Write the given buffer using async IO, and ends the exchange when done

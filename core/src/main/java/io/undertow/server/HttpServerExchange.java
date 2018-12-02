@@ -40,8 +40,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.io.Receiver;
@@ -1130,7 +1128,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IOException on failure
      */
     public ByteBuf readBlocking() throws IOException {
-        if(anyAreSet(state, FLAG_REQUEST_TERMINATED)) {
+        if (anyAreSet(state, FLAG_REQUEST_TERMINATED)) {
             return null;
         }
         return connection.readBlocking();
@@ -1159,8 +1157,8 @@ public final class HttpServerExchange extends AbstractAttachable {
             return promise;
         }
         handleFirstData();
-        if(data.length == 0) {
-            if(last) {
+        if (data.length == 0) {
+            if (last) {
                 return connection.writeAsync(null, true, this);
             } else {
                 ChannelPromise promise = connection.createPromise();
@@ -1168,7 +1166,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 return promise;
             }
         }
-        for(int i = 0; i < data.length - 1; ++i) {
+        for (int i = 0; i < data.length - 1; ++i) {
             connection.writeAsync(data[i], false, this);
         }
         return connection.writeAsync(data[data.length - 1], last, this);
@@ -1525,7 +1523,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
 
-        if(!isResponseComplete()) {
+        if (!isResponseComplete()) {
             writeAsync((ByteBuf) null, true);
         }
         connection.endExchange(this);
@@ -1633,8 +1631,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * Reads some data from the exchange. Can only be called if {@link #isReadDataAvailable()} returns true.
-     *
+     * <p>
      * Returns null when all data is full read
+     *
      * @return
      * @throws IOException
      */
@@ -1692,7 +1691,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public Sender getSender() {
             if (sender == null) {
-               // sender = new BlockingSenderImpl(exchange, getOutputStream());
+                sender = new BlockingSenderImpl(exchange, getOutputStream());
             }
             return sender;
         }

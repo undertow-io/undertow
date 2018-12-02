@@ -32,13 +32,6 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.xnio.Option;
-import org.xnio.StreamConnection;
-import org.xnio.XnioWorker;
-import org.xnio.conduits.ConduitStreamSinkChannel;
-import org.xnio.conduits.ConduitStreamSourceChannel;
-import org.xnio.conduits.StreamSinkConduit;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.util.UndertowOptionMap;
@@ -218,44 +211,44 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
     @Override
     public void dispatchMockRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException {
-
-        final DefaultByteBufferPool bufferPool = new DefaultByteBufferPool(false, 1024, 0, 0);
-        MockServerConnection connection = new MockServerConnection(bufferPool);
-        HttpServerExchange exchange = new HttpServerExchange(connection);
-        exchange.setRequestScheme(request.getScheme());
-        exchange.setRequestMethod(new HttpString(request.getMethod()));
-        exchange.setProtocol(Protocols.HTTP_1_0);
-        exchange.setResolvedPath(request.getContextPath());
-        String relative;
-        if (request.getPathInfo() == null) {
-            relative = request.getServletPath();
-        } else {
-            relative = request.getServletPath() + request.getPathInfo();
-        }
-        exchange.setRelativePath(relative);
-        final ServletPathMatch info = paths.getServletHandlerByPath(request.getServletPath());
-        final HttpServletResponseImpl oResponse = new HttpServletResponseImpl(exchange, servletContext);
-        final HttpServletRequestImpl oRequest = new HttpServletRequestImpl(exchange, servletContext);
-        final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), oRequest, oResponse, info);
-        servletRequestContext.setServletRequest(request);
-        servletRequestContext.setServletResponse(response);
-        //set the max request size if applicable
-        if (info.getServletChain().getManagedServlet().getMaxRequestSize() > 0) {
-            exchange.setMaxEntitySize(info.getServletChain().getManagedServlet().getMaxRequestSize());
-        }
-        exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
-
-        exchange.startBlocking(new ServletBlockingHttpExchange(exchange));
-        servletRequestContext.setServletPathMatch(info);
-
-        try {
-            dispatchRequest(exchange, servletRequestContext, info.getServletChain(), DispatcherType.REQUEST);
-        } catch (Exception e) {
-            if (e instanceof RuntimeException) {
-                throw (RuntimeException) e;
-            }
-            throw new ServletException(e);
-        }
+//
+//        final DefaultByteBufferPool bufferPool = new DefaultByteBufferPool(false, 1024, 0, 0);
+//        MockServerConnection connection = new MockServerConnection(bufferPool);
+//        HttpServerExchange exchange = new HttpServerExchange(connection);
+//        exchange.setRequestScheme(request.getScheme());
+//        exchange.setRequestMethod(new HttpString(request.getMethod()));
+//        exchange.setProtocol(Protocols.HTTP_1_0);
+//        exchange.setResolvedPath(request.getContextPath());
+//        String relative;
+//        if (request.getPathInfo() == null) {
+//            relative = request.getServletPath();
+//        } else {
+//            relative = request.getServletPath() + request.getPathInfo();
+//        }
+//        exchange.setRelativePath(relative);
+//        final ServletPathMatch info = paths.getServletHandlerByPath(request.getServletPath());
+//        final HttpServletResponseImpl oResponse = new HttpServletResponseImpl(exchange, servletContext);
+//        final HttpServletRequestImpl oRequest = new HttpServletRequestImpl(exchange, servletContext);
+//        final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), oRequest, oResponse, info);
+//        servletRequestContext.setServletRequest(request);
+//        servletRequestContext.setServletResponse(response);
+//        //set the max request size if applicable
+//        if (info.getServletChain().getManagedServlet().getMaxRequestSize() > 0) {
+//            exchange.setMaxEntitySize(info.getServletChain().getManagedServlet().getMaxRequestSize());
+//        }
+//        exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
+//
+//        exchange.startBlocking(new ServletBlockingHttpExchange(exchange));
+//        servletRequestContext.setServletPathMatch(info);
+//
+//        try {
+//            dispatchRequest(exchange, servletRequestContext, info.getServletChain(), DispatcherType.REQUEST);
+//        } catch (Exception e) {
+//            if (e instanceof RuntimeException) {
+//                throw (RuntimeException) e;
+//            }
+//            throw new ServletException(e);
+//        }
     }
 
     private void dispatchRequest(final HttpServerExchange exchange, final ServletRequestContext servletRequestContext, final ServletChain servletChain, final DispatcherType dispatcherType) throws Exception {
@@ -335,7 +328,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             listeners.requestDestroyed(request);
         }
         //if it is not dispatched and is not a mock request
-        if (!exchange.isDispatched() && !(exchange.getConnection() instanceof MockServerConnection)) {
+        if (!exchange.isDispatched() /*&& !(exchange.getConnection() instanceof MockServerConnection)*/) {
             servletRequestContext.getOriginalResponse().responseDone();
             servletRequestContext.getOriginalRequest().clearAttributes();
         }
@@ -351,169 +344,169 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         return next;
     }
 
-    private static class MockServerConnection extends ServerConnection {
-        private final ByteBufferPool bufferPool;
-        private SSLSessionInfo sslSessionInfo;
-
-        private MockServerConnection(ByteBufferPool bufferPool) {
-            this.bufferPool = bufferPool;
-        }
-
-        @Override
-        public ByteBufferPool getByteBufferPool() {
-            return bufferPool;
-        }
-
-        @Override
-        public XnioWorker getWorker() {
-            return null;
-        }
-
-        @Override
-        public IoExecutor getIoThread() {
-            return null;
-        }
-
-        @Override
-        public HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange) {
-            throw UndertowMessages.MESSAGES.outOfBandResponseNotSupported();
-        }
-
-        @Override
-        public boolean isContinueResponseSupported() {
-            return false;
-        }
-
-        @Override
-        public void terminateRequestChannel(HttpServerExchange exchange) {
-
-        }
-
-        @Override
-        public boolean isOpen() {
-            return true;
-        }
-
-        @Override
-        public boolean supportsOption(Option<?> option) {
-            return false;
-        }
-
-        @Override
-        public <T> T getOption(Option<T> option) throws IOException {
-            return null;
-        }
-
-        @Override
-        public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
-            return null;
-        }
-
-        @Override
-        public void close() throws IOException {
-        }
-
-        @Override
-        public SocketAddress getPeerAddress() {
-            return null;
-        }
-
-        @Override
-        public <A extends SocketAddress> A getPeerAddress(Class<A> type) {
-            return null;
-        }
-
-        @Override
-        public SocketAddress getLocalAddress() {
-            return null;
-        }
-
-        @Override
-        public <A extends SocketAddress> A getLocalAddress(Class<A> type) {
-            return null;
-        }
-
-        @Override
-        public UndertowOptionMap getUndertowOptions() {
-            return UndertowOptionMap.EMPTY;
-        }
-
-        @Override
-        public int getBufferSize() {
-            return 1024;
-        }
-
-        @Override
-        public SSLSessionInfo getSslSessionInfo() {
-            return sslSessionInfo;
-        }
-
-        @Override
-        public void setSslSessionInfo(SSLSessionInfo sessionInfo) {
-            sslSessionInfo = sessionInfo;
-        }
-
-        @Override
-        public void addCloseListener(CloseListener listener) {
-        }
-
-        @Override
-        public StreamConnection upgradeChannel() {
-            return null;
-        }
-
-        @Override
-        public ConduitStreamSinkChannel getSinkChannel() {
-            return null;
-        }
-
-        @Override
-        public ConduitStreamSourceChannel getSourceChannel() {
-            return new ConduitStreamSourceChannel(null, null);
-        }
-
-        @Override
-        protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
-            return conduit;
-        }
-
-        @Override
-        protected boolean isUpgradeSupported() {
-            return false;
-        }
-
-        @Override
-        protected boolean isConnectSupported() {
-            return false;
-        }
-
-        @Override
-        protected void exchangeComplete(HttpServerExchange exchange) {
-        }
-
-        @Override
-        protected void setUpgradeListener(HttpUpgradeListener upgradeListener) {
-            //ignore
-        }
-
-        @Override
-        protected void setConnectListener(HttpUpgradeListener connectListener) {
-            //ignore
-        }
-
-        @Override
-        protected void maxEntitySizeUpdated(HttpServerExchange exchange) {
-        }
-
-        @Override
-        public String getTransportProtocol() {
-            return "mock";
-        }
-
-        @Override
-        public boolean isRequestTrailerFieldsSupported() {
-            return false;
-        }
-    }
+//    private static class MockServerConnection extends ServerConnection {
+//        private final ByteBufferPool bufferPool;
+//        private SSLSessionInfo sslSessionInfo;
+//
+//        private MockServerConnection(ByteBufferPool bufferPool) {
+//            this.bufferPool = bufferPool;
+//        }
+//
+//        @Override
+//        public ByteBufferPool getByteBufferPool() {
+//            return bufferPool;
+//        }
+//
+//        @Override
+//        public XnioWorker getWorker() {
+//            return null;
+//        }
+//
+//        @Override
+//        public IoExecutor getIoThread() {
+//            return null;
+//        }
+//
+//        @Override
+//        public HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange) {
+//            throw UndertowMessages.MESSAGES.outOfBandResponseNotSupported();
+//        }
+//
+//        @Override
+//        public boolean isContinueResponseSupported() {
+//            return false;
+//        }
+//
+//        @Override
+//        public void terminateRequestChannel(HttpServerExchange exchange) {
+//
+//        }
+//
+//        @Override
+//        public boolean isOpen() {
+//            return true;
+//        }
+//
+//        @Override
+//        public boolean supportsOption(Option<?> option) {
+//            return false;
+//        }
+//
+//        @Override
+//        public <T> T getOption(Option<T> option) throws IOException {
+//            return null;
+//        }
+//
+//        @Override
+//        public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
+//            return null;
+//        }
+//
+//        @Override
+//        public void close() throws IOException {
+//        }
+//
+//        @Override
+//        public SocketAddress getPeerAddress() {
+//            return null;
+//        }
+//
+//        @Override
+//        public <A extends SocketAddress> A getPeerAddress(Class<A> type) {
+//            return null;
+//        }
+//
+//        @Override
+//        public SocketAddress getLocalAddress() {
+//            return null;
+//        }
+//
+//        @Override
+//        public <A extends SocketAddress> A getLocalAddress(Class<A> type) {
+//            return null;
+//        }
+//
+//        @Override
+//        public UndertowOptionMap getUndertowOptions() {
+//            return UndertowOptionMap.EMPTY;
+//        }
+//
+//        @Override
+//        public int getBufferSize() {
+//            return 1024;
+//        }
+//
+//        @Override
+//        public SSLSessionInfo getSslSessionInfo() {
+//            return sslSessionInfo;
+//        }
+//
+//        @Override
+//        public void setSslSessionInfo(SSLSessionInfo sessionInfo) {
+//            sslSessionInfo = sessionInfo;
+//        }
+//
+//        @Override
+//        public void addCloseListener(CloseListener listener) {
+//        }
+//
+//        @Override
+//        public StreamConnection upgradeChannel() {
+//            return null;
+//        }
+//
+//        @Override
+//        public ConduitStreamSinkChannel getSinkChannel() {
+//            return null;
+//        }
+//
+//        @Override
+//        public ConduitStreamSourceChannel getSourceChannel() {
+//            return new ConduitStreamSourceChannel(null, null);
+//        }
+//
+//        @Override
+//        protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
+//            return conduit;
+//        }
+//
+//        @Override
+//        protected boolean isUpgradeSupported() {
+//            return false;
+//        }
+//
+//        @Override
+//        protected boolean isConnectSupported() {
+//            return false;
+//        }
+//
+//        @Override
+//        protected void exchangeComplete(HttpServerExchange exchange) {
+//        }
+//
+//        @Override
+//        protected void setUpgradeListener(HttpUpgradeListener upgradeListener) {
+//            //ignore
+//        }
+//
+//        @Override
+//        protected void setConnectListener(HttpUpgradeListener connectListener) {
+//            //ignore
+//        }
+//
+//        @Override
+//        protected void maxEntitySizeUpdated(HttpServerExchange exchange) {
+//        }
+//
+//        @Override
+//        public String getTransportProtocol() {
+//            return "mock";
+//        }
+//
+//        @Override
+//        public boolean isRequestTrailerFieldsSupported() {
+//            return false;
+//        }
+//    }
 
 }
