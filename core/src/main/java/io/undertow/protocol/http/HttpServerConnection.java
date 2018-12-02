@@ -19,7 +19,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.FileChannel;
-import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
@@ -38,12 +37,10 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
@@ -72,11 +69,13 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     //TODO: remove this
     private final LinkedBlockingDeque<ByteBuf> contents = new LinkedBlockingDeque<>();
     private static final ByteBuf LAST = Unpooled.buffer(0);
+    private final SSLSessionInfo sslSessionInfo;
 
 
-    public HttpServerConnection(ChannelHandlerContext ctx, Executor executor) {
+    public HttpServerConnection(ChannelHandlerContext ctx, Executor executor, SSLSessionInfo sslSessionInfo) {
         this.ctx = ctx;
         this.executor = executor;
+        this.sslSessionInfo = sslSessionInfo;
     }
 
     @Override
@@ -188,12 +187,12 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     @Override
     public SSLSessionInfo getSslSessionInfo() {
-        return null;
+        return sslSessionInfo;
     }
 
     @Override
     public void setSslSessionInfo(SSLSessionInfo sessionInfo) {
-
+        throw new RuntimeException("NYI");
     }
 
     /**

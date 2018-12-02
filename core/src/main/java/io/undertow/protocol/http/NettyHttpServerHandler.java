@@ -14,11 +14,9 @@
  */
 package io.undertow.protocol.http;
 
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLSession;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -26,7 +24,6 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.undertow.server.BasicSSLSessionInfo;
 import io.undertow.server.ConnectionSSLSessionInfo;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
@@ -59,11 +56,7 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
         if (msg instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) msg;
             if(connection == null) {
-                connection = new HttpServerConnection(ctx, blockingExecutor);
-                if(engine != null) {
-
-                    connection.setSslSessionInfo(new ConnectionSSLSessionInfo(engine.getSession()));
-                }
+                connection = new HttpServerConnection(ctx, blockingExecutor, engine == null ? null : new ConnectionSSLSessionInfo(engine.getSession()));
             }
             HttpServerExchange exchange = new HttpServerExchange(connection);
             connection.setExchange(exchange);
