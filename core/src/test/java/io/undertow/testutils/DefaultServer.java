@@ -181,6 +181,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         super(klass);
     }
 
+    public static Undertow getUndertow() {
+        return undertow;
+    }
+
     @Override
     public Description getDescription() {
         return super.getDescription();

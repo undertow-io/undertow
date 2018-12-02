@@ -1,19 +1,16 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.undertow.server.handlers.accesslog;
@@ -82,7 +79,7 @@ public class AccessLogFileTestCase {
     public void testSingleLogMessageToFile() throws IOException, InterruptedException {
         Path directory = logDirectory;
         Path logFileName = directory.resolve("server1.log");
-        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1.");
+        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getUndertow().getWorker(), directory, "server1.");
         verifySingleLogMessageToFile(logFileName, logReceiver);
     }
 
@@ -90,7 +87,7 @@ public class AccessLogFileTestCase {
     public void testSingleLogMessageToFileWithSuffix() throws IOException, InterruptedException {
         Path directory = logDirectory;
         Path logFileName = directory.resolve("server1.logsuffix");
-        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server1.", "logsuffix");
+        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getUndertow().getWorker(), directory, "server1.", "logsuffix");
         verifySingleLogMessageToFile(logFileName, logReceiver);
     }
 
@@ -121,7 +118,7 @@ public class AccessLogFileTestCase {
         Path directory = logDirectory;
         Path logFileName = directory.resolve("server2.log");
 
-        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), directory, "server2.");
+        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getUndertow().getWorker(), directory, "server2.");
         CompletionLatchHandler latchHandler;
         DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(NUM_REQUESTS * NUM_THREADS, new AccessLogHandler(HELLO_HANDLER, logReceiver, "REQ %{i,test-header}", AccessLogFileTestCase.class.getClassLoader())));
 
@@ -175,7 +172,7 @@ public class AccessLogFileTestCase {
     public void testForcedLogRotation() throws IOException, InterruptedException {
         Path logFileName = logDirectory.resolve("server.log");
 
-        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getWorker(), logDirectory, "server.");
+        DefaultAccessLogReceiver logReceiver = new DefaultAccessLogReceiver(DefaultServer.getUndertow().getWorker(), logDirectory, "server.");
         CompletionLatchHandler latchHandler;
         DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver, "Remote address %a Code %s test-header %{i,test-header}", AccessLogFileTestCase.class.getClassLoader())));
         TestHttpClient client = new TestHttpClient();
