@@ -65,14 +65,14 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
             exchange.setRequestScheme("https");
             exchange.setProtocol(Protocols.HTTP_1_1);
             if(msg instanceof HttpContent) {
-                connection.queueContent((HttpContent)msg);
+                connection.addData((HttpContent)msg);
             }
             if(msg instanceof LastHttpContent) {
                 Connectors.terminateRequest(exchange);
             }
             Connectors.executeRootHandler(rootHandler, exchange);
         } else if(msg instanceof HttpContent) {
-
+            connection.addData((HttpContent) msg);
         }
     }
 

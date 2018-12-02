@@ -40,8 +40,8 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.xnio.IoUtils;
 
+import io.netty.util.concurrent.ScheduledFuture;
 import io.undertow.UndertowLogger;
 import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
@@ -62,9 +62,9 @@ import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.IoUtils;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
-import io.undertow.xnio.util.WorkerUtils;
 
 /**
  * @author Stuart Douglas
@@ -86,7 +86,7 @@ public class AsyncContextImpl implements AsyncContext {
     //todo: make default configurable
     private volatile long timeout = 30000;
 
-    private volatile IoExecutor.Key timeoutKey;
+    private volatile ScheduledFuture<?> timeoutKey;
 
     private boolean dispatched;
     private boolean initialRequestDone;
@@ -115,16 +115,16 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     public void updateTimeout() {
-        IoExecutor.Key key = this.timeoutKey;
+        ScheduledFuture<?> key = this.timeoutKey;
         if (key != null) {
-            if (!key.remove()) {
+            if (!key.cancel(false)) {
                 return;
             } else {
                 this.timeoutKey = null;
             }
         }
         if (timeout > 0 && !complete) {
-            this.timeoutKey = WorkerUtils.executeAfter(exchange.getIoThread(), timeoutTask, timeout, TimeUnit.MILLISECONDS);
+            this.timeoutKey = exchange.getIoThread().schedule(timeoutTask, timeout, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -269,7 +269,7 @@ public class AsyncContextImpl implements AsyncContext {
         }
         complete = true;
         if (timeoutKey != null) {
-            timeoutKey.remove();
+            timeoutKey.cancel(false);
             timeoutKey = null;
         }
         if (!dispatched) {
@@ -482,7 +482,7 @@ public class AsyncContextImpl implements AsyncContext {
             }
         });
         if (timeoutKey != null) {
-            timeoutKey.remove();
+            timeoutKey.cancel(false);
         }
     }
 

@@ -1133,7 +1133,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         if(anyAreSet(state, FLAG_REQUEST_TERMINATED)) {
             return null;
         }
-        return null;
+        return connection.readBlocking();
     }
 
     ChannelFuture writeAsync(ByteBuf data, boolean last) {
@@ -1628,7 +1628,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     boolean isReadDataAvailable() {
-        return false;
+        return connection.isReadDataAvailable();
     }
 
     /**
@@ -1639,7 +1639,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IOException
      */
     ByteBuf readAsync() throws IOException {
-        return null;
+        return connection.readAsync();
     }
 
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {

@@ -193,6 +193,17 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
 //
 //    protected abstract void setConnectListener(HttpUpgradeListener connectListener);
 
+    protected abstract boolean isReadDataAvailable();
+
+    /**
+     * Reads some data from the exchange. Can only be called if {@link #isReadDataAvailable()} returns true.
+     *
+     * Returns null when all data is full read
+     * @return
+     * @throws IOException
+     */
+    protected abstract ByteBuf readAsync() throws IOException;
+
     /**
      * Callback that is invoked if the max entity size is updated.
      *
@@ -254,6 +265,8 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
 
     public abstract ChannelFuture writeFileAsync(FileChannel file, long position, long count, HttpServerExchange exchange);
     public abstract void writeFileBlocking(FileChannel file, long position, long count, HttpServerExchange exchange) throws IOException;
+
+    public abstract ByteBuf readBlocking() throws IOException;
 
     public interface CloseListener {
 

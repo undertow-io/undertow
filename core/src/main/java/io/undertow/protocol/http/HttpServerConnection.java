@@ -19,10 +19,12 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.FileChannel;
+import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingDeque;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -36,8 +38,10 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.undertow.server.Connectors;
@@ -64,6 +68,10 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     private boolean responseComplete;
 
     private final Executor executor;
+
+    //TODO: remove this
+    private final LinkedBlockingDeque<ByteBuf> contents = new LinkedBlockingDeque<>();
+    private static final ByteBuf LAST = Unpooled.buffer(0);
 
 
     public HttpServerConnection(ChannelHandlerContext ctx, Executor executor) {
@@ -220,7 +228,8 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
      * Invoked when the exchange is complete.
      */
     protected void exchangeComplete(HttpServerExchange exchange) {
-
+        contents.add(LAST);
+        contents.poll();
     }
 
     /**
@@ -318,6 +327,27 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     }
 
     @Override
+    protected boolean isReadDataAvailable() {
+        return !contents.isEmpty();
+    }
+
+    /**
+     * Reads some data from the exchange. Can only be called if {@link #isReadDataAvailable()} returns true.
+     *
+     * Returns null when all data is full read
+     * @return
+     * @throws IOException
+     */
+    @Override
+    protected ByteBuf readAsync() throws IOException {
+        ByteBuf buf = contents.pop();
+        if(buf == LAST) {
+            return null;
+        }
+        return buf;
+    }
+
+    @Override
     public ChannelFuture writeFileAsync(FileChannel file, long position, long count, HttpServerExchange exchange) {
         return null;
     }
@@ -327,13 +357,34 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     }
 
+    @Override
+    public ByteBuf readBlocking() throws IOException {
+        ByteBuf buf = null;
+        try {
+            buf = contents.takeFirst();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException(e);
+        }
+        if(buf == LAST) {
+            return null;
+        }
+        return buf;
+    }
+
     public void setExchange(HttpServerExchange exchange) {
         responseCommited = false;
         responseComplete = false;
         this.currentExchange = exchange;
     }
 
-    public void queueContent(HttpContent msg) {
+    public void addData(HttpContent msg) {
+        ByteBuf content = msg.content();
+        content.retain();
+        contents.add(content);
+        if(msg instanceof LastHttpContent) {
+            contents.add(LAST);
+        }
 
     }
 }
