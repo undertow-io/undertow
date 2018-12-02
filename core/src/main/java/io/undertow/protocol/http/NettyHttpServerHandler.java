@@ -28,6 +28,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
+import io.undertow.util.QueryParameterUtils;
 
 public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
 
@@ -59,12 +60,10 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
             for(Map.Entry<String, String> header : request.headers()) {
                 exchange.getRequestHeaders().put(new HttpString(header.getKey()), header.getValue());
             }
+            Connectors.setExchangeRequestPath(exchange, request.uri(), "UTF-8", true, false, new StringBuilder());
             exchange.setRequestMethod(new HttpString(request.method().name()));
-            exchange.setRelativePath(request.uri());
-            exchange.setRequestPath(request.uri());
-            exchange.setRequestURI(request.uri());
+            exchange.setRequestScheme("https");
             exchange.setProtocol(Protocols.HTTP_1_1);
-            exchange.setQueryString("");
             if(msg instanceof HttpContent) {
                 connection.queueContent((HttpContent)msg);
             }

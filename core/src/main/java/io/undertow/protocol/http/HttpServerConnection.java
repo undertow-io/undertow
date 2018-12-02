@@ -286,7 +286,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             } else {
                 DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(exchange.getStatusCode()), data == null ? Unpooled.EMPTY_BUFFER : data);
                 for (HeaderValues i : exchange.getResponseHeaders()) {
-                    response.headers().add(i.getHeaderName().toString(), i.getFirst());
+                    response.headers().add(i.getHeaderName().toString(), i);
                 }
                 if(!response.headers().contains(Headers.CONTENT_LENGTH_STRING)) {
                     response.headers().add(Headers.CONTENT_LENGTH_STRING, data == null ? 0 : data.readableBytes());
