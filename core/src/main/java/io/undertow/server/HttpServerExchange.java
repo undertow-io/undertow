@@ -1188,10 +1188,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     private void handleFirstData() {
         if (anyAreClear(state, FLAG_RESPONSE_SENT)) {
             state |= FLAG_RESPONSE_SENT;
-            Connectors.flattenCookies(this);
             for (int i = responseCommitListenerCount - 1; i >= 0; --i) {
                 responseCommitListeners[i].beforeCommit(this);
             }
+            Connectors.flattenCookies(this);
         }
     }
 
