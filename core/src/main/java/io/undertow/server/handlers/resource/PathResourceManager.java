@@ -13,9 +13,10 @@ import org.xnio.Xnio;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -43,6 +44,8 @@ public class PathResourceManager implements ResourceManager  {
     private FileSystemWatcher fileSystemWatcher;
 
     protected volatile String base;
+
+    protected volatile FileSystem fileSystem;
 
     /**
      * Size to use direct FS to network transfer (if supported by OS/JDK) instead of read/write
@@ -91,6 +94,7 @@ public class PathResourceManager implements ResourceManager  {
     }
 
     protected PathResourceManager(long transferMinSize, boolean caseSensitive, boolean followLinks, boolean allowResourceChangeListeners, final String... safePaths) {
+        this.fileSystem = FileSystems.getDefault();
         this.caseSensitive = caseSensitive;
         this.followLinks = followLinks;
         this.transferMinSize = transferMinSize;
@@ -128,9 +132,10 @@ public class PathResourceManager implements ResourceManager  {
         if (builder.base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
+        this.fileSystem = builder.base.getFileSystem();
         String basePath = builder.base.normalize().toAbsolutePath().toString();
-        if (!basePath.endsWith(File.separator)) {
-            basePath = basePath + File.separatorChar;
+        if (!basePath.endsWith(fileSystem.getSeparator())) {
+            basePath = basePath + fileSystem.getSeparator();
         }
         this.base = basePath;
         this.transferMinSize = builder.transferMinSize;
@@ -151,16 +156,17 @@ public class PathResourceManager implements ResourceManager  {
     }
 
     public Path getBasePath() {
-        return Paths.get(base);
+        return fileSystem.getPath(base);
     }
 
     public PathResourceManager setBase(final Path base) {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
+        this.fileSystem = base.getFileSystem();
         String basePath = base.toAbsolutePath().toString();
-        if (!basePath.endsWith(File.separator)) {
-            basePath = basePath + File.separatorChar;
+        if (!basePath.endsWith(fileSystem.getSeparator())) {
+            basePath = basePath + fileSystem.getSeparator();
         }
         this.base = basePath;
         return this;
@@ -170,9 +176,10 @@ public class PathResourceManager implements ResourceManager  {
         if (base == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
+        this.fileSystem = FileSystems.getDefault();
         String basePath = base.getAbsolutePath();
-        if (!basePath.endsWith(File.separator)) {
-            basePath = basePath + File.separatorChar;
+        if (!basePath.endsWith(fileSystem.getSeparator())) {
+            basePath = basePath + fileSystem.getSeparator();
         }
         this.base = basePath;
         return this;
@@ -187,7 +194,7 @@ public class PathResourceManager implements ResourceManager  {
             path = p;
         }
         try {
-            Path file = Paths.get(base, path);
+            Path file = fileSystem.getPath(base, path);
             String normalizedFile = file.normalize().toString();
             if(!normalizedFile.startsWith(base)) {
                 if(normalizedFile.length() == base.length() - 1) {
@@ -241,6 +248,9 @@ public class PathResourceManager implements ResourceManager  {
             //PathResourceManager supports this. This will be fixed in a later version
             return;
         }
+        if (!fileSystem.equals(FileSystems.getDefault())) {
+            throw new IllegalStateException("Resource change listeners not supported when using a non-default file system");
+        }
         listeners.add(listener);
         if (fileSystemWatcher == null) {
             fileSystemWatcher = Xnio.getInstance().createFileSystemWatcher("Watcher for " + base, OptionMap.EMPTY);
@@ -289,7 +299,7 @@ public class PathResourceManager implements ResourceManager  {
      */
     private SymlinkResult getSymlinkBase(final String base, final Path file) throws IOException {
         int nameCount = file.getNameCount();
-        Path root = Paths.get(base);
+        Path root = fileSystem.getPath(base);
         int rootCount = root.getNameCount();
         Path f = file;
         for (int i = nameCount - 1; i>=0; i--) {
@@ -325,7 +335,7 @@ public class PathResourceManager implements ResourceManager  {
         String canonicalPath = file.toRealPath().toString();
         for (String safePath : this.safePaths) {
             if (safePath.length() > 0) {
-                if (safePath.charAt(0) == File.separatorChar) {
+                if (safePath.startsWith(fileSystem.getSeparator())) {
                     /*
                      * Absolute path
                      */
@@ -338,8 +348,8 @@ public class PathResourceManager implements ResourceManager  {
                     /*
                      * In relative path we build the path appending to base
                      */
-                    String absSafePath = base + File.separatorChar + safePath;
-                    Path absSafePathFile = Paths.get(absSafePath);
+                    String absSafePath = base + fileSystem.getSeparator() + safePath;
+                    Path absSafePathFile = fileSystem.getPath(absSafePath);
                     String canonicalSafePath = absSafePathFile.toRealPath().toString();
                     if (canonicalSafePath.length() > 0 &&
                             canonicalPath.length() >= canonicalSafePath.length() &&
@@ -367,11 +377,11 @@ public class PathResourceManager implements ResourceManager  {
                     return null;
                 }
                 String compare = fileResolved.substring(symlinkBaseResolved.length());
-                if(compare.startsWith(File.separator)) {
-                    compare = compare.substring(1);
+                if(compare.startsWith(fileSystem.getSeparator())) {
+                    compare = compare.substring(fileSystem.getSeparator().length());
                 }
-                if(relative.startsWith(File.separator)) {
-                    relative = relative.substring(1);
+                if(relative.startsWith(fileSystem.getSeparator())) {
+                    relative = relative.substring(fileSystem.getSeparator().length());
                 }
                 if (relative.equals(compare)) {
                     log.tracef("Found path resource %s from path resource manager with base %s", path, base);
