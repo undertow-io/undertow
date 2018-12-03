@@ -33,11 +33,14 @@ import java.util.Deque;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
 import org.jboss.logging.Logger;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.undertow.UndertowLogger;
@@ -1638,6 +1641,49 @@ public final class HttpServerExchange extends AbstractAttachable {
         return connection.readAsync();
     }
 
+    /**
+     * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the
+     * request and response as terminated, which means that once the current request is completed the raw channel
+     * can be obtained from {@link io.undertow.server.protocol.http.HttpServerConnection#getChannel()}
+     *
+     * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
+     *                               read
+     */
+    public HttpServerExchange upgradeChannel(final Consumer<ChannelHandlerContext> listener) {
+        if (!connection.isUpgradeSupported()) {
+            throw UndertowMessages.MESSAGES.upgradeNotSupported();
+        }
+        if(!getRequestHeaders().contains(Headers.UPGRADE)) {
+            throw UndertowMessages.MESSAGES.notAnUpgradeRequest();
+        }
+        UndertowLogger.REQUEST_LOGGER.debugf("Upgrading request %s", this);
+        connection.setUpgradeListener(listener);
+        setStatusCode(StatusCodes.SWITCHING_PROTOCOLS);
+        getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);
+        return this;
+    }
+
+    /**
+     * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the
+     * request and response as terminated, which means that once the current request is completed the raw channel
+     * can be obtained from {@link io.undertow.server.protocol.http.HttpServerConnection#getChannel()}
+     *
+     * @param productName the product name to report to the client
+     * @throws IllegalStateException if a response or upgrade was already sent, or if the request body is already being
+     *                               read
+     */
+    public HttpServerExchange upgradeChannel(String productName, final Consumer<ChannelHandlerContext> listener) {
+        if (!connection.isUpgradeSupported()) {
+            throw UndertowMessages.MESSAGES.upgradeNotSupported();
+        }
+        UndertowLogger.REQUEST_LOGGER.debugf("Upgrading request %s", this);
+        connection.setUpgradeListener(listener);
+        setStatusCode(StatusCodes.SWITCHING_PROTOCOLS);
+        final HeaderMap headers = getResponseHeaders();
+        headers.put(Headers.UPGRADE, productName);
+        headers.put(Headers.CONNECTION, Headers.UPGRADE_STRING);
+        return this;
+    }
 
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {
         private final ExchangeCompletionListener[] list;

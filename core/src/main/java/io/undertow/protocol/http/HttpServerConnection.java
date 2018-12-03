@@ -25,10 +25,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -38,7 +40,9 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.concurrent.EventExecutor;
@@ -77,6 +81,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     private static final ByteBuf LAST = Unpooled.buffer(0);
     private final SSLSessionInfo sslSessionInfo;
 
+    private Consumer<ChannelHandlerContext> upgradeListener;
     private ByteBuf queuedAsyncData;
     private IoCallback<?> queuedCalback;
     private Object queuedContextObject;
@@ -139,6 +144,12 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     @Override
     public ByteBufAllocator getByteBufferPool() {
         return ctx.alloc();
+    }
+
+
+    @Override
+    protected void setUpgradeListener(Consumer<ChannelHandlerContext> listener) {
+        upgradeListener = listener;
     }
 
     /**
@@ -267,7 +278,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
      * @return true if this connection supports HTTP upgrade
      */
     protected boolean isUpgradeSupported() {
-        return false;
+        return true;
     }
 
     /**
@@ -283,6 +294,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     protected void exchangeComplete(HttpServerExchange exchange) {
         contents.add(LAST);
         contents.poll();
+        this.currentExchange = null;
     }
 
     /**
@@ -367,11 +379,12 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         }
         if (last) {
             responseComplete = true;
+            HttpContent resp;
             if (responseCommited) {
                 if (data == null) {
-                    return ctx.writeAndFlush(new DefaultLastHttpContent());
+                    resp = new DefaultLastHttpContent();
                 } else {
-                    return ctx.writeAndFlush(new DefaultLastHttpContent(data));
+                    resp = new DefaultLastHttpContent(data);
                 }
             } else {
                 DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(exchange.getStatusCode()), data == null ? Unpooled.EMPTY_BUFFER : data);
@@ -383,7 +396,31 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
                 } else {
                     response.headers().set(Headers.TRANSFER_ENCODING_STRING, "chunked");
                 }
-                return ctx.writeAndFlush(response);
+                resp = response;
+
+            }
+
+            if(upgradeListener != null) {
+                //we really need to avoid races, so as soon as the data is send we need to remove the HTTP handlers
+                //and install the upgrade ones
+                ChannelPromise promose = ctx.newPromise();
+                promose.addListener(new GenericFutureListener<Future<? super Void>>() {
+                    @Override
+                    public void operationComplete(Future<? super Void> future) throws Exception {
+                        ctx.pipeline().remove(HttpServerCodec.class);
+                        ctx.pipeline().remove(NettyHttpServerHandler.class);
+                        upgradeListener.accept(ctx);
+                    }
+                });
+                getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        ctx.writeAndFlush(resp, promose);
+                    }
+                });
+                return promose;
+            } else {
+                return ctx.writeAndFlush(resp);
             }
         }
         if (responseCommited) {

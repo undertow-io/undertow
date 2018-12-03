@@ -23,15 +23,19 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 
 import javax.net.ssl.SSLSession;
 
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.util.UndertowOptionMap;
 import io.undertow.util.AbstractAttachable;
@@ -263,6 +267,10 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
     public abstract void writeFileBlocking(FileChannel file, long position, long count, HttpServerExchange exchange) throws IOException;
 
     public abstract ByteBuf readBlocking() throws IOException;
+
+    protected  void setUpgradeListener(Consumer<ChannelHandlerContext> listener) {
+        throw UndertowMessages.MESSAGES.upgradeNotSupported();
+    }
 
     public interface CloseListener {
 
