@@ -47,6 +47,7 @@ import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.form.FormData;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Cookies;
@@ -1124,6 +1125,10 @@ public final class HttpServerExchange extends AbstractAttachable {
             return null;
         }
         return connection.readBlocking();
+    }
+
+    public FormData parseFormDataBlocking() throws IOException {
+        throw new RuntimeException("NYI");
     }
 
     <T> void writeAsync(ByteBuf data, boolean last, IoCallback<T> callback, T context) {

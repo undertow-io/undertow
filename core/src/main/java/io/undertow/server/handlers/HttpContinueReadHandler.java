@@ -40,6 +40,6 @@ public class HttpContinueReadHandler implements HttpHandler {
 //        if (HttpContinue.requiresContinueResponse(exchange)) {
 //            exchange.addRequestWrapper(WRAPPER);
 //        }
-//        handler.handleRequest(exchange);
+        handler.handleRequest(exchange);
     }
 }

@@ -47,9 +47,10 @@ public class TXServlet extends HttpServlet {
         } catch (URISyntaxException e) {
         }
 
-        BufferWritableOutputStream stream = (BufferWritableOutputStream) resp.getOutputStream();
-        stream.transferFrom(file);
-        file.close();
+        throw new RuntimeException("NYI");
+//        BufferWritableOutputStream stream = (BufferWritableOutputStream) resp.getOutputStream();
+//        stream.transferFrom(file);
+//        file.close();
     }
 
     @Override

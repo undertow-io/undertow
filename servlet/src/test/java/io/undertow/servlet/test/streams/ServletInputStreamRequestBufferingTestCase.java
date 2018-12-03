@@ -41,7 +41,8 @@ public class ServletInputStreamRequestBufferingTestCase extends AbstractServletI
                 new ServletExtension() {
                     @Override
                     public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
-                        deploymentInfo.addInitialHandlerChainWrapper(new RequestBufferingHandler.Wrapper(1));
+                        throw new RuntimeException("NYI");
+                        //deploymentInfo.addInitialHandlerChainWrapper(new RequestBufferingHandler.Wrapper(1));
                     }
                 },
                 new ServletInfo(BLOCKING_SERVLET, BlockingInputStreamServlet.class)

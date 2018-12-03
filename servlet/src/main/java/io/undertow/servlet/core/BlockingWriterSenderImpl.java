@@ -28,7 +28,6 @@ import java.nio.charset.Charset;
 
 import javax.servlet.DispatcherType;
 
-import org.xnio.IoUtils;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -139,32 +138,33 @@ public class BlockingWriterSenderImpl implements Sender {
     }
 
     private void performTransfer(FileChannel source, IoCallback callback) {
-
-        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-        try {
-            long pos = source.position();
-            long size = source.size();
-            while (size - pos > 0) {
-                int ret = source.read(buffer);
-                if (ret <= 0) {
-                    break;
-                }
-                pos += ret;
-                buffer.flip();
-                if (!writeBuffer(buffer, callback)) {
-                    return;
-                }
-                buffer.clear();
-            }
-
-            if (pos != size) {
-                throw new EOFException("Unexpected EOF reading file");
-            }
-
-        } catch (IOException e) {
-            callback.onException(exchange, this, e);
-        }
-        invokeOnComplete(callback);
+        throw new RuntimeException("NYI");
+//
+//        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
+//        try {
+//            long pos = source.position();
+//            long size = source.size();
+//            while (size - pos > 0) {
+//                int ret = source.read(buffer);
+//                if (ret <= 0) {
+//                    break;
+//                }
+//                pos += ret;
+//                buffer.flip();
+//                if (!writeBuffer(buffer, callback)) {
+//                    return;
+//                }
+//                buffer.clear();
+//            }
+//
+//            if (pos != size) {
+//                throw new EOFException("Unexpected EOF reading file");
+//            }
+//
+//        } catch (IOException e) {
+//            callback.onException(exchange, this, e);
+//        }
+//        invokeOnComplete(callback);
     }
 
 
@@ -184,12 +184,7 @@ public class BlockingWriterSenderImpl implements Sender {
 
     private boolean writeBuffer(final ByteBuf buffer, final IoCallback callback) {
         StringBuilder builder = new StringBuilder();
-        try {
-            builder.append(buffer.readCharSequence(buffer.readableBytes(), charset));
-        } catch (CharacterCodingException e) {
-            callback.onException(exchange, this, e);
-            return false;
-        }
+        builder.append(buffer.readCharSequence(buffer.readableBytes(), charset));
         String data = builder.toString();
         writer.write(data);
         if (writer.checkError()) {
@@ -233,12 +228,7 @@ public class BlockingWriterSenderImpl implements Sender {
         }
         StringBuilder builder = new StringBuilder();
         for (ByteBuf buffer : byteBuffers) {
-            try {
-                builder.append(charset.decode(buffer));
-            } catch (CharacterCodingException e) {
-                ioCallback.onException(exchange, this, e);
-                return;
-            }
+            builder.append(buffer.readCharSequence(buffer.readableBytes(), charset));
         }
         this.next = builder.toString();
         queuedCallback = ioCallback;

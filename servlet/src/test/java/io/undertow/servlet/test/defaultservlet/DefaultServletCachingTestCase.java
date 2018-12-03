@@ -33,8 +33,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.BufferAllocator;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.resource.CachingResourceManager;
@@ -65,7 +65,7 @@ public class DefaultServletCachingTestCase {
     public static final String DIR_NAME = "cacheTest";
 
     static Path tmpDir;
-    static DirectBufferCache dataCache = new DirectBufferCache(1000, 10, 1000 * 10 * 1000, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, METADATA_MAX_AGE);
+    static DirectBufferCache dataCache = new DirectBufferCache(1000, 10, 1000 * 10 * 1000, ByteBufAllocator.DEFAULT, METADATA_MAX_AGE);
 
     @Before
     public void before() {

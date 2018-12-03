@@ -27,7 +27,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.xnio.IoUtils;
+import io.undertow.util.IoUtils;
+
 
 /**
  * @author Stuart Douglas

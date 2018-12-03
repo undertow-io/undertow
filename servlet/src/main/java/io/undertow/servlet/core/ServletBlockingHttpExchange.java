@@ -28,6 +28,7 @@ import javax.servlet.ServletResponse;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
 import io.undertow.server.BlockingHttpExchange;
+import io.undertow.server.BlockingSenderImpl;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
@@ -102,6 +103,7 @@ public class ServletBlockingHttpExchange implements BlockingHttpExchange {
 
     @Override
     public Receiver getReceiver() {
-        return new BlockingReceiverImpl(exchange, getInputStream());
+        throw new RuntimeException("NYI");
+        //return new BlockingReceiverImpl(exchange, getInputStream());
     }
 }

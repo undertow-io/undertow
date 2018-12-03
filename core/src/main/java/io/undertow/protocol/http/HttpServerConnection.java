@@ -429,7 +429,9 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
                 Object readCallbackContext = HttpServerConnection.this.readCallbackContext;
                 HttpServerConnection.this.readCallback = null;
                 HttpServerConnection.this.readCallbackContext = null;
-                readCallback.onComplete(currentExchange, readCallbackContext);
+                if(readCallback != null) {
+                    readCallback.onComplete(currentExchange, readCallbackContext);
+                }
             }
         });
     }

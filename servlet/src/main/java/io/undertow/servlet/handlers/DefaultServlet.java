@@ -37,7 +37,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.io.IoCallback;
-import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.DefaultResourceSupplier;
 import io.undertow.server.handlers.resource.DirectoryUtils;
@@ -130,11 +129,11 @@ public class DefaultServlet extends HttpServlet {
         if (config.getInitParameter(ALLOW_POST) != null) {
             allowPost = Boolean.parseBoolean(config.getInitParameter(ALLOW_POST));
         }
-        if(deployment.getDeploymentInfo().getPreCompressedResources().isEmpty()) {
+        if (deployment.getDeploymentInfo().getPreCompressedResources().isEmpty()) {
             this.resourceSupplier = new DefaultResourceSupplier(deployment.getDeploymentInfo().getResourceManager());
         } else {
             PreCompressedResourceSupplier preCompressedResourceSupplier = new PreCompressedResourceSupplier(deployment.getDeploymentInfo().getResourceManager());
-            for(Map.Entry<String, String> entry : deployment.getDeploymentInfo().getPreCompressedResources().entrySet()) {
+            for (Map.Entry<String, String> entry : deployment.getDeploymentInfo().getPreCompressedResources().entrySet()) {
                 preCompressedResourceSupplier.addEncoding(entry.getKey(), entry.getValue());
             }
             this.resourceSupplier = preCompressedResourceSupplier;
@@ -152,7 +151,7 @@ public class DefaultServlet extends HttpServlet {
             resp.sendError(StatusCodes.NOT_FOUND);
             return;
         }
-        if(File.separatorChar != '/') {
+        if (File.separatorChar != '/') {
             //if the separator char is not / we want to replace it with a / and canonicalise
             path = CanonicalPathUtils.canonicalize(path.replace(File.separatorChar, '/'));
         }
@@ -160,7 +159,7 @@ public class DefaultServlet extends HttpServlet {
         HttpServerExchange exchange = SecurityActions.requireCurrentServletRequestContext().getOriginalRequest().getExchange();
         final Resource resource;
         //we want to disallow windows characters in the path
-        if(File.separatorChar == '/' || !path.contains(File.separator)) {
+        if (File.separatorChar == '/' || !path.contains(File.separator)) {
             resource = resourceSupplier.getResource(exchange, path);
         } else {
             resource = null;
@@ -191,7 +190,7 @@ public class DefaultServlet extends HttpServlet {
                 resp.sendError(StatusCodes.FORBIDDEN);
             }
         } else {
-            if(path.endsWith("/")) {
+            if (path.endsWith("/")) {
                 //UNDERTOW-432
                 resp.sendError(StatusCodes.NOT_FOUND);
                 return;
@@ -202,7 +201,7 @@ public class DefaultServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        if(allowPost) {
+        if (allowPost) {
             doGet(req, resp);
         } else {
             /*
@@ -275,7 +274,7 @@ public class DefaultServlet extends HttpServlet {
     private void serveFileBlocking(final HttpServletRequest req, final HttpServletResponse resp, final Resource resource, HttpServerExchange exchange) throws IOException {
         final ETag etag = resource.getETag();
         final Date lastModified = resource.getLastModified();
-        if(req.getDispatcherType() != DispatcherType.INCLUDE) {
+        if (req.getDispatcherType() != DispatcherType.INCLUDE) {
             if (!ETagUtils.handleIfMatch(req.getHeader(Headers.IF_MATCH_STRING), etag, false) ||
                     !DateUtils.handleIfUnmodifiedSince(req.getHeader(Headers.IF_UNMODIFIED_SINCE_STRING), lastModified)) {
                 resp.setStatus(StatusCodes.PRECONDITION_FAILED);
@@ -283,7 +282,7 @@ public class DefaultServlet extends HttpServlet {
             }
             if (!ETagUtils.handleIfNoneMatch(req.getHeader(Headers.IF_NONE_MATCH_STRING), etag, true) ||
                     !DateUtils.handleIfModifiedSince(req.getHeader(Headers.IF_MODIFIED_SINCE_STRING), lastModified)) {
-                if(req.getMethod().equals(Methods.GET_STRING) || req.getMethod().equals(Methods.HEAD_STRING)) {
+                if (req.getMethod().equals(Methods.GET_STRING) || req.getMethod().equals(Methods.HEAD_STRING)) {
                     resp.setStatus(StatusCodes.NOT_MODIFIED);
                 } else {
                     resp.setStatus(StatusCodes.PRECONDITION_FAILED);
@@ -293,8 +292,8 @@ public class DefaultServlet extends HttpServlet {
         }
 
         //we are going to proceed. Set the appropriate headers
-        if(resp.getContentType() == null) {
-            if(!resource.isDirectory()) {
+        if (resp.getContentType() == null) {
+            if (!resource.isDirectory()) {
                 final String contentType = deployment.getServletContext().getMimeType(resource.getName());
                 if (contentType != null) {
                     resp.setContentType(contentType);
@@ -320,29 +319,29 @@ public class DefaultServlet extends HttpServlet {
             Long contentLength = resource.getContentLength();
             if (contentLength != null) {
                 resp.getOutputStream();
-                if(contentLength > Integer.MAX_VALUE) {
+                if (contentLength > Integer.MAX_VALUE) {
                     resp.setContentLengthLong(contentLength);
                 } else {
                     resp.setContentLength(contentLength.intValue());
                 }
-                if(resource instanceof RangeAwareResource && ((RangeAwareResource)resource).isRangeSupported() && resource.getContentLength() != null) {
+                if (resource instanceof RangeAwareResource && ((RangeAwareResource) resource).isRangeSupported() && resource.getContentLength() != null) {
                     resp.setHeader(Headers.ACCEPT_RANGES_STRING, "bytes");
                     //TODO: figure out what to do with the content encoded resource manager
                     final ByteRange range = ByteRange.parse(req.getHeader(Headers.RANGE_STRING));
-                    if(range != null) {
+                    if (range != null) {
                         rangeResponse = range.getResponseResult(resource.getContentLength(), req.getHeader(Headers.IF_RANGE_STRING), resource.getLastModified(), resource.getETag() == null ? null : resource.getETag().getTag());
-                        if(rangeResponse != null){
+                        if (rangeResponse != null) {
                             start = rangeResponse.getStart();
                             end = rangeResponse.getEnd();
                             resp.setStatus(rangeResponse.getStatusCode());
                             resp.setHeader(Headers.CONTENT_RANGE_STRING, rangeResponse.getContentRange());
                             long length = rangeResponse.getContentLength();
-                            if(length > Integer.MAX_VALUE) {
+                            if (length > Integer.MAX_VALUE) {
                                 resp.setContentLengthLong(length);
                             } else {
                                 resp.setContentLength((int) length);
                             }
-                            if(rangeResponse.getStatusCode() == StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE) {
+                            if (rangeResponse.getStatusCode() == StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE) {
                                 return;
                             }
                         }
@@ -354,30 +353,24 @@ public class DefaultServlet extends HttpServlet {
         }
         final boolean include = req.getDispatcherType() == DispatcherType.INCLUDE;
         if (!req.getMethod().equals(Methods.HEAD_STRING)) {
-            if(rangeResponse == null) {
-                resource.serve(exchange.getResponseSender(), exchange, completionCallback(include));
+            IoCallback callback = include ? new IoCallback() {
+                @Override
+                public void onComplete(HttpServerExchange exchange, Object context) {
+
+                }
+
+                @Override
+                public void onException(HttpServerExchange exchange, Object context, IOException exception) {
+
+                }
+            } : IoCallback.END_EXCHANGE;
+            if (rangeResponse == null) {
+
+                resource.serve(exchange.getResponseSender(), exchange, callback);
             } else {
-                ((RangeAwareResource)resource).serveRange(exchange.getResponseSender(), exchange, start, end, completionCallback(include));
+                ((RangeAwareResource) resource).serveRange(exchange.getResponseSender(), exchange, start, end, callback);
             }
         }
-    }
-
-    private IoCallback completionCallback(final boolean include) {
-        return new IoCallback() {
-
-            @Override
-            public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-                if (!include) {
-                    sender.close();
-                }
-            }
-
-            @Override
-            public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
-                //not much we can do here, the connection is broken
-                sender.close();
-            }
-        };
     }
 
     private String getPath(final HttpServletRequest request) {
@@ -394,7 +387,7 @@ public class DefaultServlet extends HttpServlet {
         String result = pathInfo;
         if (result == null) {
             result = CanonicalPathUtils.canonicalize(servletPath);
-        } else if(resolveAgainstContextRoot) {
+        } else if (resolveAgainstContextRoot) {
             result = servletPath + CanonicalPathUtils.canonicalize(pathInfo);
         } else {
             result = CanonicalPathUtils.canonicalize(result);
@@ -408,7 +401,7 @@ public class DefaultServlet extends HttpServlet {
 
     private boolean isAllowed(String path, DispatcherType dispatcherType) {
         if (!path.isEmpty()) {
-            if(dispatcherType == DispatcherType.REQUEST) {
+            if (dispatcherType == DispatcherType.REQUEST) {
                 //WFLY-3543 allow the dispatcher to access stuff in web-inf and meta inf
                 if (path.startsWith("/META-INF") ||
                         path.startsWith("META-INF") ||
@@ -418,7 +411,7 @@ public class DefaultServlet extends HttpServlet {
                 }
             }
         }
-        if(defaultAllowed && disallowed.isEmpty()) {
+        if (defaultAllowed && disallowed.isEmpty()) {
             return true;
         }
         int pos = path.lastIndexOf('/');

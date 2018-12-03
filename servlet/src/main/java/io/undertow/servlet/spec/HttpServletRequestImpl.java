@@ -65,24 +65,18 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
-import io.undertow.server.handlers.form.FormDataParser;
-import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import io.undertow.util.HttpAttachments;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionConfig;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.AuthorizationManager;
 import io.undertow.servlet.api.Deployment;
-import io.undertow.servlet.api.InstanceFactory;
-import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.core.ManagedServlet;
-import io.undertow.servlet.core.ServletUpgradeListener;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
@@ -100,8 +94,7 @@ import io.undertow.util.RequestTooBigException;
  */
 public final class HttpServletRequestImpl implements HttpServletRequest {
 
-    @Deprecated
-    public static final AttachmentKey<Boolean> SECURE_REQUEST = HttpServerExchange.SECURE_REQUEST;
+    public static final String MULTIPART_FORM_DATA = "multipart/form-data";
 
     private final HttpServerExchange exchange;
     private final ServletContextImpl originalServletContext;
@@ -538,16 +531,17 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public <T extends HttpUpgradeHandler> T upgrade(final Class<T> handlerClass) throws IOException {
-        try {
-            InstanceFactory<T> factory = servletContext.getDeployment().getDeploymentInfo().getClassIntrospecter().createInstanceFactory(handlerClass);
-            final InstanceHandle<T> instance = factory.createInstance();
-            exchange.upgradeChannel(new ServletUpgradeListener<>(instance, servletContext.getDeployment(), exchange));
-            return instance.getInstance();
-        } catch (InstantiationException e) {
-            throw new RuntimeException(e);
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
+        throw new RuntimeException("NYI");
+//        try {
+//            InstanceFactory<T> factory = servletContext.getDeployment().getDeploymentInfo().getClassIntrospecter().createInstanceFactory(handlerClass);
+//            final InstanceHandle<T> instance = factory.createInstance();
+//            exchange.upgradeChannel(new ServletUpgradeListener<>(instance, servletContext.getDeployment(), exchange));
+//            return instance.getInstance();
+//        } catch (InstantiationException e) {
+//            throw new RuntimeException(e);
+//        } catch (NoSuchMethodException e) {
+//            throw new RuntimeException(e);
+//        }
     }
 
     private void loadParts() throws IOException, ServletException {
@@ -556,7 +550,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (parts == null) {
             final List<Part> parts = new ArrayList<>();
             String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
-            if (mimeType != null && mimeType.startsWith(MultiPartParserDefinition.MULTIPART_FORM_DATA)) {
+            if (mimeType != null && mimeType.startsWith(MULTIPART_FORM_DATA)) {
 
                 FormData formData = parseFormData();
                 if(formData != null) {
@@ -629,10 +623,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             characterEncoding = Charset.forName(env);
 
             final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getOriginalServletPathMatch().getServletChain().getManagedServlet();
-            final FormDataParser parser = originalServlet.getFormParserFactory().createParser(exchange);
-            if (parser != null) {
-                parser.setCharacterEncoding(env);
-            }
+//            final FormDataParser parser = originalServlet.getFormParserFactory().createParser(exchange);
+//            if (parser != null) {
+//                parser.setCharacterEncoding(env);
+//            }
         } catch (UnsupportedCharsetException e) {
             throw new UnsupportedEncodingException();
         }
@@ -667,7 +661,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             throw UndertowServletMessages.MESSAGES.getReaderAlreadyCalled();
         }
         if(servletInputStream == null) {
-            servletInputStream = new ServletInputStreamImpl(this);
+            servletInputStream = new ServletInputStreamImpl(exchange);
         }
         readStarted = true;
         return servletInputStream;
@@ -678,7 +672,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             reader.close();
         }
         if(servletInputStream == null) {
-            servletInputStream = new ServletInputStreamImpl(this);
+            servletInputStream = new ServletInputStreamImpl(exchange);
         }
         servletInputStream.close();
     }
@@ -823,15 +817,11 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             if (readStarted) {
                 return null;
             }
-            final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getCurrentServlet().getManagedServlet();
-            final FormDataParser parser = originalServlet.getFormParserFactory().createParser(exchange);
-            if (parser == null) {
-                return null;
-            }
-            readStarted = true;
+
             try {
-                return parsedFormData = parser.parseBlocking();
-            } catch (RequestTooBigException | MultiPartParserDefinition.FileTooLargeException e) {
+            parsedFormData = exchange.parseFormDataBlocking();
+            readStarted = true;
+            } catch (RequestTooBigException e) {
                 throw formParsingException = new IllegalStateException(e);
             } catch (RuntimeException e) {
                 throw formParsingException = e;
