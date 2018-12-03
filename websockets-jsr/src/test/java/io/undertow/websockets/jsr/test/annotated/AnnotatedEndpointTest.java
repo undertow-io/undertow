@@ -25,6 +25,7 @@ import javax.websocket.ClientEndpoint;
 import javax.websocket.CloseReason;
 import javax.websocket.OnClose;
 import javax.websocket.Session;
+import javax.websocket.server.ServerEndpointConfig;
 
 import java.io.IOException;
 import java.net.URI;
@@ -38,7 +39,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.FutureResult;
-
 
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -100,6 +100,10 @@ public class AnnotatedEndpointTest {
                                         deployment = container;
                                     }
                                 })
+                                .addEndpoint(ServerEndpointConfig.Builder.create(
+                                        AnnotatedAddedProgrammaticallyEndpoint.class,
+                                        AnnotatedAddedProgrammaticallyEndpoint.PATH)
+                                        .build())
                 )
                 .addServlet(new ServletInfo("redirect", RedirectServlet.class)
                 .addMapping("/redirect"))
@@ -126,6 +130,18 @@ public class AnnotatedEndpointTest {
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/chat/Stuart"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
+        latch.getIoFuture().get();
+        client.destroy();
+    }
+
+    @Test
+    public void testStringOnMessageAddedProgramatically() throws Exception {
+        final byte[] payload = "foo".getBytes();
+        final FutureResult latch = new FutureResult();
+
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/programmatic"));
+        client.connect();
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "oof".getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
@@ -350,6 +366,7 @@ public class AnnotatedEndpointTest {
         session.close();
         Assert.assertEquals(0, expected.size());
     }
+
 
 
     @ClientEndpoint
