@@ -30,6 +30,8 @@ import java.util.Locale;
 
 import javax.servlet.DispatcherType;
 
+import io.netty.buffer.ByteBuf;
+
 /**
  * Real servlet print writer functionality, that is not limited by extending
  * {@link java.io.PrintWriter}
@@ -96,16 +98,16 @@ public class ServletPrintWriter {
             }
             if (charsetEncoder != null) {
                 do {
-                    ByteBuffer out = outputStream.underlyingBuffer();
+                    ByteBuf out = outputStream.underlyingBuffer();
                     if (out == null) {
                         //servlet output stream has already been closed
                         error = true;
                         return;
                     }
-                    CoderResult result = charsetEncoder.encode(buffer, out, true);
+                    CoderResult result = doEncoding(buffer, out, true);
                     if (result.isOverflow()) {
                         outputStream.flushInternal();
-                        if (out.remaining() == 0) {
+                        if (!out.isWritable()) {
                             outputStream.close();
                             error = true;
                             return;
@@ -121,22 +123,30 @@ public class ServletPrintWriter {
         }
     }
 
+    protected CoderResult doEncoding(CharBuffer buffer, ByteBuf out, boolean end) {
+        ByteBuffer b = out.nioBuffer(out.writerIndex(), out.writableBytes());
+        int orig = b.remaining();
+        CoderResult result = charsetEncoder.encode(buffer, b, end);
+        out.writerIndex(out.writerIndex() + (orig - b.remaining()));
+        return result;
+    }
+
     public boolean checkError() {
         flush();
         return error;
     }
 
     public void write(final CharBuffer input) {
-        ByteBuffer buffer = outputStream.underlyingBuffer();
+        ByteBuf buffer = outputStream.underlyingBuffer();
         if (buffer == null) {
             //stream has been closed
             error = true;
             return;
         }
         try {
-            if (!buffer.hasRemaining()) {
+            if (!buffer.isWritable()) {
                 outputStream.flushInternal();
-                if (!buffer.hasRemaining()) {
+                if (!buffer.isWritable()) {
                     error = true;
                     return;
                 }
@@ -157,12 +167,12 @@ public class ServletPrintWriter {
             }
             int last = -1;
             while (cb.hasRemaining()) {
-                int remaining = buffer.remaining();
-                CoderResult result = charsetEncoder.encode(cb, buffer, false);
-                outputStream.updateWritten(remaining - buffer.remaining());
-                if (result.isOverflow() || !buffer.hasRemaining()) {
+                int remaining = buffer.writableBytes();
+                CoderResult result = doEncoding(cb, buffer, false);
+                outputStream.updateWritten(remaining - buffer.writableBytes());
+                if (result.isOverflow() || !buffer.isWritable()) {
                     outputStream.flushInternal();
-                    if (!buffer.hasRemaining()) {
+                    if (!buffer.isWritable()) {
                         error = true;
                         return;
                     }
@@ -194,20 +204,20 @@ public class ServletPrintWriter {
     }
 
     public void write(final int c) {
-        write(Character.toString((char)c));
+        write(Character.toString((char) c));
     }
 
     public void write(final char[] buf, final int off, final int len) {
-        if(charsetEncoder == null) {
+        if (charsetEncoder == null) {
             try {
-                ByteBuffer buffer = outputStream.underlyingBuffer();
-                if(buffer == null) {
+                ByteBuf buffer = outputStream.underlyingBuffer();
+                if (buffer == null) {
                     //already closed
                     error = true;
                     return;
                 }
                 //fast path, basically we are hoping this is ascii only
-                int remaining = buffer.remaining();
+                int remaining = buffer.writableBytes();
                 boolean ok = true;
                 //so we have a pure ascii buffer, just write it out and skip all the encoder cost
 
@@ -222,15 +232,15 @@ public class ServletPrintWriter {
                             ok = false;
                             break;
                         } else {
-                            buffer.put((byte) c);
+                            buffer.writeByte((byte) c);
                         }
                     }
                     if (i == flushPos) {
                         outputStream.flushInternal();
-                        flushPos = i + buffer.remaining();
+                        flushPos = i + buffer.writableBytes();
                     }
                 }
-                outputStream.updateWritten(remaining - buffer.remaining());
+                outputStream.updateWritten(remaining - buffer.writableBytes());
                 if (ok) {
                     return;
                 }
@@ -248,20 +258,20 @@ public class ServletPrintWriter {
     }
 
     public void write(final char[] buf) {
-        write(buf,0, buf.length);
+        write(buf, 0, buf.length);
     }
 
     public void write(final String s, final int off, final int len) {
-        if(charsetEncoder == null) {
+        if (charsetEncoder == null) {
             try {
-                ByteBuffer buffer = outputStream.underlyingBuffer();
-                if(buffer == null) {
+                ByteBuf buffer = outputStream.underlyingBuffer();
+                if (buffer == null) {
                     //already closed
                     error = true;
                     return;
                 }
                 //fast path, basically we are hoping this is ascii only
-                int remaining = buffer.remaining();
+                int remaining = buffer.writableBytes();
                 boolean ok = true;
                 //so we have a pure ascii buffer, just write it out and skip all the encoder cost
 
@@ -271,16 +281,16 @@ public class ServletPrintWriter {
                 for (; i < end; ++i) {
                     if (i == fpos) {
                         outputStream.flushInternal();
-                        fpos = i + buffer.remaining();
+                        fpos = i + buffer.writableBytes();
                     }
                     char c = s.charAt(i);
                     if (c > 127) {
                         ok = false;
                         break;
                     }
-                    buffer.put((byte) c);
+                    buffer.writeByte((byte) c);
                 }
-                outputStream.updateWritten(remaining - buffer.remaining());
+                outputStream.updateWritten(remaining - buffer.writableBytes());
                 if (ok) {
                     return;
                 }

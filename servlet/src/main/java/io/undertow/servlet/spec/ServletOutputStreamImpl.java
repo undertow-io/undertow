@@ -18,15 +18,21 @@
 
 package io.undertow.servlet.spec;
 
+import static io.undertow.util.Bits.anyAreClear;
+import static io.undertow.util.Bits.anyAreSet;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
 
+import io.netty.buffer.ByteBuf;
+import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.UndertowOutputStream;
 import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.util.Headers;
 import io.undertow.util.UndertowOptionMap;
 
 /**
@@ -50,19 +56,171 @@ import io.undertow.util.UndertowOptionMap;
  */
 public class ServletOutputStreamImpl extends ServletOutputStream {
 
+    private final ServletRequestContext servletRequestContext;
     private final HttpServerExchange exchange;
-    private final UndertowOutputStream delegate;
+    private ByteBuf pooledBuffer;
+    private int state;
+    private long written;
+    private final long contentLength;
 
-    private int bufferSize;
+    private static final int FLAG_CLOSED = 1;
+    private static final int FLAG_WRITE_STARTED = 1 << 1;
 
+    /**
+     * Construct a new instance.  No write timeout is configured.
+     *
+     * @param exchange The exchange
+     */
     public ServletOutputStreamImpl(HttpServerExchange exchange) {
         this.exchange = exchange;
-        this.delegate = new UndertowOutputStream(exchange);
+        this.contentLength = exchange.getResponseContentLength();
+        servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
     }
 
     public ServletOutputStreamImpl(HttpServerExchange exchange, Integer bufferSize) {
         this.exchange = exchange;
-        this.delegate = new UndertowOutputStream(exchange);
+        this.contentLength = exchange.getResponseContentLength();
+        servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+    }
+
+
+    public long getBytesWritten() {
+        return written;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void write(final int b) throws IOException {
+        write(new byte[]{(byte) b}, 0, 1);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void write(final byte[] b) throws IOException {
+        write(b, 0, b.length);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void write(final byte[] b, final int off, final int len) throws IOException {
+        if (len < 1) {
+            return;
+        }
+        if (exchange.getIoThread().inEventLoop()) {
+            throw UndertowMessages.MESSAGES.blockingIoFromIOThread();
+        }
+        if (anyAreSet(state, FLAG_CLOSED)) {
+            throw UndertowMessages.MESSAGES.streamIsClosed();
+        }
+
+        int rem = len;
+        int idx = off;
+        ByteBuf buffer = pooledBuffer;
+        try {
+            if (buffer == null) {
+                pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
+            }
+            while (rem > 0) {
+                int toWrite = Math.min(rem, buffer.writableBytes());
+                buffer.writeBytes(b, idx, toWrite);
+                rem -= toWrite;
+                idx += toWrite;
+                if (!buffer.isWritable()) {
+                    exchange.writeBlocking(buffer, false);
+                    this.pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
+                }
+            }
+        } catch (Exception e) {
+            if (buffer != null) {
+                buffer.release();
+            }
+            throw new IOException(e);
+        }
+        updateWritten(len);
+    }
+
+    void updateWritten(final long len) throws IOException {
+        this.written += len;
+        if (contentLength != -1 && this.written >= contentLength) {
+            flush();
+            close();
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void flush() throws IOException {
+        if (anyAreSet(state, FLAG_CLOSED)) {
+            throw UndertowMessages.MESSAGES.streamIsClosed();
+        }
+        try {
+            if (pooledBuffer != null) {
+                exchange.writeBlocking(pooledBuffer, false);
+                pooledBuffer = null;
+            }
+        } catch (Exception e) {
+            if (pooledBuffer != null) {
+                pooledBuffer.release();
+                pooledBuffer = null;
+            }
+            throw new IOException(e);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public void close() throws IOException {
+        if (anyAreSet(state, FLAG_CLOSED)) return;
+        state |= FLAG_CLOSED;
+        if (anyAreClear(state, FLAG_WRITE_STARTED)) {
+            if (pooledBuffer == null) {
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
+            } else {
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + pooledBuffer.readableBytes());
+            }
+        }
+        try {
+            exchange.writeBlocking(pooledBuffer, true);
+        } catch (Exception e) {
+            throw new IOException(e);
+        } finally {
+            pooledBuffer = null;
+        }
+    }
+
+
+    public void resetBuffer() {
+        if(pooledBuffer != null) {
+            pooledBuffer.clear();
+        }
+    }
+
+    public void setBufferSize(int bufferSize) {
+        throw new RuntimeException("NYI");
+    }
+
+    public ServletRequestContext getServletRequestContext() {
+        return servletRequestContext;
+    }
+
+    public ByteBuf underlyingBuffer() {
+        if(pooledBuffer == null) {
+            pooledBuffer = exchange.getConnection().getByteBufferPool().buffer();
+        }
+        return pooledBuffer;
+    }
+
+    public void flushInternal() throws IOException {
+        flush();
+    }
+
+    public void updateWritten(int i) {
+
     }
 
     @Override
@@ -73,44 +231,5 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     @Override
     public void setWriteListener(WriteListener writeListener) {
         throw new RuntimeException("NYI");
-    }
-
-    @Override
-    public void write(int b) throws IOException {
-        delegate.write(b);
-    }
-
-    @Override
-    public void write(byte[] b) throws IOException {
-        delegate.write(b);
-    }
-
-    @Override
-    public void write(byte[] b, int off, int len) throws IOException {
-        delegate.write(b, off, len);
-    }
-
-    public void resetBuffer() {
-
-    }
-
-    public void setBufferSize(int bufferSize) {
-        this.bufferSize = bufferSize;
-    }
-
-    public ServletRequestContext getServletRequestContext() {
-        return null;
-    }
-
-    public ByteBuffer underlyingBuffer() {
-        return null;
-    }
-
-    public void flushInternal() throws IOException {
-
-    }
-
-    public void updateWritten(int i) {
-
     }
 }

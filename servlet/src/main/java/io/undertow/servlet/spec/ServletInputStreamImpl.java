@@ -19,11 +19,13 @@
 package io.undertow.servlet.spec;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.UndertowInputStream;
 
 /**
  * Servlet input stream implementation. This stream is non-buffered, and is used for both
@@ -32,10 +34,10 @@ import io.undertow.server.HttpServerExchange;
  * @author Stuart Douglas
  */
 public class ServletInputStreamImpl extends ServletInputStream {
-    private final HttpServerExchange exchange;
+    private final InputStream delegate;
 
     public ServletInputStreamImpl(HttpServerExchange exchange) {
-        this.exchange = exchange;
+        this.delegate = new UndertowInputStream(exchange);
     }
 
 
@@ -56,16 +58,16 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     @Override
     public int read() throws IOException {
-        return exchange.getInputStream().read();
+        return delegate.read();
     }
 
     @Override
     public int read(byte[] b) throws IOException {
-        return exchange.getInputStream().read(b);
+        return delegate.read(b);
     }
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
-        return exchange.getInputStream().read(b, off, len);
+        return delegate.read(b, off, len);
     }
 }

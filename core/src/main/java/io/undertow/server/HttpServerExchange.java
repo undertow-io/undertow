@@ -1131,7 +1131,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         throw new RuntimeException("NYI");
     }
 
-    <T> void writeAsync(ByteBuf data, boolean last, IoCallback<T> callback, T context) {
+    public <T> void writeAsync(ByteBuf data, boolean last, IoCallback<T> callback, T context) {
         if (data == null && !last) {
             throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
         }
@@ -1143,7 +1143,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         connection.writeAsync(data, last, this, callback, context);
     }
 
-    void writeBlocking(ByteBuf data, boolean last) throws IOException {
+    public void writeBlocking(ByteBuf data, boolean last) throws IOException {
         if (data == null && !last) {
             throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
         }
