@@ -17,13 +17,14 @@
  */
 package io.undertow.websockets.jsr.handshake;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.websocket.HandshakeResponse;
-
-import io.undertow.websockets.spi.WebSocketHttpExchange;
 
 /**
  * {@link HandshakeResponse} which wraps a {@link io.undertow.websockets.spi.WebSocketHttpExchange} to act on it.
@@ -33,19 +34,24 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public final class ExchangeHandshakeResponse implements HandshakeResponse {
-    private final WebSocketHttpExchange exchange;
+    private final HttpServletResponse response;
     private Map<String, List<String>> headers;
 
-    public ExchangeHandshakeResponse(final WebSocketHttpExchange exchange) {
-        this.exchange = exchange;
+    public ExchangeHandshakeResponse(HttpServletResponse response) {
+        this.response = response;
     }
+
 
     @Override
     public Map<String, List<String>> getHeaders() {
         if (headers == null) {
             headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-            headers.putAll(exchange.getResponseHeaders());
+            final Collection<String> headerNames = response.getHeaderNames();
+            for (String header : headerNames) {
+                headers.put(header, new ArrayList<>(response.getHeaders(header)));
+            }
         }
+
         return headers;
     }
 
@@ -54,7 +60,15 @@ public final class ExchangeHandshakeResponse implements HandshakeResponse {
      */
     void update() {
         if (headers != null) {
-            exchange.setResponseHeaders(headers);
+            for (String header : response.getHeaderNames()) {
+                response.setHeader(header, null);
+            }
+
+            for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+                for (String val : entry.getValue()) {
+                    response.addHeader(entry.getKey(), val);
+                }
+            }
         }
     }
 }

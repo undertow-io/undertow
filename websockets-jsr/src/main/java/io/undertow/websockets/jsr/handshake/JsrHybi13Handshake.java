@@ -73,9 +73,9 @@ public final class JsrHybi13Handshake extends Hybi13Handshake {
     }
 
     @Override
-    protected List<WebSocketExtension> selectedExtension(List<WebSocketExtension> extensionList) {
+    protected List<WebSocketExtensionData> selectedExtension(List<WebSocketExtensionData> extensionList) {
         List<Extension> ext = new ArrayList<>();
-        for(WebSocketExtension i : extensionList) {
+        for(WebSocketExtensionData i : extensionList) {
             ext.add(ExtensionImpl.create(i));
         }
         List<Extension> selected = HandshakeUtil.selectExtensions(config, ext);
@@ -86,19 +86,19 @@ public final class JsrHybi13Handshake extends Hybi13Handshake {
         for(ExtensionHandshake availible : availableExtensions) {
             extensionMap.put(availible.getName(), availible);
         }
-        List<WebSocketExtension> ret = new ArrayList<>();
+        List<WebSocketExtensionData> ret = new ArrayList<>();
         List<ExtensionHandshake> accepted = new ArrayList<>();
         for(Extension i : selected) {
             ExtensionHandshake handshake = extensionMap.get(i.getName());
             if(handshake == null) {
                 continue; //should not happen
             }
-            List<WebSocketExtension.Parameter> parameters = new ArrayList<>();
+            List<WebSocketExtensionData.Parameter> parameters = new ArrayList<>();
             for(Extension.Parameter p : i.getParameters()) {
-                parameters.add(new WebSocketExtension.Parameter(p.getName(), p.getValue()));
+                parameters.add(new WebSocketExtensionData.Parameter(p.getName(), p.getValue()));
             }
             if(!handshake.isIncompatible(accepted)) {
-                WebSocketExtension accept = handshake.accept(new WebSocketExtension(i.getName(), parameters));
+                WebSocketExtensionData accept = handshake.accept(new WebSocketExtensionData(i.getName(), parameters));
                 if (accept != null) {
                     ret.add(accept);
                     accepted.add(handshake);

@@ -19,6 +19,9 @@ package io.undertow.websockets.jsr.handshake;
 
 import java.util.Collections;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
 import org.xnio.StreamConnection;
 
 import io.undertow.websockets.core.WebSocketChannel;
@@ -41,21 +44,15 @@ public final class JsrHybi07Handshake extends Hybi07Handshake {
     }
 
     @Override
-    protected void upgradeChannel(final WebSocketHttpExchange exchange, byte[] data) {
+    protected void upgradeChannel(HttpServletRequest request, HttpServletResponse response, byte[] data) {
         HandshakeUtil.prepareUpgrade(config.getEndpointConfiguration(), exchange);
         super.upgradeChannel(exchange, data);
     }
 
-    @Override
-    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection c, final ByteBufferPool buffers) {
-        WebSocketChannel channel = super.createChannel(exchange, c, buffers);
-        HandshakeUtil.setConfig(channel, config);
-        return channel;
-    }
 
     @Override
-    public boolean matches(WebSocketHttpExchange exchange) {
-        return super.matches(exchange) && HandshakeUtil.checkOrigin(config.getEndpointConfiguration(), exchange);
+    public boolean matches(HttpServletRequest request, HttpServletResponse response) {
+        return super.matches(request, response) && HandshakeUtil.checkOrigin(config.getEndpointConfiguration(), request, response);
     }
 
     @Override

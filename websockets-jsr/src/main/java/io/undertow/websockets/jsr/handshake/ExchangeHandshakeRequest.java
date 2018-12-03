@@ -20,11 +20,17 @@ package io.undertow.websockets.jsr.handshake;
 import java.net.URI;
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.websocket.server.HandshakeRequest;
 
 import io.undertow.websockets.spi.WebSocketHttpExchange;
@@ -35,50 +41,62 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public final class ExchangeHandshakeRequest implements HandshakeRequest {
-    private final WebSocketHttpExchange exchange;
+    private final HttpServletRequest request;
     private Map<String, List<String>> headers;
 
-    public ExchangeHandshakeRequest(final WebSocketHttpExchange exchange) {
-        this.exchange = exchange;
+    public ExchangeHandshakeRequest(HttpServletRequest request) {
+        this.request = request;
     }
+
 
     @Override
     public Map<String, List<String>> getHeaders() {
         if (headers == null) {
-            headers = exchange.getRequestHeaders();
+            headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            final Enumeration<String> headerNames = request.getHeaderNames();
+            while (headerNames.hasMoreElements()) {
+                String header = headerNames.nextElement();
+                final Enumeration<String> theHeaders = request.getHeaders(header);
+                final List<String> vals = new ArrayList<>();
+                headers.put(header, vals);
+                while (theHeaders.hasMoreElements()) {
+                    vals.add(theHeaders.nextElement());
+                }
+
+            }
         }
         return headers;
     }
 
     @Override
     public Principal getUserPrincipal() {
-        return exchange.getUserPrincipal();
+        return request.getUserPrincipal();
     }
 
     @Override
     public URI getRequestURI() {
-        return URI.create(exchange.getRequestURI());
+        return URI.create(request.getRequestURI());
     }
 
     @Override
     public boolean isUserInRole(String role) {
-        return exchange.isUserInRole(role);
+        return request.isUserInRole(role);
     }
 
     @Override
     public Object getHttpSession() {
-        return exchange.getSession();
+        return request.getSession();
     }
 
     @Override
     public Map<String, List<String>> getParameterMap() {
         Map<String, List<String>> requestParameters = new HashMap<>();
-        for(Map.Entry<String, List<String>> e : exchange.getRequestParameters().entrySet()) {
+        for(Map.Entry<String, String[]> e : request.getParameterMap().entrySet()) {
             List<String> list = requestParameters.get(e.getKey());
             if(list == null) {
                 requestParameters.put(e.getKey(), list = new ArrayList<>());
             }
-            list.addAll(e.getValue());
+            list.addAll(Arrays.asList(e.getValue()));
         }
         Map<String, String> pathParms = exchange.getAttachment(HandshakeUtil.PATH_PARAMS);
         if(pathParms != null) {

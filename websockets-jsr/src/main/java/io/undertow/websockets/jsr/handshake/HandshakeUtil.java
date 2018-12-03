@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.websocket.Extension;
 import javax.websocket.server.ServerEndpointConfig;
 
@@ -50,7 +52,7 @@ public final class HandshakeUtil {
     /**
      * Checks the orgin against the
      */
-    public static boolean checkOrigin(ServerEndpointConfig config, WebSocketHttpExchange exchange) {
+    public static boolean checkOrigin(ServerEndpointConfig config, HttpServletRequest request, HttpServletResponse response) {
         ServerEndpointConfig.Configurator c = config.getConfigurator();
         return c.checkOrigin(exchange.getRequestHeader(Headers.ORIGIN_STRING));
     }
@@ -58,27 +60,14 @@ public final class HandshakeUtil {
     /**
      * Prepare for upgrade
      */
-    public static void prepareUpgrade(final ServerEndpointConfig config, final WebSocketHttpExchange exchange) {
-        ExchangeHandshakeRequest request = new ExchangeHandshakeRequest(exchange);
-        ExchangeHandshakeResponse response = new ExchangeHandshakeResponse(exchange);
+    public static void prepareUpgrade(final ServerEndpointConfig config, final HttpServletRequest request, HttpServletResponse response) {
+        ExchangeHandshakeRequest request = new ExchangeHandshakeRequest(request, response);
+        ExchangeHandshakeResponse response = new ExchangeHandshakeResponse();
         ServerEndpointConfig.Configurator c = config.getConfigurator();
         c.modifyHandshake(config, request, response);
         response.update();
     }
 
-    /**
-     * Set the {@link ConfiguredServerEndpoint} which is used to create the {@link WebSocketChannel}.
-     */
-    public static void setConfig(WebSocketChannel channel, ConfiguredServerEndpoint config) {
-        channel.setAttribute(CONFIG_KEY, config);
-    }
-
-    /**
-     * Returns the {@link ConfiguredServerEndpoint} which was used while create the {@link WebSocketChannel}.
-     */
-    public static ConfiguredServerEndpoint getConfig(WebSocketChannel channel) {
-        return (ConfiguredServerEndpoint) channel.getAttribute(CONFIG_KEY);
-    }
 
 
     static String selectSubProtocol(final ConfiguredServerEndpoint config, final String[] requestedSubprotocolArray) {
