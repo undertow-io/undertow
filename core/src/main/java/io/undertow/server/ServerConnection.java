@@ -64,17 +64,9 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
     public abstract EventExecutor getIoThread();
 
     /**
-     * Sends an out of band response, such as a HTTP 100-continue response.
-     *
-     * WARNING: do not attempt to write to the current exchange until the out of band
-     * exchange has been fully written. Doing so may have unexpected results.
-     *
-     * TODO: this needs more thought.
-     *
-     * @return The out of band exchange.
-     * @param exchange The current exchange
+     * Sends a 100-continue response if it is required
      */
-    public abstract HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange);
+    public abstract void sendContinueIfRequired();
 
 
     public abstract void writeBlocking(ByteBuf data, boolean last, HttpServerExchange exchange) throws IOException;

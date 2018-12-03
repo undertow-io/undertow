@@ -47,6 +47,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.server.Connectors;
+import io.undertow.server.HttpContinue;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
@@ -154,20 +155,16 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         return ctx.executor();
     }
 
-    /**
-     * Sends an out of band response, such as a HTTP 100-continue response.
-     * <p>
-     * WARNING: do not attempt to write to the current exchange until the out of band
-     * exchange has been fully written. Doing so may have unexpected results.
-     * <p>
-     * TODO: this needs more thought.
-     *
-     * @param exchange The current exchange
-     * @return The out of band exchange.
-     */
-    public HttpServerExchange sendOutOfBandResponse(HttpServerExchange exchange) {
-        throw new RuntimeException("nyi");
+    @Override
+    public void sendContinueIfRequired() {
+        if(currentExchange.isResponseStarted()) {
+            return;
+        }
+        if(HttpContinue.requiresContinueResponse(currentExchange)) {
+            ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
+        }
     }
+
 
     /**
      * @return <code>true</code> if this connection supports sending a 100-continue response

@@ -1131,6 +1131,11 @@ public final class HttpServerExchange extends AbstractAttachable {
         throw new RuntimeException("NYI");
     }
 
+    public void send1ContinueIfRequired() {
+        connection.sendContinueIfRequired();
+    }
+
+
     public <T> void writeAsync(ByteBuf data, boolean last, IoCallback<T> callback, T context) {
         if (data == null && !last) {
             throw new IllegalArgumentException("cannot call write with a null buffer and last being false");

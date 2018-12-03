@@ -54,7 +54,6 @@ public class NettyHttpServerInitializer extends ChannelInitializer<SocketChannel
             p.addLast(sslHandler);
         }
         p.addLast(new HttpServerCodec());
-        p.addLast(new HttpServerExpectContinueHandler());
         p.addLast(new NettyHttpServerHandler(blockingExecutor, rootHandler, engine));
     }
 }
