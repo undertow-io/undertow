@@ -70,7 +70,8 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
      * HTTP/2 required cipher. Not strictly part of ALPN but it can live here for now till we have a better solution.
      */
     public static final String REQUIRED_CIPHER = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
-    public static final Set<String> REQUIRED_PROTOCOLS = new HashSet<>(Arrays.asList("TLSv1.2","TLSv1.3"));
+    private static final Set<String> REQUIRED_PROTOCOLS = Collections.unmodifiableSet(
+            new HashSet<>(Arrays.asList("TLSv1.2","TLSv1.3")));
 
     private final ALPNManager alpnManager = ALPNManager.INSTANCE; //todo: configurable
     private final ByteBufferPool bufferPool;
