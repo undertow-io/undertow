@@ -42,6 +42,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.io.IoCallback;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
 import io.undertow.security.api.SecurityContext;
@@ -263,15 +264,6 @@ public final class HttpServerExchange extends AbstractAttachable {
      * or the exchange will be ended.
      */
     private static final int FLAG_IN_CALL = 1 << 17;
-    /**
-     * Flag that indicates that reads should be resumed when the call stack returns.
-     */
-    private static final int FLAG_SHOULD_RESUME_READS = 1 << 18;
-
-    /**
-     * Flag that indicates that writes should be resumed when the call stack returns
-     */
-    private static final int FLAG_SHOULD_RESUME_WRITES = 1 << 19;
 
     /**
      * Flag that indicates the user has started to read data from the request
@@ -741,7 +733,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 this.dispatchExecutor = executor;
             }
             state |= FLAG_DISPATCHED;
-            if (anyAreSet(state, FLAG_SHOULD_RESUME_READS | FLAG_SHOULD_RESUME_WRITES)) {
+            if (connection.isIoOperationQueued()) {
                 throw UndertowMessages.MESSAGES.resumedAndDispatched();
             }
             this.dispatchTask = runnable;
@@ -1134,42 +1126,16 @@ public final class HttpServerExchange extends AbstractAttachable {
         return connection.readBlocking();
     }
 
-    ChannelFuture writeAsync(ByteBuf data, boolean last) {
+    <T> void writeAsync(ByteBuf data, boolean last, IoCallback<T> callback, T context) {
         if (data == null && !last) {
             throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
         }
         if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-            ChannelPromise promise = connection.createPromise();
-            promise.setFailure(UndertowMessages.MESSAGES.responseComplete());
-            return promise;
+            callback.onException(this, context, new IOException(UndertowMessages.MESSAGES.responseComplete()));
+            return;
         }
         handleFirstData();
-        return connection.writeAsync(data, last, this);
-    }
-
-    ChannelFuture writeAsync(ByteBuf[] data, boolean last) {
-        if (data == null && !last) {
-            throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
-        }
-        if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-            ChannelPromise promise = connection.createPromise();
-            promise.setFailure(UndertowMessages.MESSAGES.responseComplete());
-            return promise;
-        }
-        handleFirstData();
-        if (data.length == 0) {
-            if (last) {
-                return connection.writeAsync(null, true, this);
-            } else {
-                ChannelPromise promise = connection.createPromise();
-                promise.setSuccess();
-                return promise;
-            }
-        }
-        for (int i = 0; i < data.length - 1; ++i) {
-            connection.writeAsync(data[i], false, this);
-        }
-        return connection.writeAsync(data[data.length - 1], last, this);
+        connection.writeAsync(data, last, this, callback, context);
     }
 
     void writeBlocking(ByteBuf data, boolean last) throws IOException {
@@ -1522,12 +1488,32 @@ public final class HttpServerExchange extends AbstractAttachable {
                 IoUtils.safeClose(connection);
             }
         }
+        if (!isRequestComplete()) {
+            connection.setReadCallback(new IoCallback<Object>() {
+                @Override
+                public void onComplete(HttpServerExchange exchange, Object context) {
+                    try {
+                        while (connection.isReadDataAvailable()) {
+                            ByteBuf res = exchange.readAsync();
+                            if (res != null) {
+                                res.release();
+                            }
+                        }
+                    } catch (IOException e) {
+                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                    }
+                }
+
+                @Override
+                public void onException(HttpServerExchange exchange, Object context, IOException exception) {
+                    UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
+                }
+            }, null);
+        }
 
         if (!isResponseComplete()) {
-            writeAsync((ByteBuf) null, true);
+            writeAsync(null, true, IoCallback.END_EXCHANGE, null);
         }
-        connection.endExchange(this);
-        invokeExchangeCompleteListeners();
         return this;
     }
 
@@ -1620,11 +1606,6 @@ public final class HttpServerExchange extends AbstractAttachable {
         responseCommitListeners[responseCommitListenerCount] = listener;
     }
 
-
-    boolean isResumed() {
-        return anyAreSet(state, FLAG_SHOULD_RESUME_WRITES | FLAG_SHOULD_RESUME_READS);
-    }
-
     boolean isReadDataAvailable() {
         return connection.isReadDataAvailable();
     }
@@ -1640,6 +1621,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     ByteBuf readAsync() throws IOException {
         return connection.readAsync();
     }
+
 
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {
         private final ExchangeCompletionListener[] list;

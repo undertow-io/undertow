@@ -27,23 +27,23 @@ import io.undertow.util.IoUtils;
 /**
  * @author Stuart Douglas
  */
-public interface IoCallback {
+public interface IoCallback<T> {
 
-    void onComplete(final HttpServerExchange exchange, final Sender sender);
+    void onComplete(final HttpServerExchange exchange, final T context);
 
-    void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception);
+    void onException(final HttpServerExchange exchange, final T context, final IOException exception);
 
     /**
      * A default callback that simply ends the exchange.
      */
-    IoCallback END_EXCHANGE = new IoCallback() {
+    IoCallback END_EXCHANGE = new IoCallback<Void>() {
         @Override
-        public void onComplete(HttpServerExchange exchange, Sender sender) {
+        public void onComplete(HttpServerExchange exchange, Void context) {
             exchange.endExchange();
         }
 
         @Override
-        public void onException(HttpServerExchange exchange, Sender sender, IOException exception) {
+        public void onException(HttpServerExchange exchange, Void context, IOException exception) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
             try {
                 exchange.endExchange();

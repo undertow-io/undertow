@@ -322,7 +322,7 @@ public class Connectors {
             exchange.setInCall(true);
             handler.handleRequest(exchange);
             exchange.setInCall(false);
-            boolean resumed = exchange.isResumed();
+            boolean resumed = exchange.getConnection().isIoOperationQueued();
             if (exchange.isDispatched()) {
                 if (resumed) {
                     UndertowLogger.REQUEST_LOGGER.resumedAndDispatched();

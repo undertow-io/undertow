@@ -32,6 +32,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.undertow.io.IoCallback;
 import io.undertow.util.UndertowOptionMap;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
@@ -78,7 +79,9 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
 
     public abstract void writeBlocking(ByteBuf data, boolean last, HttpServerExchange exchange) throws IOException;
 
-    public abstract ChannelFuture writeAsync(ByteBuf data, boolean last, HttpServerExchange exchange);
+    public abstract <T> void writeAsync(ByteBuf data, boolean last, HttpServerExchange exchange, IoCallback<T> callback, T context);
+
+    protected abstract boolean isIoOperationQueued();
 
     /**
      *
@@ -195,6 +198,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
 
     protected abstract boolean isReadDataAvailable();
 
+    protected abstract <T> void setReadCallback(IoCallback<T> callback, T context);
     /**
      * Reads some data from the exchange. Can only be called if {@link #isReadDataAvailable()} returns true.
      *

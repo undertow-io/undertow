@@ -36,60 +36,30 @@ public class AsyncSenderImpl implements Sender {
     }
 
     @Override
-    public void send(ByteBuf buffer, IoCallback callback) {
+    public void send(ByteBuf buffer, IoCallback<?> callback) {
         //TODO: use our own promise impl
-        exchange.writeAsync(buffer, callback == IoCallback.END_EXCHANGE)
-                .addListener(new ResultListener(callback));
+        exchange.writeAsync(buffer, callback == IoCallback.END_EXCHANGE, callback, null);
     }
 
     @Override
-    public void send(ByteBuf[] buffer, IoCallback callback) {
-        exchange.writeAsync(buffer, callback == IoCallback.END_EXCHANGE)
-                .addListener(new ResultListener(callback));
-    }
-
-    @Override
-    public void send(String data, Charset charset, IoCallback callback) {
-        exchange.writeAsync(Unpooled.copiedBuffer(data, StandardCharsets.UTF_8), true)
-                .addListener(new ResultListener(callback));
+    public void send(String data, Charset charset, IoCallback<?> callback) {
+        exchange.writeAsync(Unpooled.copiedBuffer(data, StandardCharsets.UTF_8), callback == IoCallback.END_EXCHANGE, callback, null);
     }
 
 
     @Override
     public void transferFrom(FileChannel channel, IoCallback callback) {
-        callback.onException(exchange, this, new IOException("NYI"));
+        callback.onException(exchange, null, new IOException("NYI"));
     }
 
     @Override
     public void transferFrom(FileChannel channel, long start, long length, IoCallback callback) {
-        callback.onException(exchange, this, new IOException("NYI"));
+        callback.onException(exchange, null, new IOException("NYI"));
     }
 
     @Override
-    public void close(IoCallback callback) {
-        exchange.writeAsync((ByteBuf) null, true)
-                .addListener(new ResultListener(callback));
+    public void close(IoCallback<?> callback) {
+        exchange.writeAsync((ByteBuf) null, true, callback, null);
     }
 
-    @Override
-    public void close() {
-
-    }
-
-    private class ResultListener implements GenericFutureListener<Future<? super Void>> {
-        private final IoCallback callback;
-
-        public ResultListener(IoCallback callback) {
-            this.callback = callback;
-        }
-
-        @Override
-        public void operationComplete(Future<? super Void> future) throws Exception {
-            if (future.isSuccess()) {
-                callback.onComplete(exchange, AsyncSenderImpl.this);
-            } else {
-                callback.onException(exchange, AsyncSenderImpl.this, new IOException(future.cause()));
-            }
-        }
-    }
 }

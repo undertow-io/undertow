@@ -76,21 +76,20 @@ public class SimpleBlockingServerTestCase {
                     } else {
                         if (exchange.getQueryParameters().containsKey("useFragmentedSender")) {
                             //we send it byte at a time
-                            exchange.getResponseSender().send("", new IoCallback() {
+                            exchange.getResponseSender().send("", new IoCallback<Void>() {
                                 int i = 0;
 
                                 @Override
-                                public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+                                public void onComplete(final HttpServerExchange exchange, final Void sender) {
                                     if (i == message.length()) {
-                                        sender.close();
                                         exchange.endExchange();
                                     } else {
-                                        sender.send("" + message.charAt(i++), this);
+                                        exchange.getResponseSender().send("" + message.charAt(i++), this);
                                     }
                                 }
 
                                 @Override
-                                public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                                public void onException(final HttpServerExchange exchange, final Void sender, final IOException exception) {
                                     exchange.endExchange();
                                 }
                             });

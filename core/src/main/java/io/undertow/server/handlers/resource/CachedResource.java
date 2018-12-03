@@ -306,18 +306,18 @@ public class CachedResource implements Resource, RangeAwareResource {
         return underlyingResource instanceof RangeAwareResource && ((RangeAwareResource) underlyingResource).isRangeSupported();
     }
 
-    private static class DereferenceCallback implements IoCallback {
+    private static class DereferenceCallback<T> implements IoCallback<T> {
 
         private final DirectBufferCache.CacheEntry entry;
-        private final IoCallback callback;
+        private final IoCallback<T> callback;
 
-        DereferenceCallback(DirectBufferCache.CacheEntry entry, final IoCallback callback) {
+        DereferenceCallback(DirectBufferCache.CacheEntry entry, final IoCallback <T> callback) {
             this.entry = entry;
             this.callback = callback;
         }
 
         @Override
-        public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+        public void onComplete(final HttpServerExchange exchange, final T sender) {
             try {
                 entry.dereference();
             } finally {
@@ -326,7 +326,7 @@ public class CachedResource implements Resource, RangeAwareResource {
         }
 
         @Override
-        public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+        public void onException(final HttpServerExchange exchange, final T sender, final IOException exception) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
             try {
                 entry.dereference();

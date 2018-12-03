@@ -59,7 +59,7 @@ public class BlockingSenderImpl implements Sender {
         } else {
             long responseContentLength = exchange.getResponseContentLength();
             if (responseContentLength > 0 && buffer.readableBytes() > responseContentLength) {
-                callback.onException(exchange, this, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(buffer.readableBytes(), responseContentLength));
+                callback.onException(exchange, null, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(buffer.readableBytes(), responseContentLength));
                 return;
             }
             if (!exchange.isResponseStarted() && callback == IoCallback.END_EXCHANGE) {
@@ -82,7 +82,7 @@ public class BlockingSenderImpl implements Sender {
         byte[] bytes = data.getBytes(charset);
         long responseContentLength = exchange.getResponseContentLength();
         if (responseContentLength > 0 && bytes.length > responseContentLength) {
-            callback.onException(exchange, this, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(bytes.length, responseContentLength));
+            callback.onException(exchange, null, UndertowLogger.ROOT_LOGGER.dataLargerThanContentLength(bytes.length, responseContentLength));
             return;
         }
         if (!exchange.isResponseStarted() && callback == IoCallback.END_EXCHANGE) {
@@ -95,7 +95,7 @@ public class BlockingSenderImpl implements Sender {
             outputStream.write(bytes);
             invokeOnComplete(callback);
         } catch (IOException e) {
-            callback.onException(exchange, this, e);
+            callback.onException(exchange, null, e);
         }
     }
 
@@ -118,7 +118,7 @@ public class BlockingSenderImpl implements Sender {
             }
             performTransfer(source, callback, 0, source.size());
         } catch (IOException e) {
-            callback.onException(exchange, this, e);
+            callback.onException(exchange, null, e);
             return;
         }
         invokeOnComplete(callback);
@@ -158,7 +158,7 @@ public class BlockingSenderImpl implements Sender {
             }
 
         } catch (IOException e) {
-            callback.onException(exchange, this, e);
+            callback.onException(exchange, null, e);
         } finally {
             buffer.release();
         }
@@ -171,7 +171,7 @@ public class BlockingSenderImpl implements Sender {
             outputStream.close();
             invokeOnComplete(callback);
         } catch (IOException e) {
-            callback.onException(exchange, this, e);
+            callback.onException(exchange, null, e);
         }
     }
 
@@ -185,7 +185,7 @@ public class BlockingSenderImpl implements Sender {
             try {
                 outputStream.write(buffer.array(), buffer.arrayOffset(), buffer.readableBytes());
             } catch (IOException e) {
-                callback.onException(exchange, this, e);
+                callback.onException(exchange, null, e);
                 return false;
             }
         } else {
@@ -197,7 +197,7 @@ public class BlockingSenderImpl implements Sender {
                     try {
                         outputStream.write(pooled.array(), pooled.arrayOffset(), toRead);
                     } catch (IOException e) {
-                        callback.onException(exchange, this, e);
+                        callback.onException(exchange, null, e);
                         return false;
                     }
                 }
@@ -213,7 +213,7 @@ public class BlockingSenderImpl implements Sender {
     private void invokeOnComplete(final IoCallback callback) {
         inCall = true;
         try {
-            callback.onComplete(exchange, this);
+            callback.onComplete(exchange, null);
         } finally {
             inCall = false;
         }
@@ -232,7 +232,7 @@ public class BlockingSenderImpl implements Sender {
             }
             inCall = true;
             try {
-                queuedCallback.onComplete(exchange, this);
+                queuedCallback.onComplete(exchange, null);
             } finally {
                 inCall = false;
             }

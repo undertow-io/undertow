@@ -1,22 +1,19 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-package io.undertow.server.handlers;
+package io.undertow.server;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -37,8 +34,7 @@ import org.junit.runner.RunWith;
 
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.PathHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -69,7 +65,7 @@ public class SenderTestCase {
                     }
                 }
                 final Sender sender = exchange.getResponseSender();
-                class SendClass implements Runnable, IoCallback {
+                class SendClass implements Runnable, IoCallback<Void> {
 
                     int sent = 0;
 
@@ -80,16 +76,16 @@ public class SenderTestCase {
                     }
 
                     @Override
-                    public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+                    public void onComplete(final HttpServerExchange exchange, final Void sender) {
                         if (sent++ == SENDS) {
-                            sender.close();
+                            exchange.getResponseSender().close();
                             return;
                         }
-                        sender.send("a", this);
+                        exchange.getResponseSender().send("a", this);
                     }
 
                     @Override
-                    public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                    public void onException(final HttpServerExchange exchange, final Void sender, final IOException exception) {
                         exception.printStackTrace();
                         exchange.endExchange();
                     }
@@ -116,7 +112,7 @@ public class SenderTestCase {
                 exchange.setResponseContentLength(channel.size() * TXS);
 
                 final Sender sender = exchange.getResponseSender();
-                class SendClass implements Runnable, IoCallback {
+                class SendClass implements Runnable, IoCallback<Void> {
 
                     int sent = 0;
 
@@ -131,20 +127,20 @@ public class SenderTestCase {
                     }
 
                     @Override
-                    public void onComplete(final HttpServerExchange exchange, final Sender sender) {
+                    public void onComplete(final HttpServerExchange exchange, final Void sender) {
                         if (sent++ == TXS) {
-                            sender.close();
+                            exchange.getResponseSender().close();
                             return;
                         }
                         try {
                             channel.position(0);
                         } catch (IOException e) {
                         }
-                        sender.transferFrom(channel, this);
+                        exchange.getResponseSender().transferFrom(channel, this);
                     }
 
                     @Override
-                    public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
+                    public void onException(final HttpServerExchange exchange, final Void sender, final IOException exception) {
                         exception.printStackTrace();
                         exchange.endExchange();
                     }
