@@ -119,20 +119,24 @@ public class Connectors {
             System.arraycopy(buffers, 0, newArray, existing.length, buffers.length);
         }
         exchange.putAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA, newArray); //todo: force some kind of wakeup?
-        exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
-            @Override
-            public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-                PooledByteBuffer[] bufs = exchange.getAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA);
-                if (bufs != null) {
-                    for (PooledByteBuffer i : bufs) {
-                        if(i != null) {
-                            i.close();
-                        }
+        exchange.addExchangeCompleteListener(BufferedRequestDataCleanupListener.INSTANCE);
+    }
+
+    private enum BufferedRequestDataCleanupListener implements ExchangeCompletionListener {
+        INSTANCE;
+
+        @Override
+        public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+            PooledByteBuffer[] bufs = exchange.getAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA);
+            if (bufs != null) {
+                for (PooledByteBuffer i : bufs) {
+                    if(i != null) {
+                        i.close();
                     }
                 }
-                nextListener.proceed();
             }
-        });
+            nextListener.proceed();
+        }
     }
 
     public static void terminateRequest(final HttpServerExchange exchange) {
