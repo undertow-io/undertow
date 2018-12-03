@@ -1493,11 +1493,17 @@ public final class HttpServerExchange extends AbstractAttachable {
                 @Override
                 public void onComplete(HttpServerExchange exchange, Object context) {
                     try {
+                        boolean done = false;
                         while (connection.isReadDataAvailable()) {
                             ByteBuf res = exchange.readAsync();
                             if (res != null) {
                                 res.release();
+                            } else {
+                                done = true;
                             }
+                        }
+                        if(!done) {
+                            connection.setReadCallback(this, null);
                         }
                     } catch (IOException e) {
                         UndertowLogger.REQUEST_IO_LOGGER.ioException(e);

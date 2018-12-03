@@ -416,13 +416,22 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
                     .addListener(asyncWriteListener);
         }
         if(readCallback != null && !contents.isEmpty()) {
-            getIoThread().execute(new Runnable() {
-                @Override
-                public void run() {
-                    readCallback.onComplete(currentExchange, readCallbackContext);
-                }
-            });
+            queueReadCallback();
         }
+    }
+
+    protected void queueReadCallback() {
+        getIoThread().execute(new Runnable() {
+            @Override
+            public void run() {
+
+                IoCallback readCallback = HttpServerConnection.this.readCallback;
+                Object readCallbackContext = HttpServerConnection.this.readCallbackContext;
+                HttpServerConnection.this.readCallback = null;
+                HttpServerConnection.this.readCallbackContext = null;
+                readCallback.onComplete(currentExchange, readCallbackContext);
+            }
+        });
     }
 
     @Override
@@ -453,6 +462,8 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         this.readCallbackContext = context;
         if(!contents.isEmpty() && currentExchange.isInIoThread()) {
             callback.onComplete(currentExchange, context);
+        } else if (!Connectors.isRunningHandlerChain(currentExchange)) {
+            queueReadCallback();
         }
     }
 
@@ -496,6 +507,10 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             contents.add(LAST);
         }
         if(readCallback != null) {
+            IoCallback readCallback = this.readCallback;
+            Object readCallbackContext = this.readCallbackContext;
+            HttpServerConnection.this.readCallback = null;
+            HttpServerConnection.this.readCallbackContext = null;
             readCallback.onComplete(currentExchange, readCallbackContext);
         }
 
