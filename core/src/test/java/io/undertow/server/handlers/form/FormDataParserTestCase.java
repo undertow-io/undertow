@@ -1,19 +1,16 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.undertow.server.handlers.form;
@@ -36,7 +33,6 @@ import org.apache.http.message.BasicNameValuePair;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -47,27 +43,44 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
-import junit.textui.TestRunner;
 
 /**
  * @author Stuart Douglas
  */
-@RunWith(DefaultServer.Parameterized.class)
+@RunWith(DefaultServer.class)
 public class FormDataParserTestCase {
 
-    static class AggregateRunner extends TestRunner {
+    @Test
+    public void blockingParser() throws Exception {
+        final BlockingHandler blocking = new BlockingHandler();
 
+        blocking.setRootHandler(new HttpHandler() {
+
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                final FormParserFactory parserFactory = FormParserFactory.builder().build();
+                final FormDataParser parser = parserFactory.createParser(exchange);
+                try {
+                    FormData data = parser.parseBlocking();
+                    Iterator<String> it = data.iterator();
+                    while (it.hasNext()) {
+                        String fd = it.next();
+                        for (FormData.FormValue val : data.get(fd)) {
+                            exchange.getResponseHeaders().add(new HttpString("res"), fd + ":" + val.getValue());
+                        }
+                    }
+                } catch (IOException e) {
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                }
+            }
+        });
+        DefaultServer.setRootHandler(blocking);
+        testCase();
     }
 
-    private final HttpHandler rootHandler;
 
-    public FormDataParserTestCase(final HttpHandler rootHandler) {
-        this.rootHandler = rootHandler;
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> handlerChains() {
-        List<Object[]> ret = new ArrayList<>();
+    @Test
+    public void asyncParser() throws Exception {
         final FormParserFactory parserFactory = FormParserFactory.builder().build();
         HttpHandler fd = new HttpHandler() {
             @Override
@@ -89,45 +102,20 @@ public class FormDataParserTestCase {
 
             }
         };
-        ret.add(new Object[]{fd});
-        final BlockingHandler blocking = new BlockingHandler();
-
-        blocking.setRootHandler(new HttpHandler() {
-
-
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                final FormDataParser parser = parserFactory.createParser(exchange);
-                try {
-                    FormData data = parser.parseBlocking();
-                    Iterator<String> it = data.iterator();
-                    while (it.hasNext()) {
-                        String fd = it.next();
-                        for (FormData.FormValue val : data.get(fd)) {
-                            exchange.getResponseHeaders().add(new HttpString("res"), fd + ":" + val.getValue());
-                        }
-                    }
-                } catch (IOException e) {
-                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                }
-            }
-        });
-        ret.add(new Object[]{blocking});
-        return ret;
-
+        DefaultServer.setRootHandler(fd);
+        testCase();
     }
 
-    @Test
-    public void testFormDataParsing() throws Exception {
+
+    public void testCase() throws Exception {
         runTest(new BasicNameValuePair("name", "A Value"));
         runTest(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("Single-value", null));
         runTest(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
-        runTest(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("Single-value", null) , new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
+        runTest(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("Single-value", null), new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
 
     }
 
     private void runTest(final NameValuePair... pairs) throws Exception {
-        DefaultServer.setRootHandler(rootHandler);
         TestHttpClient client = new TestHttpClient();
         try {
 
@@ -149,7 +137,7 @@ public class FormDataParserTestCase {
 
     private void checkResult(final List<NameValuePair> data, final HttpResponse result) {
         Map<String, String> res = new HashMap<>();
-        for(Header d : result.getHeaders("res")) {
+        for (Header d : result.getHeaders("res")) {
             String[] split = d.getValue().split(":");
             res.put(split[0], split.length == 1 ? "" : split[1]);
         }

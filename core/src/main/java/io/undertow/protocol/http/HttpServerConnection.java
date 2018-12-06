@@ -30,7 +30,6 @@ import java.util.function.Consumer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -40,7 +39,6 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
@@ -70,7 +68,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     final ChannelHandlerContext ctx;
 
-    volatile HttpServerExchange currentExchange;
+    private volatile HttpServerExchange currentExchange;
     private boolean responseCommited;
     private boolean responseComplete;
 
@@ -108,12 +106,12 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
                         queuedContextObject = null;
                         queuedCalback = null;
 
-                        if(queuedWriteLast) {
+                        if (queuedWriteLast) {
                             Connectors.terminateResponse(currentExchange);
                         }
                         callback.onComplete(currentExchange, context);
                         if (queuedCalback != null) {
-                            write(queuedAsyncData,queuedWriteLast, currentExchange)
+                            write(queuedAsyncData, queuedWriteLast, currentExchange)
                                     .addListener(this);
                         }
                     } else {
@@ -131,8 +129,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         }
     };
 
-    private IoCallback readCallback;
-    private Object readCallbackContext;
+    private volatile IoCallback<ByteBuf> readCallback;
 
 
     public HttpServerConnection(ChannelHandlerContext ctx, Executor executor, SSLSessionInfo sslSessionInfo) {
@@ -168,10 +165,10 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     @Override
     public void sendContinueIfRequired() {
-        if(currentExchange.isResponseStarted()) {
+        if (currentExchange.isResponseStarted()) {
             return;
         }
-        if(HttpContinue.requiresContinueResponse(currentExchange)) {
+        if (HttpContinue.requiresContinueResponse(currentExchange)) {
             ctx.writeAndFlush(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE));
         }
     }
@@ -350,7 +347,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     @Override
     protected boolean isIoOperationQueued() {
-        return queuedAsyncData != null;
+        return queuedAsyncData != null || readCallback != null;
     }
 
     public void writeBlocking(ByteBuf data, boolean last, HttpServerExchange exchange) throws IOException {
@@ -365,7 +362,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             }
             throw new IOException(e);
         } finally {
-            if(last) {
+            if (last) {
                 Connectors.terminateResponse(exchange);
             }
         }
@@ -400,7 +397,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
             }
 
-            if(upgradeListener != null) {
+            if (upgradeListener != null) {
                 //we really need to avoid races, so as soon as the data is send we need to remove the HTTP handlers
                 //and install the upgrade ones
                 ChannelPromise promose = ctx.newPromise();
@@ -445,11 +442,11 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     @Override
     public void runResumeReadWrite() {
-        if(queuedAsyncData != null) {
+        if (queuedAsyncData != null || queuedWriteLast) {
             write(queuedAsyncData, queuedWriteLast, currentExchange)
                     .addListener(asyncWriteListener);
         }
-        if(readCallback != null && !contents.isEmpty()) {
+        if (readCallback != null && !contents.isEmpty()) {
             queueReadCallback();
         }
     }
@@ -458,47 +455,32 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         getIoThread().execute(new Runnable() {
             @Override
             public void run() {
-
-                IoCallback readCallback = HttpServerConnection.this.readCallback;
-                Object readCallbackContext = HttpServerConnection.this.readCallbackContext;
-                HttpServerConnection.this.readCallback = null;
-                HttpServerConnection.this.readCallbackContext = null;
-                if(readCallback != null) {
-                    readCallback.onComplete(currentExchange, readCallbackContext);
-                }
+                executeReadCallback();
             }
         });
     }
 
-    @Override
-    protected boolean isReadDataAvailable() {
-        return !contents.isEmpty();
-    }
-
-    /**
-     * Reads some data from the exchange. Can only be called if {@link #isReadDataAvailable()} returns true.
-     * <p>
-     * Returns null when all data is full read
-     *
-     * @return
-     * @throws IOException
-     */
-    @Override
-    protected ByteBuf readAsync() throws IOException {
-        ByteBuf buf = contents.pop();
-        if (buf == LAST) {
-            Connectors.terminateRequest(currentExchange);
-            return null;
+    private void executeReadCallback() {
+        HttpServerExchange exchange = HttpServerConnection.this.currentExchange;
+        IoCallback<ByteBuf> readCallback = HttpServerConnection.this.readCallback;
+        HttpServerConnection.this.readCallback = null;
+        if (readCallback != null) {
+            ByteBuf data = contents.poll();
+            if (data == LAST) {
+                Connectors.terminateRequest(exchange);
+                readCallback.onComplete(exchange, null);
+            } else if (data != null) {
+                readCallback.onComplete(exchange, data);
+            }
         }
-        return buf;
+
     }
 
-    protected <T> void setReadCallback(IoCallback<T> callback, T context) {
+
+    protected void readAsync(IoCallback<ByteBuf> callback) {
+        HttpServerExchange exchange = this.currentExchange;
         this.readCallback = callback;
-        this.readCallbackContext = context;
-        if(!contents.isEmpty() && currentExchange.isInIoThread()) {
-            callback.onComplete(currentExchange, context);
-        } else if (!Connectors.isRunningHandlerChain(currentExchange)) {
+        if (!Connectors.isRunningHandlerChain(exchange) && !contents.isEmpty()) {
             queueReadCallback();
         }
     }
@@ -529,6 +511,15 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         return buf;
     }
 
+    @Override
+    protected int readBytesAvailable() {
+        int c = 0;
+        for (ByteBuf i : contents) {
+            c += i.readableBytes();
+        }
+        return c;
+    }
+
     public void setExchange(HttpServerExchange exchange) {
         responseCommited = false;
         responseComplete = false;
@@ -542,12 +533,8 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         if (msg instanceof LastHttpContent) {
             contents.add(LAST);
         }
-        if(readCallback != null) {
-            IoCallback readCallback = this.readCallback;
-            Object readCallbackContext = this.readCallbackContext;
-            HttpServerConnection.this.readCallback = null;
-            HttpServerConnection.this.readCallbackContext = null;
-            readCallback.onComplete(currentExchange, readCallbackContext);
+        if (readCallback != null && !Connectors.isRunningHandlerChain(currentExchange)) {
+            executeReadCallback();
         }
 
     }

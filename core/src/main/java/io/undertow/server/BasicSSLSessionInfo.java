@@ -20,7 +20,6 @@ package io.undertow.server;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 
@@ -29,6 +28,7 @@ import javax.net.ssl.SSLSession;
 import javax.security.cert.CertificateException;
 import javax.security.cert.X509Certificate;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.handler.ssl.ClientAuth;
 import io.undertow.UndertowMessages;
 import io.undertow.util.FlexBase64;
@@ -128,13 +128,13 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
 
     private static byte[] base64Decode(String sessionId) {
         try {
-            ByteBuffer sessionIdBuffer = FlexBase64.decode(sessionId);
+            ByteBuf sessionIdBuffer = FlexBase64.decode(sessionId);
             byte[] sessionIdData;
             if (sessionIdBuffer.hasArray()) {
                 sessionIdData = sessionIdBuffer.array();
             } else {
-                sessionIdData = new byte[sessionIdBuffer.remaining()];
-                sessionIdBuffer.get(sessionIdData);
+                sessionIdData = new byte[sessionIdBuffer.readableBytes()];
+                sessionIdBuffer.readBytes(sessionIdData);
             }
             return sessionIdData;
         } catch (IOException e) {

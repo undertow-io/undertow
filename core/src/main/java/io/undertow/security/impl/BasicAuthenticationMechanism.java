@@ -35,6 +35,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.security.api.AuthenticationMechanism;
@@ -133,7 +134,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                     String base64Challenge = current.substring(PREFIX_LENGTH);
                     String plainChallenge = null;
                     try {
-                        ByteBuffer decode = FlexBase64.decode(base64Challenge);
+                        ByteBuf decode = FlexBase64.decode(base64Challenge);
 
                         Charset charset = this.charset;
                         if(!userAgentCharsets.isEmpty()) {
@@ -148,7 +149,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                             }
                         }
 
-                        plainChallenge = new String(decode.array(), decode.arrayOffset(), decode.limit(), charset);
+                        plainChallenge = new String(decode.array(), decode.arrayOffset(), decode.writerIndex(), charset);
                         UndertowLogger.SECURITY_LOGGER.debugf("Found basic auth header %s (decoded using charset %s) in %s", plainChallenge, charset, exchange);
                     } catch (IOException e) {
                         UndertowLogger.SECURITY_LOGGER.debugf(e, "Failed to decode basic auth header %s in %s", base64Challenge, exchange);

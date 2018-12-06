@@ -35,6 +35,7 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.util.concurrent.EventExecutor;
 import io.undertow.security.api.SessionNonceManager;
 import io.undertow.server.HttpServerExchange;
@@ -352,10 +353,10 @@ public class SimpleNonceManager implements SessionNonceManager {
         int offset;
         int length;
         try {
-            ByteBuffer decode = FlexBase64.decode(nonce);
+            ByteBuf decode = FlexBase64.decode(nonce);
             complete = decode.array();
             offset = decode.arrayOffset();
-            length = decode.limit() - offset;
+            length = decode.writerIndex() - offset;
         } catch (IOException e) {
             throw MESSAGES.invalidBase64Token(e);
         }

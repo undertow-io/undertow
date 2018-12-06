@@ -38,7 +38,6 @@ import java.util.function.Consumer;
 import org.jboss.logging.Logger;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -101,6 +100,21 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Attachment key that can be used as a flag of secure attribute
      */
     public static final AttachmentKey<Boolean> SECURE_REQUEST = AttachmentKey.create(Boolean.class);
+    private static final IoCallback<ByteBuf> DRAIN_CALLBACK = new IoCallback<ByteBuf>() {
+        @Override
+        public void onComplete(HttpServerExchange exchange, ByteBuf context) {
+            if(context != null) {
+                context.release();
+                exchange.readAsync(this);
+            }
+
+        }
+
+        @Override
+        public void onException(HttpServerExchange exchange, ByteBuf context, IOException exception) {
+            IoUtils.safeClose(exchange.getConnection());
+        }
+    };
 
     private final ServerConnection connection;
     private final HeaderMap requestHeaders;
@@ -256,20 +270,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final int FLAG_URI_CONTAINS_HOST = 1 << 16;
 
     /**
-     * If this flag is set then the request is current running through a
-     * handler chain.
-     * <p>
-     * This will be true most of the time, this only time this will return
-     * false is when performing async operations outside the scope of a call to
-     * {@link Connectors#executeRootHandler(HttpHandler, HttpServerExchange)},
-     * such as when performing async IO.
-     * <p>
-     * If this is true then when the call stack returns the exchange will either be dispatched,
-     * or the exchange will be ended.
-     */
-    private static final int FLAG_IN_CALL = 1 << 17;
-
-    /**
      * Flag that indicates the user has started to read data from the request
      */
     private static final int FLAG_REQUEST_READ = 1 << 20;
@@ -283,6 +283,19 @@ public final class HttpServerExchange extends AbstractAttachable {
      * The destination address for the request. If this is null then the actual source address from the channel is used
      */
     private InetSocketAddress destinationAddress;
+
+    /**
+     * If this flag is set then the request is current running through a
+     * handler chain.
+     * <p>
+     * This will be true most of the time, this only time this will return
+     * false is when performing async operations outside the scope of a call to
+     * {@link Connectors#executeRootHandler(HttpHandler, HttpServerExchange)}
+     * <p>
+     * If this is true then when the call stack returns the exchange will either be dispatched,
+     * or the exchange will be ended.
+     */
+    private volatile boolean inHandlerChain;
 
     public HttpServerExchange(final ServerConnection connection, long maxEntitySize) {
         this(connection, new HeaderMap(), new HeaderMap(), maxEntitySize);
@@ -732,7 +745,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException If this exchange has already been dispatched
      */
     public HttpServerExchange dispatch(final Executor executor, final Runnable runnable) {
-        if (isInCall()) {
+        if (isExecutingHandlerChain()) {
             if (executor != null) {
                 this.dispatchExecutor = executor;
             }
@@ -797,16 +810,12 @@ public final class HttpServerExchange extends AbstractAttachable {
         return dispatchTask;
     }
 
-    boolean isInCall() {
-        return anyAreSet(state, FLAG_IN_CALL);
+    boolean isExecutingHandlerChain() {
+        return inHandlerChain;
     }
 
     HttpServerExchange setInCall(boolean value) {
-        if (value) {
-            state |= FLAG_IN_CALL;
-        } else {
-            state &= ~FLAG_IN_CALL;
-        }
+        inHandlerChain = value;
         return this;
     }
 
@@ -1502,68 +1511,12 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
         if (!isRequestComplete()) {
-            connection.setReadCallback(new IoCallback<Object>() {
-                @Override
-                public void onComplete(HttpServerExchange exchange, Object context) {
-                    try {
-                        boolean done = false;
-                        while (connection.isReadDataAvailable()) {
-                            ByteBuf res = exchange.readAsync();
-                            if (res != null) {
-                                res.release();
-                            } else {
-                                done = true;
-                            }
-                        }
-                        if(!done) {
-                            connection.setReadCallback(this, null);
-                        }
-                    } catch (IOException e) {
-                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                    }
-                }
-
-                @Override
-                public void onException(HttpServerExchange exchange, Object context, IOException exception) {
-                    UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
-                }
-            }, null);
+            connection.readAsync(DRAIN_CALLBACK);
         }
 
         if (!isResponseComplete()) {
             writeAsync(null, true, IoCallback.END_EXCHANGE, null);
         }
-        return this;
-    }
-
-
-    /**
-     * Transmit the response headers. After this method successfully returns,
-     * the response channel may become writable.
-     * <p/>
-     * If this method fails the request and response channels will be closed.
-     * <p/>
-     * This method runs asynchronously. If the channel is writable it will
-     * attempt to write as much of the response header as possible, and then
-     * queue the rest in a listener and return.
-     * <p/>
-     * If future handlers in the chain attempt to write before this is finished
-     * XNIO will just magically sort it out so it works. This is not actually
-     * implemented yet, so we just terminate the connection straight away at
-     * the moment.
-     * <p/>
-     * TODO: make this work properly
-     *
-     * @throws IllegalStateException if the response headers were already sent
-     */
-    HttpServerExchange startResponse() throws IllegalStateException {
-        int oldVal = state;
-        if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
-            throw UndertowMessages.MESSAGES.responseAlreadyStarted();
-        }
-        this.state = oldVal | FLAG_RESPONSE_SENT;
-
-        log.tracef("Starting to write response for %s", this);
         return this;
     }
 
@@ -1625,21 +1578,14 @@ public final class HttpServerExchange extends AbstractAttachable {
         responseCommitListeners[responseCommitListenerCount] = listener;
     }
 
-    boolean isReadDataAvailable() {
-        return connection.isReadDataAvailable();
+    public void readAsync(IoCallback<ByteBuf> cb) {
+        connection.readAsync(cb);
     }
 
-    /**
-     * Reads some data from the exchange. Can only be called if {@link #isReadDataAvailable()} returns true.
-     * <p>
-     * Returns null when all data is full read
-     *
-     * @return
-     * @throws IOException
-     */
-    ByteBuf readAsync() throws IOException {
-        return connection.readAsync();
+    public int readBytesAvailable() {
+        return connection.readBytesAvailable();
     }
+
 
     /**
      * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the

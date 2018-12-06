@@ -94,30 +94,15 @@ public class UndertowInputStream extends InputStream {
         }
     }
 
-    private void readIntoBufferNonBlocking() throws IOException {
-        if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
-            if(exchange.isReadDataAvailable()) {
-                pooled = exchange.readAsync();
-                if (pooled == null) {
-                    state |= FLAG_FINISHED;
-                }
-            }
-        }
-    }
-
     @Override
     public int available() throws IOException {
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
-        readIntoBufferNonBlocking();
         if (anyAreSet(state, FLAG_FINISHED)) {
             return -1;
         }
-        if (pooled == null) {
-            return 0;
-        }
-        return pooled.readableBytes();
+        return exchange.readBytesAvailable();
     }
 
     @Override

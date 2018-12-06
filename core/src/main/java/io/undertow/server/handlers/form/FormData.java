@@ -30,7 +30,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import io.undertow.UndertowMessages;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
 
 /**
@@ -39,8 +38,6 @@ import io.undertow.util.HeaderMap;
  * TODO: add representation of multipart data
  */
 public final class FormData implements Iterable<String> {
-
-    public static final AttachmentKey<FormData> ATTACHMENT_KEY = AttachmentKey.create(FormData.class);
 
     private final Map<String, Deque<FormValue>> values = new LinkedHashMap<>();
 

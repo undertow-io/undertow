@@ -24,7 +24,6 @@ import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
@@ -40,6 +39,7 @@ import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.Oid;
 
+import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.GSSAPIServerSubjectFactory;
@@ -133,7 +133,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
                 if (current.startsWith(NEGOTIATE_PREFIX)) {
                     String base64Challenge = current.substring(NEGOTIATE_PREFIX.length());
                     try {
-                        ByteBuffer challenge = FlexBase64.decode(base64Challenge);
+                        ByteBuf challenge = FlexBase64.decode(base64Challenge);
                         return runGSSAPI(exchange, challenge, securityContext);
                     } catch (IOException e) {
                     }
@@ -180,7 +180,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
 
     public AuthenticationMechanismOutcome runGSSAPI(final HttpServerExchange exchange,
-                                                    final ByteBuffer challenge, final SecurityContext securityContext) {
+                                                    final ByteBuf challenge, final SecurityContext securityContext) {
         try {
             Subject server = subjectFactory.getSubjectForHost(getHostName(exchange));
             // The AcceptSecurityContext takes over responsibility for setting the result.
@@ -212,11 +212,11 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
     private class AcceptSecurityContext implements PrivilegedExceptionAction<AuthenticationMechanismOutcome> {
 
         private final HttpServerExchange exchange;
-        private final ByteBuffer challenge;
+        private final ByteBuf challenge;
         private final SecurityContext securityContext;
 
         private AcceptSecurityContext(final HttpServerExchange exchange,
-                                      final ByteBuffer challenge, final SecurityContext securityContext) {
+                                      final ByteBuf challenge, final SecurityContext securityContext) {
             this.exchange = exchange;
             this.challenge = challenge;
             this.securityContext = securityContext;
@@ -242,7 +242,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
                 negContext.setGssContext(gssContext);
             }
 
-            byte[] respToken = gssContext.acceptSecContext(challenge.array(), challenge.arrayOffset(), challenge.limit());
+            byte[] respToken = gssContext.acceptSecContext(challenge.array(), challenge.arrayOffset(), challenge.writerIndex());
             negContext.setResponseToken(respToken);
 
             if (negContext.isEstablished()) {

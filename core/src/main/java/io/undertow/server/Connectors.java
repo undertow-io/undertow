@@ -65,7 +65,7 @@ public class Connectors {
     }
 
     public static boolean isRunningHandlerChain(HttpServerExchange exchange) {
-        return exchange.isInCall();
+        return exchange.isExecutingHandlerChain();
     }
 
     /**
