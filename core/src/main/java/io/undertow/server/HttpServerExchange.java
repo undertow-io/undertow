@@ -1139,10 +1139,6 @@ public final class HttpServerExchange extends AbstractAttachable {
         return connection.readBlocking();
     }
 
-    public FormData parseFormDataBlocking() throws IOException {
-        throw new RuntimeException("NYI");
-    }
-
     public void send1ContinueIfRequired() {
         connection.sendContinueIfRequired();
     }

@@ -21,6 +21,7 @@ package io.undertow.security.api;
 import java.util.Map;
 
 import io.undertow.security.idm.IdentityManager;
+import io.undertow.server.handlers.form.FormParserFactory;
 
 /**
  *
@@ -46,7 +47,7 @@ public interface AuthenticationMechanismFactory {
      * @return The mechanism
      */
     @Deprecated
-    default AuthenticationMechanism create(String mechanismName, final Map<String, String> properties) {
+    default AuthenticationMechanism create(String mechanismName, FormParserFactory formParserFactory, final Map<String, String> properties) {
         return null;
     }
 
@@ -59,8 +60,7 @@ public interface AuthenticationMechanismFactory {
      * @param properties The properties
      * @return The mechanism
      */
-    default AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, final Map<String, String> properties) {
-        return create(mechanismName, properties);
+    default AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory, final Map<String, String> properties) {
+        return create(mechanismName, formParserFactory, properties);
     }
-
 }

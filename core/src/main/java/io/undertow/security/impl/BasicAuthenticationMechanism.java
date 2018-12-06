@@ -45,6 +45,7 @@ import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.Headers;
 
@@ -217,7 +218,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
         public Factory() {}
 
         @Override
-        public AuthenticationMechanism create(String mechanismName,IdentityManager identityManager, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
             String realm = properties.get(REALM);
             String silent = properties.get(SILENT);
             String charsetString = properties.get(CHARSET);

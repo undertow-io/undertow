@@ -65,6 +65,8 @@ import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
+import io.undertow.server.handlers.form.FormDataParser;
+import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionConfig;
 import io.undertow.servlet.UndertowServletMessages;
@@ -809,19 +811,24 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         return ret;
     }
 
+
     private FormData parseFormData() {
-        if (formParsingException != null) {
+        if(formParsingException != null) {
             throw formParsingException;
         }
         if (parsedFormData == null) {
             if (readStarted) {
                 return null;
             }
-
+            final ManagedServlet originalServlet = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getCurrentServlet().getManagedServlet();
+            final FormDataParser parser = originalServlet.getFormParserFactory().createParser(exchange);
+            if (parser == null) {
+                return null;
+            }
+            readStarted = true;
             try {
-                parsedFormData = exchange.parseFormDataBlocking();
-                readStarted = true;
-            } catch (RequestTooBigException e) {
+                return parsedFormData = parser.parseBlocking();
+            } catch (RequestTooBigException | MultiPartParserDefinition.FileTooLargeException e) {
                 throw formParsingException = new IllegalStateException(e);
             } catch (RuntimeException e) {
                 throw formParsingException = e;

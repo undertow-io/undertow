@@ -136,6 +136,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         } catch (Exception e) {
             if (buffer != null) {
                 buffer.release();
+                this.pooledBuffer = null;
             }
             throw new IOException(e);
         }

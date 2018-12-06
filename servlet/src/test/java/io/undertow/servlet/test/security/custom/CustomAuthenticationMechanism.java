@@ -24,6 +24,7 @@ import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
 import io.undertow.util.Methods;
 
@@ -61,7 +62,7 @@ public class CustomAuthenticationMechanism extends ServletFormAuthenticationMech
     public static final class Factory implements AuthenticationMechanismFactory {
 
         @Override
-        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
             return new CustomAuthenticationMechanism(mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE));
         }
     }

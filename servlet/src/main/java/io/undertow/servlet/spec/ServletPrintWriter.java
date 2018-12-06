@@ -281,6 +281,7 @@ public class ServletPrintWriter {
                 for (; i < end; ++i) {
                     if (i == fpos) {
                         outputStream.flushInternal();
+                        buffer = outputStream.underlyingBuffer();
                         fpos = i + buffer.writableBytes();
                     }
                     char c = s.charAt(i);

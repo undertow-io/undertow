@@ -65,6 +65,8 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.HttpContinueReadHandler;
 import io.undertow.server.handlers.PredicateHandler;
+import io.undertow.server.handlers.form.FormEncodedDataDefinition;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.server.session.SessionListener;
 import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.ServletExtension;
@@ -364,17 +366,17 @@ public class DeploymentManagerImpl implements DeploymentManager {
             if (loginConfig != null || deploymentInfo.getJaspiAuthenticationMechanism() != null) {
 
                 //we don't allow multipart requests, and use the default encoding when it's set
-//                FormEncodedDataDefinition formEncodedDataDefinition = new FormEncodedDataDefinition();
-//                String reqEncoding = deploymentInfo.getDefaultRequestEncoding();
-//                if(reqEncoding == null) {
-//                    deploymentInfo.getDefaultEncoding();
-//                }
-//                if (reqEncoding != null) {
-//                    formEncodedDataDefinition.setDefaultEncoding(reqEncoding);
-//                }
-//                FormParserFactory parser = FormParserFactory.builder(false)
-//                        .addParser(formEncodedDataDefinition)
-//                        .build();
+                FormEncodedDataDefinition formEncodedDataDefinition = new FormEncodedDataDefinition();
+                String reqEncoding = deploymentInfo.getDefaultRequestEncoding();
+                if(reqEncoding == null) {
+                    deploymentInfo.getDefaultEncoding();
+                }
+                if (reqEncoding != null) {
+                    formEncodedDataDefinition.setDefaultEncoding(reqEncoding);
+                }
+                FormParserFactory parser = FormParserFactory.builder(false)
+                        .addParser(formEncodedDataDefinition)
+                        .build();
 
                 List<AuthMethodConfig> authMethods = Collections.<AuthMethodConfig>emptyList();
                 if(loginConfig != null) {
@@ -405,7 +407,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     name = name.equals(DIGEST_AUTH) ? DIGEST_AUTH : name;
                     name = name.equals(CLIENT_CERT_AUTH) ? CLIENT_CERT_AUTH : name;
 
-                    authenticationMechanisms.add(factory.create(name, identityManager, properties));
+                    authenticationMechanisms.add(factory.create(name, identityManager, parser, properties));
                 }
             }
 

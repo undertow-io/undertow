@@ -35,6 +35,7 @@ import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.HttpString;
 
 /**
@@ -119,7 +120,7 @@ public class GenericHeaderAuthenticationMechanism implements AuthenticationMecha
         }
 
         @Override
-        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
             String identity = properties.get(IDENTITY_HEADER);
             if (identity == null) {
                 throw UndertowMessages.MESSAGES.authenticationPropertyNotSet(mechanismName, IDENTITY_HEADER);

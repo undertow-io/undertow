@@ -36,6 +36,7 @@ import io.undertow.security.idm.X509CertificateCredential;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
+import io.undertow.server.handlers.form.FormParserFactory;
 
 /**
  * The Client Cert based authentication mechanism.
@@ -149,7 +150,7 @@ public class ClientCertAuthenticationMechanism implements AuthenticationMechanis
         public Factory() {}
 
         @Override
-        public AuthenticationMechanism create(String mechanismName,IdentityManager identityManager, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
             String forceRenegotiation = properties.get(FORCE_RENEGOTIATION);
             return new ClientCertAuthenticationMechanism(mechanismName, forceRenegotiation == null ? true : "true".equals(forceRenegotiation), identityManager);
         }

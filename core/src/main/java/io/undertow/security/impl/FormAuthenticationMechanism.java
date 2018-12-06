@@ -30,6 +30,8 @@ import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.DefaultResponseListener;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormData;
+import io.undertow.server.handlers.form.FormDataParser;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.server.session.Session;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
@@ -49,27 +51,35 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     private final String loginPage;
     private final String errorPage;
     private final String postLocation;
+    private final FormParserFactory formParserFactory;
     private final IdentityManager identityManager;
 
-
-
     public FormAuthenticationMechanism(final String name, final String loginPage, final String errorPage) {
-        this(name, loginPage, errorPage, DEFAULT_POST_LOCATION);
-    }
-
-    public FormAuthenticationMechanism(final String name, final String loginPage, final String errorPage, final IdentityManager identityManager) {
-        this( name, loginPage, errorPage, DEFAULT_POST_LOCATION, identityManager);
+        this(FormParserFactory.builder().build(), name, loginPage, errorPage);
     }
 
     public FormAuthenticationMechanism(final String name, final String loginPage, final String errorPage, final String postLocation) {
-        this(name, loginPage, errorPage, postLocation, null);
+        this(FormParserFactory.builder().build(), name, loginPage, errorPage, postLocation);
     }
 
-    public FormAuthenticationMechanism(final String name, final String loginPage, final String errorPage, final String postLocation, final IdentityManager identityManager) {
+    public FormAuthenticationMechanism(final FormParserFactory formParserFactory, final String name, final String loginPage, final String errorPage) {
+        this(formParserFactory, name, loginPage, errorPage, DEFAULT_POST_LOCATION);
+    }
+
+    public FormAuthenticationMechanism(final FormParserFactory formParserFactory, final String name, final String loginPage, final String errorPage, final IdentityManager identityManager) {
+        this(formParserFactory, name, loginPage, errorPage, DEFAULT_POST_LOCATION, identityManager);
+    }
+
+    public FormAuthenticationMechanism(final FormParserFactory formParserFactory, final String name, final String loginPage, final String errorPage, final String postLocation) {
+        this(formParserFactory, name, loginPage, errorPage, postLocation, null);
+    }
+
+    public FormAuthenticationMechanism(final FormParserFactory formParserFactory, final String name, final String loginPage, final String errorPage, final String postLocation, final IdentityManager identityManager) {
         this.name = name;
         this.loginPage = loginPage;
         this.errorPage = errorPage;
         this.postLocation = postLocation;
+        this.formParserFactory = formParserFactory;
         this.identityManager = identityManager;
     }
 
@@ -89,9 +99,15 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     public AuthenticationMechanismOutcome runFormAuth(final HttpServerExchange exchange, final SecurityContext securityContext) {
+        final FormDataParser parser = formParserFactory.createParser(exchange);
+        if (parser == null) {
+            UndertowLogger.SECURITY_LOGGER.debug("Could not authenticate as no form parser is present");
+            // TODO - May need a better error signaling mechanism here to prevent repeated attempts.
+            return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
+        }
 
         try {
-            final FormData data = exchange.parseFormDataBlocking();
+            final FormData data = parser.parseBlocking();
             if (data == null) {
                 UndertowLogger.SECURITY_LOGGER.debug("Could not authenticate as no form parser is present");
                 // TODO - May need a better error signaling mechanism here to prevent repeated attempts.

@@ -39,6 +39,7 @@ import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionListener;
 import io.undertow.server.session.SessionManager;
@@ -98,25 +99,35 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
     };
 
     @Deprecated
+    public ServletFormAuthenticationMechanism(final String name, final String loginPage, final String errorPage) {
+        super(name, loginPage, errorPage);
+        this.saveOriginalRequest = true;
+    }
+
+    @Deprecated
     public ServletFormAuthenticationMechanism(final String name, final String loginPage, final String errorPage, final String postLocation) {
         super(name, loginPage, errorPage, postLocation);
         this.saveOriginalRequest = true;
     }
 
-    public ServletFormAuthenticationMechanism(String name, String loginPage, String errorPage) {
-        super(name, loginPage, errorPage);
+    public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage, String postLocation) {
+        super(formParserFactory, name, loginPage, errorPage, postLocation);
         this.saveOriginalRequest = true;
     }
 
-    public ServletFormAuthenticationMechanism(String name, String loginPage, String errorPage, IdentityManager identityManager) {
-        super(name, loginPage, errorPage, identityManager);
+    public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage) {
+        super(formParserFactory, name, loginPage, errorPage);
         this.saveOriginalRequest = true;
     }
-    public ServletFormAuthenticationMechanism(String name, String loginPage, String errorPage, IdentityManager identityManager, boolean saveOriginalRequest) {
-        super(name, loginPage, errorPage, identityManager);
+
+    public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage, IdentityManager identityManager) {
+        super(formParserFactory, name, loginPage, errorPage, identityManager);
+        this.saveOriginalRequest = true;
+    }
+    public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage, IdentityManager identityManager, boolean saveOriginalRequest) {
+        super(formParserFactory, name, loginPage, errorPage, identityManager);
         this.saveOriginalRequest = saveOriginalRequest;
     }
-
     @Override
     protected Integer servePage(final HttpServerExchange exchange, final String location) {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
@@ -236,12 +247,12 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         public Factory() {}
 
         @Override
-        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, Map<String, String> properties) {
+        public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory,  Map<String, String> properties) {
             boolean saveOriginal = true;
             if(properties.containsKey(SAVE_ORIGINAL_REQUEST)) {
                 saveOriginal = Boolean.parseBoolean(properties.get(SAVE_ORIGINAL_REQUEST));
             }
-            return new ServletFormAuthenticationMechanism( mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE), identityManager, saveOriginal);
+            return new ServletFormAuthenticationMechanism( formParserFactory, mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE), identityManager,  saveOriginal);
         }
     }
 
