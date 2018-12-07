@@ -87,11 +87,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     private static final AttachmentKey<String> REASON_PHRASE = AttachmentKey.create(String.class);
 
     /**
-     * The attachment key that buffered request data is attached under.
-     */
-    static final AttachmentKey<ByteBuf[]> BUFFERED_REQUEST_DATA = AttachmentKey.create(ByteBuf[].class);
-
-    /**
      * Attachment key that can be used to hold additional request attributes
      */
     public static final AttachmentKey<Map<String, String>> REQUEST_ATTRIBUTES = AttachmentKey.create(Map.class);
@@ -273,6 +268,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Flag that indicates the user has started to read data from the request
      */
     private static final int FLAG_REQUEST_READ = 1 << 20;
+
+    /**
+     * Flag that indicates that the request channel has been reset, and {@link #getRequestChannel()} can be called again
+     */
+    private static final int FLAG_REQUEST_RESET= 1 << 21;
 
     /**
      * The source address for the request. If this is null then the actual source address from the channel is used
@@ -1210,10 +1210,6 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return true if the request is complete
      */
     public boolean isRequestComplete() {
-        ByteBuf[] data = getAttachment(BUFFERED_REQUEST_DATA);
-        if (data != null) {
-            return false;
-        }
         return allAreSet(state, FLAG_REQUEST_TERMINATED);
     }
 
@@ -1625,6 +1621,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         headers.put(Headers.UPGRADE, productName);
         headers.put(Headers.CONNECTION, Headers.UPGRADE_STRING);
         return this;
+    }
+
+    public void resetRequestChannel() {
+        state |= FLAG_REQUEST_RESET;
     }
 
     private static class ExchangeCompleteNextListener implements ExchangeCompletionListener.NextListener {

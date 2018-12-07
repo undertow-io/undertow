@@ -74,32 +74,9 @@ public class Connectors {
      * @param exchange The HTTP server exchange
      * @param buffers  The buffers to attach
      */
-    public static void ungetRequestBytes(final HttpServerExchange exchange, ByteBuf... buffers) {
-        ByteBuf[] existing = exchange.getAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA);
-        ByteBuf[] newArray;
-        if (existing == null) {
-            newArray = new ByteBuf[buffers.length];
-            System.arraycopy(buffers, 0, newArray, 0, buffers.length);
-        } else {
-            newArray = new ByteBuf[existing.length + buffers.length];
-            System.arraycopy(existing, 0, newArray, 0, existing.length);
-            System.arraycopy(buffers, 0, newArray, existing.length, buffers.length);
-        }
-        exchange.putAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA, newArray); //todo: force some kind of wakeup?
-        exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
-            @Override
-            public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-                ByteBuf[] bufs = exchange.getAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA);
-                if (bufs != null) {
-                    for (ByteBuf i : bufs) {
-                        if (i != null) {
-                            i.release();
-                        }
-                    }
-                }
-                nextListener.proceed();
-            }
-        });
+    public static void ungetRequestBytes(final HttpServerExchange exchange, ByteBuf buffer) {
+        exchange.getConnection().ungetRequestBytes(buffer);
+        exchange.resetRequestChannel();
     }
 
     public static void terminateRequest(final HttpServerExchange exchange) {

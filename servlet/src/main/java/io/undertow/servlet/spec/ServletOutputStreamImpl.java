@@ -33,6 +33,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.UndertowOutputStream;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.Headers;
+import io.undertow.util.IoUtils;
 import io.undertow.util.UndertowOptionMap;
 
 /**
@@ -178,7 +179,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     public void close() throws IOException {
         if (anyAreSet(state, FLAG_CLOSED)) return;
         state |= FLAG_CLOSED;
-        if (anyAreClear(state, FLAG_WRITE_STARTED)) {
+        if (anyAreClear(state, FLAG_WRITE_STARTED) && servletRequestContext.getOriginalResponse().getHeader(Headers.CONTENT_LENGTH_STRING) == null) {
             if (pooledBuffer == null) {
                 exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
             } else {
@@ -220,8 +221,13 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         flush();
     }
 
-    public void updateWritten(int i) {
+    public void updateWritten(int len) {
 
+        this.written += len;
+        long contentLength = servletRequestContext.getOriginalResponse().getContentLength();
+        if (contentLength != -1 && this.written >= contentLength) {
+            IoUtils.safeClose(this);
+        }
     }
 
     @Override

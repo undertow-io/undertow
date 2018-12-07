@@ -270,6 +270,8 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
         throw UndertowMessages.MESSAGES.upgradeNotSupported();
     }
 
+    protected abstract void ungetRequestBytes(ByteBuf buffer);
+
     public interface CloseListener {
 
         void closed(final ServerConnection connection);

@@ -59,7 +59,6 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
                 connection = new HttpServerConnection(ctx, blockingExecutor, engine == null ? null : new ConnectionSSLSessionInfo(engine.getSession()));
             }
             HttpServerExchange exchange = new HttpServerExchange(connection);
-            connection.setExchange(exchange);
             for(String header : request.headers().names()) {
                 exchange.getRequestHeaders().putAll(new HttpString(header), request.headers().getAll(header));
             }
@@ -77,7 +76,8 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
             if(msg instanceof LastHttpContent) {
                 Connectors.terminateRequest(exchange);
             }
-            Connectors.executeRootHandler(rootHandler, exchange);
+
+            connection.newExchange(exchange, rootHandler);
         } else if(msg instanceof HttpContent) {
             connection.addData((HttpContent) msg);
         }

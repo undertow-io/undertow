@@ -31,6 +31,7 @@ import java.util.Map;
 
 import javax.servlet.http.HttpSession;
 
+import io.netty.buffer.Unpooled;
 import io.undertow.UndertowLogger;
 import io.undertow.util.UndertowOptions;
 import io.undertow.server.Connectors;
@@ -157,7 +158,7 @@ public class SavedRequest implements Serializable {
                 if(request.requestPath.equals(exchange.getRelativePath()) && exchange.isRequestComplete()) {
                     UndertowLogger.REQUEST_LOGGER.debugf("restoring request body for request to %s", request.requestPath);
                     exchange.setRequestMethod(request.method);
-                    //Connectors.ungetRequestBytes(exchange, new ImmediatePooledByteBuffer(ByteBuffer.wrap(request.data, 0, request.dataLength)));
+                    Connectors.ungetRequestBytes(exchange, Unpooled.wrappedBuffer(request.data, 0, request.dataLength));
                     underlyingSession.removeAttribute(SESSION_KEY);
                     //clear the existing header map of everything except the connection header
                     //TODO: are there other headers we should preserve?

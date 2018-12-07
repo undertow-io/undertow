@@ -50,6 +50,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpContinue;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
@@ -76,6 +77,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     //TODO: remove this
     private final LinkedBlockingDeque<ByteBuf> contents = new LinkedBlockingDeque<>();
+    private final LinkedBlockingDeque<QueuedExchange> queuedExchanges = new LinkedBlockingDeque<>();
     private static final ByteBuf LAST = Unpooled.buffer(0);
     private final SSLSessionInfo sslSessionInfo;
 
@@ -147,6 +149,17 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     @Override
     protected void setUpgradeListener(Consumer<ChannelHandlerContext> listener) {
         upgradeListener = listener;
+    }
+
+    @Override
+    protected void ungetRequestBytes(ByteBuf buffer) {
+        contents.addFirst(buffer);
+        if (currentExchange.isRequestComplete()) {
+            contents.add(LAST);
+        }
+        if (readCallback != null && !Connectors.isRunningHandlerChain(currentExchange)) {
+            executeReadCallback();
+        }
     }
 
     /**
@@ -292,6 +305,24 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         contents.add(LAST);
         contents.poll();
         this.currentExchange = null;
+        if (!queuedExchanges.isEmpty()) {
+            if (getIoThread().inEventLoop()) {
+                QueuedExchange ex = queuedExchanges.poll();
+                newExchange(ex.exchange, ex.handler);
+            }
+            getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    if (currentExchange == null) {
+                        QueuedExchange ex = queuedExchanges.poll();
+                        if (ex != null) {
+                            newExchange(ex.exchange, ex.handler);
+                        }
+
+                    }
+                }
+            });
+        }
     }
 
     /**
@@ -390,8 +421,6 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
                 }
                 if (!response.headers().contains(Headers.CONTENT_LENGTH_STRING)) {
                     response.headers().add(Headers.CONTENT_LENGTH_STRING, data == null ? 0 : data.readableBytes());
-                } else {
-                    response.headers().set(Headers.TRANSFER_ENCODING_STRING, "chunked");
                 }
                 resp = response;
 
@@ -428,7 +457,9 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             for (HeaderValues i : exchange.getResponseHeaders()) {
                 response.headers().add(i.getHeaderName().toString(), i.getFirst());
             }
-            response.headers().set(Headers.TRANSFER_ENCODING_STRING, "chunked");
+            if (!response.headers().contains(Headers.CONTENT_LENGTH_STRING)) {
+                response.headers().set(Headers.TRANSFER_ENCODING_STRING, "chunked");
+            }
 
             ctx.write(response);
             return ctx.writeAndFlush(new DefaultHttpContent(data));
@@ -520,10 +551,19 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         return c;
     }
 
-    public void setExchange(HttpServerExchange exchange) {
-        responseCommited = false;
-        responseComplete = false;
-        this.currentExchange = exchange;
+    public void newExchange(HttpServerExchange exchange, HttpHandler rootHandler) {
+        if (currentExchange != null) {
+            queuedExchanges.add(new QueuedExchange(exchange, rootHandler));
+            if (currentExchange == null) {
+                QueuedExchange ex = queuedExchanges.poll();
+                Connectors.executeRootHandler(ex.handler, ex.exchange);
+            }
+        } else {
+            responseCommited = false;
+            responseComplete = false;
+            this.currentExchange = exchange;
+            Connectors.executeRootHandler(rootHandler, exchange);
+        }
     }
 
     public void addData(HttpContent msg) {
@@ -537,5 +577,15 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             executeReadCallback();
         }
 
+    }
+
+    private static class QueuedExchange {
+        final HttpServerExchange exchange;
+        final HttpHandler handler;
+
+        private QueuedExchange(HttpServerExchange exchange, HttpHandler handler) {
+            this.exchange = exchange;
+            this.handler = handler;
+        }
     }
 }
