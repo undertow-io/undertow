@@ -32,7 +32,7 @@ class ProxyProtocolV2ReadListener implements ChannelListener<StreamSourceChannel
     private static final int MAX_HEADER_LENGTH = 52;
 
     private static final byte[] SIG = new byte[] {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A};
-    private static final char[] hexArray = "0123456789ABCDEF".toCharArray();
+//    private static final char[] hexArray = "0123456789ABCDEF".toCharArray();
 
 
     private final StreamConnection streamConnection;
@@ -88,19 +88,16 @@ class ProxyProtocolV2ReadListener implements ChannelListener<StreamSourceChannel
 
 
                     byte ver_cmd = buffer.getBuffer().get();
-                    UndertowLogger.ROOT_LOGGER.errorf("  ver_cmd: 0x" + byteToHex(ver_cmd));
-
+//                    UndertowLogger.ROOT_LOGGER.errorf("  ver_cmd: 0x" + byteToHex(ver_cmd));
 
                     byte fam = buffer.getBuffer().get();
-                    UndertowLogger.ROOT_LOGGER.errorf("  fam: 0x" + byteToHex(fam));
-
+//                    UndertowLogger.ROOT_LOGGER.errorf("  fam: 0x" + byteToHex(fam));
 
                     int len = (buffer.getBuffer().getShort() & 0xffff);
-                    UndertowLogger.ROOT_LOGGER.errorf("  len: " + len);
+//                    UndertowLogger.ROOT_LOGGER.errorf("  len: " + len);
 
 
                     if ((ver_cmd & 0xF0) != 0x20) {  // expect version 2
-                        UndertowLogger.ROOT_LOGGER.errorf("wrong ver_cmd");
                         throw UndertowMessages.MESSAGES.invalidProxyHeader();
                     }
 
@@ -123,11 +120,11 @@ class ProxyProtocolV2ReadListener implements ChannelListener<StreamSourceChannel
                                     sourcePort = buffer.getBuffer().getShort() & 0xffff;
                                     destPort = buffer.getBuffer().getShort() & 0xffff;
 
-                                    UndertowLogger.ROOT_LOGGER.errorf("sourceAddress: %s, destAddress: %s, sourcePort: %d, destPort: %d", sourceAddress.toString(), destAddress.toString(), sourcePort, destPort);
+//                                    UndertowLogger.ROOT_LOGGER.errorf("sourceAddress: %s, destAddress: %s, sourcePort: %d, destPort: %d", sourceAddress.toString(), destAddress.toString(), sourcePort, destPort);
 
                                     if (len > 12) {
                                         int skipAhead = len - 12;
-                                        UndertowLogger.ROOT_LOGGER.errorf("Skipping over extra %d bytes", skipAhead);
+//                                        UndertowLogger.ROOT_LOGGER.errorf("Skipping over extra %d bytes", skipAhead);
                                         int currentPosition = buffer.getBuffer().position();
                                         buffer.getBuffer().position(currentPosition + skipAhead);
                                     }
@@ -151,11 +148,11 @@ class ProxyProtocolV2ReadListener implements ChannelListener<StreamSourceChannel
                                     sourcePort = buffer.getBuffer().getShort() & 0xffff;
                                     destPort = buffer.getBuffer().getShort() & 0xffff;
 
-                                    UndertowLogger.ROOT_LOGGER.errorf("sourceAddress: %s, destAddress: %s, sourcePort: %d, destPort: %d", sourceAddress.toString(), destAddress.toString(), sourcePort, destPort);
+//                                    UndertowLogger.ROOT_LOGGER.errorf("sourceAddress: %s, destAddress: %s, sourcePort: %d, destPort: %d", sourceAddress.toString(), destAddress.toString(), sourcePort, destPort);
 
                                     if (len > 36) {
                                         int skipAhead = len - 36;
-                                        UndertowLogger.ROOT_LOGGER.errorf("Skipping over extra %d bytes", skipAhead);
+//                                        UndertowLogger.ROOT_LOGGER.errorf("Skipping over extra %d bytes", skipAhead);
                                         int currentPosition = buffer.getBuffer().position();
                                         buffer.getBuffer().position(currentPosition + skipAhead);
                                     }
@@ -164,15 +161,11 @@ class ProxyProtocolV2ReadListener implements ChannelListener<StreamSourceChannel
                                 }
 
                                 default: // AF_UNIX sockets not supported
-                                    UndertowLogger.ROOT_LOGGER.errorf("AF_UNIX");
-
                                     throw UndertowMessages.MESSAGES.invalidProxyHeader();
 
                             }
                             break;
                         case 0x00: // LOCAL command
-                            UndertowLogger.ROOT_LOGGER.errorf("LOCAL");
-
                             if (buffer.getBuffer().hasRemaining()) {
                                 freeBuffer = false;
                                 proxyAccept(null, null, buffer);
@@ -181,8 +174,6 @@ class ProxyProtocolV2ReadListener implements ChannelListener<StreamSourceChannel
                             }
                             return;
                         default:
-                            UndertowLogger.ROOT_LOGGER.errorf("default");
-
                             throw UndertowMessages.MESSAGES.invalidProxyHeader();
                     }
 
@@ -190,7 +181,7 @@ class ProxyProtocolV2ReadListener implements ChannelListener<StreamSourceChannel
                     SocketAddress s = new InetSocketAddress(sourceAddress, sourcePort);
                     SocketAddress d = new InetSocketAddress(destAddress, destPort);
                     if (buffer.getBuffer().hasRemaining()) {
-                        UndertowLogger.ROOT_LOGGER.errorf("still remaining buffer");
+//                        UndertowLogger.ROOT_LOGGER.errorf("still remaining buffer");
                         freeBuffer = false;
                         proxyAccept(s, d, buffer);
                     } else {
@@ -201,12 +192,12 @@ class ProxyProtocolV2ReadListener implements ChannelListener<StreamSourceChannel
             }
 
         } catch (IOException e) {
-            UndertowLogger.ROOT_LOGGER.errorf("IOException %s", e.getMessage());
+//            UndertowLogger.ROOT_LOGGER.errorf("IOException %s", e.getMessage());
 
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             IoUtils.safeClose(streamConnection);
         } catch (Exception e) {
-            UndertowLogger.ROOT_LOGGER.errorf("Exception %s", e.getMessage());
+//            UndertowLogger.ROOT_LOGGER.errorf("Exception %s", e.getMessage());
 
             UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
             IoUtils.safeClose(streamConnection);
@@ -237,7 +228,7 @@ class ProxyProtocolV2ReadListener implements ChannelListener<StreamSourceChannel
             callOpenListener(streamConnection, null);
         } else {
             callOpenListener(streamConnection, additionalData);
-            UndertowLogger.ROOT_LOGGER.errorf("parsing additional data");
+//            UndertowLogger.ROOT_LOGGER.errorf("parsing additional data");
 
         }
     }
@@ -256,13 +247,6 @@ class ProxyProtocolV2ReadListener implements ChannelListener<StreamSourceChannel
         }
     }
 
-//    static InetAddress parseAddress(String addressString, String protocol) throws IOException {
-//        if (protocol.equals(TCP4)) {
-//            return NetworkUtils.parseIpv4Address(addressString);
-//        } else {
-//            return NetworkUtils.parseIpv6Address(addressString);
-//        }
-//    }
 
     private static final class AddressWrappedConnection extends StreamConnection {
 
@@ -301,22 +285,12 @@ class ProxyProtocolV2ReadListener implements ChannelListener<StreamSourceChannel
     }
 
 
-    private static String bytesToHex(byte[] bytes) {
-        char[] hexChars = new char[bytes.length * 2];
-        for ( int j = 0; j < bytes.length; j++ ) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = hexArray[v >>> 4];
-            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
-        }
-        return new String(hexChars);
-    }
-
-    private static String byteToHex(byte abyte) {
-        char[] hexChars = new char[2];
-        int v = abyte & 0xFF;
-        hexChars[0] = hexArray[v >>> 4];
-        hexChars[1] = hexArray[v & 0x0F];
-
-        return new String(hexChars);
-    }
+//    private static String byteToHex(byte abyte) {
+//        char[] hexChars = new char[2];
+//        int v = abyte & 0xFF;
+//        hexChars[0] = hexArray[v >>> 4];
+//        hexChars[1] = hexArray[v & 0x0F];
+//
+//        return new String(hexChars);
+//    }
 }
