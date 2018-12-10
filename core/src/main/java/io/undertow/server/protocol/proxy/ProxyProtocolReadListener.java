@@ -327,6 +327,11 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
 
             }
 
+            byteCount++;
+            if (byteCount == MAX_HEADER_LENGTH) {
+                throw UndertowMessages.MESSAGES.headerSizeToLarge();
+            }
+
         }
     }
 
