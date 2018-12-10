@@ -363,7 +363,7 @@ public class ProxyProtocolTestCase {
         String expectedResponse = "result: /1.2.3.4:444 /5.6.7.8:555";
 
 
-        proxyProtocolRequestResponseCheckSSL(header, requestHttp, expectedResponse);
+        proxyProtocolRequestResponseCheck(header, requestHttp, expectedResponse);
     }
 
 
@@ -509,22 +509,7 @@ public class ProxyProtocolTestCase {
      */
     private void proxyProtocolRequestResponseCheck(String requestProxy, String requestHttp, String expectedResponse)
             throws Exception {
-        try {
-            undertowSsl.start();
-            int port = ((InetSocketAddress) undertowSsl.getListenerInfo().get(0).getAddress()).getPort();
-            Socket s = new Socket(DefaultServer.getHostAddress(), port);
-            s.getOutputStream().write(requestProxy.getBytes(StandardCharsets.US_ASCII));
-            // if expectedResponse is empty, we expect server to close connection due to bad request
-            if (!expectedResponse.isEmpty()) {
-                s = DefaultServer.getClientSSLContext().getSocketFactory().createSocket(s, DefaultServer
-                        .getHostAddress(), port, true);
-                s.getOutputStream().write(requestHttp.getBytes(StandardCharsets.US_ASCII));
-            }
-            String result = FileUtils.readFile(s.getInputStream());
-            Assert.assertTrue(result, result.contains(expectedResponse));
-        } finally {
-            undertowSsl.stop();
-        }
+        proxyProtocolRequestResponseCheck(requestProxy.getBytes(StandardCharsets.US_ASCII), requestHttp, expectedResponse);
     }
 
     /**
@@ -549,36 +534,6 @@ public class ProxyProtocolTestCase {
             Assert.assertTrue(result, result.contains(expectedResponse));
         } finally {
             undertow.stop();
-        }
-    }
-
-    /**
-     * Starts an undertow server with HTTPS listener and performs request to the server with given request proxy
-     * string and HTTP request. Then response from the server is checked with given expected response string.
-     * Undertow is stopped in the end.
-     *
-     * @param requestProxy     request string with proxy-protocol part
-     * @param requestHttp      request string with HTTP part
-     * @param expectedResponse expected response string that we expect from the server
-     * @throws Exception
-     */
-    private void proxyProtocolRequestResponseCheckSSL(byte[] requestProxy, String requestHttp, String expectedResponse)
-            throws Exception {
-        try {
-            undertowSsl.start();
-            int port = ((InetSocketAddress) undertowSsl.getListenerInfo().get(0).getAddress()).getPort();
-            Socket s = new Socket(DefaultServer.getHostAddress(), port);
-            s.getOutputStream().write(requestProxy);
-            // if expectedResponse is empty, we expect server to close connection due to bad request
-            if (!expectedResponse.isEmpty()) {
-                s = DefaultServer.getClientSSLContext().getSocketFactory().createSocket(s, DefaultServer
-                        .getHostAddress(), port, true);
-                s.getOutputStream().write(requestHttp.getBytes(StandardCharsets.US_ASCII));
-            }
-            String result = FileUtils.readFile(s.getInputStream());
-            Assert.assertTrue(result, result.contains(expectedResponse));
-        } finally {
-            undertowSsl.stop();
         }
     }
 

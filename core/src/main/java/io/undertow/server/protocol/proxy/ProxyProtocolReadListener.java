@@ -42,8 +42,6 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     private static final String TCP_6 = "TCP6";
 
     private static final byte[] SIG = new byte[] {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A};
-    private static final char[] hexArray = "0123456789ABCDEF".toCharArray();
-
 
     private final StreamConnection streamConnection;
     private final OpenListener openListener;
@@ -400,18 +398,13 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
         }
     }
 
-    private static String byteToHex(byte abyte) {
-        char[] hexChars = new char[2];
-        int v = abyte & 0xFF;
-        hexChars[0] = hexArray[v >>> 4];
-        hexChars[1] = hexArray[v & 0x0F];
 
-        return new String(hexChars);
-    }
-
+    /**
+     * This is needed to pass "freeBuffer" by reference between methods
+     */
     private static class BooleanWrapper {
         public boolean value;
-        public BooleanWrapper(boolean value) {
+        BooleanWrapper(boolean value) {
             this.value = value;
         }
 

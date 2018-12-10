@@ -115,8 +115,6 @@ public final class Undertow {
 
     public synchronized void start() {
         UndertowLogger.ROOT_LOGGER.debugf("starting undertow server %s", this);
-
-
         xnio = Xnio.getInstance(Undertow.class.getClassLoader());
         channels = new ArrayList<>();
         try {
