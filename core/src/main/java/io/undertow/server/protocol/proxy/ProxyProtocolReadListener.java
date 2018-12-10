@@ -30,6 +30,7 @@ import java.nio.charset.StandardCharsets;
  * fragmentation of
  *
  * @author Stuart Douglas
+ * @author Ulrich Herberg
  */
 class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> {
 
