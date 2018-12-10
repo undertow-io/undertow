@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.BufferUnderflowException;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -43,8 +42,6 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
 
     private static final byte[] SIG = new byte[] {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A};
     private static final char[] hexArray = "0123456789ABCDEF".toCharArray();
-    private boolean freeBuffer = true;
-
 
 
     private final StreamConnection streamConnection;
@@ -78,7 +75,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     @Override
     public void handleEvent(StreamSourceChannel streamSourceChannel) {
         PooledByteBuffer buffer = bufferPool.allocate();
-        freeBuffer = true;
+        BooleanWrapper freeBuffer = new BooleanWrapper(true);
         try {
             for (; ; ) {
                 int res = streamSourceChannel.read(buffer.getBuffer());
@@ -94,9 +91,9 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                         byte firstByte = buffer.getBuffer().get();
                         byteCount++;
                         if (firstByte == SIG[0]) {  // Could be Proxy Protocol V2
-                            parseProxyProtocolV2(buffer);
+                            parseProxyProtocolV2(buffer, freeBuffer);
                         } else if ((char) firstByte == NAME[0]){ // Could be Proxy Protocol V1
-                            parseProxyProtocolV1(buffer);
+                            parseProxyProtocolV1(buffer, freeBuffer);
                         } else {
                             throw UndertowMessages.MESSAGES.invalidProxyHeader();
                         }
@@ -111,15 +108,15 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
             UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
             IoUtils.safeClose(streamConnection);
         } finally {
-            if (freeBuffer) {
+            if (freeBuffer.value) {
                 buffer.close();
             }
         }
-
     }
 
 
-    private void parseProxyProtocolV2(PooledByteBuffer buffer) throws Exception {
+
+    private void parseProxyProtocolV2(PooledByteBuffer buffer, BooleanWrapper freeBuffer) throws Exception {
         while (byteCount < SIG.length) {
             byte c = buffer.getBuffer().get();
 
@@ -132,13 +129,8 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
 
 
         byte ver_cmd = buffer.getBuffer().get();
-        UndertowLogger.ROOT_LOGGER.errorf("  ver_cmd: 0x" + byteToHex(ver_cmd));
-
         byte fam = buffer.getBuffer().get();
-        UndertowLogger.ROOT_LOGGER.errorf("  fam: 0x" + byteToHex(fam));
-
         int len = (buffer.getBuffer().getShort() & 0xffff);
-        UndertowLogger.ROOT_LOGGER.errorf("  len: " + len);
 
 
         if ((ver_cmd & 0xF0) != 0x20) {  // expect version 2
@@ -164,11 +156,8 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                         sourcePort = buffer.getBuffer().getShort() & 0xffff;
                         destPort = buffer.getBuffer().getShort() & 0xffff;
 
-                        UndertowLogger.ROOT_LOGGER.errorf("sourceAddress: %s, destAddress: %s, sourcePort: %d, destPort: %d", sourceAddress.toString(), destAddress.toString(), sourcePort, destPort);
-
                         if (len > 12) {
                             int skipAhead = len - 12;
-                            UndertowLogger.ROOT_LOGGER.errorf("Skipping over extra %d bytes", skipAhead);
                             int currentPosition = buffer.getBuffer().position();
                             buffer.getBuffer().position(currentPosition + skipAhead);
                         }
@@ -192,11 +181,8 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                         sourcePort = buffer.getBuffer().getShort() & 0xffff;
                         destPort = buffer.getBuffer().getShort() & 0xffff;
 
-                        UndertowLogger.ROOT_LOGGER.errorf("sourceAddress: %s, destAddress: %s, sourcePort: %d, destPort: %d", sourceAddress.toString(), destAddress.toString(), sourcePort, destPort);
-
                         if (len > 36) {
                             int skipAhead = len - 36;
-                            UndertowLogger.ROOT_LOGGER.errorf("Skipping over extra %d bytes", skipAhead);
                             int currentPosition = buffer.getBuffer().position();
                             buffer.getBuffer().position(currentPosition + skipAhead);
                         }
@@ -210,10 +196,8 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                 }
                 break;
             case 0x00: // LOCAL command
-                UndertowLogger.ROOT_LOGGER.errorf("LOCAL command");
-
                 if (buffer.getBuffer().hasRemaining()) {
-                    freeBuffer = false;
+                    freeBuffer.value = false;
                     proxyAccept(null, null, buffer);
                 } else {
                     proxyAccept(null, null, null);
@@ -227,8 +211,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
         SocketAddress s = new InetSocketAddress(sourceAddress, sourcePort);
         SocketAddress d = new InetSocketAddress(destAddress, destPort);
         if (buffer.getBuffer().hasRemaining()) {
-            UndertowLogger.ROOT_LOGGER.errorf("still remaining buffer");
-            freeBuffer = false;
+            freeBuffer.value = false;
             proxyAccept(s, d, buffer);
         } else {
             proxyAccept(s, d, null);
@@ -236,7 +219,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
         return;
     }
 
-    private void parseProxyProtocolV1(PooledByteBuffer buffer) throws Exception {
+    private void parseProxyProtocolV1(PooledByteBuffer buffer, BooleanWrapper freeBuffer) throws Exception {
         while (buffer.getBuffer().hasRemaining()) {
             char c = (char) buffer.getBuffer().get();
             if (byteCount < NAME.length) {
@@ -256,7 +239,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                         }
                         //we are done
                         if (buffer.getBuffer().hasRemaining()) {
-                            freeBuffer = false;
+                            freeBuffer.value = false;
                             proxyAccept(null, null, buffer);
                         } else {
                             proxyAccept(null, null, null);
@@ -271,7 +254,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                         SocketAddress s = new InetSocketAddress(sourceAddress, sourcePort);
                         SocketAddress d = new InetSocketAddress(destAddress, destPort);
                         if (buffer.getBuffer().hasRemaining()) {
-                            freeBuffer = false;
+                            freeBuffer.value = false;
                             proxyAccept(s, d, buffer);
                         } else {
                             proxyAccept(s, d, null);
@@ -425,4 +408,15 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
         return new String(hexChars);
     }
 
+    private static class BooleanWrapper {
+        public boolean value;
+        public BooleanWrapper(boolean value) {
+            this.value = value;
+        }
+
+        @Override
+        public String toString(){
+            return Boolean.toString(value);
+        }
+    }
 }
