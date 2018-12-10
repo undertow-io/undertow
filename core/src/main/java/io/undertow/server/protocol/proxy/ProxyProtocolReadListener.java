@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.BufferUnderflowException;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -39,6 +40,12 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     private static final String UNKNOWN = "UNKNOWN";
     private static final String TCP4 = "TCP4";
     private static final String TCP_6 = "TCP6";
+
+    private static final byte[] SIG = new byte[] {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A};
+    private static final char[] hexArray = "0123456789ABCDEF".toCharArray();
+    private boolean freeBuffer = true;
+
+
 
     private final StreamConnection streamConnection;
     private final OpenListener openListener;
@@ -71,7 +78,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     @Override
     public void handleEvent(StreamSourceChannel streamSourceChannel) {
         PooledByteBuffer buffer = bufferPool.allocate();
-        boolean freeBuffer = true;
+        freeBuffer = true;
         try {
             for (; ; ) {
                 int res = streamSourceChannel.read(buffer.getBuffer());
@@ -82,103 +89,18 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                     return;
                 } else {
                     buffer.getBuffer().flip();
-                    while (buffer.getBuffer().hasRemaining()) {
-                        char c = (char) buffer.getBuffer().get();
-                        if (byteCount < NAME.length) {
-                            //first we verify that we have the correct protocol
-                            if (c != NAME[byteCount]) {
-                                throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                            }
-                        } else {
-                            if (parsingUnknown) {
-                                //we are parsing the UNKNOWN protocol
-                                //we just ignore everything till \r\n
-                                if (c == '\r') {
-                                    carriageReturnSeen = true;
-                                } else if (c == '\n') {
-                                    if (!carriageReturnSeen) {
-                                        throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                                    }
-                                    //we are done
-                                    if (buffer.getBuffer().hasRemaining()) {
-                                        freeBuffer = false;
-                                        proxyAccept(null, null, buffer);
-                                    } else {
-                                        proxyAccept(null, null, null);
-                                    }
-                                    return;
-                                } else if (carriageReturnSeen) {
-                                    throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                                }
-                            } else if (carriageReturnSeen) {
-                                if (c == '\n') {
-                                    //we are done
-                                    SocketAddress s = new InetSocketAddress(sourceAddress, sourcePort);
-                                    SocketAddress d = new InetSocketAddress(destAddress, destPort);
-                                    if (buffer.getBuffer().hasRemaining()) {
-                                        freeBuffer = false;
-                                        proxyAccept(s, d, buffer);
-                                    } else {
-                                        proxyAccept(s, d, null);
-                                    }
-                                    return;
-                                } else {
-                                    throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                                }
-                            } else switch (c) {
-                                case ' ':
-                                    //we have a space
-                                    if (sourcePort != -1 || stringBuilder.length() == 0) {
-                                        //header was invalid, either we are expecting a \r or a \n, or the previous character was a space
-                                        throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                                    } else if (protocol == null) {
-                                        protocol = stringBuilder.toString();
-                                        stringBuilder.setLength(0);
-                                        if (protocol.equals(UNKNOWN)) {
-                                            parsingUnknown = true;
-                                        } else if (!protocol.equals(TCP4) && !protocol.equals(TCP_6)) {
-                                            throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                                        }
-                                    } else if (sourceAddress == null) {
-                                        sourceAddress = parseAddress(stringBuilder.toString(), protocol);
-                                        stringBuilder.setLength(0);
-                                    } else if (destAddress == null) {
-                                        destAddress = parseAddress(stringBuilder.toString(), protocol);
-                                        stringBuilder.setLength(0);
-                                    } else {
-                                        sourcePort = Integer.parseInt(stringBuilder.toString());
-                                        stringBuilder.setLength(0);
-                                    }
-                                    break;
-                                case '\r':
-                                    if (destPort == -1 && sourcePort != -1 && !carriageReturnSeen && stringBuilder.length() > 0) {
-                                        destPort = Integer.parseInt(stringBuilder.toString());
-                                        stringBuilder.setLength(0);
-                                        carriageReturnSeen = true;
-                                    } else if (protocol == null) {
-                                        if (UNKNOWN.equals(stringBuilder.toString())) {
-                                            parsingUnknown = true;
-                                            carriageReturnSeen = true;
-                                        }
-                                    } else {
-                                        throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                                    }
-                                    break;
-                                case '\n':
-                                    throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                                default:
-                                    stringBuilder.append(c);
-                            }
 
-                        }
+                    if (buffer.getBuffer().hasRemaining()) {
+                        byte firstByte = buffer.getBuffer().get();
                         byteCount++;
-                        if (byteCount == MAX_HEADER_LENGTH) {
-                            throw UndertowMessages.MESSAGES.headerSizeToLarge();
+                        if (firstByte == SIG[0]) {  // Could be Proxy Protocol V2
+                            parseProxyProtocolV2(buffer);
+                        } else if ((char) firstByte == NAME[0]){ // Could be Proxy Protocol V1
+                            parseProxyProtocolV1(buffer);
+                        } else {
+                            throw UndertowMessages.MESSAGES.invalidProxyHeader();
                         }
-
                     }
-
-
                 }
             }
 
@@ -195,6 +117,219 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
         }
 
     }
+
+
+    private void parseProxyProtocolV2(PooledByteBuffer buffer) throws Exception {
+        while (byteCount < SIG.length) {
+            byte c = buffer.getBuffer().get();
+
+            //first we verify that we have the correct protocol
+            if (c != SIG[byteCount]) {
+                throw UndertowMessages.MESSAGES.invalidProxyHeader();
+            }
+            byteCount++;
+        }
+
+
+        byte ver_cmd = buffer.getBuffer().get();
+        UndertowLogger.ROOT_LOGGER.errorf("  ver_cmd: 0x" + byteToHex(ver_cmd));
+
+        byte fam = buffer.getBuffer().get();
+        UndertowLogger.ROOT_LOGGER.errorf("  fam: 0x" + byteToHex(fam));
+
+        int len = (buffer.getBuffer().getShort() & 0xffff);
+        UndertowLogger.ROOT_LOGGER.errorf("  len: " + len);
+
+
+        if ((ver_cmd & 0xF0) != 0x20) {  // expect version 2
+            throw UndertowMessages.MESSAGES.invalidProxyHeader();
+        }
+
+        switch (ver_cmd & 0x0F) {
+            case 0x01:  // PROXY command
+                switch (fam) {
+                    case 0x11: { // TCP over IPv4
+                        if (len < 12) {
+                            throw UndertowMessages.MESSAGES.invalidProxyHeader();
+                        }
+
+                        byte[] sourceAddressBytes = new byte[4];
+                        buffer.getBuffer().get(sourceAddressBytes);
+                        sourceAddress = InetAddress.getByAddress(sourceAddressBytes);
+
+                        byte[] dstAddressBytes = new byte[4];
+                        buffer.getBuffer().get(dstAddressBytes);
+                        destAddress = InetAddress.getByAddress(dstAddressBytes);
+
+                        sourcePort = buffer.getBuffer().getShort() & 0xffff;
+                        destPort = buffer.getBuffer().getShort() & 0xffff;
+
+                        UndertowLogger.ROOT_LOGGER.errorf("sourceAddress: %s, destAddress: %s, sourcePort: %d, destPort: %d", sourceAddress.toString(), destAddress.toString(), sourcePort, destPort);
+
+                        if (len > 12) {
+                            int skipAhead = len - 12;
+                            UndertowLogger.ROOT_LOGGER.errorf("Skipping over extra %d bytes", skipAhead);
+                            int currentPosition = buffer.getBuffer().position();
+                            buffer.getBuffer().position(currentPosition + skipAhead);
+                        }
+
+                        break;
+                    }
+
+                    case 0x21: { // TCP over IPv6
+                        if (len < 36) {
+                            throw UndertowMessages.MESSAGES.invalidProxyHeader();
+                        }
+
+                        byte[] sourceAddressBytes = new byte[16];
+                        buffer.getBuffer().get(sourceAddressBytes);
+                        sourceAddress = InetAddress.getByAddress(sourceAddressBytes);
+
+                        byte[] dstAddressBytes = new byte[16];
+                        buffer.getBuffer().get(dstAddressBytes);
+                        destAddress = InetAddress.getByAddress(dstAddressBytes);
+
+                        sourcePort = buffer.getBuffer().getShort() & 0xffff;
+                        destPort = buffer.getBuffer().getShort() & 0xffff;
+
+                        UndertowLogger.ROOT_LOGGER.errorf("sourceAddress: %s, destAddress: %s, sourcePort: %d, destPort: %d", sourceAddress.toString(), destAddress.toString(), sourcePort, destPort);
+
+                        if (len > 36) {
+                            int skipAhead = len - 36;
+                            UndertowLogger.ROOT_LOGGER.errorf("Skipping over extra %d bytes", skipAhead);
+                            int currentPosition = buffer.getBuffer().position();
+                            buffer.getBuffer().position(currentPosition + skipAhead);
+                        }
+
+                        break;
+                    }
+
+                    default: // AF_UNIX sockets not supported
+                        throw UndertowMessages.MESSAGES.invalidProxyHeader();
+
+                }
+                break;
+            case 0x00: // LOCAL command
+                UndertowLogger.ROOT_LOGGER.errorf("LOCAL command");
+
+                if (buffer.getBuffer().hasRemaining()) {
+                    freeBuffer = false;
+                    proxyAccept(null, null, buffer);
+                } else {
+                    proxyAccept(null, null, null);
+                }
+                return;
+            default:
+                throw UndertowMessages.MESSAGES.invalidProxyHeader();
+        }
+
+
+        SocketAddress s = new InetSocketAddress(sourceAddress, sourcePort);
+        SocketAddress d = new InetSocketAddress(destAddress, destPort);
+        if (buffer.getBuffer().hasRemaining()) {
+            UndertowLogger.ROOT_LOGGER.errorf("still remaining buffer");
+            freeBuffer = false;
+            proxyAccept(s, d, buffer);
+        } else {
+            proxyAccept(s, d, null);
+        }
+        return;
+    }
+
+    private void parseProxyProtocolV1(PooledByteBuffer buffer) throws Exception {
+        while (buffer.getBuffer().hasRemaining()) {
+            char c = (char) buffer.getBuffer().get();
+            if (byteCount < NAME.length) {
+                //first we verify that we have the correct protocol
+                if (c != NAME[byteCount]) {
+                    throw UndertowMessages.MESSAGES.invalidProxyHeader();
+                }
+            } else {
+                if (parsingUnknown) {
+                    //we are parsing the UNKNOWN protocol
+                    //we just ignore everything till \r\n
+                    if (c == '\r') {
+                        carriageReturnSeen = true;
+                    } else if (c == '\n') {
+                        if (!carriageReturnSeen) {
+                            throw UndertowMessages.MESSAGES.invalidProxyHeader();
+                        }
+                        //we are done
+                        if (buffer.getBuffer().hasRemaining()) {
+                            freeBuffer = false;
+                            proxyAccept(null, null, buffer);
+                        } else {
+                            proxyAccept(null, null, null);
+                        }
+                        return;
+                    } else if (carriageReturnSeen) {
+                        throw UndertowMessages.MESSAGES.invalidProxyHeader();
+                    }
+                } else if (carriageReturnSeen) {
+                    if (c == '\n') {
+                        //we are done
+                        SocketAddress s = new InetSocketAddress(sourceAddress, sourcePort);
+                        SocketAddress d = new InetSocketAddress(destAddress, destPort);
+                        if (buffer.getBuffer().hasRemaining()) {
+                            freeBuffer = false;
+                            proxyAccept(s, d, buffer);
+                        } else {
+                            proxyAccept(s, d, null);
+                        }
+                        return;
+                    } else {
+                        throw UndertowMessages.MESSAGES.invalidProxyHeader();
+                    }
+                } else switch (c) {
+                    case ' ':
+                        //we have a space
+                        if (sourcePort != -1 || stringBuilder.length() == 0) {
+                            //header was invalid, either we are expecting a \r or a \n, or the previous character was a space
+                            throw UndertowMessages.MESSAGES.invalidProxyHeader();
+                        } else if (protocol == null) {
+                            protocol = stringBuilder.toString();
+                            stringBuilder.setLength(0);
+                            if (protocol.equals(UNKNOWN)) {
+                                parsingUnknown = true;
+                            } else if (!protocol.equals(TCP4) && !protocol.equals(TCP_6)) {
+                                throw UndertowMessages.MESSAGES.invalidProxyHeader();
+                            }
+                        } else if (sourceAddress == null) {
+                            sourceAddress = parseAddress(stringBuilder.toString(), protocol);
+                            stringBuilder.setLength(0);
+                        } else if (destAddress == null) {
+                            destAddress = parseAddress(stringBuilder.toString(), protocol);
+                            stringBuilder.setLength(0);
+                        } else {
+                            sourcePort = Integer.parseInt(stringBuilder.toString());
+                            stringBuilder.setLength(0);
+                        }
+                        break;
+                    case '\r':
+                        if (destPort == -1 && sourcePort != -1 && !carriageReturnSeen && stringBuilder.length() > 0) {
+                            destPort = Integer.parseInt(stringBuilder.toString());
+                            stringBuilder.setLength(0);
+                            carriageReturnSeen = true;
+                        } else if (protocol == null) {
+                            if (UNKNOWN.equals(stringBuilder.toString())) {
+                                parsingUnknown = true;
+                                carriageReturnSeen = true;
+                            }
+                        } else {
+                            throw UndertowMessages.MESSAGES.invalidProxyHeader();
+                        }
+                        break;
+                    case '\n':
+                        throw UndertowMessages.MESSAGES.invalidProxyHeader();
+                    default:
+                        stringBuilder.append(c);
+                }
+
+            }
+
+        }
+    }
+
 
     private void proxyAccept(SocketAddress source, SocketAddress dest, PooledByteBuffer additionalData) {
         StreamConnection streamConnection = this.streamConnection;
@@ -274,6 +409,15 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
         public SocketAddress getLocalAddress() {
             return dest;
         }
+    }
+
+    private static String byteToHex(byte abyte) {
+        char[] hexChars = new char[2];
+        int v = abyte & 0xFF;
+        hexChars[0] = hexArray[v >>> 4];
+        hexChars[1] = hexArray[v & 0x0F];
+
+        return new String(hexChars);
     }
 
 }

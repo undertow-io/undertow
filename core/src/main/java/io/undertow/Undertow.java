@@ -29,6 +29,7 @@ import io.undertow.server.protocol.http.AlpnOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.server.protocol.http2.Http2OpenListener;
 import io.undertow.server.protocol.http2.Http2UpgradeHandler;
+import io.undertow.server.protocol.proxy.ProxyProtocolOpenListener;
 import io.undertow.server.protocol.proxy2.ProxyProtocolV2OpenListener;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -164,7 +165,7 @@ public final class Undertow {
 
                     final ChannelListener<StreamConnection> finalListener;
                     if (listener.useProxyProtocol) {
-                        finalListener = new ProxyProtocolV2OpenListener(openListener, null, buffers, OptionMap.EMPTY);
+                        finalListener = new ProxyProtocolOpenListener(openListener, null, buffers, OptionMap.EMPTY);
                     } else {
                         finalListener = openListener;
                     }
@@ -186,7 +187,7 @@ public final class Undertow {
                         openListener.setRootHandler(handler);
                         final ChannelListener<StreamConnection> finalListener;
                         if (listener.useProxyProtocol) {
-                            finalListener = new ProxyProtocolV2OpenListener(openListener, null, buffers, OptionMap.EMPTY);
+                            finalListener = new ProxyProtocolOpenListener(openListener, null, buffers, OptionMap.EMPTY);
                         } else {
                             finalListener = openListener;
                         }
@@ -229,7 +230,7 @@ public final class Undertow {
                         OptionMap socketOptionsWithOverrides = OptionMap.builder().addAll(socketOptions).addAll(listener.overrideSocketOptions).getMap();
                         AcceptingChannel<? extends StreamConnection> sslServer;
                         if (listener.useProxyProtocol) {
-                            ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(new ProxyProtocolV2OpenListener(openListener, xnioSsl, buffers, socketOptionsWithOverrides));
+                            ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(new ProxyProtocolOpenListener(openListener, xnioSsl, buffers, socketOptionsWithOverrides));
                             sslServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(listener.host), listener.port), (ChannelListener) acceptListener, socketOptionsWithOverrides);
                         } else {
                             ChannelListener<AcceptingChannel<StreamConnection>> acceptListener = ChannelListeners.openListenerAdapter(openListener);
