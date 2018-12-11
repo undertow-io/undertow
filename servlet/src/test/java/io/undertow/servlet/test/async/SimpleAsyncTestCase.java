@@ -21,6 +21,7 @@ package io.undertow.servlet.test.async;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ErrorPage;
+import io.undertow.servlet.api.ServletStackTraces;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.testutils.DefaultServer;
@@ -39,6 +40,7 @@ import org.junit.runner.RunWith;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import static io.undertow.servlet.Servlets.servlet;
 
@@ -55,6 +57,7 @@ public class SimpleAsyncTestCase {
         DeploymentUtils.setupServlet(new ServletExtension() {
             @Override
             public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
+                deploymentInfo.setServletStackTraces(ServletStackTraces.NONE);
                 deploymentInfo.addErrorPages(new ErrorPage("/500", StatusCodes.INTERNAL_SERVER_ERROR));
             }
         },
@@ -76,6 +79,9 @@ public class SimpleAsyncTestCase {
                 servlet("error", AsyncErrorServlet.class)
                         .setAsyncSupported(true)
                         .addMapping("/error"),
+                servlet("errorlistener", AsyncErrorListenerServlet.class)
+                        .setAsyncSupported(true)
+                        .addMapping("/errorlistener"),
                 servlet("dispatch", AsyncDispatchServlet.class)
                         .setAsyncSupported(true)
                         .addMapping("/dispatch"),
@@ -127,6 +133,21 @@ public class SimpleAsyncTestCase {
         }
     }
 
+    @Test
+    public void testErrorListenerServlet() throws Exception {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/errorlistener");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("500", response);
+            Assert.assertEquals("ERROR", AsyncErrorListenerServlet.EVENTS.poll(10, TimeUnit.SECONDS));
+            Assert.assertEquals("COMPLETED", AsyncErrorListenerServlet.EVENTS.poll(10, TimeUnit.SECONDS));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
     @Test
     public void testWrappedDispatch() throws IOException {
         TestHttpClient client = new TestHttpClient();

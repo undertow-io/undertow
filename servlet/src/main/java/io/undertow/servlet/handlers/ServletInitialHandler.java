@@ -291,6 +291,9 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             listeners.requestInitialized(request);
             next.handleRequest(exchange);
             AsyncContextImpl asyncContextInternal = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
+            if(asyncContextInternal != null) {
+                asyncContextInternal.initialRequestDone();
+            }
             if(asyncContextInternal != null && asyncContextInternal.isCompletedBeforeInitialRequestDone()) {
                 asyncContextInternal.handleCompletedBeforeInitialRequestDone();
             }
@@ -299,7 +302,12 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 servletRequestContext.getOriginalResponse().doErrorDispatch(servletRequestContext.getErrorCode(), servletRequestContext.getErrorMessage());
             }
         } catch (Throwable t) {
+
+            servletRequestContext.setRunningInsideHandler(false);
             AsyncContextImpl asyncContextInternal = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
+            if(asyncContextInternal != null) {
+                asyncContextInternal.initialRequestDone();
+            }
             if(asyncContextInternal != null && asyncContextInternal.isCompletedBeforeInitialRequestDone()) {
                 asyncContextInternal.handleCompletedBeforeInitialRequestDone();
             }

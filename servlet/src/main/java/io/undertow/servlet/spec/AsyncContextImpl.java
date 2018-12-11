@@ -110,7 +110,6 @@ public class AsyncContextImpl implements AsyncContext {
             @Override
             public void run() {
                 exchange.setDispatchExecutor(null);
-                initialRequestDone();
             }
         });
     }
