@@ -60,6 +60,7 @@ import org.xnio.BufferAllocator;
 @RunWith(DefaultServer.class)
 public class DefaultServletCachingTestCase {
 
+    private static final int MAX_FILE_SIZE = 20;
     private static final int METADATA_MAX_AGE = 2000;
     public static final String DIR_NAME = "cacheTest";
 
@@ -86,7 +87,7 @@ public class DefaultServletCachingTestCase {
                 .setClassLoader(ServletPathMappingTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setDeploymentName("servletContext.war")
-                .setResourceManager(new CachingResourceManager(100, 10000, dataCache, new PathResourceManager(tmpDir, 10485760, false, false, false), METADATA_MAX_AGE));
+                .setResourceManager(new CachingResourceManager(100, MAX_FILE_SIZE, dataCache, new PathResourceManager(tmpDir, 10485760, false, false, false), METADATA_MAX_AGE));
 
         builder.addServlet(new ServletInfo("DefaultTestServlet", PathTestServlet.class)
                 .addMapping("/path/default"))
@@ -219,6 +220,29 @@ public class DefaultServletCachingTestCase {
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("ll", response);
 
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    /**
+     * Regression test for UNDERTOW-1444.
+     *
+     * Tested file is bigger then {@value #MAX_FILE_SIZE} bytes.
+     */
+    @Test
+    public void testRangeRequestFileNotInCache() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            String fileName = "range_not_in_cache.html";
+            Path f = tmpDir.resolve(fileName);
+            Files.write(f, "hello world and once again hello world".getBytes());
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/range_not_in_cache.html");
+            get.addHeader("range", "bytes=2-3");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("ll", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
