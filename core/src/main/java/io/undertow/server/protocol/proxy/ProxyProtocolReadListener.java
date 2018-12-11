@@ -39,7 +39,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     private static final byte[] NAME = "PROXY ".getBytes(StandardCharsets.US_ASCII);
     private static final String UNKNOWN = "UNKNOWN";
     private static final String TCP4 = "TCP4";
-    private static final String TCP_6 = "TCP6";
+    private static final String TCP6 = "TCP6";
 
     private static final byte[] SIG = new byte[] {0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A};
 
@@ -76,28 +76,27 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
         PooledByteBuffer buffer = bufferPool.allocate();
         BooleanWrapper freeBuffer = new BooleanWrapper(true);
         try {
-            for (; ; ) {
-                int res = streamSourceChannel.read(buffer.getBuffer());
-                if (res == -1) {
-                    IoUtils.safeClose(streamConnection);
-                    return;
-                } else if (res == 0) {
-                    return;
-                } else {
-                    buffer.getBuffer().flip();
+            int res = streamSourceChannel.read(buffer.getBuffer());
+            if (res == -1) {
+                IoUtils.safeClose(streamConnection);
+                return;
+            } else if (res == 0) {
+                return;
+            } else {
+                buffer.getBuffer().flip();
 
-                    if (buffer.getBuffer().hasRemaining()) {
-                        byte firstByte = buffer.getBuffer().get();
-                        byteCount++;
-                        if (firstByte == SIG[0]) {  // Could be Proxy Protocol V2
-                            parseProxyProtocolV2(buffer, freeBuffer);
-                        } else if ((char) firstByte == NAME[0]){ // Could be Proxy Protocol V1
-                            parseProxyProtocolV1(buffer, freeBuffer);
-                        } else {
-                            throw UndertowMessages.MESSAGES.invalidProxyHeader();
-                        }
+                if (buffer.getBuffer().hasRemaining()) {
+                    byte firstByte = buffer.getBuffer().get(); // get first byte to determine whether Proxy Protocol V1 or V2 is used
+                    byteCount++;
+                    if (firstByte == SIG[0]) {  // Could be Proxy Protocol V2
+                        parseProxyProtocolV2(buffer, freeBuffer);
+                    } else if ((char) firstByte == NAME[0]){ // Could be Proxy Protocol V1
+                        parseProxyProtocolV1(buffer, freeBuffer);
+                    } else {
+                        throw UndertowMessages.MESSAGES.invalidProxyHeader();
                     }
                 }
+                return;
             }
 
         } catch (IOException e) {
@@ -126,11 +125,9 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
             byteCount++;
         }
 
-
         byte ver_cmd = buffer.getBuffer().get();
         byte fam = buffer.getBuffer().get();
         int len = (buffer.getBuffer().getShort() & 0xffff);
-
 
         if ((ver_cmd & 0xF0) != 0x20) {  // expect version 2
             throw UndertowMessages.MESSAGES.invalidProxyHeader();
@@ -195,6 +192,12 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                 }
                 break;
             case 0x00: // LOCAL command
+                if (len > 0) {
+                    int skipAhead = len;
+                    int currentPosition = buffer.getBuffer().position();
+                    buffer.getBuffer().position(currentPosition + skipAhead);
+                }
+
                 if (buffer.getBuffer().hasRemaining()) {
                     freeBuffer.value = false;
                     proxyAccept(null, null, buffer);
@@ -273,7 +276,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                             stringBuilder.setLength(0);
                             if (protocol.equals(UNKNOWN)) {
                                 parsingUnknown = true;
-                            } else if (!protocol.equals(TCP4) && !protocol.equals(TCP_6)) {
+                            } else if (!protocol.equals(TCP4) && !protocol.equals(TCP6)) {
                                 throw UndertowMessages.MESSAGES.invalidProxyHeader();
                             }
                         } else if (sourceAddress == null) {
