@@ -25,12 +25,15 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import javax.servlet.ServletOutputStream;
+import javax.servlet.ServletRequest;
 import javax.servlet.WriteListener;
 
 import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowMessages;
+import io.undertow.io.IoCallback;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.UndertowOutputStream;
+import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.Headers;
 import io.undertow.util.IoUtils;
@@ -50,7 +53,7 @@ import io.undertow.util.UndertowOptionMap;
  * Once the write listener has been set operations must only be invoked on this stream from the write
  * listener callback. Attempting to invoke from a different thread will result in an IllegalStateException.
  * <p>
- * Async listener tasks are queued in the {@link AsyncContextImpl}. At most one lister can be active at
+ * Async listener tasks are queued in the {@link AsyncContextImpl}. At most one listener can be active at
  * one time, which simplifies the thread safety requirements.
  *
  * @author Stuart Douglas
@@ -60,12 +63,16 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     private final ServletRequestContext servletRequestContext;
     private final HttpServerExchange exchange;
     private ByteBuf pooledBuffer;
+    private int bufferSize;
     private int state;
     private long written;
     private final long contentLength;
 
     private static final int FLAG_CLOSED = 1;
     private static final int FLAG_WRITE_STARTED = 1 << 1;
+
+    private WriteListener listener;
+    private ListenerCallback listenerCallback;
 
     /**
      * Construct a new instance.  No write timeout is configured.
@@ -117,39 +124,83 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
 
+        if (listener == null)
+        {
+            int rem = len;
+            int idx = off;
+            ByteBuf buffer = pooledBuffer;
+            try
+            {
+                if (buffer == null)
+                {
+                    // TODO too ugly ... is there any other way? for now I'm not replicating this throughout the class
+                    if (bufferSize > 0)
+                    {
+                        pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer(bufferSize);
+                    } else
+                    {
+                        pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
+                    }
+                }
+                while (rem > 0)
+                {
+                    int toWrite = Math.min(rem, buffer.writableBytes());
+                    buffer.writeBytes(b, idx, toWrite);
+                    rem -= toWrite;
+                    idx += toWrite;
+                    if (!buffer.isWritable())
+                    {
+                        exchange.writeBlocking(buffer, false);
+                        this.pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
+                    }
+                }
+            } catch (Exception e)
+            {
+                if (buffer != null)
+                {
+                    buffer.release();
+                    this.pooledBuffer = null;
+                }
+                throw new IOException(e);
+            }
+            updateWritten(len);
+        }  else {
+            writeAsync(b, off, len);
+        }
+    }
+
+    private void writeAsync(byte[] b, int off, int len) throws IOException {
         int rem = len;
         int idx = off;
         ByteBuf buffer = pooledBuffer;
-        try {
-            if (buffer == null) {
+        try
+        {
+            if (buffer == null)
+            {
                 pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
             }
-            while (rem > 0) {
+            while (rem > 0)
+            {
                 int toWrite = Math.min(rem, buffer.writableBytes());
                 buffer.writeBytes(b, idx, toWrite);
                 rem -= toWrite;
                 idx += toWrite;
-                if (!buffer.isWritable()) {
-                    exchange.writeBlocking(buffer, false);
+                if (!buffer.isWritable())
+                {
+                    exchange.writeAsync(buffer,false, listenerCallback, null);
                     this.pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
                 }
             }
-        } catch (Exception e) {
-            if (buffer != null) {
+        } catch (Exception e)
+        {
+            if (buffer != null)
+            {
                 buffer.release();
                 this.pooledBuffer = null;
             }
             throw new IOException(e);
         }
-        updateWritten(len);
-    }
-
-    void updateWritten(final long len) throws IOException {
-        this.written += len;
-        if (contentLength != -1 && this.written >= contentLength) {
-            flush();
-            close();
-        }
+        updateWrittenAsync(len);
     }
 
     /**
@@ -203,7 +254,10 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     }
 
     public void setBufferSize(int bufferSize) {
-        throw new RuntimeException("NYI");
+        if (pooledBuffer == null || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
+            throw UndertowServletMessages.MESSAGES.contentHasBeenWritten();
+        }
+        this.bufferSize = bufferSize;
     }
 
     public ServletRequestContext getServletRequestContext() {
@@ -230,6 +284,14 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         }
     }
 
+    void updateWrittenAsync(final long len) throws IOException {
+        this.written += len;
+        long contentLength = servletRequestContext.getOriginalResponse().getContentLength();
+        if (contentLength != -1 && this.written >= contentLength) {
+            IoUtils.safeClose(this);
+        }
+    }
+
     @Override
     public boolean isReady() {
         return false;
@@ -237,6 +299,59 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
 
     @Override
     public void setWriteListener(WriteListener writeListener) {
-        throw new RuntimeException("NYI");
+        if (writeListener == null) {
+            throw UndertowServletMessages.MESSAGES.listenerCannotBeNull();
+        }
+        if (listener != null) {
+            throw UndertowServletMessages.MESSAGES.listenerAlreadySet();
+        }
+        final ServletRequest servletRequest = servletRequestContext.getOriginalRequest();
+        if (!servletRequest.isAsyncStarted()) {
+            throw UndertowServletMessages.MESSAGES.asyncNotStarted();
+        }
+        AsyncContextImpl asyncContext = (AsyncContextImpl) servletRequest.getAsyncContext();
+        listener = writeListener;
+        listenerCallback = new ListenerCallback();
+    }
+
+    private class ListenerCallback implements IoCallback<Void> {
+
+        @Override public void onComplete(HttpServerExchange exchange, Void context)
+        {
+            if (anyAreSet(state, FLAG_CLOSED)) {
+                try {
+                    IoUtils.safeClose(ServletOutputStreamImpl.this);
+                    if (pooledBuffer != null) {
+                        pooledBuffer.release();
+                    }
+                    // CHECK: no need for flushing?
+                } catch (Throwable t) {
+                    // TODO
+                    return;
+                }
+            } else {
+                // CHECK: no asyncContext to check if isDispatched and revert back to non synchronous
+            }
+
+        }
+
+        @Override public void onException(HttpServerExchange exchange, Void context,
+              IOException exception)
+        {
+            try {
+                servletRequestContext.getCurrentServletContext().invokeRunnable(servletRequestContext.getExchange(), new Runnable() {
+                    @Override
+                    public void run() {
+                        listener.onError(exception);
+                    }
+                });
+            } finally {
+
+                IoUtils.safeClose(servletRequestContext.getExchange().getConnection());
+                if (pooledBuffer != null) {
+                    pooledBuffer.release();
+                }
+            }
+        }
     }
 }
