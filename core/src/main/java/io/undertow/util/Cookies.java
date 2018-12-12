@@ -215,6 +215,7 @@ public class Cookies {
         int state = 0;
         String name = null;
         int start = 0;
+        boolean containsEscapedQuotes = false;
         int cookieCount = parsedCookies.size();
         final Map<String, String> cookies = new HashMap<>();
         final Map<String, String> additional = new HashMap<>();
@@ -254,6 +255,7 @@ public class Cookies {
                         state = 0;
                         start = i + 1;
                     } else if (c == '"' && start == i) { //only process the " if it is the first character
+                        containsEscapedQuotes = false;
                         state = 3;
                         start = i + 1;
                     } else if (!allowEqualInValue && c == '=') {
@@ -266,9 +268,23 @@ public class Cookies {
                 case 3: {
                     //extract quoted value
                     if (c == '"') {
-                        cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         state = 0;
                         start = i + 1;
+                    }
+                    // Skip the next double quote char '"' when it is escaped by backslash '\' (i.e. \") inside the quoted value
+                    if (c == '\\' && (i + 1 < cookie.length()) && cookie.charAt(i + 1) == '"') {
+                        // But..., do not skip at the following conditions
+                        if (i + 2 == cookie.length()) { // Cookie: key="\" or Cookie: key="...\"
+                            break;
+                        }
+                        if (i + 2 < cookie.length() && (cookie.charAt(i + 2) == ';'      // Cookie: key="\"; key2=...
+                                || (commaIsSeperator && cookie.charAt(i + 2) == ','))) { // Cookie: key="\", key2=...
+                            break;
+                        }
+                        // Skip the next double quote char ('"' behind '\') in the cookie value
+                        i++;
+                        containsEscapedQuotes = true;
                     }
                     break;
                 }
@@ -322,6 +338,24 @@ public class Cookies {
             cookies.put(name, value);
             return ++cookieCount;
         }
+    }
+
+    private static String unescapeDoubleQuotes(final String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+
+        // Replace all escaped double quote (\") to double quote (")
+        char[] tmp = new char[value.length()];
+        int dest = 0;
+        for(int i = 0; i < value.length(); i++) {
+            if (value.charAt(i) == '\\' && (i + 1 < value.length()) && value.charAt(i + 1) == '"') {
+                i++;
+            }
+            tmp[dest] = value.charAt(i);
+            dest++;
+        }
+        return new String(tmp, 0, dest);
     }
 
     private Cookies() {
