@@ -199,6 +199,7 @@ public class CookiesTestCase {
         Assert.assertNotNull(cookie);
         Assert.assertEquals("FEDEX", cookie.getValue());
     }
+
     @Test
     public void testCommaSeparatedCookies() {
         Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, false, Arrays.asList("CUSTOMER=\"WILE_E_COYOTE\", SHIPPING=FEDEX" ), true);
@@ -222,9 +223,52 @@ public class CookiesTestCase {
     }
 
     @Test
+    public void testQuotedEscapedStringInRequestCookie() {
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(3, false, Arrays.asList(
+                    "Customer=\"WILE_\\\"E_\\\"COYOTE\"; $Version=\"1\"; $Path=\"/acme\";"
+                    + " SHIPPING=\"FEDEX\\\\\"; foo=\"\\\""));
+
+        Cookie cookie = cookies.get("Customer");
+        Assert.assertEquals("Customer", cookie.getName());
+        Assert.assertEquals("WILE_\"E_\"COYOTE", cookie.getValue()); // backslash escapled double quotes in the value
+        Assert.assertEquals("/acme", cookie.getPath());
+        Assert.assertEquals(1, cookie.getVersion());
+
+        cookie = cookies.get("SHIPPING");
+        Assert.assertEquals("SHIPPING", cookie.getName());
+        Assert.assertEquals("FEDEX\\\\", cookie.getValue()); // backslash escapled backslash in the value
+
+        cookie = cookies.get("foo");
+        Assert.assertEquals("foo", cookie.getName());
+        Assert.assertEquals("\\", cookie.getValue()); // unescaped backslash exists at the last of the value
+    }
+
+    @Test
     public void testSimpleJSONObjectInRequestCookies() {
         Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, true, Arrays.asList(
                 "CUSTOMER={\"v1\":1, \"id\":\"some_unique_id\", \"c\":\"http://www.google.com?q=love me\"};"
+                + " $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"));
+
+        Cookie cookie = cookies.get("CUSTOMER");
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("{\"v1\":1, \"id\":\"some_unique_id\", \"c\":\"http://www.google.com?q=love me\"}",
+               cookie.getValue());
+        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
+        Assert.assertEquals(1, cookie.getVersion());
+        Assert.assertEquals("/", cookie.getPath());
+
+        cookie = cookies.get("SHIPPING");
+        Assert.assertEquals("SHIPPING", cookie.getName());
+        Assert.assertEquals("FEDEX", cookie.getValue());
+        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
+        Assert.assertEquals(1, cookie.getVersion());
+        Assert.assertEquals("/", cookie.getPath());
+    }
+
+    @Test
+    public void testQuotedJSONObjectInRequestCookies() {
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, true, Arrays.asList(
+                "CUSTOMER=\"{\\\"v1\\\":1, \\\"id\\\":\\\"some_unique_id\\\", \\\"c\\\":\\\"http://www.google.com?q=love me\\\"}\";"
                 + " $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"));
 
         Cookie cookie = cookies.get("CUSTOMER");

@@ -269,9 +269,22 @@ public class Cookies {
                 case 3: {
                     //extract quoted value
                     if (c == '"') {
-                        cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        cookieCount = createCookie(name, unescapeDoubleQuotes(cookie.substring(start, i)), maxCookies, cookieCount, cookies, additional);
                         state = 0;
                         start = i + 1;
+                    }
+                    // Skip the next double quote char '"' when it is escaped by backslash '\' (i.e. \") inside the quoted value
+                    if (c == '\\' && (i + 1 < cookie.length()) && cookie.charAt(i + 1) == '"') {
+                        // But..., do not skip at the following conditions
+                        if (i + 2 == cookie.length()) { // Cookie: key="\" or Cookie: key="...\"
+                            break;
+                        }
+                        if (i + 2 < cookie.length() && (cookie.charAt(i + 2) == ';'      // Cookie: key="\"; key2=...
+                                || (commaIsSeperator && cookie.charAt(i + 2) == ','))) { // Cookie: key="\", key2=...
+                            break;
+                        }
+                        // Skip the next double quote char ('"' behind '\') in the cookie value
+                        i++;
                     }
                     break;
                 }
@@ -325,6 +338,26 @@ public class Cookies {
             cookies.put(name, value);
             return ++cookieCount;
         }
+    }
+
+    private static String unescapeDoubleQuotes(final String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+
+        // Replace all escaped double quote (\") to double quote (")
+        char[] tmp = new char[value.length()];
+        int dest = 0;
+        for(int i = 0; i < value.length(); i++) {
+            if (value.charAt(i) == '\\' && (i + 1 < value.length()) && value.charAt(i + 1) == '"') {
+                i++;
+            }
+            tmp[dest] = value.charAt(i);
+            dest++;
+        }
+        char[] chars = new char[dest];
+        System.arraycopy(tmp, 0, chars, 0, dest);
+        return String.valueOf(chars);
     }
 
     private Cookies() {
