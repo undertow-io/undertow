@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Implementation of version 1 of the proxy protocol (https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt)
@@ -74,7 +75,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     @Override
     public void handleEvent(StreamSourceChannel streamSourceChannel) {
         PooledByteBuffer buffer = bufferPool.allocate();
-        BooleanWrapper freeBuffer = new BooleanWrapper(true);
+        AtomicBoolean freeBuffer = new AtomicBoolean(true);
         try {
             int res = streamSourceChannel.read(buffer.getBuffer());
             if (res == -1) {
@@ -106,7 +107,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
             UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
             IoUtils.safeClose(streamConnection);
         } finally {
-            if (freeBuffer.value) {
+            if (freeBuffer.get()) {
                 buffer.close();
             }
         }
@@ -114,7 +115,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
 
 
 
-    private void parseProxyProtocolV2(PooledByteBuffer buffer, BooleanWrapper freeBuffer) throws Exception {
+    private void parseProxyProtocolV2(PooledByteBuffer buffer, AtomicBoolean freeBuffer) throws Exception {
         while (byteCount < SIG.length) {
             byte c = buffer.getBuffer().get();
 
@@ -199,7 +200,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                 }
 
                 if (buffer.getBuffer().hasRemaining()) {
-                    freeBuffer.value = false;
+                    freeBuffer.set(false);
                     proxyAccept(null, null, buffer);
                 } else {
                     proxyAccept(null, null, null);
@@ -213,7 +214,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
         SocketAddress s = new InetSocketAddress(sourceAddress, sourcePort);
         SocketAddress d = new InetSocketAddress(destAddress, destPort);
         if (buffer.getBuffer().hasRemaining()) {
-            freeBuffer.value = false;
+            freeBuffer.set(false);
             proxyAccept(s, d, buffer);
         } else {
             proxyAccept(s, d, null);
@@ -221,7 +222,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
         return;
     }
 
-    private void parseProxyProtocolV1(PooledByteBuffer buffer, BooleanWrapper freeBuffer) throws Exception {
+    private void parseProxyProtocolV1(PooledByteBuffer buffer, AtomicBoolean freeBuffer) throws Exception {
         while (buffer.getBuffer().hasRemaining()) {
             char c = (char) buffer.getBuffer().get();
             if (byteCount < NAME.length) {
@@ -241,7 +242,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                         }
                         //we are done
                         if (buffer.getBuffer().hasRemaining()) {
-                            freeBuffer.value = false;
+                            freeBuffer.set(false);
                             proxyAccept(null, null, buffer);
                         } else {
                             proxyAccept(null, null, null);
@@ -256,7 +257,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                         SocketAddress s = new InetSocketAddress(sourceAddress, sourcePort);
                         SocketAddress d = new InetSocketAddress(destAddress, destPort);
                         if (buffer.getBuffer().hasRemaining()) {
-                            freeBuffer.value = false;
+                            freeBuffer.set(false);
                             proxyAccept(s, d, buffer);
                         } else {
                             proxyAccept(s, d, null);
@@ -398,22 +399,6 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
         @Override
         public SocketAddress getLocalAddress() {
             return dest;
-        }
-    }
-
-
-    /**
-     * This is needed to pass "freeBuffer" by reference between methods
-     */
-    private static class BooleanWrapper {
-        public boolean value;
-        BooleanWrapper(boolean value) {
-            this.value = value;
-        }
-
-        @Override
-        public String toString(){
-            return Boolean.toString(value);
         }
     }
 }
