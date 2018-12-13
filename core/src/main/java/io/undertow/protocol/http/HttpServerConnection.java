@@ -533,7 +533,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             if (data == LAST) {
                 Connectors.terminateRequest(exchange);
                 readCallback.onComplete(exchange, null);
-            } else if (data != null) {
+            } else if (data != null && data.readableBytes() > 0) {
                 readCallback.onComplete(exchange, data);
             }
         }
@@ -607,7 +607,9 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         }
         ByteBuf content = msg.content();
         content.retain();
-        contents.add(content);
+        if(content.readableBytes() > 0) {
+            contents.add(content);
+        }
         if (msg instanceof LastHttpContent) {
             contents.add(LAST);
         }
