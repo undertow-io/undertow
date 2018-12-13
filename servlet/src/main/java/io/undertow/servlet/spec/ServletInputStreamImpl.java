@@ -238,7 +238,29 @@ public class ServletInputStreamImpl extends ServletInputStream {
                     if (!anyAreSet(state, FLAG_FINISHED)) {
                         setFlags(FLAG_BEING_INVOKED_IN_IO_THREAD);
                         try {
-                            request.getServletContext().invokeOnDataAvailable(request.getExchange(), listener);
+                            exchange.getIoThread().execute(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        request.getServletContext().invokeOnDataAvailable(request.getExchange(), listener);
+                                    } catch (Throwable e) {
+                                        try {
+                                            request.getServletContext().invokeRunnable(request.getExchange(), new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    listener.onError(e);
+                                                }
+                                            });
+                                        } finally {
+                                            if (pooled != null) {
+                                                pooled.release();
+                                                pooled = null;
+                                            }
+                                            exchange.discardRequest();
+                                        }
+                                    }
+                                }
+                            });
                         } finally {
                             clearFlags(FLAG_BEING_INVOKED_IN_IO_THREAD);
                         }

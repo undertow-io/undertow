@@ -321,15 +321,20 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         servletRequestContext.getOriginalRequest().getAsyncContext().addAsyncTask(new Runnable() {
             @Override
             public void run() {
-                try {
-                    listener.onWritePossible();
-                } catch (IOException e) {
-                    try {
-                        listener.onError(e);
-                    } finally {
-                        IoUtils.safeClose(ServletOutputStreamImpl.this);
+                exchange.getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            listener.onWritePossible();
+                        } catch (IOException e) {
+                            try {
+                                listener.onError(e);
+                            } finally {
+                                IoUtils.safeClose(ServletOutputStreamImpl.this);
+                            }
+                        }
                     }
-                }
+                });
             }
         });
 
@@ -341,21 +346,28 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         public void onComplete(HttpServerExchange exchange, Void context) {
             clearFlags(FLAG_PENDING_DATA);
             if (allAreClear(state, FLAG_CLOSED)) {
-                try {
-                    servletRequestContext.getCurrentServletContext().invokeOnWritePossible(exchange, listener);
-                } catch (Exception e) {
+                //TODO: better way to avoid recursive invocation
+                exchange.getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            servletRequestContext.getCurrentServletContext().invokeOnWritePossible(exchange, listener);
+                        } catch (Exception e) {
 
-                    if (pooledBuffer != null) {
-                        pooledBuffer.release();
-                        pooledBuffer = null;
-                    }
-                    servletRequestContext.getCurrentServletContext().invokeRunnable(exchange, new Runnable() {
-                        @Override
-                        public void run() {
-                            listener.onError(e);
+                            if (pooledBuffer != null) {
+                                pooledBuffer.release();
+                                pooledBuffer = null;
+                            }
+                            servletRequestContext.getCurrentServletContext().invokeRunnable(exchange, new Runnable() {
+                                @Override
+                                public void run() {
+                                    listener.onError(e);
+                                }
+                            });
                         }
-                    });
-                }
+                    }
+                });
+
             } else {
                 synchronized (ServletOutputStreamImpl.this) {
                     if (allAreClear(state, FLAG_EXCHANGE_LAST_SENT)) {

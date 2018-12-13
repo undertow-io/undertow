@@ -69,6 +69,7 @@ public class AsyncInputStreamServlet extends HttpServlet {
         boolean done = false;
 
         int written = 0;
+        int read = 0;
 
         MyListener(
                 final ServletOutputStream outputStream,
@@ -87,7 +88,9 @@ public class AsyncInputStreamServlet extends HttpServlet {
             //we don't use async writes for the off IO thread case
             //as we can't make it thread safe
             if (offIoThread || outputStream.isReady()) {
-                dataToWrite.writeTo(outputStream);
+                if(dataToWrite.size() > 0) {
+                    dataToWrite.writeTo(outputStream);
+                }
                 written += dataToWrite.size();
                 dataToWrite.reset();
                 if (done) {
@@ -119,6 +122,7 @@ public class AsyncInputStreamServlet extends HttpServlet {
                         System.out.println("onDataAvailable> read 0x00");
                     }
                     if (read != -1) {
+                        this.read++;
                         dataToWrite.write(read);
                     } else {
                         onWritePossible();
