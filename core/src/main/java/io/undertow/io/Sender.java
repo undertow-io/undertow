@@ -44,7 +44,7 @@ public interface Sender {
      * @param buffer   The buffer to send.
      * @param callback The callback
      */
-    void send(final ByteBuf buffer, final IoCallback<?> callback);
+    void send(final ByteBuf buffer, final IoCallback<Sender> callback);
 
     /**
      * Write the given buffers using async IO, and calls the given callback on completion or error.
@@ -52,7 +52,7 @@ public interface Sender {
      * @param buffer   The buffers to send.
      * @param callback The callback
      */
-    default void send(final ByteBuf[] buffer, final IoCallback<?> callback) {
+    default void send(final ByteBuf[] buffer, final IoCallback<Sender> callback) {
         send(Unpooled.wrappedBuffer(buffer), callback);
     }
 
@@ -82,7 +82,7 @@ public interface Sender {
      * @param data     The data to send
      * @param callback The callback
      */
-    default void send(final String data, final IoCallback<?> callback){
+    default void send(final String data, final IoCallback<Sender> callback){
         send(data, StandardCharsets.UTF_8, callback);
     }
 
@@ -93,7 +93,7 @@ public interface Sender {
      * @param charset  The charset to use
      * @param callback The callback
      */
-    void send(final String data, final Charset charset, final IoCallback<?> callback);
+    void send(final String data, final Charset charset, final IoCallback<Sender> callback);
 
 
     /**
@@ -124,7 +124,7 @@ public interface Sender {
      * @param channel  the file channel to transfer
      * @param callback The callback
      */
-    void transferFrom(final FileChannel channel, final IoCallback<?> callback);
+    void transferFrom(final FileChannel channel, final IoCallback<Sender> callback);
 
     /**
      * Transfers all content from the specified file
@@ -132,13 +132,13 @@ public interface Sender {
      * @param channel  the file channel to transfer
      * @param callback The callback
      */
-    void transferFrom(final FileChannel channel, long start, long length, final IoCallback<?> callback);
+    void transferFrom(final FileChannel channel, long start, long length, final IoCallback<Sender> callback);
     /**
      * Closes this sender asynchronously. The given callback is notified on completion
      *
      * @param callback The callback that is notified when all data has been flushed and the channel is closed
      */
-    void close(final IoCallback<?> callback);
+    void close(final IoCallback<Sender> callback);
 
     /**
      * Closes this sender asynchronously

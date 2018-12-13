@@ -57,9 +57,9 @@ public class ChunkedRequestNotConsumedTestCase {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws InterruptedException {
                 exchange.setResponseContentLength("message".length());
-                exchange.getResponseSender().send("message", new IoCallback<Void>() {
+                exchange.getResponseSender().send("message", new IoCallback<Sender>() {
                     @Override
-                    public void onComplete(HttpServerExchange exchange, Void sender) {
+                    public void onComplete(HttpServerExchange exchange, Sender sender) {
                         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
                             @Override
                             public void run() {
@@ -73,10 +73,6 @@ public class ChunkedRequestNotConsumedTestCase {
                         });
                     }
 
-                    @Override
-                    public void onException(HttpServerExchange exchange, Void sender, IOException exception) {
-                        exchange.endExchange();
-                    }
                 });
             }
         });

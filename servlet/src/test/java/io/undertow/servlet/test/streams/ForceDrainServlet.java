@@ -32,7 +32,6 @@ import io.undertow.testutils.DefaultServer;
 /**
  * @author Stuart Douglas
  */
-@RunWith(DefaultServer.class)
 public class ForceDrainServlet extends HttpServlet {
 
     @Override

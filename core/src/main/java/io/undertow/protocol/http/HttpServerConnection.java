@@ -34,6 +34,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.DefaultFileRegion;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -72,6 +73,10 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     private volatile HttpServerExchange currentExchange;
     private boolean responseCommited;
     private boolean responseComplete;
+    /**
+     * If the connection is going away after this request and we should just discard all data
+     */
+    private volatile boolean discardMode;
 
     private final Executor executor;
 
@@ -162,6 +167,22 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         }
     }
 
+    @Override
+    public void discardRequest() {
+        if(currentExchange == null) {
+            return;
+        }
+        discardMode = true;
+        if(!currentExchange.isResponseStarted()) {
+            currentExchange.getResponseHeaders().put(Headers.CONNECTION, "close");
+            currentExchange.setPersistent(false);
+        }
+        while (!contents.isEmpty()) {
+            contents.poll().release();
+        }
+
+    }
+
     /**
      * @return The connections worker
      */
@@ -197,6 +218,9 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     @Override
     public void endExchange(HttpServerExchange exchange) {
         currentExchange = null;
+        if(discardMode) {
+            ctx.close();
+        }
     }
 
     /**
@@ -357,9 +381,17 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     public <T> void writeAsync(ByteBuf data, boolean last, HttpServerExchange exchange, IoCallback<T> callback, T context) {
         Objects.requireNonNull(callback);
         if (queuedAsyncData != null) {
+            //special case, where the buffer is null and we just want to end the exchange
+            //TODO: this seems a bit less than ideal, but I don't see what else we can do
+            if(data == null && last) {
+                queuedWriteLast = true;
+                return;
+            }
+
             callback.onException(exchange, context, new IOException(UndertowMessages.MESSAGES.dataAlreadyQueued()));
             return;
         }
+
 
         queuedAsyncData = data;
         queuedCalback = callback;
@@ -399,12 +431,13 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         }
     }
 
-    public ChannelFuture write(ByteBuf data, boolean last, HttpServerExchange exchange) {
+    public ChannelFuture write(Object sendObj, boolean last, HttpServerExchange exchange) {
         if (exchange != this.currentExchange || responseComplete) {
             DefaultChannelPromise defaultChannelPromise = new DefaultChannelPromise(ctx.channel());
             defaultChannelPromise.setFailure(new IOException("Exchange has completed"));
             return defaultChannelPromise;
         }
+        ByteBuf data = (ByteBuf) sendObj;
         if (last) {
             responseComplete = true;
             HttpContent resp;
@@ -517,8 +550,9 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     }
 
     @Override
-    public ChannelFuture writeFileAsync(FileChannel file, long position, long count, HttpServerExchange exchange) {
-        return null;
+    public <T> void writeFileAsync(FileChannel file, long position, long count, HttpServerExchange exchange, T context, IoCallback<T> callback) {
+        DefaultFileRegion region = new DefaultFileRegion(file, position, count);
+        callback.onException(exchange, null, new IOException("NOT IMPLEMENTED"));
     }
 
     @Override
@@ -567,6 +601,10 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     }
 
     public void addData(HttpContent msg) {
+        if(discardMode) {
+            msg.content().release();
+            return;
+        }
         ByteBuf content = msg.content();
         content.retain();
         contents.add(content);

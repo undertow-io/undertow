@@ -36,20 +36,24 @@ public class AsyncSenderImpl implements Sender {
     }
 
     @Override
-    public void send(ByteBuf buffer, IoCallback<?> callback) {
+    public void send(ByteBuf buffer, IoCallback<Sender> callback) {
         //TODO: use our own promise impl
         exchange.writeAsync(buffer, callback == IoCallback.END_EXCHANGE, callback, null);
     }
 
     @Override
-    public void send(String data, Charset charset, IoCallback<?> callback) {
+    public void send(String data, Charset charset, IoCallback<Sender> callback) {
         exchange.writeAsync(Unpooled.copiedBuffer(data, StandardCharsets.UTF_8), callback == IoCallback.END_EXCHANGE, callback, null);
     }
 
 
     @Override
-    public void transferFrom(FileChannel channel, IoCallback callback) {
-        callback.onException(exchange, null, new IOException("NYI"));
+    public void transferFrom(FileChannel channel, IoCallback<Sender> callback) {
+        try {
+            exchange.writeFileAsync(channel, 0, channel.size(), this, callback);
+        } catch (IOException e) {
+            callback.onException(exchange, this, e);
+        }
     }
 
     @Override
@@ -58,7 +62,7 @@ public class AsyncSenderImpl implements Sender {
     }
 
     @Override
-    public void close(IoCallback<?> callback) {
+    public void close(IoCallback<Sender> callback) {
         exchange.writeAsync((ByteBuf) null, true, callback, null);
     }
 

@@ -18,26 +18,26 @@
 
 package io.undertow.servlet.spec;
 
+import static io.undertow.util.Bits.allAreClear;
 import static io.undertow.util.Bits.anyAreClear;
 import static io.undertow.util.Bits.anyAreSet;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.WriteListener;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.UndertowOutputStream;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.Headers;
 import io.undertow.util.IoUtils;
-import io.undertow.util.UndertowOptionMap;
 
 /**
  * This stream essentially has two modes. When it is being used in standard blocking mode then
@@ -64,12 +64,16 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     private final HttpServerExchange exchange;
     private ByteBuf pooledBuffer;
     private int bufferSize;
-    private int state;
     private long written;
     private final long contentLength;
+    private static final AtomicIntegerFieldUpdater<ServletOutputStreamImpl> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(ServletOutputStreamImpl.class, "state");
+    private volatile int state;
 
     private static final int FLAG_CLOSED = 1;
     private static final int FLAG_WRITE_STARTED = 1 << 1;
+    private static final int FLAG_IS_READY_CALLED = 1 << 2;
+    private static final int FLAG_PENDING_DATA = 1 << 3;
+    private static final int FLAG_EXCHANGE_LAST_SENT = 1 << 4;
 
     private WriteListener listener;
     private ListenerCallback listenerCallback;
@@ -117,84 +121,71 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         if (len < 1) {
             return;
         }
-        if (exchange.getIoThread().inEventLoop()) {
-            throw UndertowMessages.MESSAGES.blockingIoFromIOThread();
-        }
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
 
-        if (listener == null)
-        {
+        if (listener == null) {
+
+            if (exchange.getIoThread().inEventLoop()) {
+                throw UndertowMessages.MESSAGES.blockingIoFromIOThread();
+            }
             int rem = len;
             int idx = off;
             ByteBuf buffer = pooledBuffer;
-            try
-            {
-                if (buffer == null)
-                {
+            try {
+                if (buffer == null) {
                     // TODO too ugly ... is there any other way? for now I'm not replicating this throughout the class
-                    if (bufferSize > 0)
-                    {
+                    if (bufferSize > 0) {
                         pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer(bufferSize);
-                    } else
-                    {
+                    } else {
                         pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
                     }
                 }
-                while (rem > 0)
-                {
+                while (rem > 0) {
                     int toWrite = Math.min(rem, buffer.writableBytes());
                     buffer.writeBytes(b, idx, toWrite);
                     rem -= toWrite;
                     idx += toWrite;
-                    if (!buffer.isWritable())
-                    {
+                    if (!buffer.isWritable()) {
                         exchange.writeBlocking(buffer, false);
                         this.pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
                     }
                 }
-            } catch (Exception e)
-            {
-                if (buffer != null)
-                {
+            } catch (Exception e) {
+                if (buffer != null) {
                     buffer.release();
                     this.pooledBuffer = null;
                 }
                 throw new IOException(e);
             }
             updateWritten(len);
-        }  else {
+        } else {
             writeAsync(b, off, len);
         }
     }
 
     private void writeAsync(byte[] b, int off, int len) throws IOException {
-        int rem = len;
-        int idx = off;
         ByteBuf buffer = pooledBuffer;
-        try
-        {
-            if (buffer == null)
-            {
+        try {
+            if (buffer == null) {
                 pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
             }
-            while (rem > 0)
-            {
-                int toWrite = Math.min(rem, buffer.writableBytes());
-                buffer.writeBytes(b, idx, toWrite);
-                rem -= toWrite;
-                idx += toWrite;
-                if (!buffer.isWritable())
-                {
-                    exchange.writeAsync(buffer,false, listenerCallback, null);
-                    this.pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
+            int toWrite = Math.min(len, buffer.writableBytes());
+            buffer.writeBytes(b, off, toWrite);
+
+            if (!buffer.isWritable()) {
+                setFlags(FLAG_PENDING_DATA);
+                this.pooledBuffer = null;
+                if (toWrite < len) {
+                    ByteBuf remainder = Unpooled.wrappedBuffer(b, off + toWrite, len - toWrite);
+                    buffer = Unpooled.wrappedBuffer(buffer, remainder);
                 }
+                exchange.writeAsync(buffer, false, listenerCallback, null);
             }
-        } catch (Exception e)
-        {
-            if (buffer != null)
-            {
+
+        } catch (Exception e) {
+            if (buffer != null) {
                 buffer.release();
                 this.pooledBuffer = null;
             }
@@ -229,7 +220,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
      */
     public void close() throws IOException {
         if (anyAreSet(state, FLAG_CLOSED)) return;
-        state |= FLAG_CLOSED;
+        setFlags(FLAG_CLOSED);
         if (anyAreClear(state, FLAG_WRITE_STARTED) && servletRequestContext.getOriginalResponse().getHeader(Headers.CONTENT_LENGTH_STRING) == null) {
             if (pooledBuffer == null) {
                 exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
@@ -238,7 +229,19 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             }
         }
         try {
-            exchange.writeBlocking(pooledBuffer, true);
+            if (listener == null) {
+                exchange.writeBlocking(pooledBuffer, true);
+            } else {
+
+                //this needs a sync block, as we could be called from any thread
+                //once the close flag is set if we can't close ourselves it becomes the listeners responsibility
+                synchronized (this) {
+                    if (allAreClear(state, FLAG_PENDING_DATA | FLAG_EXCHANGE_LAST_SENT)) {
+                        setFlags(FLAG_EXCHANGE_LAST_SENT);
+                        exchange.writeAsync(pooledBuffer, true, listenerCallback, null);
+                    }
+                }
+            }
         } catch (Exception e) {
             throw new IOException(e);
         } finally {
@@ -248,7 +251,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
 
 
     public void resetBuffer() {
-        if(pooledBuffer != null) {
+        if (pooledBuffer != null) {
             pooledBuffer.clear();
         }
     }
@@ -265,7 +268,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     }
 
     public ByteBuf underlyingBuffer() {
-        if(pooledBuffer == null) {
+        if (pooledBuffer == null) {
             pooledBuffer = exchange.getConnection().getByteBufferPool().buffer();
         }
         return pooledBuffer;
@@ -294,7 +297,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
 
     @Override
     public boolean isReady() {
-        return false;
+        if (anyAreSet(state, FLAG_CLOSED | FLAG_PENDING_DATA)) {
+            return false;
+        }
+        setFlags(FLAG_IS_READY_CALLED);
+        return true;
     }
 
     @Override
@@ -309,35 +316,59 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         if (!servletRequest.isAsyncStarted()) {
             throw UndertowServletMessages.MESSAGES.asyncNotStarted();
         }
-        AsyncContextImpl asyncContext = (AsyncContextImpl) servletRequest.getAsyncContext();
         listener = writeListener;
         listenerCallback = new ListenerCallback();
+        servletRequestContext.getOriginalRequest().getAsyncContext().addAsyncTask(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    listener.onWritePossible();
+                } catch (IOException e) {
+                    try {
+                        listener.onError(e);
+                    } finally {
+                        IoUtils.safeClose(ServletOutputStreamImpl.this);
+                    }
+                }
+            }
+        });
+
     }
 
     private class ListenerCallback implements IoCallback<Void> {
 
-        @Override public void onComplete(HttpServerExchange exchange, Void context)
-        {
-            if (anyAreSet(state, FLAG_CLOSED)) {
+        @Override
+        public void onComplete(HttpServerExchange exchange, Void context) {
+            clearFlags(FLAG_PENDING_DATA);
+            if (allAreClear(state, FLAG_CLOSED)) {
                 try {
-                    IoUtils.safeClose(ServletOutputStreamImpl.this);
+                    servletRequestContext.getCurrentServletContext().invokeOnWritePossible(exchange, listener);
+                } catch (Exception e) {
+
                     if (pooledBuffer != null) {
                         pooledBuffer.release();
+                        pooledBuffer = null;
                     }
-                    // CHECK: no need for flushing?
-                } catch (Throwable t) {
-                    // TODO
-                    return;
+                    servletRequestContext.getCurrentServletContext().invokeRunnable(exchange, new Runnable() {
+                        @Override
+                        public void run() {
+                            listener.onError(e);
+                        }
+                    });
                 }
             } else {
-                // CHECK: no asyncContext to check if isDispatched and revert back to non synchronous
+                synchronized (ServletOutputStreamImpl.this) {
+                    if (allAreClear(state, FLAG_EXCHANGE_LAST_SENT)) {
+                        setFlags(FLAG_EXCHANGE_LAST_SENT);
+                        exchange.writeAsync(pooledBuffer, true, this, null);
+                    }
+                }
             }
-
         }
 
-        @Override public void onException(HttpServerExchange exchange, Void context,
-              IOException exception)
-        {
+        @Override
+        public void onException(HttpServerExchange exchange, Void context,
+                                IOException exception) {
             try {
                 servletRequestContext.getCurrentServletContext().invokeRunnable(servletRequestContext.getExchange(), new Runnable() {
                     @Override
@@ -346,12 +377,26 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                     }
                 });
             } finally {
-
-                IoUtils.safeClose(servletRequestContext.getExchange().getConnection());
+                exchange.endExchange();
                 if (pooledBuffer != null) {
                     pooledBuffer.release();
+                    pooledBuffer = null;
                 }
             }
         }
+    }
+
+    private void setFlags(int flags) {
+        int old;
+        do {
+            old = state;
+        } while (!stateUpdater.compareAndSet(this, old, old | flags));
+    }
+
+    private void clearFlags(int flags) {
+        int old;
+        do {
+            old = state;
+        } while (!stateUpdater.compareAndSet(this, old, old & ~flags));
     }
 }

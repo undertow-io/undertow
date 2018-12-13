@@ -31,7 +31,14 @@ public interface IoCallback<T> {
 
     void onComplete(final HttpServerExchange exchange, final T context);
 
-    void onException(final HttpServerExchange exchange, final T context, final IOException exception);
+    default void onException(final HttpServerExchange exchange, final T context, final IOException exception) {
+        UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
+        try {
+            exchange.endExchange();
+        } finally {
+            IoUtils.safeClose(exchange.getConnection());
+        }
+    }
 
     /**
      * A default callback that simply ends the exchange.
@@ -40,16 +47,6 @@ public interface IoCallback<T> {
         @Override
         public void onComplete(HttpServerExchange exchange, Void context) {
             exchange.endExchange();
-        }
-
-        @Override
-        public void onException(HttpServerExchange exchange, Void context, IOException exception) {
-            UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
-            try {
-                exchange.endExchange();
-            } finally {
-                IoUtils.safeClose(exchange.getConnection());
-            }
         }
     };
 

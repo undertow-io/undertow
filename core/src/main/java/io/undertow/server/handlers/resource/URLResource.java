@@ -178,7 +178,7 @@ public class URLResource implements Resource, RangeAwareResource {
 
     public void serveImpl(final Sender sender, final HttpServerExchange exchange, final long start, final long end, final boolean range, final IoCallback completionCallback) {
 
-        class ServerTask implements Runnable, IoCallback<Void> {
+        class ServerTask implements Runnable, IoCallback<Sender> {
 
             private InputStream inputStream;
             private byte[] buffer;
@@ -241,7 +241,7 @@ public class URLResource implements Resource, RangeAwareResource {
             }
 
             @Override
-            public void onComplete(final HttpServerExchange exchange, final Void sender) {
+            public void onComplete(final HttpServerExchange exchange, final Sender sender) {
                 if (exchange.isInIoThread()) {
                     exchange.dispatch(this);
                 } else {
@@ -250,7 +250,7 @@ public class URLResource implements Resource, RangeAwareResource {
             }
 
             @Override
-            public void onException(final HttpServerExchange exchange, final Void sender, final IOException exception) {
+            public void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
                 IoUtils.safeClose(inputStream);
                 if (!exchange.isResponseStarted()) {

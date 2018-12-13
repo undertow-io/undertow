@@ -35,7 +35,6 @@ import io.undertow.testutils.DefaultServer;
 /**
  * @author Stuart Douglas
  */
-@RunWith(DefaultServer.class)
 public class EarlyCloseClientServlet extends HttpServlet {
 
     private static volatile boolean exceptionThrown;

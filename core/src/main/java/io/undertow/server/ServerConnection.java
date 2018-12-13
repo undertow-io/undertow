@@ -30,7 +30,6 @@ import javax.net.ssl.SSLSession;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -262,7 +261,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
 
     public abstract void runResumeReadWrite();
 
-    public abstract ChannelFuture writeFileAsync(FileChannel file, long position, long count, HttpServerExchange exchange);
+    public abstract <T> void writeFileAsync(FileChannel file, long position, long count, HttpServerExchange exchange, T context, IoCallback<T> callback);
     public abstract void writeFileBlocking(FileChannel file, long position, long count, HttpServerExchange exchange) throws IOException;
 
 
@@ -271,6 +270,8 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
     }
 
     protected abstract void ungetRequestBytes(ByteBuf buffer);
+
+    public abstract void discardRequest();
 
     public interface CloseListener {
 

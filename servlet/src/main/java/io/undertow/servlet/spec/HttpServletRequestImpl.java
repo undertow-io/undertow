@@ -664,7 +664,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             throw UndertowServletMessages.MESSAGES.getReaderAlreadyCalled();
         }
         if (servletInputStream == null) {
-            servletInputStream = new ServletInputStreamImpl(exchange);
+            servletInputStream = new ServletInputStreamImpl(this);
         }
         readStarted = true;
         return servletInputStream;
@@ -675,7 +675,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             reader.close();
         }
         if (servletInputStream == null) {
-            servletInputStream = new ServletInputStreamImpl(exchange);
+            servletInputStream = new ServletInputStreamImpl(this);
         }
         servletInputStream.close();
     }

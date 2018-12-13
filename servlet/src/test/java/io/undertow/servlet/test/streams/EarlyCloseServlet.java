@@ -35,7 +35,6 @@ import io.undertow.testutils.DefaultServer;
 /**
  * @author Stuart Douglas
  */
-@RunWith(DefaultServer.class)
 public class EarlyCloseServlet extends HttpServlet {
 
     private volatile ServerConnection connection;

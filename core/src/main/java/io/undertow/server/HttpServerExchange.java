@@ -18,6 +18,7 @@
 
 package io.undertow.server;
 
+import static io.undertow.util.Bits.allAreClear;
 import static io.undertow.util.Bits.allAreSet;
 import static io.undertow.util.Bits.anyAreClear;
 import static io.undertow.util.Bits.anyAreSet;
@@ -273,6 +274,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Flag that indicates that the request channel has been reset, and {@link #getRequestChannel()} can be called again
      */
     private static final int FLAG_REQUEST_RESET= 1 << 21;
+
+    /**
+     * Flag that indicates that the last data has been queued
+     */
+    private static final int FLAG_LAST_DATA_QUEUED= 1 << 22;
 
     /**
      * The source address for the request. If this is null then the actual source address from the channel is used
@@ -1148,10 +1154,14 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (data == null && !last) {
             throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
         }
-        if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+        if (anyAreSet(state, FLAG_RESPONSE_TERMINATED | FLAG_LAST_DATA_QUEUED)) {
             callback.onException(this, context, new IOException(UndertowMessages.MESSAGES.responseComplete()));
             return;
         }
+        if(last) {
+            state |= FLAG_LAST_DATA_QUEUED;
+        }
+
         handleFirstData();
         connection.writeAsync(data, last, this, callback, context);
     }
@@ -1160,8 +1170,11 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (data == null && !last) {
             throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
         }
-        if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
+        if (anyAreSet(state, FLAG_RESPONSE_TERMINATED | FLAG_LAST_DATA_QUEUED)) {
             throw UndertowMessages.MESSAGES.responseComplete();
+        }
+        if(last) {
+            state |= FLAG_LAST_DATA_QUEUED;
         }
         handleFirstData();
         connection.writeBlocking(data, last, this);
@@ -1177,14 +1190,12 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
     }
 
-    ChannelFuture writeFileAsync(FileChannel file, long position, long count) {
+    public <T> void writeFileAsync(FileChannel file, long position, long count, T context, IoCallback<T> callback) {
         if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
-            ChannelPromise promise = connection.createPromise();
-            promise.setFailure(UndertowMessages.MESSAGES.responseComplete());
-            return promise;
+            callback.onException(this, context, new IOException(UndertowMessages.MESSAGES.responseComplete()));
         }
         handleFirstData();
-        return connection.writeFileAsync(file, position, count, this);
+        connection.writeFileAsync(file, position, count, this, context, callback);
     }
 
     void writeFileBlocking(FileChannel file, long position, long count) throws IOException {
@@ -1506,7 +1517,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             connection.readAsync(DRAIN_CALLBACK);
         }
 
-        if (!isResponseComplete()) {
+        if (!isResponseComplete() && allAreClear(state, FLAG_LAST_DATA_QUEUED)) {
             writeAsync(null, true, IoCallback.END_EXCHANGE, null);
         }
         return this;
@@ -1578,6 +1589,18 @@ public final class HttpServerExchange extends AbstractAttachable {
         return connection.readBytesAvailable();
     }
 
+    /**
+     * Used to terminate the request in an async manner, the actual mechanism will depend on the underlying protocol,
+     * for example HTTP/2 may send a RST_STREAM stream if there is more data coming.
+     *
+     * This may result in an unclean close if it is called on a non multiplexed protocol
+     */
+    public void discardRequest() {
+        if(isRequestComplete()) {
+            return;
+        }
+        connection.discardRequest();
+    }
 
     /**
      * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the

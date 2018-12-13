@@ -146,7 +146,6 @@ public class AsyncInputStreamServlet extends HttpServlet {
                     }
                 });
             } else {
-
                 onWritePossible();
             }
         }
