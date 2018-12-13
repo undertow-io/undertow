@@ -468,6 +468,9 @@ public class AsyncContextImpl implements AsyncContext {
         initiatingThread = null;
     }
 
+    public synchronized void initialRequestFailed() {
+        initialRequestDone = true;
+    }
 
     private synchronized void doDispatch(final Runnable runnable) {
         if (dispatched) {

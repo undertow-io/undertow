@@ -18,6 +18,18 @@
 
 package io.undertow.servlet.test.listener.request.async.onError;
 
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.jboss.logging.Logger;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -29,16 +41,6 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.jboss.logging.Logger;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import javax.servlet.ServletException;
-import java.io.IOException;
 
 /**
  * @author Jozef Hartinger
@@ -72,12 +74,16 @@ public class AsyncListenerOnErrorTest {
                 .setAsyncSupported(true)
                 .addMapping("/async3");
 
+        ServletInfo a4 = new ServletInfo("asyncServlet4", AsyncServlet4.class)
+                .setAsyncSupported(true)
+                .addMapping("/async4");
+
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(AsyncListenerOnErrorTest.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .addServlets(f, a1, a2, a3);
+                .addServlets(f, a1, a2, a3, a4);
 
         builder.setExceptionHandler(LoggingExceptionHandler.builder()
                 .add(IllegalStateException.class, "io.undertow", Logger.Level.DEBUG)
@@ -131,6 +137,27 @@ public class AsyncListenerOnErrorTest {
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
             Assert.assertArrayEquals(new String[]{"START", "ERROR", "COMPLETE"}, AsyncEventListener.results(3));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    /**
+     * Regression test for UNDERTOW-1455
+     *
+     * Compared to testAsyncListenerOnErrorInvoked* tests, exception is thrown in
+     * entering servlet not in asynchronous dispatch part.
+     */
+    @Test
+    public void testAsyncListenerOnErrorExceptionInFirstServlet() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async4");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
+            Assert.assertArrayEquals(new String[]{"ERROR", "COMPLETE"}, AsyncEventListener.results(2));
         } finally {
             client.getConnectionManager().shutdown();
         }

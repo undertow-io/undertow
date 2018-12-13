@@ -86,10 +86,7 @@ public class PathHandler implements HttpHandler {
             exchange.setResolvedPath(match.getMatched());
         } else {
             //already something in the resolved path
-            StringBuilder sb = new StringBuilder(exchange.getResolvedPath().length() + match.getMatched().length());
-            sb.append(exchange.getResolvedPath());
-            sb.append(match.getMatched());
-            exchange.setResolvedPath(sb.toString());
+            exchange.setResolvedPath(exchange.getResolvedPath() + match.getMatched());
         }
         match.getValue().handleRequest(exchange);
     }

@@ -42,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * @author Stuart Douglas
@@ -57,15 +58,7 @@ public class Bootstrap implements ServletExtension {
         if (info == null) {
             return;
         }
-        XnioWorker worker = info.getWorker();
-        if(worker == null) {
-            ServerWebSocketContainer defaultContainer = UndertowContainerProvider.getDefaultContainer();
-            if(defaultContainer == null) {
-                throw JsrWebSocketLogger.ROOT_LOGGER.xnioWorkerWasNullAndNoDefault();
-            }
-            JsrWebSocketLogger.ROOT_LOGGER.xnioWorkerWasNull();
-            worker = defaultContainer.getXnioWorker();
-        }
+        Supplier<XnioWorker> worker = info.getWorker();
         ByteBufferPool buffers = info.getBuffers();
         if(buffers == null) {
             ServerWebSocketContainer defaultContainer = UndertowContainerProvider.getDefaultContainer();

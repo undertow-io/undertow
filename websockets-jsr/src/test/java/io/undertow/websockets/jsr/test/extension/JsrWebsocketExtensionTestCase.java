@@ -84,7 +84,7 @@ public class JsrWebsocketExtensionTestCase {
                         new WebSocketDeploymentInfo()
                                 .setDispatchToWorkerThread(true)
                                 .setBuffers(DefaultServer.getBufferPool())
-                                .setWorker(DefaultServer.getWorker())
+                                .setWorker(DefaultServer.getWorkerSupplier())
                                 .addExtension(new PerMessageDeflateHandshake())
                         .addEndpoint(AutobahnAnnotatedEndpoint.class)
                 )

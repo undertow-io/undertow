@@ -203,7 +203,12 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
     @Override
     public void closeConnections() {
         for(HttpServerConnection i : connections) {
-            IoUtils.safeClose(i);
+            i.getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    IoUtils.safeClose(i);
+                }
+            });
         }
     }
 

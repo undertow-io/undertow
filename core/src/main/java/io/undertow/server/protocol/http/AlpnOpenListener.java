@@ -21,10 +21,13 @@ package io.undertow.server.protocol.http;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -67,7 +70,8 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
      * HTTP/2 required cipher. Not strictly part of ALPN but it can live here for now till we have a better solution.
      */
     public static final String REQUIRED_CIPHER = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
-    public static final String REQUIRED_PROTOCOL = "TLSv1.2";
+    private static final Set<String> REQUIRED_PROTOCOLS = Collections.unmodifiableSet(
+            new HashSet<>(Arrays.asList("TLSv1.2","TLSv1.3")));
 
     private final ALPNManager alpnManager = ALPNManager.INSTANCE; //todo: configurable
     private final ByteBufferPool bufferPool;
@@ -312,7 +316,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         String[] protcols = engine.getEnabledProtocols();
         boolean found = false;
         for (String proto : protcols) {
-            if (proto.equals(REQUIRED_PROTOCOL)) {
+            if (REQUIRED_PROTOCOLS.contains(proto)) {
                 found = true;
                 break;
             }

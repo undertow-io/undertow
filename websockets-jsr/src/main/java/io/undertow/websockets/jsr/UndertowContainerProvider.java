@@ -24,6 +24,8 @@ import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
+
 import javax.websocket.ContainerProvider;
 import javax.websocket.WebSocketContainer;
 
@@ -83,16 +85,29 @@ public class UndertowContainerProvider extends ContainerProvider {
         }
         synchronized (UndertowContainerProvider.class) {
             if (defaultContainer == null) {
-                try {
-                    //this is not great, as we have no way to control the lifecycle
-                    //but there is not much we can do
-                    //todo: what options should we use here?
-                    XnioWorker worker = Xnio.getInstance().createWorker(OptionMap.create(Options.THREAD_DAEMON, true));
-                    ByteBufferPool buffers = new DefaultByteBufferPool(directBuffers, 1024, 100, 12);
-                    defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), worker, buffers, Collections.EMPTY_LIST, !invokeInIoThread);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+                //this is not great, as we have no way to control the lifecycle
+                //but there is not much we can do
+                //todo: what options should we use here?
+                ByteBufferPool buffers = new DefaultByteBufferPool(directBuffers, 1024, 100, 12);
+                defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), new Supplier<XnioWorker>() {
+                    volatile XnioWorker worker;
+
+                    @Override
+                    public XnioWorker get() {
+                        if(worker == null) {
+                            synchronized (this) {
+                                if(worker == null) {
+                                    try {
+                                        worker = Xnio.getInstance().createWorker(OptionMap.create(Options.THREAD_DAEMON, true));
+                                    } catch (IOException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                            }
+                        }
+                        return worker;
+                    }
+                }, buffers, Collections.EMPTY_LIST, !invokeInIoThread);
             }
             return defaultContainer;
         }

@@ -77,7 +77,7 @@ public class BinaryEndpointTest {
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
                                 .setBuffers(DefaultServer.getBufferPool())
-                                .setWorker(DefaultServer.getWorker())
+                                .setWorker(DefaultServer.getWorkerSupplier())
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
                                     @Override
                                     public void ready(ServerWebSocketContainer container) {

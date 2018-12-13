@@ -33,6 +33,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.util.function.Supplier;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -245,6 +246,15 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     public static ByteBufferPool getBufferPool() {
         return pool;
+    }
+
+    public static Supplier<XnioWorker> getWorkerSupplier() {
+        return new Supplier<XnioWorker>() {
+            @Override
+            public XnioWorker get() {
+                return getWorker();
+            }
+        };
     }
 
     @Override

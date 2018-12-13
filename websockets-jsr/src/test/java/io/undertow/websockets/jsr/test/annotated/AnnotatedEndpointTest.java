@@ -82,7 +82,7 @@ public class AnnotatedEndpointTest {
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
                                 .setBuffers(DefaultServer.getBufferPool())
-                                .setWorker(DefaultServer.getWorker())
+                                .setWorker(DefaultServer.getWorkerSupplier())
                                 .addEndpoint(MessageEndpoint.class)
                                 .addEndpoint(AnnotatedClientEndpoint.class)
                                 .addEndpoint(AnnotatedClientEndpointWithConfigurator.class)

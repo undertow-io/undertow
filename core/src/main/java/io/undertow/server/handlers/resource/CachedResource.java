@@ -246,12 +246,13 @@ public class CachedResource implements Resource, RangeAwareResource {
         final Long length = getContentLength();
         //if it is not eligible to be served from the cache
         if (length == null || length > cachingResourceManager.getMaxFileSize()) {
-            underlyingResource.serve(sender, exchange, completionCallback);
+            ((RangeAwareResource)underlyingResource).serveRange(sender, exchange, start, end, completionCallback);
             return;
         }
         //it is not cached yet, just serve it directly
         if (existing == null || !existing.enabled() || !existing.reference()) {
-            //it is not cached yet, install a wrapper to grab the data
+            //it is not cached yet, we can't use a range request to establish the cached item
+            //so we just serve it
             ((RangeAwareResource)underlyingResource).serveRange(sender, exchange, start, end, completionCallback);
         } else {
             //serve straight from the cache
