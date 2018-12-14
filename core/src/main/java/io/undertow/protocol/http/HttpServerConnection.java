@@ -18,6 +18,7 @@ package io.undertow.protocol.http;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.List;
 import java.util.Objects;
@@ -84,6 +85,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     private final LinkedBlockingDeque<ByteBuf> contents = new LinkedBlockingDeque<>();
     private final LinkedBlockingDeque<QueuedExchange> queuedExchanges = new LinkedBlockingDeque<>();
     private static final ByteBuf LAST = Unpooled.buffer(0);
+    private static final ByteBuf CLOSED = Unpooled.buffer(0);
     private final SSLSessionInfo sslSessionInfo;
 
     private Consumer<ChannelHandlerContext> upgradeListener;
@@ -169,11 +171,11 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     @Override
     public void discardRequest() {
-        if(currentExchange == null) {
+        if (currentExchange == null) {
             return;
         }
         discardMode = true;
-        if(!currentExchange.isResponseStarted()) {
+        if (!currentExchange.isResponseStarted()) {
             currentExchange.getResponseHeaders().put(Headers.CONNECTION, "close");
             currentExchange.setPersistent(false);
         }
@@ -318,8 +320,6 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
      * Invoked when the exchange is complete.
      */
     protected void exchangeComplete(HttpServerExchange exchange) {
-        contents.add(LAST);
-        contents.poll();
         this.currentExchange = null;
         if (!queuedExchanges.isEmpty()) {
             if (getIoThread().inEventLoop()) {
@@ -376,7 +376,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         if (queuedAsyncData != null) {
             //special case, where the buffer is null and we just want to end the exchange
             //TODO: this seems a bit less than ideal, but I don't see what else we can do
-            if(data == null && last) {
+            if (data == null && last) {
                 queuedWriteLast = true;
                 return;
             }
@@ -526,6 +526,8 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             if (data == LAST) {
                 Connectors.terminateRequest(exchange);
                 readCallback.onComplete(exchange, null);
+            } else if(data == CLOSED) {
+                readCallback.onException(exchange, null, new ClosedChannelException());
             } else if (data != null && data.readableBytes() > 0) {
                 readCallback.onComplete(exchange, data);
             }
@@ -565,6 +567,8 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         if (buf == LAST) {
             Connectors.terminateRequest(currentExchange);
             return null;
+        } else if(buf == CLOSED) {
+            throw new ClosedChannelException();
         }
         return buf;
     }
@@ -594,13 +598,13 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     }
 
     public void addData(HttpContent msg) {
-        if(discardMode) {
+        if (discardMode) {
             msg.content().release();
             return;
         }
         ByteBuf content = msg.content();
         content.retain();
-        if(content.readableBytes() > 0) {
+        if (content.readableBytes() > 0) {
             contents.add(content);
         }
         if (msg instanceof LastHttpContent) {
@@ -609,7 +613,20 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         if (readCallback != null && !Connectors.isRunningHandlerChain(currentExchange)) {
             executeReadCallback();
         }
+    }
 
+    public void closed() {
+        if (discardMode) {
+            return;
+        }
+        int count = 0;
+        if (currentExchange != null) {
+            count++;
+        }
+        count += queuedExchanges.size();
+        for (int i = 0; i < count; ++i) {
+            contents.add(CLOSED);
+        }
     }
 
     private static class QueuedExchange {

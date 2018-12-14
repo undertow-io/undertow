@@ -199,7 +199,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
      */
     public void flush() throws IOException {
         if (anyAreSet(state, FLAG_CLOSED)) {
-            throw UndertowMessages.MESSAGES.streamIsClosed();
+            return;
         }
         try {
             if (pooledBuffer != null) {

@@ -20,6 +20,7 @@ import javax.net.ssl.SSLEngine;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
@@ -49,6 +50,9 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
         ctx.flush();
+        if(connection != null) {
+            connection.closed();
+        }
     }
 
     @Override
