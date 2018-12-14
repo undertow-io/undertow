@@ -83,7 +83,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
 
     @Override
     public boolean authenticate() {
-        UndertowLogger.SECURITY_LOGGER.debugf("Attempting to authenticate %s, authentication required: %s", exchange.getRequestPath(), isAuthenticationRequired());
+        UndertowLogger.SECURITY_LOGGER.tracef("Attempting to authenticate %s, authentication required: %s", exchange.getRequestPath(), isAuthenticationRequired());
         if(authenticationState == AuthenticationState.ATTEMPTED || (authenticationState == AuthenticationState.CHALLENGE_SENT && !exchange.isResponseStarted())) {
             //we are re-attempted, so we just reset the state
             //see UNDERTOW-263
@@ -107,7 +107,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
             return authTransition();
 
         } else {
-            UndertowLogger.SECURITY_LOGGER.debugf("Authentication result was %s for %s", authenticationState, exchange.getRequestPath());
+            UndertowLogger.SECURITY_LOGGER.tracef("Authentication result was %s for %s", authenticationState, exchange.getRequestPath());
             // Keep in mind this switch statement is only called after a call to authTransitionRequired.
             switch (authenticationState) {
                 case NOT_ATTEMPTED: // No constraint was set that mandated authentication so not reason to hold up the request.
@@ -244,7 +244,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
                 currentMethod = currentMethod.next;
                 AuthenticationMechanismOutcome outcome = mechanism.authenticate(exchange, SecurityContextImpl.this);
                 if(UndertowLogger.SECURITY_LOGGER.isDebugEnabled()) {
-                    UndertowLogger.SECURITY_LOGGER.debugf("Authentication outcome was %s with method %s for %s", outcome, mechanism, exchange.getRequestURI());
+                    UndertowLogger.SECURITY_LOGGER.tracef("Authentication outcome was %s with method %s for %s", outcome, mechanism, exchange.getRequestURI());
                     if(UndertowLogger.SECURITY_LOGGER.isTraceEnabled()) {
                         UndertowLogger.SECURITY_LOGGER.tracef("Contents of exchange after authentication attempt is %s", exchange);
                     }

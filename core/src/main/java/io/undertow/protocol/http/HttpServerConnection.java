@@ -215,14 +215,6 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         return true;
     }
 
-    @Override
-    public void endExchange(HttpServerExchange exchange) {
-        currentExchange = null;
-        if(discardMode) {
-            ctx.close();
-        }
-    }
-
     /**
      * @return true if the connection is open
      */
@@ -333,19 +325,20 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             if (getIoThread().inEventLoop()) {
                 QueuedExchange ex = queuedExchanges.poll();
                 newExchange(ex.exchange, ex.handler);
-            }
-            getIoThread().execute(new Runnable() {
-                @Override
-                public void run() {
-                    if (currentExchange == null) {
-                        QueuedExchange ex = queuedExchanges.poll();
-                        if (ex != null) {
-                            newExchange(ex.exchange, ex.handler);
-                        }
+            } else {
+                getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (currentExchange == null) {
+                            QueuedExchange ex = queuedExchanges.poll();
+                            if (ex != null) {
+                                newExchange(ex.exchange, ex.handler);
+                            }
 
+                        }
                     }
-                }
-            });
+                });
+            }
         }
     }
 
