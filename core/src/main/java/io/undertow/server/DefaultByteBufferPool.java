@@ -26,7 +26,6 @@ import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -41,7 +40,8 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 public class DefaultByteBufferPool implements ByteBufferPool {
 
     private final ThreadLocal<ThreadLocalData> threadLocalCache = new ThreadLocal<>();
-    private final List<WeakReference<ThreadLocalData>> threadLocalDataList = Collections.synchronizedList(new ArrayList<WeakReference<ThreadLocalData>>());
+    // Access requires synchronization on the threadLocalDataList instance
+    private final List<WeakReference<ThreadLocalData>> threadLocalDataList = new ArrayList<>();
     private final ConcurrentLinkedQueue<ByteBuffer> queue = new ConcurrentLinkedQueue<>();
 
     private final boolean direct;
