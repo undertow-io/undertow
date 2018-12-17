@@ -14,6 +14,8 @@
  */
 package io.undertow.protocol.http;
 
+import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.ExecutorService;
 
 import javax.net.ssl.SSLEngine;
@@ -25,6 +27,8 @@ import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.undertow.server.ConnectionSSLSessionInfo;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
@@ -50,9 +54,6 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
         ctx.flush();
-        if(connection != null) {
-            connection.closed();
-        }
     }
 
     @Override
@@ -61,6 +62,12 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
             HttpRequest request = (HttpRequest) msg;
             if(connection == null) {
                 connection = new HttpServerConnection(ctx, blockingExecutor, engine == null ? null : new ConnectionSSLSessionInfo(engine.getSession()));
+                ctx.channel().closeFuture().addListener(new GenericFutureListener<Future<? super Void>>() {
+                    @Override
+                    public void operationComplete(Future<? super Void> future) throws Exception {
+                        connection.closed(new ClosedChannelException());
+                    }
+                });
             }
             HttpServerExchange exchange = new HttpServerExchange(connection);
             for(String header : request.headers().names()) {
@@ -90,6 +97,7 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
+         connection.closed(new IOException(cause));
         ctx.close();
     }
 }

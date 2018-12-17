@@ -148,6 +148,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                     rem -= toWrite;
                     idx += toWrite;
                     if (!buffer.isWritable()) {
+                        setFlags(FLAG_WRITE_STARTED);
                         exchange.writeBlocking(buffer, false);
                         this.pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
                     }
@@ -175,7 +176,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             buffer.writeBytes(b, off, toWrite);
 
             if (!buffer.isWritable()) {
-                setFlags(FLAG_PENDING_DATA);
+                setFlags(FLAG_PENDING_DATA | FLAG_WRITE_STARTED);
                 this.pooledBuffer = null;
                 if (toWrite < len) {
                     ByteBuf remainder = Unpooled.wrappedBuffer(b, off + toWrite, len - toWrite);
@@ -347,26 +348,21 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
             clearFlags(FLAG_PENDING_DATA);
             if (allAreClear(state, FLAG_CLOSED)) {
                 //TODO: better way to avoid recursive invocation
-                exchange.getIoThread().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            servletRequestContext.getCurrentServletContext().invokeOnWritePossible(exchange, listener);
-                        } catch (Exception e) {
+                try {
+                    servletRequestContext.getCurrentServletContext().invokeOnWritePossible(exchange, listener);
+                } catch (Exception e) {
 
-                            if (pooledBuffer != null) {
-                                pooledBuffer.release();
-                                pooledBuffer = null;
-                            }
-                            servletRequestContext.getCurrentServletContext().invokeRunnable(exchange, new Runnable() {
-                                @Override
-                                public void run() {
-                                    listener.onError(e);
-                                }
-                            });
-                        }
+                    if (pooledBuffer != null) {
+                        pooledBuffer.release();
+                        pooledBuffer = null;
                     }
-                });
+                    servletRequestContext.getCurrentServletContext().invokeRunnable(exchange, new Runnable() {
+                        @Override
+                        public void run() {
+                            listener.onError(e);
+                        }
+                    });
+                }
 
             } else {
                 synchronized (ServletOutputStreamImpl.this) {

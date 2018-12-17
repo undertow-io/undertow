@@ -18,7 +18,6 @@ package io.undertow.protocol.http;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketAddress;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.List;
 import java.util.Objects;
@@ -67,9 +66,9 @@ import io.undertow.util.UndertowOptionMap;
  */
 public class HttpServerConnection extends ServerConnection implements Closeable {
 
-    final List<CloseListener> closeListeners = new CopyOnWriteArrayList<>();
+    private final List<CloseListener> closeListeners = new CopyOnWriteArrayList<>();
 
-    final ChannelHandlerContext ctx;
+    private final ChannelHandlerContext ctx;
 
     private volatile HttpServerExchange currentExchange;
     private boolean responseCommited;
@@ -84,61 +83,35 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     //TODO: remove this
     private final LinkedBlockingDeque<ByteBuf> contents = new LinkedBlockingDeque<>();
     private final LinkedBlockingDeque<QueuedExchange> queuedExchanges = new LinkedBlockingDeque<>();
-    private static final ByteBuf LAST = Unpooled.buffer(0);
-    private static final ByteBuf CLOSED = Unpooled.buffer(0);
+    private static final ByteBuf LAST = Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(new byte[0]));
+    private static final ByteBuf CLOSED = Unpooled.unreleasableBuffer(Unpooled.wrappedBuffer(new byte[0]));
     private final SSLSessionInfo sslSessionInfo;
+    private volatile IOException closedException;
+    private ByteBuf queuedAsyncData;
 
     private Consumer<ChannelHandlerContext> upgradeListener;
-    private ByteBuf queuedAsyncData;
-    private IoCallback<?> queuedCalback;
+
+    private IoCallback<?> queuedWriteCallback;
+
     private Object queuedContextObject;
+
     private boolean queuedWriteLast;
-    private boolean inWriteListenerInvocation;
+
+    private boolean inIoInvocation;
+
     private Future<? super Void> writeListenerFuture; //used to prevent recursion when invoking the write listener
+
     private final GenericFutureListener<Future<? super Void>> asyncWriteListener = new GenericFutureListener<Future<? super Void>>() {
         @Override
         public void operationComplete(Future<? super Void> f) throws Exception {
             writeListenerFuture = f;
-            if (inWriteListenerInvocation) {
-                return;
-            }
-            inWriteListenerInvocation = true;
-            try {
-                while (writeListenerFuture != null) {
-                    Future<? super Void> future = writeListenerFuture;
-                    writeListenerFuture = null;
-                    HttpServerExchange currentExchange = HttpServerConnection.this.currentExchange;
-                    if (future.isSuccess()) {
-                        IoCallback callback = queuedCalback;
-                        Object context = queuedContextObject;
-                        queuedAsyncData = null;
-                        queuedContextObject = null;
-                        queuedCalback = null;
-
-                        if (queuedWriteLast) {
-                            Connectors.terminateResponse(currentExchange);
-                        }
-                        callback.onComplete(currentExchange, context);
-                        if (queuedCalback != null) {
-                            write(queuedAsyncData, queuedWriteLast, currentExchange)
-                                    .addListener(this);
-                        }
-                    } else {
-                        IoCallback callback = queuedCalback;
-                        Object context = queuedContextObject;
-                        queuedAsyncData = null;
-                        queuedContextObject = null;
-                        queuedCalback = null;
-                        callback.onException(currentExchange, context, new IOException(future.cause()));
-                    }
-                }
-            } finally {
-                inWriteListenerInvocation = false;
-            }
+            runIoCallbackLoop();
         }
     };
 
     private volatile IoCallback<ByteBuf> readCallback;
+    private boolean asyncReadPossible;
+
 
 
     public HttpServerConnection(ChannelHandlerContext ctx, Executor executor, SSLSessionInfo sslSessionInfo) {
@@ -165,7 +138,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             contents.add(LAST);
         }
         if (readCallback != null && !Connectors.isRunningHandlerChain(currentExchange)) {
-            executeReadCallback();
+            queueReadCallback();
         }
     }
 
@@ -183,6 +156,64 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             contents.poll().release();
         }
 
+    }
+
+    void runIoCallbackLoop() {
+        if (inIoInvocation) {
+            return;
+        }
+        inIoInvocation = true;
+        try {
+            while (writeListenerFuture != null || asyncReadPossible) {
+                Future<? super Void> future = writeListenerFuture;
+                if(future != null) {
+                    writeListenerFuture = null;
+                    HttpServerExchange currentExchange = HttpServerConnection.this.currentExchange;
+                    if (future.isSuccess()) {
+                        IoCallback callback = queuedWriteCallback;
+                        Object context = queuedContextObject;
+                        queuedAsyncData = null;
+                        queuedContextObject = null;
+                        queuedWriteCallback = null;
+
+                        if (queuedWriteLast) {
+                            Connectors.terminateResponse(currentExchange);
+                        }
+                        callback.onComplete(currentExchange, context);
+                        if (queuedWriteCallback != null) {
+                            write(queuedAsyncData, queuedWriteLast, currentExchange)
+                                    .addListener(asyncWriteListener);
+                        }
+                    } else {
+                        IoCallback callback = queuedWriteCallback;
+                        Object context = queuedContextObject;
+                        queuedAsyncData = null;
+                        queuedContextObject = null;
+                        queuedWriteCallback = null;
+                        callback.onException(currentExchange, context, new IOException(future.cause()));
+                    }
+                }
+                if(asyncReadPossible) {
+                    HttpServerExchange exchange = HttpServerConnection.this.currentExchange;
+                    IoCallback<ByteBuf> readCallback = HttpServerConnection.this.readCallback;
+                    HttpServerConnection.this.readCallback = null;
+                    if (readCallback != null) {
+                        ByteBuf data = contents.poll();
+                        if (data == LAST) {
+                            Connectors.terminateRequest(exchange);
+                            readCallback.onComplete(exchange, null);
+                        } else if(data == CLOSED) {
+                            readCallback.onException(exchange, null, new IOException(closedException));
+                        } else if (data != null && data.readableBytes() > 0) {
+                            readCallback.onComplete(exchange, data);
+                        }
+                    }
+                    asyncReadPossible = !contents.isEmpty() && this.readCallback != null;
+                }
+            }
+        } finally {
+            inIoInvocation = false;
+        }
     }
 
     /**
@@ -387,10 +418,10 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
 
         queuedAsyncData = data;
-        queuedCalback = callback;
+        queuedWriteCallback = callback;
         queuedContextObject = context;
         queuedWriteLast = last;
-        if (Connectors.isRunningHandlerChain(exchange) || inWriteListenerInvocation) {
+        if (Connectors.isRunningHandlerChain(exchange)) {
             //delay, either till the handler chain returns or until the write listener invocation is done
             return;
         }
@@ -508,32 +539,16 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         }
     }
 
-    protected void queueReadCallback() {
+    private void queueReadCallback() {
         getIoThread().execute(new Runnable() {
             @Override
             public void run() {
-                executeReadCallback();
+                asyncReadPossible = true;
+                runIoCallbackLoop();
             }
         });
     }
 
-    private void executeReadCallback() {
-        HttpServerExchange exchange = HttpServerConnection.this.currentExchange;
-        IoCallback<ByteBuf> readCallback = HttpServerConnection.this.readCallback;
-        HttpServerConnection.this.readCallback = null;
-        if (readCallback != null) {
-            ByteBuf data = contents.poll();
-            if (data == LAST) {
-                Connectors.terminateRequest(exchange);
-                readCallback.onComplete(exchange, null);
-            } else if(data == CLOSED) {
-                readCallback.onException(exchange, null, new ClosedChannelException());
-            } else if (data != null && data.readableBytes() > 0) {
-                readCallback.onComplete(exchange, data);
-            }
-        }
-
-    }
 
 
     protected void readAsync(IoCallback<ByteBuf> callback) {
@@ -568,7 +583,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             Connectors.terminateRequest(currentExchange);
             return null;
         } else if(buf == CLOSED) {
-            throw new ClosedChannelException();
+            throw new IOException(closedException);
         }
         return buf;
     }
@@ -611,21 +626,20 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             contents.add(LAST);
         }
         if (readCallback != null && !Connectors.isRunningHandlerChain(currentExchange)) {
-            executeReadCallback();
+            asyncReadPossible = true;
+            runIoCallbackLoop();
         }
     }
 
-    public void closed() {
-        if (discardMode) {
-            return;
-        }
+    public void closed(IOException e) {
+        closedException = e;
         int count = 0;
         if (currentExchange != null) {
             count++;
         }
         count += queuedExchanges.size();
         for (int i = 0; i < count; ++i) {
-            contents.add(CLOSED);
+            contents.add(                                                                                                                                                     CLOSED);
         }
     }
 
