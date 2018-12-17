@@ -758,7 +758,13 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
         seenPaths.add(template);
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, endpoint.getDecoders(), endpoint.getEncoders());
-        ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(endpoint, null, template, encodingFactory);
+
+        AnnotatedEndpointFactory annotatedEndpointFactory = null;
+        if(!Endpoint.class.isAssignableFrom(endpoint.getEndpointClass())) {
+            // We may want to check that the path in @ServerEndpoint matches the specified path, and throw if they are not equivalent
+            annotatedEndpointFactory = AnnotatedEndpointFactory.create(endpoint.getEndpointClass(), encodingFactory, template.getParameterNames());
+        }
+        ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(endpoint, null, template, encodingFactory, annotatedEndpointFactory, endpoint.getExtensions());
         configuredServerEndpoints.add(confguredServerEndpoint);
         handleAddingFilterMapping();
     }
