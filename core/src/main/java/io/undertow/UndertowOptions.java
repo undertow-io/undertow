@@ -276,7 +276,7 @@ public class UndertowOptions {
     /**
      * The maximum number of concurrent requests that will be processed at a time. This differs from max concurrent streams in that it is not sent to the remote client.
      *
-     * If the number of pending requests exceeds this number then requests will be queued, the difference between this and max concurrent streams determins
+     * If the number of pending requests exceeds this number then requests will be queued, the difference between this and max concurrent streams determines
      * the maximum number of requests that will be queued.
      *
      * Queued requests are processed by a priority queue, rather than a FIFO based queue, using HTTP2 stream priority.
@@ -323,6 +323,14 @@ public class UndertowOptions {
 
 
     public static final Option<Boolean> ALLOW_UNESCAPED_CHARACTERS_IN_URL = Option.simple(UndertowOptions.class,"ALLOW_UNESCAPED_CHARACTERS_IN_URL", Boolean.class);
+
+    /**
+     * The server shutdown timeout in milliseconds after which the executor will be forcefully shut down interrupting
+     * tasks which are still executing.
+     *
+     * There is no timeout by default.
+     */
+    public static final Option<Integer> SHUTDOWN_TIMEOUT = Option.simple(UndertowOptions.class, "SHUTDOWN_TIMEOUT", Integer.class);
 
     private UndertowOptions() {
 
