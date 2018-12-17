@@ -50,24 +50,25 @@ public class PathTemplateMatcher<T> {
     private volatile int[] lengths = {};
 
     public PathMatchResult<T> match(final String path) {
+        String normalizedPath = "".equals(path) ? "/" : path;
         final Map<String, String> params = new HashMap<>();
-        int length = path.length();
+        int length = normalizedPath.length();
         final int[] lengths = this.lengths;
         for (int i = 0; i < lengths.length; ++i) {
             int pathLength = lengths[i];
             if (pathLength == length) {
-                Set<PathTemplateHolder> entry = pathTemplateMap.get(path);
+                Set<PathTemplateHolder> entry = pathTemplateMap.get(normalizedPath);
                 if (entry != null) {
-                    PathMatchResult<T> res = handleStemMatch(entry, path, params);
+                    PathMatchResult<T> res = handleStemMatch(entry, normalizedPath, params);
                     if (res != null) {
                         return res;
                     }
                 }
             } else if (pathLength < length) {
-                String part = path.substring(0, pathLength);
+                String part = normalizedPath.substring(0, pathLength);
                 Set<PathTemplateHolder> entry = pathTemplateMap.get(part);
                 if (entry != null) {
-                    PathMatchResult<T> res = handleStemMatch(entry, path, params);
+                    PathMatchResult<T> res = handleStemMatch(entry, normalizedPath, params);
                     if (res != null) {
                         return res;
                     }

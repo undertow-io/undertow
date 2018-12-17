@@ -89,7 +89,7 @@ public class RoutingHandlerTestCase {
                     }
                 });
 
-        DefaultServer.setRootHandler(Handlers.routing()
+        HttpHandler handler = Handlers.routing()
                 .add(Methods.GET, "/wild/{test}/*", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -132,82 +132,102 @@ public class RoutingHandlerTestCase {
                         exchange.getResponseSender().send("foo-path" + exchange.getQueryParameters().get("bar"));
                     }
                 })
+                .get("/", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send("GET /");
+                    }
+                })
                 .addAll(commonHandler)
-                .addAll(convienceHandler));
+                .addAll(convienceHandler);
+
+        DefaultServer.setRootHandler(Handlers.path(handler).addPrefixPath("/prefix", handler));
     }
 
     @Test
     public void testRoutingTemplateHandler() throws IOException {
+        runRoutingTemplateHandlerTests("");
+    }
+
+    @Test
+    public void testRoutingTemplateHandlerWithPrefixPath() throws IOException {
+        runRoutingTemplateHandlerTests("/prefix");
+    }
+
+    public void runRoutingTemplateHandlerTests(String prefix) throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix + "/foo");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("foo", HttpClientUtils.readResponse(result));
 
-            HttpDelete delete = new HttpDelete(DefaultServer.getDefaultServerURL() + "/foo");
+            HttpDelete delete = new HttpDelete(DefaultServer.getDefaultServerURL() + prefix + "/foo");
             result = client.execute(delete);
             Assert.assertEquals(StatusCodes.METHOD_NOT_ALLOWED, result.getStatusLine().getStatusCode());
             Assert.assertEquals("", HttpClientUtils.readResponse(result));
 
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/foo");
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + prefix + "/foo");
             result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("posted foo", HttpClientUtils.readResponse(result));
 
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix + "/foo");
             get.addHeader("SomeHeader", "value");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("foo", HttpClientUtils.readResponse(result));
 
 
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix + "/foo");
             get.addHeader("SomeHeader", "special");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("special foo", HttpClientUtils.readResponse(result));
 
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix + "/foo/a");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("foo-path[a]", HttpClientUtils.readResponse(result));
 
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/baz");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix + "/baz");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("baz", HttpClientUtils.readResponse(result));
 
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/baz/a");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix + "/baz/a");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("baz-path[a]", HttpClientUtils.readResponse(result));
 
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/bar");
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix + "/bar");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("GET bar", HttpClientUtils.readResponse(result));
 
-            post = new HttpPost(DefaultServer.getDefaultServerURL() + "/bar");
+            post = new HttpPost(DefaultServer.getDefaultServerURL() + prefix + "/bar");
             result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("POST bar", HttpClientUtils.readResponse(result));
 
-            HttpPut put = new HttpPut(DefaultServer.getDefaultServerURL() + "/bar");
+            HttpPut put = new HttpPut(DefaultServer.getDefaultServerURL() + prefix + "/bar");
             result = client.execute(put);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("PUT bar", HttpClientUtils.readResponse(result));
 
-            delete = new HttpDelete(DefaultServer.getDefaultServerURL() + "/bar");
+            delete = new HttpDelete(DefaultServer.getDefaultServerURL() + prefix + "/bar");
             result = client.execute(delete);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("DELETE bar", HttpClientUtils.readResponse(result));
 
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix);
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("GET /", HttpClientUtils.readResponse(result));
         } finally {
             client.getConnectionManager().shutdown();
         }
     }
-
 
     @Test
     public void testWildCardRoutingTemplateHandler() throws IOException {
