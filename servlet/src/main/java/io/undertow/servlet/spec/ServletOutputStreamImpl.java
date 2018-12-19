@@ -322,20 +322,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         servletRequestContext.getOriginalRequest().getAsyncContext().addAsyncTask(new Runnable() {
             @Override
             public void run() {
-                exchange.getIoThread().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            listener.onWritePossible();
-                        } catch (IOException e) {
-                            try {
-                                listener.onError(e);
-                            } finally {
-                                IoUtils.safeClose(ServletOutputStreamImpl.this);
-                            }
-                        }
-                    }
-                });
+                //TODO: hack to make sure the invocation happens in the callback loop, to prevent recursive callbacks
+                exchange.scheduleIoCallback(listenerCallback, null);
             }
         });
 

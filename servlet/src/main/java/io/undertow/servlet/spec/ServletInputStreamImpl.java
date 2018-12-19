@@ -54,8 +54,6 @@ public class ServletInputStreamImpl extends ServletInputStream {
     private static final int FLAG_CLOSED = 1 << 1;
     private static final int FLAG_FINISHED = 1 << 2;
     private static final int FLAG_ON_DATA_READ_CALLED = 1 << 3;
-    private static final int FLAG_CALL_ON_ALL_DATA_READ = 1 << 4;
-    private static final int FLAG_BEING_INVOKED_IN_IO_THREAD = 1 << 5;
     private static final int FLAG_IS_READY_CALLED = 1 << 6;
 
     private static final AtomicIntegerFieldUpdater<ServletInputStreamImpl> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(ServletInputStreamImpl.class, "state");
@@ -80,12 +78,13 @@ public class ServletInputStreamImpl extends ServletInputStream {
         boolean finished = anyAreSet(state, FLAG_FINISHED);
         if (finished) {
             if (anyAreClear(state, FLAG_ON_DATA_READ_CALLED)) {
-                if (allAreClear(state, FLAG_BEING_INVOKED_IN_IO_THREAD)) {
-                    setFlags(FLAG_ON_DATA_READ_CALLED);
-                    request.getServletContext().invokeOnAllDataRead(request.getExchange(), listener);
-                } else {
-                    setFlags(FLAG_CALL_ON_ALL_DATA_READ);
-                }
+                exchange.scheduleIoCallback(new IoCallback<Object>() {
+                    @Override
+                    public void onComplete(HttpServerExchange exchange, Object context) {
+                        setFlags(FLAG_ON_DATA_READ_CALLED);
+                        request.getServletContext().invokeOnAllDataRead(request.getExchange(), listener);
+                    }
+                }, null);
             }
         }
         boolean ready = anyAreSet(state, FLAG_READY) && !finished;
@@ -114,11 +113,18 @@ public class ServletInputStreamImpl extends ServletInputStream {
         listener = readListener;
         internalListener = new ServletInputStreamChannelListener();
 
+        ByteBuf existing = pooled;
+        pooled = null;
+
         //we resume from an async task, after the request has been dispatched
         asyncContext.addAsyncTask(new Runnable() {
             @Override
             public void run() {
-                exchange.readAsync(internalListener);
+                if(existing != null) {
+                    exchange.scheduleIoCallback(internalListener, existing);
+                } else {
+                    exchange.readAsync(internalListener);
+                }
             }
         });
     }
@@ -236,37 +242,23 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 if (pooled != null) {
                     setFlags(FLAG_READY);
                     if (!anyAreSet(state, FLAG_FINISHED)) {
-                        setFlags(FLAG_BEING_INVOKED_IN_IO_THREAD);
                         try {
-                            exchange.getIoThread().execute(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        request.getServletContext().invokeOnDataAvailable(request.getExchange(), listener);
-                                    } catch (Throwable e) {
-                                        try {
-                                            request.getServletContext().invokeRunnable(request.getExchange(), new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    listener.onError(e);
-                                                }
-                                            });
-                                        } finally {
-                                            if (pooled != null) {
-                                                pooled.release();
-                                                pooled = null;
-                                            }
-                                            exchange.discardRequest();
-                                        }
+                            request.getServletContext().invokeOnDataAvailable(request.getExchange(), listener);
+                        } catch (Throwable e) {
+                            try {
+                                request.getServletContext().invokeRunnable(request.getExchange(), new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        listener.onError(e);
                                     }
+                                });
+                            } finally {
+                                if (pooled != null) {
+                                    pooled.release();
+                                    pooled = null;
                                 }
-                            });
-                        } finally {
-                            clearFlags(FLAG_BEING_INVOKED_IN_IO_THREAD);
-                        }
-                        if (anyAreSet(state, FLAG_CALL_ON_ALL_DATA_READ) && allAreClear(state, FLAG_ON_DATA_READ_CALLED)) {
-                            setFlags(FLAG_ON_DATA_READ_CALLED);
-                            request.getServletContext().invokeOnAllDataRead(request.getExchange(), listener);
+                                exchange.discardRequest();
+                            }
                         }
                     }
                 } else if (pooled == null) {

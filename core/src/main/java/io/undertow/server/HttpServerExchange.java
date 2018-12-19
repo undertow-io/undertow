@@ -290,18 +290,6 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private InetSocketAddress destinationAddress;
 
-    /**
-     * If this flag is set then the request is current running through a
-     * handler chain.
-     * <p>
-     * This will be true most of the time, this only time this will return
-     * false is when performing async operations outside the scope of a call to
-     * {@link Connectors#executeRootHandler(HttpHandler, HttpServerExchange)}
-     * <p>
-     * If this is true then when the call stack returns the exchange will either be dispatched,
-     * or the exchange will be ended.
-     */
-    private volatile boolean inHandlerChain;
 
     public HttpServerExchange(final ServerConnection connection, long maxEntitySize) {
         this(connection, new HeaderMap(), new HeaderMap(), maxEntitySize);
@@ -751,7 +739,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException If this exchange has already been dispatched
      */
     public HttpServerExchange dispatch(final Executor executor, final Runnable runnable) {
-        if (isExecutingHandlerChain()) {
+        if (connection.isExecutingHandlerChain()) {
             if (executor != null) {
                 this.dispatchExecutor = executor;
             }
@@ -815,16 +803,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     Runnable getDispatchTask() {
         return dispatchTask;
     }
-
-    boolean isExecutingHandlerChain() {
-        return inHandlerChain;
-    }
-
-    HttpServerExchange setInCall(boolean value) {
-        inHandlerChain = value;
-        return this;
-    }
-
 
 //    /**
 //     * Upgrade the channel to a raw socket. This method set the response code to 101, and then marks both the
@@ -1204,6 +1182,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         handleFirstData();
         connection.writeFileBlocking(file, position, count, this);
+    }
+
+    public <T> void scheduleIoCallback(IoCallback<T> callback, T context) {
+        getConnection().scheduleIoCallback(callback, context);
     }
 
     /**

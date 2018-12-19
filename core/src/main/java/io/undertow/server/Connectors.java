@@ -65,7 +65,7 @@ public class Connectors {
     }
 
     public static boolean isRunningHandlerChain(HttpServerExchange exchange) {
-        return exchange.isExecutingHandlerChain();
+        return exchange.getConnection().isExecutingHandlerChain();
     }
 
     /**
@@ -296,9 +296,9 @@ public class Connectors {
 
     public static void executeRootHandler(final HttpHandler handler, final HttpServerExchange exchange) {
         try {
-            exchange.setInCall(true);
+            exchange.getConnection().beginExecutingHandlerChain();
             handler.handleRequest(exchange);
-            exchange.setInCall(false);
+            exchange.getConnection().endExecutingHandlerChain();
             boolean resumed = exchange.getConnection().isIoOperationQueued();
             if (exchange.isDispatched()) {
                 if (resumed) {
@@ -328,7 +328,7 @@ public class Connectors {
             }
         } catch (Throwable t) {
             exchange.putAttachment(DefaultResponseListener.EXCEPTION, t);
-            exchange.setInCall(false);
+            exchange.getConnection().endExecutingHandlerChain();
             if (!exchange.isResponseStarted()) {
                 exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
             }

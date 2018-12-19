@@ -269,12 +269,6 @@
 
             <dependency>
                 <groupId>io.undertow</groupId>
-                <artifactId>undertow-io</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.undertow</groupId>
                 <artifactId>undertow-xnio</artifactId>
                 <version>${project.version}</version>
             </dependency>

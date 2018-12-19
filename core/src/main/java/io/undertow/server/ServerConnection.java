@@ -78,6 +78,8 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
 
     protected abstract boolean isIoOperationQueued();
 
+    protected abstract <T> void scheduleIoCallback(IoCallback<T> callback, T context);
+
     /**
      *
      * @return <code>true</code> if this connection supports sending a 100-continue response
@@ -111,6 +113,13 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      * @return The address of the remote peer
      */
     public abstract SocketAddress getPeerAddress();
+
+
+
+    protected abstract boolean isExecutingHandlerChain();
+
+    protected abstract void beginExecutingHandlerChain();
+    protected abstract void endExecutingHandlerChain();
 
     /**
      * Returns the actual address of the remote connection. This will not take things like X-Forwarded-for
