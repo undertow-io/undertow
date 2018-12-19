@@ -43,9 +43,9 @@ public interface IoCallback<T> {
     /**
      * A default callback that simply ends the exchange.
      */
-    IoCallback END_EXCHANGE = new IoCallback<Void>() {
+    IoCallback END_EXCHANGE = new IoCallback<Object>() {
         @Override
-        public void onComplete(HttpServerExchange exchange, Void context) {
+        public void onComplete(HttpServerExchange exchange, Object context) {
             exchange.endExchange();
         }
     };

@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.cache;
 
+import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -103,13 +104,13 @@ public class ResponseCachingSender implements Sender {
     }
 
     @Override
-    public void transferFrom(FileChannel channel, IoCallback callback) {
+    public void transferFrom(RandomAccessFile channel, IoCallback callback) {
         // Transfer never caches
         delegate.transferFrom(channel, callback);
     }
 
     @Override
-    public void transferFrom(FileChannel channel, long start, long length, IoCallback callback) {
+    public void transferFrom(RandomAccessFile channel, long start, long length, IoCallback callback) {
         delegate.transferFrom(channel, start, length, callback);
     }
 

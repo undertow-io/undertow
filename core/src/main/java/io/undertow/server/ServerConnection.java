@@ -20,6 +20,7 @@ package io.undertow.server;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.SocketAddress;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.Executor;
@@ -30,7 +31,6 @@ import javax.net.ssl.SSLSession;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
@@ -259,8 +259,8 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
 
     public abstract void runResumeReadWrite();
 
-    public abstract <T> void writeFileAsync(FileChannel file, long position, long count, HttpServerExchange exchange, T context, IoCallback<T> callback);
-    public abstract void writeFileBlocking(FileChannel file, long position, long count, HttpServerExchange exchange) throws IOException;
+    public abstract <T> void writeFileAsync(RandomAccessFile file, long position, long count, HttpServerExchange exchange, IoCallback<T> context, T callback);
+    public abstract void writeFileBlocking(RandomAccessFile file, long position, long count, HttpServerExchange exchange) throws IOException;
 
 
     protected  void setUpgradeListener(Consumer<ChannelHandlerContext> listener) {

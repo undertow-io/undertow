@@ -16,6 +16,7 @@
 package io.undertow.server;
 
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -48,17 +49,17 @@ public class AsyncSenderImpl implements Sender {
 
 
     @Override
-    public void transferFrom(FileChannel channel, IoCallback<Sender> callback) {
+    public void transferFrom(RandomAccessFile channel, IoCallback<Sender> callback) {
         try {
-            exchange.writeFileAsync(channel, 0, channel.size(), this, callback);
+            exchange.writeFileAsync(channel, 0, channel.length(), callback, this);
         } catch (IOException e) {
             callback.onException(exchange, this, e);
         }
     }
 
     @Override
-    public void transferFrom(FileChannel channel, long start, long length, IoCallback callback) {
-        callback.onException(exchange, null, new IOException("NYI"));
+    public void transferFrom(RandomAccessFile channel, long start, long length, IoCallback<Sender> callback) {
+        exchange.writeFileAsync(channel, start, length, callback, this);
     }
 
     @Override

@@ -24,10 +24,8 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
 
 /**
- *
  * Handler that attaches a cache to the exchange, a handler can query this cache to see if the
  * cache has a cached copy of the content, and if so have the cache serve this content automatically.
- *
  *
  * @author Stuart Douglas
  */
@@ -83,7 +81,7 @@ public class CacheHandler implements HttpHandler {
 //                return new ResponseCachingStreamSinkConduit(factory.create(), entry, length);
 //            }
 //        });
-//        next.handleRequest(exchange);
+        next.handleRequest(exchange);
     }
 
     public HttpHandler getNext() {

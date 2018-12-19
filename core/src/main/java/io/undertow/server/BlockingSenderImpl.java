@@ -18,6 +18,7 @@ package io.undertow.server;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 
@@ -41,7 +42,7 @@ public class BlockingSenderImpl implements Sender {
     private final OutputStream outputStream;
     private boolean inCall;
     private ByteBuf next;
-    private FileChannel pendingFile;
+    private RandomAccessFile pendingFile;
     private IoCallback queuedCallback;
     private long pendingFileStart;
     private long pendingFileEnd;
@@ -110,13 +111,13 @@ public class BlockingSenderImpl implements Sender {
     }
 
     @Override
-    public void transferFrom(FileChannel source, IoCallback callback) {
+    public void transferFrom(RandomAccessFile source, IoCallback callback) {
         try {
             if (inCall) {
-                queue(source, callback, 0, source.size());
+                queue(source, callback, 0, source.length());
                 return;
             }
-            performTransfer(source, callback, 0, source.size());
+            performTransfer(source, callback, 0, source.length());
         } catch (IOException e) {
             callback.onException(exchange, null, e);
             return;
@@ -125,7 +126,7 @@ public class BlockingSenderImpl implements Sender {
     }
 
     @Override
-    public void transferFrom(FileChannel channel, long start, long length, IoCallback callback) {
+    public void transferFrom(RandomAccessFile channel, long start, long length, IoCallback callback) {
 
         if (inCall) {
             queue(channel, callback, start, length);
@@ -135,8 +136,9 @@ public class BlockingSenderImpl implements Sender {
         invokeOnComplete(callback);
     }
 
-    private void performTransfer(FileChannel source, IoCallback callback, long start, long length) {
+    private void performTransfer(RandomAccessFile file, IoCallback callback, long start, long length) {
         ByteBuf buffer = exchange.getConnection().getByteBufferPool().heapBuffer();
+        FileChannel source = file.getChannel();
         try {
             source.position(start);
             long pos = start;
@@ -220,7 +222,7 @@ public class BlockingSenderImpl implements Sender {
         while (next != null || pendingFile != null) {
             ByteBuf next = this.next;
             IoCallback queuedCallback = this.queuedCallback;
-            FileChannel file = this.pendingFile;
+            RandomAccessFile file = this.pendingFile;
             this.next = null;
             this.queuedCallback = null;
             this.pendingFile = null;
@@ -248,7 +250,7 @@ public class BlockingSenderImpl implements Sender {
         queuedCallback = ioCallback;
     }
 
-    private void queue(final FileChannel source, final IoCallback ioCallback, long start, long end) {
+    private void queue(final RandomAccessFile source, final IoCallback ioCallback, long start, long end) {
         //if data is sent from withing the callback we queue it, to prevent the stack growing indefinitely
         if (pendingFile != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();

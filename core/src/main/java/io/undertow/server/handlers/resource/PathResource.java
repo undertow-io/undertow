@@ -1,7 +1,9 @@
 package io.undertow.server.handlers.resource;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.channels.FileChannel;
@@ -106,28 +108,25 @@ public class PathResource implements RangeAwareResource {
 
     @Override
     public void serve(final Sender sender, final HttpServerExchange exchange, final IoCallback callback) {
-        serveImpl(sender, exchange, -1, -1, callback, false);
+        try {
+            serveImpl(sender, exchange, 0, Files.size(file), callback);
+        } catch (IOException e) {
+            callback.onException(exchange, sender, e);
+        }
     }
     @Override
     public void serveRange(final Sender sender, final HttpServerExchange exchange, final long start, final long end, final IoCallback callback) {
-        serveImpl(sender, exchange, start, end, callback, true);
+        serveImpl(sender, exchange, start, end + 1, callback);
 
     }
 
-    private void serveImpl(final Sender sender, final HttpServerExchange exchange, final long start, final long end, final IoCallback callback, final boolean range) {
-        FileChannel fileChannel;
+    private void serveImpl(final Sender sender, final HttpServerExchange exchange, final long start, final long end, final IoCallback<Sender> callback) {
+        RandomAccessFile fileChannel;
         try {
-            //TODO: this is all broken, needs to be fixed
-            fileChannel = FileChannel.open(file, StandardOpenOption.READ);
-            sender.transferFrom(fileChannel, start, end - start, callback);
-            if (range) {
-                fileChannel.position(start);
-            }
-        } catch (NoSuchFileException e) {
+            fileChannel = new RandomAccessFile(file.toFile(), "r");
+            sender.transferFrom(fileChannel, start, end - start , callback);
+        } catch (FileNotFoundException e) {
             exchange.setStatusCode(StatusCodes.NOT_FOUND);
-            callback.onException(exchange, sender, e);
-        } catch (IOException e) {
-            exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
             callback.onException(exchange, sender, e);
         }
     }

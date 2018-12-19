@@ -21,6 +21,7 @@ package io.undertow.servlet.core;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.CharacterCodingException;
@@ -57,7 +58,7 @@ public class BlockingWriterSenderImpl implements Sender {
     private final HttpServerExchange exchange;
     private final PrintWriter writer;
 
-    private FileChannel pendingFile;
+    private RandomAccessFile pendingFile;
     private boolean inCall;
     private String next;
     private IoCallback queuedCallback;
@@ -124,7 +125,7 @@ public class BlockingWriterSenderImpl implements Sender {
     }
 
     @Override
-    public void transferFrom(FileChannel source, IoCallback callback) {
+    public void transferFrom(RandomAccessFile source, IoCallback callback) {
         if (inCall) {
             queue(source, callback);
             return;
@@ -133,11 +134,11 @@ public class BlockingWriterSenderImpl implements Sender {
     }
 
     @Override
-    public void transferFrom(FileChannel channel, long start, long length, IoCallback callback) {
+    public void transferFrom(RandomAccessFile channel, long start, long length, IoCallback callback) {
         throw new RuntimeException("NYI");
     }
 
-    private void performTransfer(FileChannel source, IoCallback callback) {
+    private void performTransfer(RandomAccessFile source, IoCallback callback) {
         throw new RuntimeException("NYI");
 //
 //        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
@@ -242,7 +243,7 @@ public class BlockingWriterSenderImpl implements Sender {
         next = data;
         queuedCallback = callback;
     }
-    private void queue(final FileChannel data, final IoCallback callback) {
+    private void queue(final RandomAccessFile data, final IoCallback callback) {
         //if data is sent from withing the callback we queue it, to prevent the stack growing indefinitely
         if (next != null || pendingFile != null) {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();

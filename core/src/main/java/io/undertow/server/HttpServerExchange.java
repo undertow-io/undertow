@@ -27,6 +27,7 @@ import static io.undertow.util.Bits.intBitMask;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
@@ -1168,19 +1169,21 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
     }
 
-    public <T> void writeFileAsync(FileChannel file, long position, long count, T context, IoCallback<T> callback) {
+    public <T> void writeFileAsync(RandomAccessFile file, long position, long count, IoCallback<T> callback, T context) {
         if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
             callback.onException(this, context, new IOException(UndertowMessages.MESSAGES.responseComplete()));
         }
         handleFirstData();
-        connection.writeFileAsync(file, position, count, this, context, callback);
+        state |= FLAG_LAST_DATA_QUEUED;
+        connection.writeFileAsync(file, position, count, this, callback, context);
     }
 
-    void writeFileBlocking(FileChannel file, long position, long count) throws IOException {
+    public void writeFileBlocking(RandomAccessFile file, long position, long count) throws IOException {
         if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
             throw UndertowMessages.MESSAGES.responseComplete();
         }
         handleFirstData();
+        state |= FLAG_LAST_DATA_QUEUED;
         connection.writeFileBlocking(file, position, count, this);
     }
 

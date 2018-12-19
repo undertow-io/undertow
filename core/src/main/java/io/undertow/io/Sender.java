@@ -18,6 +18,7 @@
 
 package io.undertow.io;
 
+import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -124,7 +125,7 @@ public interface Sender {
      * @param channel  the file channel to transfer
      * @param callback The callback
      */
-    void transferFrom(final FileChannel channel, final IoCallback<Sender> callback);
+    void transferFrom(final RandomAccessFile channel, final IoCallback<Sender> callback);
 
     /**
      * Transfers all content from the specified file
@@ -132,7 +133,7 @@ public interface Sender {
      * @param channel  the file channel to transfer
      * @param callback The callback
      */
-    void transferFrom(final FileChannel channel, long start, long length, final IoCallback<Sender> callback);
+    void transferFrom(final RandomAccessFile channel, long start, long length, final IoCallback<Sender> callback);
     /**
      * Closes this sender asynchronously. The given callback is notified on completion
      *

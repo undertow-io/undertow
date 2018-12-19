@@ -17,8 +17,8 @@ package io.undertow.protocol.http;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.SocketAddress;
-import java.nio.channels.FileChannel;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -39,11 +39,14 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
+import io.netty.handler.codec.http.HttpChunkedInput;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -132,7 +135,6 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     private volatile IoCallback<ByteBuf> readCallback;
 
 
-
     public HttpServerConnection(ChannelHandlerContext ctx, Executor executor, SSLSessionInfo sslSessionInfo) {
         this.ctx = ctx;
         this.executor = executor;
@@ -181,7 +183,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         if (!canInvokeIoCallback) {
             return;
         }
-        if(!ctx.executor().inEventLoop()) {
+        if (!ctx.executor().inEventLoop()) {
             ctx.executor().execute(runEventLoop);
             return;
         }
@@ -190,7 +192,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         try {
             while (writeListenerFuture != null || asyncReadPossible || !queuedCallbacks.isEmpty()) {
                 Future<? super Void> future = writeListenerFuture;
-                if(future != null) {
+                if (future != null) {
                     writeListenerFuture = null;
                     HttpServerExchange currentExchange = HttpServerConnection.this.currentExchange;
                     if (future.isSuccess()) {
@@ -211,7 +213,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
                         callback.onException(currentExchange, context, new IOException(future.cause()));
                     }
                 }
-                if(asyncReadPossible) {
+                if (asyncReadPossible) {
                     HttpServerExchange exchange = HttpServerConnection.this.currentExchange;
                     IoCallback<ByteBuf> readCallback = HttpServerConnection.this.readCallback;
                     HttpServerConnection.this.readCallback = null;
@@ -220,7 +222,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
                         if (data == LAST) {
                             Connectors.terminateRequest(exchange);
                             readCallback.onComplete(exchange, null);
-                        } else if(data == CLOSED) {
+                        } else if (data == CLOSED) {
                             readCallback.onException(exchange, null, new IOException(closedException));
                         } else if (data != null && data.readableBytes() > 0) {
                             readCallback.onComplete(exchange, data);
@@ -318,6 +320,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         inHandlerChain = true;
         canInvokeIoCallback = false;
     }
+
     protected void endExecutingHandlerChain() {
         inHandlerChain = false;
         canInvokeIoCallback = true;
@@ -454,14 +457,12 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             callback.onException(exchange, context, new IOException(UndertowMessages.MESSAGES.dataAlreadyQueued()));
             return;
         }
-
-
         queuedWriteCallback = callback;
         queuedContextObject = context;
         queuedWriteLast = last;
         //TODO: use a custom promise implementation for max efficency
         //TODO: this whole this needs some work
-        ChannelFuture res = write(data, last, exchange);
+        ChannelFuture res = write(data, last, exchange, true);
         res.addListener(asyncWriteListener);
 
     }
@@ -478,7 +479,8 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     }
 
     public void writeBlocking(ByteBuf data, boolean last, HttpServerExchange exchange) throws IOException {
-        ChannelFuture write = write(data, last, exchange);
+
+        ChannelFuture write = write(data, last, exchange, true);
         try {
             write.get();
         } catch (InterruptedException e) {
@@ -495,56 +497,14 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         }
     }
 
-    public ChannelFuture write(Object sendObj, boolean last, HttpServerExchange exchange) {
+    public ChannelFuture write(ByteBuf data, boolean last, HttpServerExchange exchange, boolean flush) {
         if (exchange != this.currentExchange || responseComplete) {
             DefaultChannelPromise defaultChannelPromise = new DefaultChannelPromise(ctx.channel());
-            defaultChannelPromise.setFailure(new IOException("Exchange has completed"));
+            defaultChannelPromise.setFailure(UndertowMessages.MESSAGES.exchangeAlreadyComplete());
             return defaultChannelPromise;
         }
-        ByteBuf data = (ByteBuf) sendObj;
         if (last) {
-            responseComplete = true;
-            HttpContent resp;
-            if (responseCommited) {
-                if (data == null) {
-                    resp = new DefaultLastHttpContent();
-                } else {
-                    resp = new DefaultLastHttpContent(data);
-                }
-            } else {
-                DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(exchange.getStatusCode()), data == null ? Unpooled.EMPTY_BUFFER : data);
-                for (HeaderValues i : exchange.getResponseHeaders()) {
-                    response.headers().add(i.getHeaderName().toString(), i);
-                }
-                if (!response.headers().contains(Headers.CONTENT_LENGTH_STRING)) {
-                    response.headers().add(Headers.CONTENT_LENGTH_STRING, data == null ? 0 : data.readableBytes());
-                }
-                resp = response;
-
-            }
-
-            if (upgradeListener != null) {
-                //we really need to avoid races, so as soon as the data is send we need to remove the HTTP handlers
-                //and install the upgrade ones
-                ChannelPromise promose = ctx.newPromise();
-                promose.addListener(new GenericFutureListener<Future<? super Void>>() {
-                    @Override
-                    public void operationComplete(Future<? super Void> future) throws Exception {
-                        ctx.pipeline().remove(HttpServerCodec.class);
-                        ctx.pipeline().remove(NettyHttpServerHandler.class);
-                        upgradeListener.accept(ctx);
-                    }
-                });
-                getIoThread().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        ctx.writeAndFlush(resp, promose);
-                    }
-                });
-                return promose;
-            } else {
-                return ctx.writeAndFlush(resp);
-            }
+            return writeLast(data, exchange);
         }
         if (responseCommited) {
             return ctx.writeAndFlush(new DefaultHttpContent(data));
@@ -557,11 +517,67 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             if (!response.headers().contains(Headers.CONTENT_LENGTH_STRING)) {
                 response.headers().set(Headers.TRANSFER_ENCODING_STRING, "chunked");
             }
+            if (data == null && flush) {
+                return ctx.writeAndFlush(response);
+            } else if (data == null) {
+                return ctx.write(response);
+            } else {
+                ctx.write(response);
+                if (flush) {
+                    return ctx.writeAndFlush(new DefaultHttpContent(data));
+                } else {
+                    return ctx.write(new DefaultHttpContent(data));
+                }
+            }
 
-            ctx.write(response);
-            return ctx.writeAndFlush(new DefaultHttpContent(data));
         }
 
+    }
+
+    private ChannelFuture writeLast(ByteBuf data, HttpServerExchange exchange) {
+        responseComplete = true;
+        HttpContent resp;
+        if (responseCommited) {
+            if (data == null) {
+                resp = new DefaultLastHttpContent();
+            } else {
+                resp = new DefaultLastHttpContent(data);
+            }
+        } else {
+            DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(exchange.getStatusCode()), data == null ? Unpooled.EMPTY_BUFFER : data);
+            for (HeaderValues i : exchange.getResponseHeaders()) {
+                response.headers().add(i.getHeaderName().toString(), i);
+            }
+            response.headers().remove(Headers.TRANSFER_ENCODING_STRING);
+            if (!response.headers().contains(Headers.CONTENT_LENGTH_STRING)) {
+                response.headers().add(Headers.CONTENT_LENGTH_STRING, data == null ? 0 : data.readableBytes());
+            }
+            resp = response;
+
+        }
+
+        if (upgradeListener != null) {
+            //we really need to avoid races, so as soon as the data is send we need to remove the HTTP handlers
+            //and install the upgrade ones
+            ChannelPromise promose = ctx.newPromise();
+            promose.addListener(new GenericFutureListener<Future<? super Void>>() {
+                @Override
+                public void operationComplete(Future<? super Void> future) throws Exception {
+                    ctx.pipeline().remove(HttpServerCodec.class);
+                    ctx.pipeline().remove(NettyHttpServerHandler.class);
+                    upgradeListener.accept(ctx);
+                }
+            });
+            getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    ctx.writeAndFlush(resp, promose);
+                }
+            });
+            return promose;
+        } else {
+            return ctx.writeAndFlush(resp);
+        }
     }
 
     public ChannelPromise createPromise() {
@@ -585,14 +601,60 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     }
 
     @Override
-    public <T> void writeFileAsync(FileChannel file, long position, long count, HttpServerExchange exchange, T context, IoCallback<T> callback) {
-        DefaultFileRegion region = new DefaultFileRegion(file, position, count);
-        callback.onException(exchange, null, new IOException("NOT IMPLEMENTED"));
+    public <T> void writeFileAsync(RandomAccessFile file, long position, long count, HttpServerExchange exchange, IoCallback<T> callback, T context) {
+
+        Objects.requireNonNull(callback);
+        if (queuedWriteCallback != null) {
+            callback.onException(exchange, context, new IOException(UndertowMessages.MESSAGES.dataAlreadyQueued()));
+            return;
+        }
+        queuedWriteCallback = callback;
+        queuedContextObject = context;
+        queuedWriteLast = true;
+
+
+        if (!responseCommited) {
+            write(null, false, exchange, false);
+        }
+        if (ctx.pipeline().get(SslHandler.class) == null) {
+            ctx.write(new DefaultFileRegion(file.getChannel(), position, count), ctx.newProgressivePromise());
+            // Write the end marker.
+            write(null, true, exchange, true)
+                    .addListener(asyncWriteListener);
+        } else {
+            try {
+                responseComplete = true;
+                ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(file, position, count, 8192)),
+                        ctx.newProgressivePromise()).addListener(asyncWriteListener);
+            } catch (IOException e) {
+                callback.onException(exchange, context, e);
+            }
+            // HttpChunkedInput will write the end marker (LastHttpContent) for us.
+        }
     }
 
     @Override
-    public void writeFileBlocking(FileChannel file, long position, long count, HttpServerExchange exchange) throws IOException {
-
+    public void writeFileBlocking(RandomAccessFile file, long position, long count, HttpServerExchange exchange) throws IOException {
+        if (!responseCommited) {
+            write(null, false, exchange, false);
+        }
+        if (ctx.pipeline().get(SslHandler.class) == null) {
+            ctx.write(new DefaultFileRegion(file.getChannel(), position, count), ctx.newProgressivePromise());
+            // Write the end marker.
+            try {
+                write(null, true, exchange, true).get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new IOException(e);
+            }
+        } else {
+            try {
+                ctx.writeAndFlush(new HttpChunkedInput(new ChunkedFile(file, position, count, 8192)),
+                        ctx.newProgressivePromise()).get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new IOException(e);
+            }
+            // HttpChunkedInput will write the end marker (LastHttpContent) for us.
+        }
     }
 
     @Override
@@ -607,7 +669,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         if (buf == LAST) {
             Connectors.terminateRequest(currentExchange);
             return null;
-        } else if(buf == CLOSED) {
+        } else if (buf == CLOSED) {
             throw new IOException(closedException);
         }
         return buf;
@@ -663,7 +725,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         }
         count += queuedExchanges.size();
         for (int i = 0; i < count; ++i) {
-            contents.add(                                                                                                                                                     CLOSED);
+            contents.add(CLOSED);
         }
     }
 
@@ -676,6 +738,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             this.handler = handler;
         }
     }
+
     private static class QueuedCallback {
         final IoCallback callback;
         final Object context;

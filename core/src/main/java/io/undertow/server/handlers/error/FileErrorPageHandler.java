@@ -21,6 +21,7 @@ package io.undertow.server.handlers.error;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -128,15 +129,9 @@ public class FileErrorPageHandler implements HttpHandler {
         exchange.dispatch(new Runnable() {
             @Override
             public void run() {
-                final FileChannel fileChannel;
+                final RandomAccessFile fileChannel;
                 try {
-                    try {
-                        fileChannel = FileChannel.open(file, StandardOpenOption.READ);
-                    } catch (FileNotFoundException e) {
-                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                        exchange.endExchange();
-                        return;
-                    }
+                    fileChannel = new RandomAccessFile(file.toFile(), "r");
                 } catch (IOException e) {
                     UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
                     exchange.endExchange();
