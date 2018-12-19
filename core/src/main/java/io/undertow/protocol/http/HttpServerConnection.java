@@ -134,11 +134,13 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     private volatile IoCallback<ByteBuf> readCallback;
 
+    private static CopyOnWriteArrayList<Object> INST = new CopyOnWriteArrayList<>();
 
     public HttpServerConnection(ChannelHandlerContext ctx, Executor executor, SSLSessionInfo sslSessionInfo) {
         this.ctx = ctx;
         this.executor = executor;
         this.sslSessionInfo = sslSessionInfo;
+        INST.add(this);
     }
 
     @Override
@@ -228,13 +230,13 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
                             readCallback.onComplete(exchange, data);
                         }
                     }
-                    asyncReadPossible = !contents.isEmpty() && this.readCallback != null;
                 }
                 QueuedCallback c = queuedCallbacks.poll();
                 while (c != null) {
                     c.callback.onComplete(currentExchange, c.context);
                     c = queuedCallbacks.poll();
                 }
+                asyncReadPossible = !contents.isEmpty() && this.readCallback != null;
             }
         } finally {
             canInvokeIoCallback = true;

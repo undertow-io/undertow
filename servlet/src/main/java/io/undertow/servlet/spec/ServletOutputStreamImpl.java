@@ -252,8 +252,12 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
 
 
     public void resetBuffer() {
+        if(anyAreSet(state, FLAG_WRITE_STARTED)) {
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+        }
         if (pooledBuffer != null) {
             pooledBuffer.clear();
+            written = 0;
         }
     }
 
