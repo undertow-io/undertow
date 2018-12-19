@@ -114,6 +114,13 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     private volatile boolean inHandlerChain;
     private volatile boolean canInvokeIoCallback = false;
 
+    private final Runnable runEventLoop = new Runnable() {
+        @Override
+        public void run() {
+            runIoCallbackLoop();
+        }
+    };
+
     private final GenericFutureListener<Future<? super Void>> asyncWriteListener = new GenericFutureListener<Future<? super Void>>() {
         @Override
         public void operationComplete(Future<? super Void> f) throws Exception {
@@ -150,7 +157,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             contents.add(LAST);
         }
         if (readCallback != null && !Connectors.isRunningHandlerChain(currentExchange)) {
-            invokeIoLoop();
+            runIoCallbackLoop();
         }
     }
 
@@ -172,6 +179,10 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     void runIoCallbackLoop() {
         if (!canInvokeIoCallback) {
+            return;
+        }
+        if(!ctx.executor().inEventLoop()) {
+            ctx.executor().execute(runEventLoop);
             return;
         }
         canInvokeIoCallback = false;
@@ -559,34 +570,17 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     @Override
     public void runResumeReadWrite() {
-        if (readCallback != null && !contents.isEmpty()) {
-            invokeIoLoop();
-        } else if(queuedWriteCallback != null) {
-            getIoThread().execute(new Runnable() {
-                @Override
-                public void run() {
-                    runIoCallbackLoop();
-                }
-            });
+        if (readCallback != null && !contents.isEmpty() || queuedWriteCallback != null) {
+            runIoCallbackLoop();
         }
     }
-
-    private void invokeIoLoop() {
-        getIoThread().execute(new Runnable() {
-            @Override
-            public void run() {
-                runIoCallbackLoop();
-            }
-        });
-    }
-
 
 
     protected void readAsync(IoCallback<ByteBuf> callback) {
         HttpServerExchange exchange = this.currentExchange;
         this.readCallback = callback;
         if (!Connectors.isRunningHandlerChain(exchange) && !contents.isEmpty()) {
-            invokeIoLoop();
+            runIoCallbackLoop();
         }
     }
 
