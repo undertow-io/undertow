@@ -29,6 +29,7 @@ import io.undertow.util.Headers;
 import org.xnio.Buffers;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 
@@ -80,11 +81,9 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         if(anyAreSet(state, FLAG_WRITE_STARTED)) {
             throw UndertowMessages.MESSAGES.cannotResetBuffer();
         }
-        if(pooledBuffer != null) {
-            pooledBuffer.close();
-            pooledBuffer = null;
-        }
-
+        buffer = null;
+        IoUtils.safeClose(pooledBuffer);
+        pooledBuffer = null;
     }
 
     public long getBytesWritten() {
@@ -302,6 +301,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         buffer.clear();
         state |= FLAG_WRITE_STARTED;
     }
+
     @Override
     public void transferFrom(FileChannel source) throws IOException {
         if (anyAreSet(state, FLAG_CLOSED)) {
