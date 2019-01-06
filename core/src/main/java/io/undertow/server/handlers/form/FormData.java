@@ -256,11 +256,14 @@ public final class FormData implements Iterable<String> {
             if (file != null) {
                 try {
                     Files.move(file, target);
+                    return;
                 } catch (IOException e) {
-                    Files.copy(getInputStream(), target);
+                    // ignore and let the Files.copy, outside
+                    // this if block, take over and attempt to copy it
                 }
-            } else {
-                Files.copy(getInputStream(), target);
+            }
+            try (InputStream is = getInputStream()) {
+                Files.copy(is, target);
             }
         }
     }
