@@ -30,6 +30,7 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.util.PathTemplateMatch;
 import io.undertow.util.URLUtils;
 
 /**
@@ -72,6 +73,15 @@ public class URLDecodingHandler implements HttpHandler {
                 }
                 exchange.getQueryParameters().clear();
                 exchange.getQueryParameters().putAll(newParams);
+                PathTemplateMatch pathTemplateMatch = exchange.getAttachment(PathTemplateMatch.ATTACHMENT_KEY);
+                if (pathTemplateMatch != null) {
+                    Map<String, String> parameters = pathTemplateMatch.getParameters();
+                    if (parameters != null) {
+                        for (Map.Entry<String, String> entry : parameters.entrySet()) {
+                            entry.setValue(URLUtils.decode(entry.getValue(), charset, true, true, sb));
+                        }
+                    }
+                }
             }
         }
         next.handleRequest(exchange);
