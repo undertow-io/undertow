@@ -45,6 +45,8 @@ import io.undertow.util.URLUtils;
  */
 public class URLDecodingHandler implements HttpHandler {
 
+    private static final ThreadLocal<StringBuilder> DECODING_BUFFER_CACHE = ThreadLocal.withInitial(StringBuilder::new);
+
     private final HttpHandler next;
     private final String charset;
 
@@ -57,7 +59,7 @@ public class URLDecodingHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         boolean decodeDone = exchange.getConnection().getUndertowOptions().get(UndertowOptions.DECODE_URL, true);
         if (!decodeDone) {
-            final StringBuilder sb = new StringBuilder();
+            final StringBuilder sb = getStringBuilderForDecoding(exchange);
             decodePath(exchange, charset, sb);
             decodeQueryString(exchange, charset, sb);
             decodePathTemplateMatch(exchange, charset, sb);
@@ -97,6 +99,16 @@ public class URLDecodingHandler implements HttpHandler {
                 }
             }
         }
+    }
+
+    private static StringBuilder getStringBuilderForDecoding(HttpServerExchange exchange) {
+        if (exchange.isInIoThread()) {
+            // Unnecessary to clear the buffer here, URLUtils.decode updates the buffer length before usage.
+            // We don't need to check the size after use because decoded size is bounded to the request line,
+            // which cannot exceed one buffer.
+            return DECODING_BUFFER_CACHE.get();
+        }
+        return new StringBuilder();
     }
 
     public static class Builder implements HandlerBuilder {
