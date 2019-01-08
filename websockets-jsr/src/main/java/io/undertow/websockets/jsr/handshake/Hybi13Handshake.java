@@ -58,6 +58,8 @@ public class Hybi13Handshake extends Hybi07Handshake {
         try {
             final String solution = solve(key);
             response.setHeader(Headers.SEC_WEB_SOCKET_ACCEPT_STRING, solution);
+
+            HandshakeUtil.prepareUpgrade(config.getEndpointConfiguration(), exchange);
             performUpgrade(request, response);
         } catch (NoSuchAlgorithmException e) {
             return;

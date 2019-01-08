@@ -87,4 +87,7 @@ public interface JsrWebSocketLogger extends BasicLogger {
 
     @Message(id = 26012, value = "Buffer pool was not set on WebSocketDeploymentInfo, and there is no default to use")
     IllegalArgumentException bufferPoolWasNullAndNoDefault();
+
+    @Message(id = 26013, value = "Unhandled error in annotated websocket endpoint %s")
+    void unhandledErrorInAnnotatedEndpoint(Object instance, @Cause Throwable thr);
 }

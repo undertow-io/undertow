@@ -42,6 +42,7 @@ import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.undertow.server.session.SecureRandomSessionIdGenerator;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.websockets.client.WebSocketClient;
@@ -58,7 +59,7 @@ import io.undertow.xnio.util.WorkerUtils;
 public final class UndertowSession implements Session {
 
     private final String sessionId;
-    private WebSocketChannel webSocketChannel;
+    private ChannelHandlerContext ctx;
     private FrameHandler frameHandler;
     private final ServerWebSocketContainer container;
     private final Principal user;
@@ -82,13 +83,13 @@ public final class UndertowSession implements Session {
     private int disconnectCount = 0;
     private int failedCount = 0;
 
-    UndertowSession(WebSocketChannel webSocketChannel, URI requestUri, Map<String, String> pathParameters,
+    UndertowSession(ChannelHandlerContext ctx, URI requestUri, Map<String, String> pathParameters,
                     Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
                     InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString,
                     final Encoding encoding, final SessionContainer openSessions, final String subProtocol,
                     final List<Extension> extensions, WebSocketClient.ConnectionBuilder clientConnectionBuilder) {
         assert openSessions != null;
-        this.webSocketChannel = webSocketChannel;
+        this.ctx = ctx;
         this.queryString = queryString;
         this.encoding = encoding;
         this.openSessions = openSessions;
@@ -167,17 +168,17 @@ public final class UndertowSession implements Session {
 
     @Override
     public boolean isOpen() {
-        return webSocketChannel.isOpen();
+        return ctx.channel().isOpen();
     }
 
     @Override
     public long getMaxIdleTimeout() {
-        return webSocketChannel.getIdleTimeout();
+        //return webSocketChannel.getIdleTimeout();
     }
 
     @Override
     public void setMaxIdleTimeout(final long milliseconds) {
-        webSocketChannel.setIdleTimeout(milliseconds);
+        //webSocketChannel.setIdleTimeout(milliseconds);
     }
 
     @Override
@@ -380,8 +381,8 @@ public final class UndertowSession implements Session {
         return encoding;
     }
 
-    public WebSocketChannel getWebSocketChannel() {
-        return webSocketChannel;
+    public ChannelHandlerContext getWebSocketChannel() {
+        return ctx;
     }
 
     private void setupWebSocketChannel(WebSocketChannel webSocketChannel) {
@@ -416,5 +417,9 @@ public final class UndertowSession implements Session {
 
     boolean isSessionClosed() {
         return closed.get();
+    }
+
+    public Executor getWorker() {
+        return executor;
     }
 }

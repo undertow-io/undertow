@@ -60,9 +60,9 @@ public final class HandshakeUtil {
     /**
      * Prepare for upgrade
      */
-    public static void prepareUpgrade(final ServerEndpointConfig config, final HttpServletRequest request, HttpServletResponse response) {
-        ExchangeHandshakeRequest request = new ExchangeHandshakeRequest(request, response);
-        ExchangeHandshakeResponse response = new ExchangeHandshakeResponse();
+    public static void prepareUpgrade(final ServerEndpointConfig config, final HttpServletRequest req, HttpServletResponse resp) {
+        ExchangeHandshakeRequest request = new ExchangeHandshakeRequest(req);
+        ExchangeHandshakeResponse response = new ExchangeHandshakeResponse(resp);
         ServerEndpointConfig.Configurator c = config.getConfigurator();
         c.modifyHandshake(config, request, response);
         response.update();

@@ -33,7 +33,7 @@ import javax.websocket.Session;
 
 import io.undertow.UndertowLogger;
 import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.websockets.core.WebSocketLogger;
+import io.undertow.websockets.jsr.JsrWebSocketLogger;
 import io.undertow.websockets.jsr.UndertowSession;
 
 /**
@@ -240,7 +240,7 @@ public class AnnotatedEndpoint extends Endpoint {
         } else if (thr instanceof IOException) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException((IOException) thr);
         } else {
-            WebSocketLogger.REQUEST_LOGGER.unhandledErrorInAnnotatedEndpoint(instance.getInstance(), thr);
+            JsrWebSocketLogger.REQUEST_LOGGER.unhandledErrorInAnnotatedEndpoint(instance.getInstance(), thr);
         }
     }
 

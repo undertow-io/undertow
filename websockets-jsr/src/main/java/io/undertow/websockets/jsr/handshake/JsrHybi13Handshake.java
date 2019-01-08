@@ -51,7 +51,6 @@ public final class JsrHybi13Handshake extends Hybi13Handshake {
 
     @Override
     protected void upgradeChannel(final WebSocketHttpExchange exchange, byte[] data) {
-        HandshakeUtil.prepareUpgrade(config.getEndpointConfiguration(), exchange);
         super.upgradeChannel(exchange, data);
     }
 

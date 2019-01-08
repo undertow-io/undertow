@@ -78,7 +78,7 @@ class FrameHandler extends AbstractReceiveListener {
 
         final Executor executor;
         if (session.getContainer().isDispatchToWorker()) {
-            executor = new OrderedExecutor(session.getWebSocketChannel().getWorker());
+            executor = new OrderedExecutor(session.getWorker());
         } else {
             executor = session.getWebSocketChannel().getIoThread();
         }
