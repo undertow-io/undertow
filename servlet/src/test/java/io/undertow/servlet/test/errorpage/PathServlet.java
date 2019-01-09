@@ -19,6 +19,8 @@
 package io.undertow.servlet.test.errorpage;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Enumeration;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -31,6 +33,16 @@ import javax.servlet.http.HttpServletResponse;
 public class PathServlet extends HttpServlet {
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
-        resp.getWriter().write(req.getPathInfo());
+        try (PrintWriter w = resp.getWriter()) {
+            w.println(req.getPathInfo());
+            // write all the attributes
+            Enumeration<String> e = req.getAttributeNames();
+            while (e.hasMoreElements()) {
+                String attr = e.nextElement();
+                w.print(attr);
+                w.print("=");
+                w.println(req.getAttribute(attr));
+            }
+        }
     }
 }

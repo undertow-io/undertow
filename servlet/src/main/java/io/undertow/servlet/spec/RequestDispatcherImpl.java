@@ -445,7 +445,14 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         final ServletResponse oldResponse = servletRequestContext.getServletResponse();
         servletRequestContext.setDispatcherType(DispatcherType.ERROR);
 
-        //only update if this is the first forward
+        //only update if this is the first forward, add forward attrs too
+        if (request.getAttribute(FORWARD_REQUEST_URI) == null) {
+            requestImpl.setAttribute(FORWARD_REQUEST_URI, requestImpl.getRequestURI());
+            requestImpl.setAttribute(FORWARD_CONTEXT_PATH, requestImpl.getContextPath());
+            requestImpl.setAttribute(FORWARD_SERVLET_PATH, requestImpl.getServletPath());
+            requestImpl.setAttribute(FORWARD_PATH_INFO, requestImpl.getPathInfo());
+            requestImpl.setAttribute(FORWARD_QUERY_STRING, requestImpl.getQueryString());
+        }
         requestImpl.setAttribute(ERROR_REQUEST_URI, requestImpl.getRequestURI());
         requestImpl.setAttribute(ERROR_SERVLET_NAME, servletName);
         if (exception != null) {
