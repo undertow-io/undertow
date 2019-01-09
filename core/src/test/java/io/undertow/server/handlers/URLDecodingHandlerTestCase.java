@@ -101,6 +101,31 @@ public class URLDecodingHandlerTestCase {
         }
     }
 
+    @Test
+    public void testMultipleURLDecodingHandlers() throws Exception {
+        // When multiple URLDecodingHandler are present, only the first handler to consume an exchange should decode
+        Undertow undertow = Undertow.builder()
+                .setServerOption(UndertowOptions.DECODE_URL, false)
+                .addHttpListener(PORT, "0.0.0.0")
+                .setHandler(new URLDecodingHandler(new URLDecodingHandler(new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send(exchange.getRelativePath());
+                    }
+                }, "UTF-8"), "UTF-8"))
+                .build();
+        undertow.start();
+        try {
+            TestHttpClient client = new TestHttpClient();
+            // '%253E' decodes to '%3E', which would decode to '>' if decoded twice
+            try (CloseableHttpResponse response = client.execute(new HttpGet("http://localhost:" + PORT + "/%253E"))) {
+                Assert.assertEquals("/%3E", getResponseString(response));
+            }
+        } finally {
+            undertow.stop();
+        }
+    }
+
     private static String getResponseString(CloseableHttpResponse response) throws IOException {
         Assert.assertEquals(200, response.getStatusLine().getStatusCode());
         return IOUtils.toString(response.getEntity().getContent(), "UTF-8");

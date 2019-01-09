@@ -30,6 +30,7 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.PathTemplateMatch;
 import io.undertow.util.URLUtils;
 
@@ -46,6 +47,7 @@ import io.undertow.util.URLUtils;
 public class URLDecodingHandler implements HttpHandler {
 
     private static final ThreadLocal<StringBuilder> DECODING_BUFFER_CACHE = ThreadLocal.withInitial(StringBuilder::new);
+    private static final AttachmentKey<Object> ALREADY_DECODED = AttachmentKey.create(Object.class);
 
     private final HttpHandler next;
     private final String charset;
@@ -57,14 +59,20 @@ public class URLDecodingHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        boolean decodeDone = exchange.getConnection().getUndertowOptions().get(UndertowOptions.DECODE_URL, true);
-        if (!decodeDone) {
+        if (shouldDecode(exchange)) {
             final StringBuilder sb = getStringBuilderForDecoding(exchange);
             decodePath(exchange, charset, sb);
             decodeQueryString(exchange, charset, sb);
             decodePathTemplateMatch(exchange, charset, sb);
         }
         next.handleRequest(exchange);
+    }
+
+    // Returns true if the exchange should be decoded.  This method updates the ALREADY_DECODED
+    // attachment so that subsequent invocations will always return false.
+    private static boolean shouldDecode(final HttpServerExchange exchange) {
+        return !exchange.getConnection().getUndertowOptions().get(UndertowOptions.DECODE_URL, true)
+                && exchange.putAttachment(ALREADY_DECODED, Boolean.TRUE) == null;
     }
 
     private static void decodePath(HttpServerExchange exchange, String charset, StringBuilder sb) {
