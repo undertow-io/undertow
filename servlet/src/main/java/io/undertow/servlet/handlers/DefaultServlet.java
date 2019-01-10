@@ -184,6 +184,7 @@ public class DefaultServlet extends HttpServlet {
                 return;
             }
             if (directoryListingEnabled) {
+                resp.setContentType("text/html");
                 StringBuilder output = DirectoryUtils.renderDirectoryListing(req.getRequestURI(), resource);
                 resp.getWriter().write(output.toString());
             } else {

@@ -40,6 +40,7 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.util.EntityUtils;
@@ -264,6 +265,9 @@ public class DefaultServletTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path");
             HttpResponse result = client.execute(get);
+            Header contentType = result.getFirstHeader(Headers.CONTENT_TYPE_STRING);
+            Assert.assertNotNull(contentType);
+            Assert.assertTrue(contentType.getValue().contains("text/html"));
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
         } finally {
