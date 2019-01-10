@@ -35,8 +35,10 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
+import javax.servlet.RequestDispatcher;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.hamcrest.CoreMatchers;
 import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -178,14 +180,14 @@ public class ErrorPageTestCase {
         try {
             runTest(2, client, StatusCodes.NOT_FOUND, null, "/404");
             runTest(2, client, StatusCodes.NOT_IMPLEMENTED, null, "/501");
-            runTest(2, client, StatusCodes.INTERNAL_SERVER_ERROR, null, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>");
+            runTest(2, client, StatusCodes.INTERNAL_SERVER_ERROR, null, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>", false);
             runTest(2, client, null, ParentException.class, "/parentException");
             runTest(2, client, null, ChildException.class, "/childException");
             runTest(2, client, null, RuntimeException.class, "/runtimeException");
             runTest(2, client, null, IllegalStateException.class, "/runtimeException");
-            runTest(2, client, null, Exception.class, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>");
-            runTest(2, client, null, IOException.class, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>");
-            runTest(2, client, null, ServletException.class, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>");
+            runTest(2, client, null, Exception.class, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>", false);
+            runTest(2, client, null, IOException.class, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>", false);
+            runTest(2, client, null, ServletException.class, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>", false);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -210,7 +212,14 @@ public class ErrorPageTestCase {
             client.getConnectionManager().shutdown();
         }
     }
-    private void runTest(int deploymentNo, final TestHttpClient client, Integer statusCode, Class<?> exception, String expected) throws IOException {
+
+    private void runTest(int deploymentNo, final TestHttpClient client, Integer statusCode,
+            Class<?> exception, String expected) throws IOException {
+        this.runTest(deploymentNo, client, statusCode, exception, expected, true);
+    }
+
+    private void runTest(int deploymentNo, final TestHttpClient client, Integer statusCode, Class<?> exception,
+            String expected, boolean checkAttributes) throws IOException {
         final HttpGet get;
         final HttpResponse result;
         final String response;
@@ -218,6 +227,33 @@ public class ErrorPageTestCase {
         result = client.execute(get);
         Assert.assertEquals(statusCode == null ? StatusCodes.INTERNAL_SERVER_ERROR : statusCode, result.getStatusLine().getStatusCode());
         response = HttpClientUtils.readResponse(result);
-        Assert.assertEquals(expected, response);
+        Assert.assertThat(response, CoreMatchers.startsWith(expected));
+        if (checkAttributes) {
+            // check error attributes
+            Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_REQUEST_URI + "=/servletContext" + deploymentNo + "/error"));
+            Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_SERVLET_NAME + "=error"));
+            if (statusCode == null) {
+                if (RuntimeException.class.isAssignableFrom(exception)) {
+                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION_TYPE + "=" + exception));
+                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION + "=" + exception.getName()));
+                    // RequestDispatcher.ERROR_MESSAGE is null
+                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=500"));
+                } else {
+                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION_TYPE + "=" + ServletException.class));
+                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION + "=javax.servlet.ServletException: " + exception.getName()));
+                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_MESSAGE + "=" + exception.getName()));
+                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=500"));
+                }
+            } else {
+                Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_MESSAGE + "=" + StatusCodes.getReason(statusCode)));
+                Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=" + statusCode));
+            }
+            // check forward attributes
+            Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_REQUEST_URI + "=/servletContext" + deploymentNo + "/error"));
+            Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_CONTEXT_PATH + "=/servletContext" + deploymentNo));
+            Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_QUERY_STRING + "=" + (statusCode != null ? "statusCode=" + statusCode : "exception=" + exception.getName())));
+            // RequestDispatcher.FORWARD_PATH_INFO is null
+            Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_SERVLET_PATH + "=/error"));
+        }
     }
 }

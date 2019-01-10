@@ -41,6 +41,8 @@ import org.junit.runner.RunWith;
 
 import javax.servlet.ServletException;
 import java.io.IOException;
+import javax.servlet.RequestDispatcher;
+import org.hamcrest.CoreMatchers;
 
 /**
  * @author Stuart Douglas
@@ -103,6 +105,17 @@ public class SecurityErrorPageTestCase {
         result = client.execute(get);
         Assert.assertEquals(statusCode, result.getStatusLine().getStatusCode());
         response = HttpClientUtils.readResponse(result);
-        Assert.assertEquals(expected, response);
+        Assert.assertThat(response, CoreMatchers.startsWith(expected));
+        // check error attributes
+        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_REQUEST_URI + "=/servletContext/secure"));
+        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_SERVLET_NAME + "=secure"));
+        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_MESSAGE + "=" + StatusCodes.getReason(statusCode)));
+        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=" + statusCode));
+        // check forward attributes
+        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_REQUEST_URI + "=/servletContext/secure"));
+        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_CONTEXT_PATH + "=/servletContext"));
+        // RequestDispatcher.FORWARD_QUERY_STRING is null
+        // RequestDispatcher.FORWARD_PATH_INFO is null
+        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_SERVLET_PATH + "=/secure"));
     }
 }
