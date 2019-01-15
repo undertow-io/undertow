@@ -565,7 +565,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     public static void setRootHandler(HttpHandler handler) {
         if ((isProxy()) && !ajp) {
             //if we are testing HTTP proxy we always add the SSLHeaderHandler
-            //this allows the SSL information to be propagated to be backend
+            //this allows the SSL information to be propagated to the backend
             handler = new SSLHeaderHandler(new ProxyPeerAddressHandler(handler));
         }
         if (dump) {
