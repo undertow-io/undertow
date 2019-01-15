@@ -112,7 +112,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         if (len < 1) {
             return;
         }
-        if(Thread.currentThread() == exchange.getIoThread()) {
+        if (exchange.isInIoThread()) {
             throw UndertowMessages.MESSAGES.blockingIoFromIOThread();
         }
         if (anyAreSet(state, FLAG_CLOSED)) {
