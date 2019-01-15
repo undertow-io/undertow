@@ -22,12 +22,14 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -50,24 +52,50 @@ public class Runner {
         final Map<String, Class> examples = new HashMap<>();
         //hackz to discover all the example classes on the class path
         ZipInputStream in = null;
+        boolean fromJarFile = false;
         try {
-            String zipPath = url.getPath().substring(0, url.getPath().indexOf("!")).replace("file:", "");
-            in = new ZipInputStream(new FileInputStream(zipPath));
-            ZipEntry entry = in.getNextEntry();
-            while (entry != null) {
-                if (entry.getName().endsWith(".class")) {
-                    String className = entry.getName().substring(0, entry.getName().length() - 6).replace("/", ".");
-                    try {
-                        Class<?> clazz = Class.forName(className);
-                        UndertowExample example = clazz.getAnnotation(UndertowExample.class);
-                        if (example != null) {
-                            examples.put(example.value(), clazz);
+            String finalURIString = url.toString();
+            if(url.getPath().contains("!")) {
+                fromJarFile = true;
+                finalURIString = url.getPath().substring(0, url.getPath().indexOf("!"));
+            }
+            if(fromJarFile) {
+                String zipPath = finalURIString.replace("file:", "");
+                in = new ZipInputStream(new FileInputStream(zipPath));
+                ZipEntry entry = in.getNextEntry();
+                while (entry != null) {
+                    if (entry.getName().endsWith(".class")) {
+                        String className = entry.getName().substring(0, entry.getName().length() - 6).replace("/", ".");
+                        try {
+                            Class<?> clazz = Class.forName(className);
+                            UndertowExample example = clazz.getAnnotation(UndertowExample.class);
+                            if (example != null) {
+                                examples.put(example.value(), clazz);
+                            }
+                        } catch (Throwable e) {
+                            //ignore
                         }
-                    } catch (Throwable e) {
-                        //ignore
                     }
+                    entry = in.getNextEntry();
                 }
-                entry = in.getNextEntry();
+            }else  {
+                try {
+                    try (Stream<Path> paths = Files.walk(Paths.get(url.toURI()))) {
+                        Map<String, ? extends Class<?>> annotationMapping = paths
+                                .filter(Files::isRegularFile)
+                                .filter(path -> path.toFile().getName().endsWith(".class"))
+                                .map(Runner::toFileName)
+                                .map(fileName -> fileName.replace("/", "."))
+                                .map(Runner::instance)
+                                .filter(Optional::isPresent)
+                                .filter(clazz -> clazz.get().getAnnotation(UndertowExample.class) != null)
+                                .collect(Collectors.toMap(clazz -> clazz.get().getAnnotation(UndertowExample.class).value(), Optional::get));
+                        examples.putAll(annotationMapping);
+                    }
+
+                } catch (URISyntaxException e) {
+                    e.printStackTrace();
+                }
             }
 
             final List<String> names = new ArrayList<>(examples.keySet());
@@ -91,17 +119,26 @@ public class Runner {
             final Method main = exampleClass.getDeclaredMethod("main", String[].class);
             main.invoke(null, (Object)args);
 
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        } catch (InvocationTargetException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
+        } catch (IOException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
             throw new RuntimeException(e);
         } finally {
             IoUtils.safeClose(in);
         }
 
+    }
+
+    private static String toFileName(Path path) {
+        String pathName = path.toFile().getAbsolutePath();
+        int index = pathName.indexOf("target/classes/") + "target/classes/".length();
+        int classIndex = pathName.lastIndexOf(".class");
+        return pathName.substring(index,classIndex);
+    }
+
+    private static Optional<Class<?>> instance(String clazz) {
+        try {
+            return Optional.ofNullable(Class.forName(clazz));
+        } catch (ClassNotFoundException e) {
+            return Optional.empty();
+        }
     }
 }
