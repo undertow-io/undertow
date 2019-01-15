@@ -197,6 +197,7 @@ public class AnnotatedEndpointTest {
 
     @Test
     public void testCloseReason() throws Exception {
+        AnnotatedClientEndpoint.reset();
         MessageEndpoint.reset();
 
         Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/chat/Bob"));
