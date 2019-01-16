@@ -128,4 +128,8 @@ public interface UndertowServletLogger extends BasicLogger {
     @LogMessage(level = ERROR)
     @Message(id = 15021, value = "Failure dispatching async event")
     void failureDispatchingAsyncEvent(@Cause Throwable t);
+
+    @LogMessage(level = WARN)
+    @Message(id = 15022, value = "Requested resource at %s does not exist for include method")
+    void requestedResourceDoesNotExistForIncludeMethod(String path);
 }
