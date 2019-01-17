@@ -18,6 +18,7 @@
 package io.undertow.websockets.jsr;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.ssl.SslHandler;
 import io.undertow.server.session.SecureRandomSessionIdGenerator;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.util.WorkerUtils;
@@ -46,7 +47,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -57,7 +57,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class UndertowSession implements Session {
 
     private final String sessionId;
-    private ChannelHandlerContext webSocketChannel;
+    private ChannelHandlerContext channelHandlerContext;
     private FrameHandler frameHandler;
     private final ServerWebSocketContainer container;
     private final Principal user;
@@ -73,7 +73,6 @@ public final class UndertowSession implements Session {
     private final SessionContainer openSessions;
     private final String subProtocol;
     private final List<Extension> extensions;
-    private final WebSocketClient.ConnectionBuilder clientConnectionBuilder;
     private final EndpointConfig config;
     private volatile int maximumBinaryBufferSize = 0;
     private volatile int maximumTextBufferSize = 0;
@@ -82,17 +81,16 @@ public final class UndertowSession implements Session {
     private int failedCount = 0;
     private ConfiguredServerEndpoint configuredServerEndpoint;
 
-    UndertowSession(ChannelHandlerContext webSocketChannel, URI requestUri, Map<String, String> pathParameters,
+    UndertowSession(ChannelHandlerContext channelHandlerContext, URI requestUri, Map<String, String> pathParameters,
                     Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
                     InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString,
                     final Encoding encoding, final SessionContainer openSessions, final String subProtocol,
-                    final List<Extension> extensions, WebSocketClient.ConnectionBuilder clientConnectionBuilder) {
+                    final List<Extension> extensions) {
         assert openSessions != null;
-        this.webSocketChannel = webSocketChannel;
+        this.channelHandlerContext = channelHandlerContext;
         this.queryString = queryString;
         this.encoding = encoding;
         this.openSessions = openSessions;
-        this.clientConnectionBuilder = clientConnectionBuilder;
         container = handler.getContainer();
         this.user = user;
         this.requestUri = requestUri;
@@ -105,7 +103,11 @@ public final class UndertowSession implements Session {
         this.attrs = Collections.synchronizedMap(new HashMap<>(config.getUserProperties()));
         this.extensions = extensions;
         this.subProtocol = subProtocol;
-        setupWebSocketChannel(webSocketChannel);
+        setupWebSocketChannel(channelHandlerContext);
+    }
+
+    public ChannelHandlerContext getChannelHandlerContext() {
+        return channelHandlerContext;
     }
 
     @Override
@@ -141,15 +143,6 @@ public final class UndertowSession implements Session {
         frameHandler.removeHandler(messageHandler);
     }
 
-    /**
-     * sets the recieve listener This should only be used for annotated endpoints.
-     *
-     * @param handler The handler
-     */
-    public void setReceiveListener(final ChannelListener<WebSocketChannel> handler) {
-        webSocketChannel.getReceiveSetter().set(handler);
-    }
-
     @Override
     public String getProtocolVersion() {
         return "13";
@@ -162,22 +155,22 @@ public final class UndertowSession implements Session {
 
     @Override
     public boolean isSecure() {
-        return webSocketChannel.isSecure();
+        return channelHandlerContext.pipeline().get(SslHandler.class) != null;
     }
 
     @Override
     public boolean isOpen() {
-        return webSocketChannel.isOpen();
+        return channelHandlerContext.channel().isOpen();
     }
 
     @Override
     public long getMaxIdleTimeout() {
-        return webSocketChannel.getIdleTimeout();
+        //return webSocketChannel.getIdleTimeout();
     }
 
     @Override
     public void setMaxIdleTimeout(final long milliseconds) {
-        webSocketChannel.setIdleTimeout(milliseconds);
+        //webSocketChannel.setIdleTimeout(milliseconds);
     }
 
     @Override
@@ -204,22 +197,22 @@ public final class UndertowSession implements Session {
         if(closed.compareAndSet(false, true)) {
             try {
                 try {
-                    if (!webSocketChannel.isCloseFrameReceived() && !webSocketChannel.isCloseFrameSent()) {
+                    if (!channelHandlerContext.isCloseFrameReceived() && !channelHandlerContext.isCloseFrameSent()) {
                         //if we have already recieved a close frame then the close frame handler
                         //will deal with sending back the reason message
                         if (closeReason == null || closeReason.getCloseCode().getCode() == CloseReason.CloseCodes.NO_STATUS_CODE.getCode()) {
-                            webSocketChannel.sendClose();
+                            channelHandlerContext.sendClose();
                         } else {
-                            WebSockets.sendClose(new CloseMessage(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()).toByteBuffer(), webSocketChannel, null);
+                            WebSockets.sendClose(new CloseMessage(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()).toByteBuffer(), channelHandlerContext, null);
                         }
                     }
                 } finally {
                     try {
                         String reason = null;
                         CloseReason.CloseCode code = CloseReason.CloseCodes.NO_STATUS_CODE;
-                        if(webSocketChannel.getCloseCode() != -1) {
-                            reason = webSocketChannel.getCloseReason();
-                            code = CloseReason.CloseCodes.getCloseCode(webSocketChannel.getCloseCode());
+                        if(channelHandlerContext.getCloseCode() != -1) {
+                            reason = channelHandlerContext.getCloseReason();
+                            code = CloseReason.CloseCodes.getCloseCode(channelHandlerContext.getCloseCode());
                         } else if(closeReason != null) {
                             reason = closeReason.getReasonPhrase();
                             code = closeReason.getCloseCode();
@@ -228,7 +221,7 @@ public final class UndertowSession implements Session {
                         //the spec says that if we (the local container) close locally then we need to use 1006
                         //although the TCK does not expect this behaviour for TOO_BIG and VIOLATED_POLICY
                         //we need to really clean up the close behaviour in the next spec
-                        if(!webSocketChannel.isCloseInitiatedByRemotePeer() && !localClose && code.getCode() != CloseReason.CloseCodes.TOO_BIG.getCode() && code.getCode() != CloseReason.CloseCodes.VIOLATED_POLICY.getCode()) {
+                        if(!channelHandlerContext.isCloseInitiatedByRemotePeer() && !localClose && code.getCode() != CloseReason.CloseCodes.TOO_BIG.getCode() && code.getCode() != CloseReason.CloseCodes.VIOLATED_POLICY.getCode()) {
                             //2.1.5: we must use 1006 if the close was initiated locally
                             //however we only do this for normal closure
                             //if the close was due to another reason such as a message being too long we need to report the real reason
@@ -256,35 +249,35 @@ public final class UndertowSession implements Session {
     }
 
     private void handleReconnect(final long reconnect) {
-        JsrWebSocketLogger.REQUEST_LOGGER.debugf("Attempting reconnect in %s ms for session %s", reconnect, this);
-        WorkerUtils.executeAfter(webSocketChannel.getIoThread(), new Runnable() {
-            @Override
-            public void run() {
-                clientConnectionBuilder.connect().addNotifier(new IoFuture.HandlingNotifier<WebSocketChannel, Object>() {
-                    @Override
-                    public void handleDone(WebSocketChannel data, Object attachment) {
-                        closed.set(false);
-                        UndertowSession.this.webSocketChannel = data;
-                        UndertowSession.this.setupWebSocketChannel(data);
-                        localClose = false;
-                        endpoint.getInstance().onOpen(UndertowSession.this, config);
-                        webSocketChannel.resumeReceives();
-                    }
-
-                    @Override
-                    public void handleFailed(IOException exception, Object attachment) {
-                        long timeout = container.getWebSocketReconnectHandler().reconnectFailed(exception, getRequestURI(), UndertowSession.this, ++failedCount);
-                        if(timeout >= 0) {
-                            handleReconnect(timeout);
-                        }
-                    }
-                }, null);
-            }
-        }, reconnect, TimeUnit.MILLISECONDS);
+//        JsrWebSocketLogger.REQUEST_LOGGER.debugf("Attempting reconnect in %s ms for session %s", reconnect, this);
+//        webSocketChannel.executor().schedule(new Runnable() {
+//            @Override
+//            public void run() {
+//                clientConnectionBuilder.connect().addNotifier(new IoFuture.HandlingNotifier<WebSocketChannel, Object>() {
+//                    @Override
+//                    public void handleDone(WebSocketChannel data, Object attachment) {
+//                        closed.set(false);
+//                        UndertowSession.this.webSocketChannel = data;
+//                        UndertowSession.this.setupWebSocketChannel(data);
+//                        localClose = false;
+//                        endpoint.getInstance().onOpen(UndertowSession.this, config);
+//                        webSocketChannel.resumeReceives();
+//                    }
+//
+//                    @Override
+//                    public void handleFailed(IOException exception, Object attachment) {
+//                        long timeout = container.getWebSocketReconnectHandler().reconnectFailed(exception, getRequestURI(), UndertowSession.this, ++failedCount);
+//                        if(timeout >= 0) {
+//                            handleReconnect(timeout);
+//                        }
+//                    }
+//                }, null);
+//            }
+//        }, reconnect, TimeUnit.MILLISECONDS);
     }
 
     public void forceClose() {
-        IoUtils.safeClose(webSocketChannel);
+        channelHandlerContext.close();
     }
 
     @Override
@@ -389,34 +382,10 @@ public final class UndertowSession implements Session {
         return encoding;
     }
 
-    public WebSocketChannel getWebSocketChannel() {
-        return webSocketChannel;
-    }
-
-    private void setupWebSocketChannel(WebSocketChannel webSocketChannel) {
+    private void setupWebSocketChannel(ChannelHandlerContext webSocketChannel) {
         this.frameHandler = new FrameHandler(this, this.endpoint.getInstance());
-        webSocketChannel.getReceiveSetter().set(frameHandler);
-        webSocketChannel.addCloseTask(new ChannelListener<WebSocketChannel>() {
-            @Override
-            public void handleEvent(WebSocketChannel channel) {
-                //so this puts us in an interesting position. We know the underlying
-                //TCP connection has been torn down, however this may have involved reading
-                //a close frame, which will be delivered shortly
-                //to get around this we schedule the code in the IO thread, so if there is a close
-                //frame awaiting delivery it will be delivered before the close
-                channel.getIoThread().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        //we delegate this execution to the IO thread
-                        try {
-                            closeInternal(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, null));
-                        } catch (IOException e) {
-                            //ignore
-                        }
-                    }
-                });
-            }
-        });
+        webSocketChannel.pipeline().addLast(frameHandler);
+
     }
 
     public Executor getExecutor() {

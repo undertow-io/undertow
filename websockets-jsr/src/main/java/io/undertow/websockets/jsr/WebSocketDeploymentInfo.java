@@ -18,18 +18,13 @@
 
 package io.undertow.websockets.jsr;
 
-import io.undertow.server.XnioByteBufferPool;
-import io.undertow.websockets.extensions.ExtensionHandshake;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.Pool;
-import org.xnio.XnioWorker;
-
-import javax.websocket.server.ServerEndpointConfig;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Supplier;
+
+import javax.websocket.server.ServerEndpointConfig;
+
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
 
 /**
  * Web socket deployment information
@@ -40,59 +35,13 @@ public class WebSocketDeploymentInfo implements Cloneable {
 
     public static final String ATTRIBUTE_NAME = "io.undertow.websockets.jsr.WebSocketDeploymentInfo";
 
-    private Supplier<XnioWorker> worker = new Supplier<XnioWorker>() {
-
-        volatile XnioWorker worker;
-
-        @Override
-        public XnioWorker get() {
-            if(worker != null) {
-                return worker;
-            }
-            return worker = UndertowContainerProvider.getDefaultContainer().getXnioWorker();
-        }
-    };
-    private ByteBufferPool buffers;
     private boolean dispatchToWorkerThread = false;
     private final List<Class<?>> annotatedEndpoints = new ArrayList<>();
     private final List<ServerEndpointConfig> programaticEndpoints = new ArrayList<>();
     private final List<ContainerReadyListener> containerReadyListeners = new ArrayList<>();
-    private final List<ExtensionHandshake> extensions = new ArrayList<>();
+    private final List<WebSocketServerExtensionHandshaker> serverExtensions = new ArrayList<>();
     private String clientBindAddress = null;
     private WebSocketReconnectHandler reconnectHandler;
-
-    public Supplier<XnioWorker> getWorker() {
-        return worker;
-    }
-
-    public WebSocketDeploymentInfo setWorker(Supplier<XnioWorker> worker) {
-        this.worker = worker;
-        return this;
-    }
-
-    public WebSocketDeploymentInfo setWorker(XnioWorker worker) {
-        this.worker = new Supplier<XnioWorker>() {
-            @Override
-            public XnioWorker get() {
-                return worker;
-            }
-        };
-        return this;
-    }
-
-    public ByteBufferPool getBuffers() {
-        return buffers;
-    }
-
-    @Deprecated
-    public WebSocketDeploymentInfo setBuffers(Pool<ByteBuffer> buffers) {
-        return setBuffers(new XnioByteBufferPool(buffers));
-    }
-
-    public WebSocketDeploymentInfo setBuffers(ByteBufferPool buffers) {
-        this.buffers = buffers;
-        return this;
-    }
 
     public WebSocketDeploymentInfo addEndpoint(final Class<?> annotated) {
         this.annotatedEndpoints.add(annotated);
@@ -123,7 +72,7 @@ public class WebSocketDeploymentInfo implements Cloneable {
     }
 
     void containerReady(ServerWebSocketContainer container) {
-        for(ContainerReadyListener listener : containerReadyListeners) {
+        for (ContainerReadyListener listener : containerReadyListeners) {
             listener.ready(container);
         }
     }
@@ -159,25 +108,25 @@ public class WebSocketDeploymentInfo implements Cloneable {
      * Add a new WebSocket Extension into this deployment info.
      *
      * @param extension a new {@code ExtensionHandshake} instance
-     * @return          current deployment info
+     * @return current deployment info
      */
-    public WebSocketDeploymentInfo addExtension(final ExtensionHandshake extension) {
+    public WebSocketDeploymentInfo addServerExtension(final WebSocketServerExtensionHandshaker extension) {
         if (null != extension) {
-            this.extensions.add(extension);
+            this.serverExtensions.add(extension);
         }
         return this;
     }
 
-    public WebSocketDeploymentInfo addExtensions(final Collection<ExtensionHandshake> extensions) {
-        this.extensions.addAll(extensions);
+    public WebSocketDeploymentInfo addServerExtensions(final Collection<WebSocketServerExtensionHandshaker> extensions) {
+        this.serverExtensions.addAll(extensions);
         return this;
     }
 
     /**
      * @return list of extensions available for this deployment info
      */
-    public List<ExtensionHandshake> getExtensions() {
-        return extensions;
+    public List<WebSocketServerExtensionHandshaker> getServerExtensions() {
+        return serverExtensions;
     }
 
     public String getClientBindAddress() {
@@ -201,16 +150,14 @@ public class WebSocketDeploymentInfo implements Cloneable {
     @Override
     public WebSocketDeploymentInfo clone() {
         return new WebSocketDeploymentInfo()
-                .setWorker(this.worker)
-                .setBuffers(this.buffers)
                 .setDispatchToWorkerThread(this.dispatchToWorkerThread)
                 .addAnnotatedEndpoints(this.annotatedEndpoints)
                 .addProgramaticEndpoints(this.programaticEndpoints)
                 .addListeners(this.containerReadyListeners)
-                .addExtensions(this.extensions)
+                .addServerExtensions(this.serverExtensions)
                 .setClientBindAddress(this.clientBindAddress)
                 .setReconnectHandler(this.reconnectHandler)
-        ;
+                ;
     }
 
 }

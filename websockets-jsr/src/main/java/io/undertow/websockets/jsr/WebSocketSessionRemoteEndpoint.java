@@ -17,24 +17,23 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.websockets.core.BinaryOutputStream;
-import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.WebSocketCallback;
-import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.WebSocketUtils;
-import io.undertow.websockets.core.WebSockets;
-import org.xnio.channels.Channels;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import javax.websocket.EncodeException;
 import javax.websocket.RemoteEndpoint;
 import javax.websocket.SendHandler;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.Future;
+import javax.websocket.SendResult;
+
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 
 /**
  * {@link RemoteEndpoint} implementation which uses a WebSocketSession for all its operation.
@@ -78,24 +77,24 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
     @Override
     public void sendPing(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-        if(applicationData == null) {
+        if (applicationData == null) {
             throw JsrWebSocketMessages.MESSAGES.messageInNull();
         }
-        if(applicationData.remaining() > 125) {
+        if (applicationData.remaining() > 125) {
             throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
         }
-        WebSockets.sendPing(applicationData, undertowSession.getWebSocketChannel(), null);
+        undertowSession.getChannelHandlerContext().writeAndFlush(new PingWebSocketFrame(Unpooled.copiedBuffer(applicationData)));
     }
 
     @Override
     public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-        if(applicationData == null) {
+        if (applicationData == null) {
             throw JsrWebSocketMessages.MESSAGES.messageInNull();
         }
-        if(applicationData.remaining() > 125) {
+        if (applicationData.remaining() > 125) {
             throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
         }
-        WebSockets.sendPong(applicationData, undertowSession.getWebSocketChannel(), null);
+        undertowSession.getChannelHandlerContext().writeAndFlush(new PongWebSocketFrame(Unpooled.copiedBuffer(applicationData)));
     }
 
     class AsyncWebSocketSessionRemoteEndpoint implements Async {
@@ -114,50 +113,47 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         @Override
         public void sendText(final String text, final SendHandler handler) {
-            if(handler == null) {
+            if (handler == null) {
                 throw JsrWebSocketMessages.MESSAGES.handlerIsNull();
             }
-            if(text == null) {
+            if (text == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            WebSockets.sendText(text, undertowSession.getWebSocketChannel(), new SendHandlerAdapter(handler), sendTimeout);
+            undertowSession.getChannelHandlerContext().writeAndFlush(new TextWebSocketFrame(text))
+                    .addListener(new SendHandlerAdapter(handler));
         }
 
         @Override
         public Future<Void> sendText(final String text) {
-            if(text == null) {
+            if (text == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            final SendResultFuture future = new SendResultFuture();
-            WebSockets.sendText(text, undertowSession.getWebSocketChannel(), future, sendTimeout);
-            return future;
+            return undertowSession.getChannelHandlerContext().writeAndFlush(new TextWebSocketFrame(text));
         }
 
         @Override
         public Future<Void> sendBinary(final ByteBuffer data) {
-            if(data == null) {
+            if (data == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            final SendResultFuture future = new SendResultFuture();
-            WebSockets.sendBinary(data, undertowSession.getWebSocketChannel(), future, sendTimeout);
-            return future;
+            return undertowSession.getChannelHandlerContext().writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(data)));
         }
 
         @Override
         public void sendBinary(final ByteBuffer data, final SendHandler completion) {
 
-            if(completion == null) {
+            if (completion == null) {
                 throw JsrWebSocketMessages.MESSAGES.handlerIsNull();
             }
-            if(data == null) {
+            if (data == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            WebSockets.sendBinary(data, undertowSession.getWebSocketChannel(), new SendHandlerAdapter(completion), sendTimeout);
+            undertowSession.getChannelHandlerContext().writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(data))).addListener(new SendHandlerAdapter(completion));
         }
 
         @Override
         public Future<Void> sendObject(final Object o) {
-            if(o == null) {
+            if (o == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
             final SendResultFuture future = new SendResultFuture();
@@ -168,127 +164,129 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         @Override
         public void sendObject(final Object data, final SendHandler handler) {
 
-            if(handler == null) {
+            if (handler == null) {
                 throw JsrWebSocketMessages.MESSAGES.handlerIsNull();
             }
-            if(data == null) {
+            if (data == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            sendObjectImpl(data, new SendHandlerAdapter(handler));
+            sendObjectImpl(data, handler);
         }
 
-        private void sendObjectImpl(final Object o, final WebSocketCallback callback) {
+        private void sendObjectImpl(final Object o, final SendHandler callback) {
             try {
-                if(o instanceof String) {
-                    WebSockets.sendText((String)o, undertowSession.getWebSocketChannel(), callback, sendTimeout);
-                } else if(o instanceof byte[]) {
-                    WebSockets.sendBinary(ByteBuffer.wrap((byte[])o), undertowSession.getWebSocketChannel(), callback, sendTimeout);
-                } else if(o instanceof ByteBuffer) {
-                    WebSockets.sendBinary((ByteBuffer)o, undertowSession.getWebSocketChannel(), callback, sendTimeout);
+                if (o instanceof String) {
+                    sendText((String) o, callback);
+                } else if (o instanceof byte[]) {
+                    sendBinary(ByteBuffer.wrap((byte[]) o), callback);
+                } else if (o instanceof ByteBuffer) {
+                    sendBinary((ByteBuffer) o, callback);
                 } else if (encoding.canEncodeText(o.getClass())) {
-                    WebSockets.sendText(encoding.encodeText(o), undertowSession.getWebSocketChannel(), callback, sendTimeout);
+                    sendText(encoding.encodeText(o), callback);
                 } else if (encoding.canEncodeBinary(o.getClass())) {
-                    WebSockets.sendBinary(encoding.encodeBinary(o), undertowSession.getWebSocketChannel(), callback, sendTimeout);
+                    sendBinary(encoding.encodeBinary(o), callback);
                 } else {
                     // TODO: Replace on bug is fixed
                     // https://issues.jboss.org/browse/LOGTOOL-64
                     throw new EncodeException(o, "No suitable encoder found");
                 }
             } catch (Exception e) {
-                callback.onError(undertowSession.getWebSocketChannel(), null, e);
+                callback.onResult(new SendResult(e));
             }
         }
 
         @Override
         public void setBatchingAllowed(final boolean allowed) throws IOException {
-            undertowSession.getWebSocketChannel().setRequireExplicitFlush(allowed);
+            //undertowSession.getWebSocketChannel().setRequireExplicitFlush(allowed);
         }
 
         @Override
         public boolean getBatchingAllowed() {
-            return undertowSession.getWebSocketChannel().isRequireExplicitFlush();
+            //return undertowSession.getWebSocketChannel().isRequireExplicitFlush();
+            return false;
         }
 
         @Override
         public void flushBatch() throws IOException {
-            undertowSession.getWebSocketChannel().flush();
+            //undertowSession.getWebSocketChannel().flush();
         }
 
         @Override
         public void sendPing(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-            if(applicationData == null) {
+            if (applicationData == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            if(applicationData.remaining() > 125) {
+            if (applicationData.remaining() > 125) {
                 throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
             }
-            WebSockets.sendPing(applicationData, undertowSession.getWebSocketChannel(), null, sendTimeout);
+            undertowSession.getChannelHandlerContext().writeAndFlush(new PingWebSocketFrame(Unpooled.copiedBuffer(applicationData)));
         }
 
         @Override
         public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-            if(applicationData == null) {
+            if (applicationData == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            if(applicationData.remaining() > 125) {
+            if (applicationData.remaining() > 125) {
                 throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
             }
-            WebSockets.sendPong(applicationData, undertowSession.getWebSocketChannel(), null, sendTimeout);
+            undertowSession.getChannelHandlerContext().writeAndFlush(new PongWebSocketFrame(Unpooled.copiedBuffer(applicationData)));
         }
     }
 
 
     class BasicWebSocketSessionRemoteEndpoint implements Basic {
 
-        private StreamSinkFrameChannel binaryFrameSender;
-        private StreamSinkFrameChannel textFrameSender;
+        boolean inTextFragment = false;
+        boolean inBinaryFragment = false;
 
         public void assertNotInFragment() {
-            if (textFrameSender != null || binaryFrameSender != null) {
+            if (inTextFragment || inBinaryFragment) {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
         }
 
         @Override
         public void sendText(final String text) throws IOException {
-            if(text == null) {
+            if (text == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
             assertNotInFragment();
-            WebSockets.sendTextBlocking(text, undertowSession.getWebSocketChannel());
+            try {
+                undertowSession.getChannelHandlerContext().writeAndFlush(new TextWebSocketFrame(text)).get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new IOException(e);
+            }
         }
 
         @Override
         public void sendBinary(final ByteBuffer data) throws IOException {
-            if(data == null) {
+            if (data == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
             assertNotInFragment();
-            WebSockets.sendBinaryBlocking(data, undertowSession.getWebSocketChannel());
+            try {
+                undertowSession.getChannelHandlerContext().writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(data))).get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new IOException(e);
+            }
             data.clear(); //for some reason the TCK expects this, might as well just match the RI behaviour
         }
 
         @Override
         public void sendText(final String partialMessage, final boolean isLast) throws IOException {
-            if(partialMessage == null) {
+            if (partialMessage == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            if (binaryFrameSender != null) {
+            if (inBinaryFragment) {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
-            if (textFrameSender == null) {
-                textFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.TEXT);
-            }
+            inTextFragment = !isLast;
+
             try {
-                Channels.writeBlocking(textFrameSender, WebSocketUtils.fromUtf8String(partialMessage));
-                if(isLast) {
-                    textFrameSender.shutdownWrites();
-                }
-                Channels.flushBlocking(textFrameSender);
-            } finally {
-                if (isLast) {
-                    textFrameSender = null;
-                }
+                undertowSession.getChannelHandlerContext().writeAndFlush(new TextWebSocketFrame(isLast, 0, partialMessage)).get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new IOException(e);
             }
 
         }
@@ -296,61 +294,54 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         @Override
         public void sendBinary(final ByteBuffer partialByte, final boolean isLast) throws IOException {
 
-            if(partialByte == null) {
+            if (partialByte == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            if (textFrameSender != null) {
+            if (inTextFragment) {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
-            if (binaryFrameSender == null) {
-                binaryFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.BINARY);
-            }
+            inBinaryFragment = !isLast;
+
             try {
-                Channels.writeBlocking(binaryFrameSender, partialByte);
-                if(isLast) {
-                    binaryFrameSender.shutdownWrites();
-                }
-                Channels.flushBlocking(binaryFrameSender);
-            } finally {
-                if (isLast) {
-                    binaryFrameSender = null;
-                }
+                undertowSession.getChannelHandlerContext().writeAndFlush(new BinaryWebSocketFrame(isLast, 0, Unpooled.copiedBuffer(partialByte))).get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new IOException(e);
             }
+
             partialByte.clear();
         }
 
         @Override
         public OutputStream getSendStream() throws IOException {
             assertNotInFragment();
-            //TODO: track fragment state
-            return new BinaryOutputStream(undertowSession.getWebSocketChannel().send(WebSocketFrameType.BINARY));
+            return new BinaryOutputStream(this);
         }
 
         @Override
         public Writer getSendWriter() throws IOException {
             assertNotInFragment();
-            return new OutputStreamWriter(new BinaryOutputStream(undertowSession.getWebSocketChannel().send(WebSocketFrameType.TEXT)), StandardCharsets.UTF_8);
+            return new WebSocketWriter(this);
         }
 
         @Override
         public void sendObject(final Object data) throws IOException, EncodeException {
-            if(data == null) {
+            if (data == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
             sendObjectImpl(data);
         }
 
         private void sendObjectImpl(final Object o) throws IOException, EncodeException {
-            if(o instanceof String) {
-                sendText((String)o);
-            } else if(o instanceof byte[]) {
-                sendBinary(ByteBuffer.wrap((byte[])o));
-            } else if(o instanceof ByteBuffer) {
-                sendBinary((ByteBuffer)o);
+            if (o instanceof String) {
+                sendText((String) o);
+            } else if (o instanceof byte[]) {
+                sendBinary(ByteBuffer.wrap((byte[]) o));
+            } else if (o instanceof ByteBuffer) {
+                sendBinary((ByteBuffer) o);
             } else if (encoding.canEncodeText(o.getClass())) {
-                WebSockets.sendTextBlocking(encoding.encodeText(o), undertowSession.getWebSocketChannel());
+                sendText(encoding.encodeText(o));
             } else if (encoding.canEncodeBinary(o.getClass())) {
-                WebSockets.sendBinaryBlocking(encoding.encodeBinary(o), undertowSession.getWebSocketChannel());
+                sendBinary(encoding.encodeBinary(o));
             } else {
                 // TODO: Replace on bug is fixed
                 // https://issues.jboss.org/browse/LOGTOOL-64
@@ -375,24 +366,32 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
 
         @Override
         public void sendPing(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-            if(applicationData == null) {
+            if (applicationData == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            if(applicationData.remaining() > 125) {
+            if (applicationData.remaining() > 125) {
                 throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
             }
-            WebSockets.sendPingBlocking(applicationData, undertowSession.getWebSocketChannel());
+            try {
+                undertowSession.getChannelHandlerContext().writeAndFlush(new PingWebSocketFrame(Unpooled.copiedBuffer(applicationData))).get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new IOException(e);
+            }
         }
 
         @Override
         public void sendPong(final ByteBuffer applicationData) throws IOException, IllegalArgumentException {
-            if(applicationData == null) {
+            if (applicationData == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            if(applicationData.remaining() > 125) {
+            if (applicationData.remaining() > 125) {
                 throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
             }
-            WebSockets.sendPongBlocking(applicationData, undertowSession.getWebSocketChannel());
+            try {
+                undertowSession.getChannelHandlerContext().writeAndFlush(new PongWebSocketFrame(Unpooled.copiedBuffer(applicationData))).get();
+            } catch (InterruptedException | ExecutionException e) {
+                throw new IOException(e);
+            }
         }
     }
 }

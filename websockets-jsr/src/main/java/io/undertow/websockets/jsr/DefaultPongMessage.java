@@ -17,8 +17,9 @@
  */
 package io.undertow.websockets.jsr;
 
-import javax.websocket.PongMessage;
 import java.nio.ByteBuffer;
+
+import javax.websocket.PongMessage;
 
 /**
  * Default {@link PongMessage} implementation
@@ -26,7 +27,7 @@ import java.nio.ByteBuffer;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public final class DefaultPongMessage implements PongMessage {
-    private static final PongMessage EMPTY = new DefaultPongMessage(Buffers.EMPTY_BYTE_BUFFER);
+    private static final PongMessage EMPTY = new DefaultPongMessage(ByteBuffer.allocate(0));
     private final ByteBuffer data;
 
     private DefaultPongMessage(ByteBuffer data) {

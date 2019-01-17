@@ -17,6 +17,10 @@
  */
 package io.undertow.websockets.jsr;
 
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.HttpObject;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.undertow.websockets.core.AbstractReceiveListener;
 import io.undertow.websockets.core.BufferedBinaryMessage;
 import io.undertow.websockets.core.BufferedTextMessage;
@@ -54,7 +58,7 @@ import java.util.concurrent.Executor;
  * @author Stuart Douglas
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-class FrameHandler extends AbstractReceiveListener {
+class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     private final Endpoint endpoint;
     private final UndertowSession session;
     protected static final byte[] EMPTY = new byte[0];
@@ -197,7 +201,7 @@ class FrameHandler extends AbstractReceiveListener {
         if (handler != null && handler.isPartialHandler()) {
             BufferedBinaryMessage data = new BufferedBinaryMessage(session.getMaxBinaryMessageBufferSize(), false);
             data.read(messageChannel, new WebSocketCallback<BufferedBinaryMessage>() {
-                @Override
+                @Overlride
                 public void complete(WebSocketChannel channel, BufferedBinaryMessage context) {
                     invokeBinaryHandler(context, handler, context.isComplete());
                 }

@@ -17,19 +17,18 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.websockets.core.WebSocketCallback;
-import io.undertow.websockets.core.WebSocketChannel;
-
 import javax.websocket.SendHandler;
 import javax.websocket.SendResult;
 
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 /**
  * {@link WebSocketCallback} implementation which will notify a wrapped {@link SendHandler} once a send operation
  * completes.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class SendHandlerAdapter implements WebSocketCallback<Void> {
+final class SendHandlerAdapter implements GenericFutureListener<Future<? super Void>> {
     private final SendHandler handler;
     private static final SendResult OK = new SendResult();
     private volatile boolean done;
@@ -37,21 +36,13 @@ final class SendHandlerAdapter implements WebSocketCallback<Void> {
     SendHandlerAdapter(SendHandler handler) {
         this.handler = handler;
     }
-    @Override
-    public void complete(WebSocketChannel channel, Void context) {
-        if(done) {
-            return;
-        }
-        done = true;
-        handler.onResult(new SendResult());
-    }
 
     @Override
-    public void onError(WebSocketChannel channel, Void context, Throwable throwable) {
-        if(done) {
-            return;
+    public void operationComplete(Future<? super Void> future) throws Exception {
+        if (future.isSuccess()) {
+            handler.onResult(OK);
+        } else {
+            handler.onResult(new SendResult(future.cause()));
         }
-        done = true;
-        handler.onResult(new SendResult(throwable));
     }
 }

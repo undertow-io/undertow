@@ -435,10 +435,10 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             WebSocketHandshakeHolder hand;
 
             WebSocketDeploymentInfo info = (WebSocketDeploymentInfo)request.getServletContext().getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
-            if (info == null || info.getExtensions() == null) {
+            if (info == null || info.getServerExtensions() == null) {
                 hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint);
             } else {
-                hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint, info.getExtensions());
+                hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint, info.getServerExtensions());
             }
 
             final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(request, response, new HashSet<WebSocketChannel>());

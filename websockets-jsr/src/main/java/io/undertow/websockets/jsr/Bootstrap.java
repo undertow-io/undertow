@@ -78,7 +78,7 @@ public class Bootstrap implements ServletExtension {
             bind = new InetSocketAddress(info.getClientBindAddress(), 0);
         }
         List<Extension> extensions = new ArrayList<>();
-        for(ExtensionHandshake e: info.getExtensions()) {
+        for(ExtensionHandshake e: info.getServerExtensions()) {
             extensions.add(new ExtensionImpl(e.getName(), Collections.emptyList()));
         }
         ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), worker, buffers, setup, info.isDispatchToWorkerThread(), bind, info.getReconnectHandler(), extensions);

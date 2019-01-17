@@ -17,13 +17,13 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.undertow.websockets.core.WebSocketCallback;
-import io.undertow.websockets.core.WebSocketChannel;
-
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import javax.websocket.SendHandler;
+import javax.websocket.SendResult;
 
 /**
  * Default implementation of a {@link Future} that is used in the {@link javax.websocket.RemoteEndpoint.Async}
@@ -31,31 +31,21 @@ import java.util.concurrent.TimeoutException;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-final class SendResultFuture<T> implements Future<Void>, WebSocketCallback<T> {
+final class SendResultFuture<T> implements Future<Void>, SendHandler {
     private boolean done;
     private Throwable exception;
     private int waiters;
 
 
     @Override
-    public synchronized void complete(WebSocketChannel channel, T context) {
+    public void onResult(SendResult result) {
         if (done) {
             return;
         }
-
-        if (waiters > 0) {
-            notifyAll();
-        }
         done = true;
-    }
-
-    @Override
-    public synchronized void onError(WebSocketChannel channel, T context, Throwable throwable) {
-        if (done) {
-            return;
+        if (!result.isOK()) {
+            exception = result.getException();
         }
-        exception = throwable;
-        done = true;
         if (waiters > 0) {
             notifyAll();
         }
@@ -146,5 +136,4 @@ final class SendResultFuture<T> implements Future<Void>, WebSocketCallback<T> {
         }
         return null;
     }
-
 }

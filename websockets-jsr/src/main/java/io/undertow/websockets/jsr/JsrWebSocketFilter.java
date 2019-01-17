@@ -86,10 +86,10 @@ public class JsrWebSocketFilter implements Filter {
         pathTemplateMatcher = new PathTemplateMatcher<>();
         WebSocketDeploymentInfo info = (WebSocketDeploymentInfo)filterConfig.getServletContext().getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
         for (ConfiguredServerEndpoint endpoint : container.getConfiguredServerEndpoints()) {
-            if (info == null || info.getExtensions().isEmpty()) {
+            if (info == null || info.getServerExtensions().isEmpty()) {
                 pathTemplateMatcher.add(endpoint.getPathTemplate(), ServerWebSocketContainer.handshakes(endpoint));
             } else {
-                pathTemplateMatcher.add(endpoint.getPathTemplate(), ServerWebSocketContainer.handshakes(endpoint, info.getExtensions()));
+                pathTemplateMatcher.add(endpoint.getPathTemplate(), ServerWebSocketContainer.handshakes(endpoint, info.getServerExtensions()));
             }
         }
         this.callback = new EndpointSessionHandler(container);
