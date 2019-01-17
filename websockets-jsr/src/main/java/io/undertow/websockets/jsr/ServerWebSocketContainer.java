@@ -17,54 +17,9 @@
  */
 package io.undertow.websockets.jsr;
 
-import static java.lang.System.currentTimeMillis;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.nio.channels.ClosedChannelException;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.ServiceLoader;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.TreeSet;
-import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
-
-import javax.net.ssl.SSLContext;
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.websocket.ClientEndpoint;
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.CloseReason;
-import javax.websocket.DeploymentException;
-import javax.websocket.Endpoint;
-import javax.websocket.Extension;
-import javax.websocket.HandshakeResponse;
-import javax.websocket.Session;
-import javax.websocket.server.ServerContainer;
-import javax.websocket.server.ServerEndpoint;
-import javax.websocket.server.ServerEndpointConfig;
-
-import org.xnio.IoFuture;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import org.xnio.StreamConnection;
-import org.xnio.XnioWorker;
-import org.xnio.http.UpgradeFailedException;
-import org.xnio.ssl.XnioSsl;
-
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.HttpUpgradeListener;
 import io.undertow.servlet.api.ClassIntrospecter;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
@@ -84,9 +39,7 @@ import io.undertow.websockets.core.protocol.Handshake;
 import io.undertow.websockets.extensions.ExtensionHandshake;
 import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
 import io.undertow.websockets.jsr.handshake.HandshakeUtil;
-import io.undertow.websockets.jsr.handshake.JsrHybi07Handshake;
-import io.undertow.websockets.jsr.handshake.JsrHybi08Handshake;
-import io.undertow.websockets.jsr.handshake.JsrHybi13Handshake;
+
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import io.undertow.connector.ByteBufferPool;
@@ -135,7 +88,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static java.lang.System.*;
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 
 /**
@@ -264,7 +216,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
         if(ssl == null) {
             try {
-                ssl = new UndertowXnioSsl(xnioWorker.getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+                ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
             } catch (NoSuchAlgorithmException e) {
                 //ignore
             }
@@ -312,7 +264,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             }
             if(ssl == null) {
                 try {
-                    ssl = new UndertowXnioSsl(xnioWorker.getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+                    ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
                 } catch (NoSuchAlgorithmException e) {
                     //ignore
                 }
@@ -338,7 +290,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
         if(ssl == null) {
             try {
-                ssl = new UndertowXnioSsl(xnioWorker.getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+                ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
             } catch (NoSuchAlgorithmException e) {
                 //ignore
             }
@@ -804,7 +756,13 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
         seenPaths.add(template);
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, endpoint.getDecoders(), endpoint.getEncoders());
-        ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(endpoint, null, template, encodingFactory);
+
+        AnnotatedEndpointFactory annotatedEndpointFactory = null;
+        if(!Endpoint.class.isAssignableFrom(endpoint.getEndpointClass())) {
+            // We may want to check that the path in @ServerEndpoint matches the specified path, and throw if they are not equivalent
+            annotatedEndpointFactory = AnnotatedEndpointFactory.create(endpoint.getEndpointClass(), encodingFactory, template.getParameterNames());
+        }
+        ConfiguredServerEndpoint confguredServerEndpoint = new ConfiguredServerEndpoint(endpoint, null, template, encodingFactory, annotatedEndpointFactory, endpoint.getExtensions());
         configuredServerEndpoints.add(confguredServerEndpoint);
         handleAddingFilterMapping();
     }

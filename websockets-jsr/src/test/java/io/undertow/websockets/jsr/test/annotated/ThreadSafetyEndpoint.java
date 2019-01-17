@@ -20,7 +20,6 @@ package io.undertow.websockets.jsr.test.annotated;
 
 import java.util.HashSet;
 import java.util.Set;
-
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;

@@ -20,27 +20,34 @@ package io.undertow.websockets.jsr;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.websocket.Extension;
 
-import io.undertow.websockets.WebSocketExtension;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 
 /**
  * @author Stuart Douglas
  */
 public class ExtensionImpl implements Extension {
 
-    private final String name;
-    private final List<Parameter> parameters;
+    private final WebSocketExtensionData data;
+    private final List<Parameter> parameters = new ArrayList<>();
 
-    ExtensionImpl(String name, List<Parameter> parameters) {
-        this.name = name;
-        this.parameters = parameters;
+    public ExtensionImpl(WebSocketExtensionData data) {
+        this.data = data;
+        for(Map.Entry<String, String> i : data.parameters().entrySet()) {
+            parameters.add(new ParameterImpl(i.getKey(), i.getValue()));
+        }
+    }
+
+    public WebSocketExtensionData getData() {
+        return data;
     }
 
     @Override
     public String getName() {
-        return name;
+        return data.name();
     }
 
     @Override
@@ -66,13 +73,5 @@ public class ExtensionImpl implements Extension {
         public String getValue() {
             return value;
         }
-    }
-
-    public static Extension create(WebSocketExtension extension) {
-        List<Parameter> params = new ArrayList<>(extension.getParameters().size());
-        for(WebSocketExtension.Parameter p : extension.getParameters()) {
-            params.add(new ParameterImpl(p.getName(), p.getValue()));
-        }
-        return new ExtensionImpl(extension.getName(), params);
     }
 }

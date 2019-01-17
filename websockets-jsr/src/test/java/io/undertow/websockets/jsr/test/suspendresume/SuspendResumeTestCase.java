@@ -18,23 +18,6 @@
 
 package io.undertow.websockets.jsr.test.suspendresume;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
-import javax.servlet.ServletException;
-
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.channels.Channels;
-import org.xnio.http.UpgradeFailedException;
-
 import io.undertow.Handlers;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -54,6 +37,21 @@ import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import io.undertow.websockets.jsr.test.TestMessagesReceivedInOrder;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.channels.Channels;
+import org.xnio.http.UpgradeFailedException;
+
+import javax.servlet.ServletException;
+import java.io.IOException;
+import java.net.URI;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Stuart Douglas

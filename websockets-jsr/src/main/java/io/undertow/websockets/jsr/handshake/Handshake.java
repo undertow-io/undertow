@@ -15,21 +15,26 @@
 
 package io.undertow.websockets.jsr.handshake;
 
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import javax.websocket.Extension;
 
-import io.netty.handler.codec.http.websocketx.WebSocketFrameDecoder;
-import io.netty.handler.codec.http.websocketx.WebSocketFrameEncoder;
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtension;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
 import io.undertow.util.Headers;
-import io.undertow.websockets.jsr.WebSocketVersion;
+import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
+import io.undertow.websockets.jsr.ExtensionImpl;
 
 /**
  * Abstract base class for doing a WebSocket Handshake.
@@ -37,54 +42,39 @@ import io.undertow.websockets.jsr.WebSocketVersion;
  * @author Mike Brock
  */
 public abstract class Handshake {
-    private final WebSocketVersion version;
-    private final String hashAlgorithm;
-    private final String magicNumber;
+
+
+    private static final String EXTENSION_SEPARATOR = ",";
+    private static final String PARAMETER_SEPARATOR = ";";
+    private static final char PARAMETER_EQUAL = '=';
+
+    public static final String MAGIC_NUMBER = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    public static final String SHA1 = "SHA1";
+    private static final String WEB_SOCKET_VERSION = "13";
+
     protected final Set<String> subprotocols;
     private static final byte[] EMPTY = new byte[0];
     private static final Pattern PATTERN = Pattern.compile("\\s*,\\s*");
-    protected Set<ExtensionHandshake> availableExtensions = new HashSet<>();
+    protected Set<WebSocketServerExtensionHandshaker> availableExtensions = new HashSet<>();
     protected boolean allowExtensions;
+    private final ConfiguredServerEndpoint config;
 
-    protected Handshake(WebSocketVersion version, String hashAlgorithm, String magicNumber, final Set<String> subprotocols) {
-        this.version = version;
-        this.hashAlgorithm = hashAlgorithm;
-        this.magicNumber = magicNumber;
+    protected Handshake(ConfiguredServerEndpoint config, final Set<String> subprotocols) {
         this.subprotocols = subprotocols;
-    }
-
-    /**
-     * Return the version for which the {@link Handshake} can be used.
-     */
-    public WebSocketVersion getVersion() {
-        return version;
-    }
-
-    /**
-     * Return the algorithm that is used to hash during the handshake
-     */
-    public String getHashAlgorithm() {
-        return hashAlgorithm;
-    }
-
-    /**
-     * Return the magic number which will be mixed in
-     */
-    public String getMagicNumber() {
-        return magicNumber;
+        this.config = config;
     }
 
     /**
      * Return the full url of the websocket location of the given {@link WebSocketHttpExchange}
      */
-    protected static String getWebSocketLocation(HttpServletRequest request, HttpServletResponse response) {
+    protected static String getWebSocketLocation(WebSocketHttpExchange exchange) {
         String scheme;
-        if ("https".equals(request.getScheme())) {
+        if ("https".equals(exchange.getRequestScheme())) {
             scheme = "wss";
         } else {
             scheme = "ws";
         }
-        return scheme + "://" + request.getHeader(Headers.HOST_STRING) + request.getRequestURI();
+        return scheme + "://" + exchange.getRequestHeader(Headers.HOST_STRING) + exchange.getRequestURI();
     }
 
     /**
@@ -92,51 +82,59 @@ public abstract class Handshake {
      *
      * @param exchange The {@link WebSocketHttpExchange} for which the handshake and upgrade should occur.
      */
-    public final void handshake(HttpServletRequest request, HttpServletResponse response) {
-        handshakeInternal(request, response);
+    public final void handshake(final WebSocketHttpExchange exchange) {
+        handshakeInternal(exchange);
     }
 
-    protected abstract void handshakeInternal(HttpServletRequest request, HttpServletResponse response);
+    protected void handshakeInternal(final WebSocketHttpExchange exchange) {
+        String origin = exchange.getRequestHeader(Headers.ORIGIN_STRING);
+        if (origin != null) {
+            exchange.setResponseHeader(Headers.ORIGIN_STRING, origin);
+        }
+        selectSubprotocol(exchange);
+        selectExtensions(exchange);
+        exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_LOCATION_STRING, getWebSocketLocation(exchange));
 
-    /**
-     * Return {@code true} if this implementation can be used to issue a handshake.
-     */
-    public abstract boolean matches(HttpServletRequest request, HttpServletResponse response);
+        final String key = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY_STRING);
+        try {
+            final String solution = solve(key);
+            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_ACCEPT_STRING, solution);
+            performUpgrade(exchange);
+        } catch (NoSuchAlgorithmException e) {
+            exchange.endExchange();
+            return;
+        }
+    }
 
     /**
      * convenience method to perform the upgrade
      */
-    protected final void performUpgrade(HttpServletRequest request, HttpServletResponse response, final byte[] data) {
-        response.addHeader(Headers.CONTENT_LENGTH_STRING, String.valueOf(data.length));
-        response.addHeader(Headers.UPGRADE_STRING, "WebSocket");
-        response.addHeader(Headers.CONNECTION_STRING, "Upgrade");
-        upgradeChannel(request, response, data);
+    protected final void performUpgrade(final WebSocketHttpExchange exchange, final byte[] data) {
+        exchange.setResponseHeader(Headers.CONTENT_LENGTH_STRING, String.valueOf(data.length));
+        exchange.setResponseHeader(Headers.UPGRADE_STRING, "WebSocket");
+        exchange.setResponseHeader(Headers.CONNECTION_STRING, "Upgrade");
+
+        //
+
+        upgradeChannel(exchange, data);
     }
 
-    protected void upgradeChannel(HttpServletRequest request, HttpServletResponse response, final byte[] data) {
-        try {
-            if (data.length > 0) {
-                response.getOutputStream().write(data);
-            }
-            response.getOutputStream().close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    protected void upgradeChannel(final WebSocketHttpExchange exchange) {
+        exchange.endExchange();
     }
-
 
     /**
      * Perform the upgrade using no payload
      */
-    protected final void performUpgrade(HttpServletRequest request, HttpServletResponse response) {
-        performUpgrade(request, response, EMPTY);
+    protected final void performUpgrade(final WebSocketHttpExchange exchange) {
+        performUpgrade(exchange, EMPTY);
     }
 
     /**
      * Selects the first matching supported sub protocol and add it the the headers of the exchange.
      */
-    protected final void selectSubprotocol(HttpServletRequest request, HttpServletResponse response) {
-        String requestedSubprotocols = request.getHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING);
+    protected final void selectSubprotocol(final WebSocketHttpExchange exchange) {
+        String requestedSubprotocols = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING);
         if (requestedSubprotocols == null) {
             return;
         }
@@ -144,47 +142,25 @@ public abstract class Handshake {
         String[] requestedSubprotocolArray = PATTERN.split(requestedSubprotocols);
         String subProtocol = supportedSubprotols(requestedSubprotocolArray);
         if (subProtocol != null && !subProtocol.isEmpty()) {
-            response.setHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING, subProtocol);
+            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING, subProtocol);
         }
 
     }
 
 
-    protected final void selectExtensions(HttpServletRequest request, HttpServletResponse response) {
-        List<WebSocketExtensionData> requestedExtensions = WebSocketExtensionData.parse(request.getHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING));
-        List<WebSocketExtensionData> extensions = selectedExtension(requestedExtensions);
+    protected final void selectExtensions(final WebSocketHttpExchange exchange) {
+        List<WebSocketExtensionData> requestedExtensions = WebSocketExtensionUtil.extractExtensions(exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING));
+        List<WebSocketServerExtension> extensions = selectedExtension(requestedExtensions);
         if (extensions != null && !extensions.isEmpty()) {
-            response.setHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING, WebSocketExtensionData.toExtensionHeader(extensions));
-        }
-
-    }
-
-    protected String supportedSubprotols(String[] requestedSubprotocolArray) {
-        for (String p : requestedSubprotocolArray) {
-            String requestedSubprotocol = p.trim();
-
-            for (String supportedSubprotocol : subprotocols) {
-                if (requestedSubprotocol.equals(supportedSubprotocol)) {
-                    return supportedSubprotocol;
-                }
+            String headerValue = "";
+            for (WebSocketServerExtension extension : extensions) {
+                WebSocketExtensionData extensionData = extension.newReponseData();
+                headerValue = appendExtension(headerValue,
+                        extensionData.name(), extensionData.parameters());
             }
+            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING, headerValue);
         }
-        return null;
-    }
 
-    protected List<WebSocketExtensionData> selectedExtension(List<WebSocketExtensionData> extensionList) {
-        List<WebSocketExtensionData> selected = new ArrayList<>();
-        List<ExtensionHandshake> configured = new ArrayList<>();
-        for (WebSocketExtensionData ext : extensionList) {
-            for (ExtensionHandshake extHandshake : availableExtensions) {
-                WebSocketExtensionData negotiated = extHandshake.accept(ext);
-                if (negotiated != null && !extHandshake.isIncompatible(configured)) {
-                    selected.add(negotiated);
-                    configured.add(extHandshake);
-                }
-            }
-        }
-        return selected;
     }
 
     /**
@@ -192,7 +168,7 @@ public abstract class Handshake {
      *
      * @param extension a new {@code ExtensionHandshake}
      */
-    public final void addExtension(ExtensionHandshake extension) {
+    public final void addExtension(WebSocketServerExtensionHandshaker extension) {
         availableExtensions.add(extension);
         allowExtensions = true;
     }
@@ -203,26 +179,103 @@ public abstract class Handshake {
      * @param exchange the exchange used to retrieve negotiated extensions
      * @return a list of {@code ExtensionFunction} with the implementation of the extensions
      */
-    protected final List<WebSocketExtension> initExtensions(final HttpServletResponse response) {
-        String extHeader = response.getHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING);
+    protected final List<WebSocketServerExtension> initExtensions(final WebSocketHttpExchange exchange) {
+        String extHeader = exchange.getResponseHeaders().get(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING) != null ?
+                exchange.getResponseHeaders().get(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING).get(0) : null;
 
-        List<WebSocketExtension> negotiated = new ArrayList<>();
+        List<WebSocketServerExtension> ret = new ArrayList<>();
         if (extHeader != null) {
-            List<WebSocketExtensionData> extensions = WebSocketExtensionData.parse(extHeader);
+            List<WebSocketExtensionData> extensions = WebSocketExtensionUtil.extractExtensions(extHeader);
             if (extensions != null && !extensions.isEmpty()) {
                 for (WebSocketExtensionData ext : extensions) {
-                    for (ExtensionHandshake extHandshake : availableExtensions) {
-                        if (extHandshake.getName().equals(ext.getName())) {
-                            negotiated.add(extHandshake.create());
+                    for (WebSocketServerExtensionHandshaker extHandshake : availableExtensions) {
+                        WebSocketServerExtension negotiated = extHandshake.handshakeExtension(ext);
+                        if (negotiated != null) {
+                            ret.add(negotiated);
                         }
                     }
                 }
             }
         }
-        return negotiated;
+        return ret;
     }
 
-    protected abstract WebSocketFrameDecoder newWebsocketDecoder();
 
-    protected abstract WebSocketFrameEncoder newWebSocketEncoder();
+    protected void upgradeChannel(final WebSocketHttpExchange exchange, byte[] data) {
+        HandshakeUtil.prepareUpgrade(config.getEndpointConfiguration(), exchange);
+        super.upgradeChannel(exchange, data);
+    }
+
+    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection c, final ByteBufferPool buffers) {
+        WebSocketChannel channel = super.createChannel(exchange, c, buffers);
+        HandshakeUtil.setConfig(channel, config);
+        return channel;
+    }
+
+    protected String supportedSubprotols(String[] requestedSubprotocolArray) {
+        return HandshakeUtil.selectSubProtocol(config, requestedSubprotocolArray);
+    }
+
+    protected List<WebSocketServerExtension> selectedExtension(List<WebSocketExtensionData> extensionList) {
+        List<ExtensionImpl> ext = new ArrayList<>();
+        for (WebSocketExtensionData i : extensionList) {
+            ext.add(new ExtensionImpl(i));
+        }
+        List<Extension> selected = HandshakeUtil.selectExtensions(config, ext);
+        if (selected == null) {
+            return Collections.emptyList();
+        }
+        List<WebSocketServerExtension> ret = new ArrayList<>();
+        for (Extension i : selected) {
+            for (WebSocketServerExtensionHandshaker handshaker : availableExtensions) {
+                WebSocketServerExtension negotiated = handshaker.handshakeExtension(((ExtensionImpl) i).getData());
+                if (negotiated != null) {
+                    ret.add(negotiated);
+                }
+            }
+        }
+
+        return ret;
+    }
+
+
+    static String appendExtension(String currentHeaderValue, String extensionName,
+                                  Map<String, String> extensionParameters) {
+
+        StringBuilder newHeaderValue = new StringBuilder(
+                currentHeaderValue != null ? currentHeaderValue.length() : extensionName.length() + 1);
+        if (currentHeaderValue != null && !currentHeaderValue.trim().isEmpty()) {
+            newHeaderValue.append(currentHeaderValue);
+            newHeaderValue.append(EXTENSION_SEPARATOR);
+        }
+        newHeaderValue.append(extensionName);
+        for (Map.Entry<String, String> extensionParameter : extensionParameters.entrySet()) {
+            newHeaderValue.append(PARAMETER_SEPARATOR);
+            newHeaderValue.append(extensionParameter.getKey());
+            if (extensionParameter.getValue() != null) {
+                newHeaderValue.append(PARAMETER_EQUAL);
+                newHeaderValue.append(extensionParameter.getValue());
+            }
+        }
+        return newHeaderValue.toString();
+    }
+
+    public boolean matches(final WebSocketHttpExchange exchange) {
+        if (exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY_STRING) != null &&
+                exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_VERSION_STRING) != null) {
+            if (exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_VERSION_STRING)
+                    .equals(WEB_SOCKET_VERSION)) {
+                return HandshakeUtil.checkOrigin(config.getEndpointConfiguration(), exchange);
+            }
+        }
+        return false;
+    }
+
+    protected final String solve(final String nonceBase64) throws NoSuchAlgorithmException {
+        final String concat = nonceBase64.trim() + MAGIC_NUMBER;
+        final MessageDigest digest = MessageDigest.getInstance(SHA1);
+        digest.update(concat.getBytes(StandardCharsets.UTF_8));
+        return Base64.encodeBytes(digest.digest()).trim();
+    }
+
 }

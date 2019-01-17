@@ -18,6 +18,9 @@
 
 package io.undertow.websockets.jsr;
 
+import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.InstanceHandle;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,9 +28,6 @@ import javax.websocket.Extension;
 import javax.websocket.HandshakeResponse;
 import javax.websocket.server.HandshakeRequest;
 import javax.websocket.server.ServerEndpointConfig;
-
-import io.undertow.servlet.api.InstanceFactory;
-import io.undertow.servlet.api.InstanceHandle;
 
 /**
  * Server default container configurator.

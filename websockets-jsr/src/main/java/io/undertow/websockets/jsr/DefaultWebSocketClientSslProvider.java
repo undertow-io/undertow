@@ -18,17 +18,15 @@
 
 package io.undertow.websockets.jsr;
 
-import java.net.URI;
-
-import javax.net.ssl.SSLContext;
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.Endpoint;
-
+import io.undertow.protocols.ssl.UndertowXnioSsl;
 import org.xnio.OptionMap;
 import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
 
-import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
+import javax.net.ssl.SSLContext;
+import javax.websocket.ClientEndpointConfig;
+import javax.websocket.Endpoint;
+import java.net.URI;
 
 /**
  * Client SSL provider that gets the SSL context in one of two ways.

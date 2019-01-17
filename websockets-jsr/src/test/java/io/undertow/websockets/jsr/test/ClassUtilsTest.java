@@ -17,24 +17,22 @@
  */
 package io.undertow.websockets.jsr.test;
 
+import io.undertow.testutils.category.UnitTest;
+import io.undertow.websockets.jsr.util.ClassUtils;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
-
 import javax.websocket.EncodeException;
 import javax.websocket.Encoder;
 import javax.websocket.EndpointConfig;
 import javax.websocket.MessageHandler;
-
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-import io.undertow.testutils.category.UnitTest;
-import io.undertow.websockets.jsr.util.ClassUtils;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

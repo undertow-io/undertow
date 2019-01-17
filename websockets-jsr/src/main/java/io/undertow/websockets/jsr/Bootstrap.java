@@ -18,11 +18,15 @@
 
 package io.undertow.websockets.jsr;
 
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.List;
+import io.undertow.servlet.ServletExtension;
+import io.undertow.servlet.Servlets;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.ThreadSetupHandler;
+import io.undertow.servlet.core.ContextClassLoaderSetupAction;
+import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.websockets.extensions.ExtensionHandshake;
+import org.xnio.XnioWorker;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.FilterRegistration;
@@ -33,17 +37,12 @@ import javax.websocket.DeploymentException;
 import javax.websocket.Extension;
 import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpointConfig;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.List;
 import java.util.function.Supplier;
-
-import org.xnio.XnioWorker;
-
-import io.undertow.servlet.ServletExtension;
-import io.undertow.servlet.Servlets;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.ThreadSetupHandler;
-import io.undertow.servlet.core.ContextClassLoaderSetupAction;
-import io.undertow.servlet.spec.ServletContextImpl;
-import io.undertow.websockets.extensions.ExtensionHandshake;
 
 /**
  * @author Stuart Douglas

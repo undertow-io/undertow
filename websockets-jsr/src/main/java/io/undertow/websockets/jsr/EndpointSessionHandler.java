@@ -17,21 +17,24 @@
  */
 package io.undertow.websockets.jsr;
 
-import java.net.URI;
-import java.security.Principal;
-import java.util.Collections;
+import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.util.ImmediateInstanceHandle;
+import io.undertow.websockets.WebSocketConnectionCallback;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.jsr.annotated.AnnotatedEndpoint;
+import io.undertow.websockets.jsr.handshake.HandshakeUtil;
+import io.undertow.websockets.spi.WebSocketHttpExchange;
+import org.xnio.IoUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.websocket.Endpoint;
 import javax.websocket.Extension;
 import javax.websocket.server.ServerEndpointConfig;
-
-import io.undertow.servlet.api.InstanceFactory;
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.servlet.handlers.ServletRequestContext;
-import io.undertow.servlet.util.ImmediateInstanceHandle;
-import io.undertow.websockets.jsr.annotated.AnnotatedEndpoint;
-import io.undertow.websockets.jsr.handshake.HandshakeUtil;
+import java.net.URI;
+import java.security.Principal;
+import java.util.Collections;
 
 /**
  * {@link WebSocketConnectionCallback} implementation which will setuo the {@link UndertowSession} and notify

@@ -18,8 +18,6 @@
 
 package io.undertow.websockets.jsr.test;
 
-import java.io.IOException;
-
 import javax.servlet.Servlet;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -28,6 +26,7 @@ import javax.servlet.ServletResponse;
 import javax.websocket.DeploymentException;
 import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpointConfig;
+import java.io.IOException;
 
 /**
  * @author Stuart Douglas

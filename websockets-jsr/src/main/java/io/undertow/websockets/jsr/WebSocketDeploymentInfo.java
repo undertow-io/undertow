@@ -18,16 +18,18 @@
 
 package io.undertow.websockets.jsr;
 
+import io.undertow.server.XnioByteBufferPool;
+import io.undertow.websockets.extensions.ExtensionHandshake;
+import io.undertow.connector.ByteBufferPool;
+import org.xnio.Pool;
+import org.xnio.XnioWorker;
+
+import javax.websocket.server.ServerEndpointConfig;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
-
-import javax.websocket.server.ServerEndpointConfig;
-
-import org.xnio.XnioWorker;
-
-import io.undertow.websockets.extensions.ExtensionHandshake;
 
 /**
  * Web socket deployment information
@@ -82,6 +84,11 @@ public class WebSocketDeploymentInfo implements Cloneable {
         return buffers;
     }
 
+    @Deprecated
+    public WebSocketDeploymentInfo setBuffers(Pool<ByteBuffer> buffers) {
+        return setBuffers(new XnioByteBufferPool(buffers));
+    }
+
     public WebSocketDeploymentInfo setBuffers(ByteBufferPool buffers) {
         this.buffers = buffers;
         return this;
@@ -116,7 +123,7 @@ public class WebSocketDeploymentInfo implements Cloneable {
     }
 
     void containerReady(ServerWebSocketContainer container) {
-        for (ContainerReadyListener listener : containerReadyListeners) {
+        for(ContainerReadyListener listener : containerReadyListeners) {
             listener.ready(container);
         }
     }
@@ -152,7 +159,7 @@ public class WebSocketDeploymentInfo implements Cloneable {
      * Add a new WebSocket Extension into this deployment info.
      *
      * @param extension a new {@code ExtensionHandshake} instance
-     * @return current deployment info
+     * @return          current deployment info
      */
     public WebSocketDeploymentInfo addExtension(final ExtensionHandshake extension) {
         if (null != extension) {
@@ -203,7 +210,7 @@ public class WebSocketDeploymentInfo implements Cloneable {
                 .addExtensions(this.extensions)
                 .setClientBindAddress(this.clientBindAddress)
                 .setReconnectHandler(this.reconnectHandler)
-                ;
+        ;
     }
 
 }

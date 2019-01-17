@@ -17,11 +17,11 @@
  */
 package io.undertow.websockets.jsr;
 
-import javax.websocket.SendHandler;
-import javax.websocket.SendResult;
-
 import io.undertow.websockets.core.WebSocketCallback;
 import io.undertow.websockets.core.WebSocketChannel;
+
+import javax.websocket.SendHandler;
+import javax.websocket.SendResult;
 
 /**
  * {@link WebSocketCallback} implementation which will notify a wrapped {@link SendHandler} once a send operation

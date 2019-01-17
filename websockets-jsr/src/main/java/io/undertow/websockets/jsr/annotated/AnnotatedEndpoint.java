@@ -71,27 +71,27 @@ public class AnnotatedEndpoint extends Endpoint {
         boolean partialText = textMessage == null || (textMessage.hasParameterType(boolean.class) && !textMessage.getMessageType().equals(boolean.class));
         boolean partialBinary = binaryMessage == null || (binaryMessage.hasParameterType(boolean.class) && !binaryMessage.getMessageType().equals(boolean.class));
 
-        if(textMessage != null) {
-            if(partialText) {
+        if (textMessage != null) {
+            if (partialText) {
                 addPartialHandler(s, textMessage);
             } else {
-                if(textMessage.getMaxMessageSize() > 0) {
+                if (textMessage.getMaxMessageSize() > 0) {
                     s.setMaxTextMessageBufferSize((int) textMessage.getMaxMessageSize());
                 }
                 addWholeHandler(s, textMessage);
             }
         }
-        if(binaryMessage != null) {
-            if(partialBinary) {
+        if (binaryMessage != null) {
+            if (partialBinary) {
                 addPartialHandler(s, binaryMessage);
             } else {
-                if(binaryMessage.getMaxMessageSize() > 0) {
+                if (binaryMessage.getMaxMessageSize() > 0) {
                     s.setMaxBinaryMessageBufferSize((int) binaryMessage.getMaxMessageSize());
                 }
                 addWholeHandler(s, binaryMessage);
             }
         }
-        if(pongMessage != null) {
+        if (pongMessage != null) {
             addWholeHandler(s, pongMessage);
         }
 
@@ -128,7 +128,6 @@ public class AnnotatedEndpoint extends Endpoint {
     }
 
 
-
     private void addWholeHandler(final UndertowSession session, final BoundMethod method) {
         session.addMessageHandler((Class) method.getMessageType(), new MessageHandler.Whole<Object>() {
             @Override
@@ -154,7 +153,7 @@ public class AnnotatedEndpoint extends Endpoint {
         session.getContainer().invokeEndpointMethod(session.getExecutor(), new Runnable() {
             @Override
             public void run() {
-                if(!released) {
+                if (!released) {
                     try {
                         method.invoke(instance.getInstance(), params);
                     } catch (Exception e) {
@@ -177,7 +176,7 @@ public class AnnotatedEndpoint extends Endpoint {
             } else {
                 session.getAsyncRemote().sendObject(result, new ErrorReportingSendHandler(session));
             }
-            if(session.getAsyncRemote().getBatchingAllowed()) {
+            if (session.getAsyncRemote().getBatchingAllowed()) {
                 try {
                     session.getAsyncRemote().flushBatch();
                 } catch (IOException e) {
@@ -194,10 +193,10 @@ public class AnnotatedEndpoint extends Endpoint {
             params.put(Session.class, session);
             params.put(Map.class, session.getPathParameters());
             params.put(CloseReason.class, closeReason);
-            ((UndertowSession) session).getContainer().invokeEndpointMethod(((UndertowSession)session).getExecutor(), new Runnable() {
+            ((UndertowSession) session).getContainer().invokeEndpointMethod(((UndertowSession) session).getExecutor(), new Runnable() {
                         @Override
                         public void run() {
-                            if(!released) {
+                            if (!released) {
                                 try {
                                     webSocketClose.invoke(instance.getInstance(), params);
                                 } catch (Exception e) {
@@ -222,10 +221,10 @@ public class AnnotatedEndpoint extends Endpoint {
             params.put(Session.class, session);
             params.put(Throwable.class, thr);
             params.put(Map.class, session.getPathParameters());
-            ((UndertowSession) session).getContainer().invokeEndpointMethod(((UndertowSession)session).getExecutor(), new Runnable() {
+            ((UndertowSession) session).getContainer().invokeEndpointMethod(((UndertowSession) session).getExecutor(), new Runnable() {
                 @Override
                 public void run() {
-                    if(!released) {
+                    if (!released) {
                         try {
                             webSocketError.invoke(instance.getInstance(), params);
                         } catch (Exception e) {

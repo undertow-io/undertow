@@ -18,16 +18,6 @@
 
 package io.undertow.websockets.jsr.annotated;
 
-import java.io.InputStream;
-import java.io.Reader;
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
 import javax.websocket.CloseReason;
 import javax.websocket.DecodeException;
 import javax.websocket.DeploymentException;
@@ -39,6 +29,17 @@ import javax.websocket.OnOpen;
 import javax.websocket.PongMessage;
 import javax.websocket.Session;
 import javax.websocket.server.PathParam;
+
+import java.io.InputStream;
+import java.io.Reader;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.websockets.jsr.Encoding;

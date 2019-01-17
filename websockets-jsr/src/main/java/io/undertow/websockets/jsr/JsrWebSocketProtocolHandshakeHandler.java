@@ -23,9 +23,6 @@ import java.util.Set;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.core.protocol.Handshake;
-import io.undertow.websockets.jsr.handshake.JsrHybi07Handshake;
-import io.undertow.websockets.jsr.handshake.JsrHybi08Handshake;
-import io.undertow.websockets.jsr.handshake.JsrHybi13Handshake;
 
 /**
  * {@link WebSocketProtocolHandshakeHandler} implementation which takes care to add the right {@link Handshake} instances

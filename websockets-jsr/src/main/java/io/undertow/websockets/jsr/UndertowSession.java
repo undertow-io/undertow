@@ -17,6 +17,24 @@
  */
 package io.undertow.websockets.jsr;
 
+import io.undertow.server.session.SecureRandomSessionIdGenerator;
+import io.undertow.servlet.api.InstanceHandle;
+import io.undertow.util.WorkerUtils;
+import io.undertow.websockets.client.WebSocketClient;
+import io.undertow.websockets.core.CloseMessage;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSockets;
+import org.xnio.ChannelListener;
+import org.xnio.IoFuture;
+import org.xnio.IoUtils;
+
+import javax.websocket.CloseReason;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.Extension;
+import javax.websocket.MessageHandler;
+import javax.websocket.RemoteEndpoint;
+import javax.websocket.Session;
 import java.io.IOException;
 import java.net.URI;
 import java.security.Principal;
@@ -30,27 +48,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.Extension;
-import javax.websocket.MessageHandler;
-import javax.websocket.RemoteEndpoint;
-import javax.websocket.Session;
-
-import org.xnio.ChannelListener;
-import org.xnio.IoFuture;
-import org.xnio.IoUtils;
-
-import io.netty.channel.ChannelHandlerContext;
-import io.undertow.server.session.SecureRandomSessionIdGenerator;
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.websockets.client.WebSocketClient;
-import io.undertow.websockets.core.CloseMessage;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSockets;
-import io.undertow.xnio.util.WorkerUtils;
-
 /**
  * {@link Session} implementation which makes use of the high-level WebSocket API of undertow under the hood.
  *
@@ -59,7 +56,7 @@ import io.undertow.xnio.util.WorkerUtils;
 public final class UndertowSession implements Session {
 
     private final String sessionId;
-    private ChannelHandlerContext ctx;
+    private WebSocketChannel webSocketChannel;
     private FrameHandler frameHandler;
     private final ServerWebSocketContainer container;
     private final Principal user;
@@ -83,13 +80,13 @@ public final class UndertowSession implements Session {
     private int disconnectCount = 0;
     private int failedCount = 0;
 
-    UndertowSession(ChannelHandlerContext ctx, URI requestUri, Map<String, String> pathParameters,
+    UndertowSession(WebSocketChannel webSocketChannel, URI requestUri, Map<String, String> pathParameters,
                     Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
                     InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString,
                     final Encoding encoding, final SessionContainer openSessions, final String subProtocol,
                     final List<Extension> extensions, WebSocketClient.ConnectionBuilder clientConnectionBuilder) {
         assert openSessions != null;
-        this.ctx = ctx;
+        this.webSocketChannel = webSocketChannel;
         this.queryString = queryString;
         this.encoding = encoding;
         this.openSessions = openSessions;
@@ -168,17 +165,17 @@ public final class UndertowSession implements Session {
 
     @Override
     public boolean isOpen() {
-        return ctx.channel().isOpen();
+        return webSocketChannel.isOpen();
     }
 
     @Override
     public long getMaxIdleTimeout() {
-        //return webSocketChannel.getIdleTimeout();
+        return webSocketChannel.getIdleTimeout();
     }
 
     @Override
     public void setMaxIdleTimeout(final long milliseconds) {
-        //webSocketChannel.setIdleTimeout(milliseconds);
+        webSocketChannel.setIdleTimeout(milliseconds);
     }
 
     @Override
@@ -381,8 +378,8 @@ public final class UndertowSession implements Session {
         return encoding;
     }
 
-    public ChannelHandlerContext getWebSocketChannel() {
-        return ctx;
+    public WebSocketChannel getWebSocketChannel() {
+        return webSocketChannel;
     }
 
     private void setupWebSocketChannel(WebSocketChannel webSocketChannel) {
@@ -417,9 +414,5 @@ public final class UndertowSession implements Session {
 
     boolean isSessionClosed() {
         return closed.get();
-    }
-
-    public Executor getWorker() {
-        return executor;
     }
 }

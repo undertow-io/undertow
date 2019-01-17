@@ -17,13 +17,10 @@
  */
 package io.undertow.websockets.jsr.handshake;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.websocket.HandshakeResponse;
 
 /**
@@ -34,24 +31,19 @@ import javax.websocket.HandshakeResponse;
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
 public final class ExchangeHandshakeResponse implements HandshakeResponse {
-    private final HttpServletResponse response;
+    private final WebSocketHttpExchange exchange;
     private Map<String, List<String>> headers;
 
-    public ExchangeHandshakeResponse(HttpServletResponse response) {
-        this.response = response;
+    public ExchangeHandshakeResponse(final WebSocketHttpExchange exchange) {
+        this.exchange = exchange;
     }
-
 
     @Override
     public Map<String, List<String>> getHeaders() {
         if (headers == null) {
             headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-            final Collection<String> headerNames = response.getHeaderNames();
-            for (String header : headerNames) {
-                headers.put(header, new ArrayList<>(response.getHeaders(header)));
-            }
+            headers.putAll(exchange.getResponseHeaders());
         }
-
         return headers;
     }
 
@@ -60,15 +52,7 @@ public final class ExchangeHandshakeResponse implements HandshakeResponse {
      */
     void update() {
         if (headers != null) {
-            for (String header : response.getHeaderNames()) {
-                response.setHeader(header, null);
-            }
-
-            for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-                for (String val : entry.getValue()) {
-                    response.addHeader(entry.getKey(), val);
-                }
-            }
+            exchange.setResponseHeaders(headers);
         }
     }
 }

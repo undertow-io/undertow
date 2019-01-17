@@ -18,22 +18,20 @@
 
 package io.undertow.websockets.jsr;
 
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.List;
-import java.util.Set;
-
-import javax.websocket.Decoder;
-import javax.websocket.DeploymentException;
-import javax.websocket.Encoder;
-
+import io.undertow.util.PathTemplate;
+import io.undertow.websockets.WebSocketExtension;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 
-import io.undertow.util.PathTemplate;
-import io.undertow.websockets.WebSocketExtension;
+import javax.websocket.Decoder;
+import javax.websocket.DeploymentException;
+import javax.websocket.Encoder;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.List;
+import java.util.Set;
 
 
 /**

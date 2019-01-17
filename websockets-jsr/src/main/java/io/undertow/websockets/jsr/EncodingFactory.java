@@ -33,7 +33,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.websocket.Decoder;
 import javax.websocket.DeploymentException;
 import javax.websocket.Encoder;

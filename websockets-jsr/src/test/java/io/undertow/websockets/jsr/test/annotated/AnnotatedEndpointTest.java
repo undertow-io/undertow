@@ -17,12 +17,6 @@
  */
 package io.undertow.websockets.jsr.test.annotated;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -31,6 +25,13 @@ import javax.websocket.ClientEndpoint;
 import javax.websocket.CloseReason;
 import javax.websocket.OnClose;
 import javax.websocket.Session;
+import javax.websocket.server.ServerEndpointConfig;
+
+import java.io.IOException;
+import java.net.URI;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -99,6 +100,10 @@ public class AnnotatedEndpointTest {
                                         deployment = container;
                                     }
                                 })
+                                .addEndpoint(ServerEndpointConfig.Builder.create(
+                                        AnnotatedAddedProgrammaticallyEndpoint.class,
+                                        AnnotatedAddedProgrammaticallyEndpoint.PATH)
+                                        .build())
                 )
                 .addServlet(new ServletInfo("redirect", RedirectServlet.class)
                 .addMapping("/redirect"))
@@ -125,6 +130,18 @@ public class AnnotatedEndpointTest {
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/chat/Stuart"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "hello Stuart".getBytes(), latch));
+        latch.getIoFuture().get();
+        client.destroy();
+    }
+
+    @Test
+    public void testStringOnMessageAddedProgramatically() throws Exception {
+        final byte[] payload = "foo".getBytes();
+        final FutureResult latch = new FutureResult();
+
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/programmatic"));
+        client.connect();
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "oof".getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
@@ -180,6 +197,7 @@ public class AnnotatedEndpointTest {
 
     @Test
     public void testCloseReason() throws Exception {
+        AnnotatedClientEndpoint.reset();
         MessageEndpoint.reset();
 
         Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/chat/Bob"));
@@ -349,6 +367,7 @@ public class AnnotatedEndpointTest {
         session.close();
         Assert.assertEquals(0, expected.size());
     }
+
 
 
     @ClientEndpoint
