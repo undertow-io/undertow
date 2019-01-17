@@ -17,6 +17,7 @@
  */
 package io.undertow.websockets.jsr;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.undertow.server.session.SecureRandomSessionIdGenerator;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.util.WorkerUtils;
@@ -56,7 +57,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class UndertowSession implements Session {
 
     private final String sessionId;
-    private WebSocketChannel webSocketChannel;
+    private ChannelHandlerContext webSocketChannel;
     private FrameHandler frameHandler;
     private final ServerWebSocketContainer container;
     private final Principal user;
@@ -79,8 +80,9 @@ public final class UndertowSession implements Session {
     private volatile boolean localClose;
     private int disconnectCount = 0;
     private int failedCount = 0;
+    private ConfiguredServerEndpoint configuredServerEndpoint;
 
-    UndertowSession(WebSocketChannel webSocketChannel, URI requestUri, Map<String, String> pathParameters,
+    UndertowSession(ChannelHandlerContext webSocketChannel, URI requestUri, Map<String, String> pathParameters,
                     Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
                     InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString,
                     final Encoding encoding, final SessionContainer openSessions, final String subProtocol,
@@ -150,7 +152,7 @@ public final class UndertowSession implements Session {
 
     @Override
     public String getProtocolVersion() {
-        return webSocketChannel.getVersion().toHttpHeaderValue();
+        return "13";
     }
 
     @Override
@@ -354,6 +356,15 @@ public final class UndertowSession implements Session {
     @Override
     public List<Extension> getNegotiatedExtensions() {
         return extensions;
+    }
+
+    public ConfiguredServerEndpoint getConfiguredServerEndpoint() {
+        return configuredServerEndpoint;
+    }
+
+    public UndertowSession setConfiguredServerEndpoint(ConfiguredServerEndpoint configuredServerEndpoint) {
+        this.configuredServerEndpoint = configuredServerEndpoint;
+        return this;
     }
 
     void close0() {

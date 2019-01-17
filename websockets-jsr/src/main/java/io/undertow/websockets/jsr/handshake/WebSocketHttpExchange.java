@@ -19,13 +19,10 @@ import java.io.Closeable;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.function.Consumer;
 
-import org.xnio.OptionMap;
-
-import io.undertow.server.HttpUpgradeListener;
+import io.netty.channel.ChannelHandlerContext;
 import io.undertow.util.AttachmentKey;
-import io.undertow.websockets.core.WebSocketChannel;
 
 
 /**
@@ -90,12 +87,13 @@ public interface WebSocketHttpExchange extends Closeable {
      */
     void setResponseHeader(final String headerName, final String headerValue);
 
+
     /**
      * Upgrade the underlying channel
      *
      * @param upgradeCallback
      */
-    void upgradeChannel(final HttpUpgradeListener upgradeCallback);
+    void upgradeChannel(Consumer<WebSocketConnectionCallback> listener);
 
     /**
      * End the exchange normally. If this is a blocking exchange this may be a noop, and the exchange
@@ -137,8 +135,4 @@ public interface WebSocketHttpExchange extends Closeable {
     Principal getUserPrincipal();
 
     boolean isUserInRole(String role);
-
-    Set<WebSocketChannel> getPeerConnections();
-
-    OptionMap getOptions();
 }

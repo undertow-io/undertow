@@ -24,17 +24,33 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import javax.websocket.Extension;
 
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http.HttpContentCompressor;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpRequestDecoder;
+import io.netty.handler.codec.http.HttpResponseEncoder;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.websocketx.WebSocket13FrameDecoder;
+import io.netty.handler.codec.http.websocketx.WebSocket13FrameEncoder;
+import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionDecoder;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncoder;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
 import io.undertow.util.Headers;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.jsr.ExtensionImpl;
+import io.undertow.websockets.jsr.UndertowSession;
 
 /**
  * Abstract base class for doing a WebSocket Handshake.
@@ -82,17 +98,14 @@ public abstract class Handshake {
      *
      * @param exchange The {@link WebSocketHttpExchange} for which the handshake and upgrade should occur.
      */
-    public final void handshake(final WebSocketHttpExchange exchange) {
-        handshakeInternal(exchange);
-    }
+    public final void handshake(final WebSocketHttpExchange exchange, Consumer<ChannelHandlerContext> completeListener) {
 
-    protected void handshakeInternal(final WebSocketHttpExchange exchange) {
         String origin = exchange.getRequestHeader(Headers.ORIGIN_STRING);
         if (origin != null) {
             exchange.setResponseHeader(Headers.ORIGIN_STRING, origin);
         }
         selectSubprotocol(exchange);
-        selectExtensions(exchange);
+        List<WebSocketServerExtension> extensions = selectExtensions(exchange);
         exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_LOCATION_STRING, getWebSocketLocation(exchange));
 
         final String key = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY_STRING);
@@ -104,30 +117,57 @@ public abstract class Handshake {
             exchange.endExchange();
             return;
         }
+        handshakeInternal(exchange);
+        exchange.upgradeChannel(new Consumer<ChannelHandlerContext>() {
+            @Override
+            public void accept(ChannelHandlerContext context) {
+
+                WebSocket13FrameDecoder decoder = new WebSocket13FrameDecoder(true, allowExtensions, 65536, false);
+                WebSocket13FrameEncoder encoder = new WebSocket13FrameEncoder(false);
+                ChannelPipeline p = context.pipeline();
+                if (p.get(HttpObjectAggregator.class) != null) {
+                    p.remove(HttpObjectAggregator.class);
+                }
+                if (p.get(HttpContentCompressor.class) != null) {
+                    p.remove(HttpContentCompressor.class);
+                }
+                ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
+                if (ctx == null) {
+                    // this means the user use a HttpServerCodec
+                    ctx = p.context(HttpServerCodec.class);
+                    if (ctx == null) {
+                        //should never happen
+                        throw new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline");
+                    }
+                    p.addBefore(ctx.name(), "wsdecoder", decoder);
+                    p.addBefore(ctx.name(), "wsencoder", encoder);
+                    p.remove(ctx.name());
+                } else {
+                    p.replace(ctx.name(), "wsdecoder", decoder);
+                    p.replace(p.context(HttpResponseEncoder.class).name(), "wsencoder", encoder);
+                }
+                for(WebSocketServerExtension extension : extensions) {
+                    WebSocketExtensionDecoder exdecoder = extension.newExtensionDecoder();
+                    WebSocketExtensionEncoder exencoder = extension.newExtensionEncoder();
+                    ctx.pipeline().addAfter(ctx.name(), exdecoder.getClass().getName(), exdecoder);
+                    ctx.pipeline().addAfter(ctx.name(), exencoder.getClass().getName(), exencoder);
+                }
+
+                completeListener.accept(context);
+            }
+        });
+    }
+
+    protected void handshakeInternal(final WebSocketHttpExchange exchange) {
     }
 
     /**
      * convenience method to perform the upgrade
      */
-    protected final void performUpgrade(final WebSocketHttpExchange exchange, final byte[] data) {
-        exchange.setResponseHeader(Headers.CONTENT_LENGTH_STRING, String.valueOf(data.length));
+    protected final void performUpgrade(final WebSocketHttpExchange exchange) {
         exchange.setResponseHeader(Headers.UPGRADE_STRING, "WebSocket");
         exchange.setResponseHeader(Headers.CONNECTION_STRING, "Upgrade");
-
-        //
-
-        upgradeChannel(exchange, data);
-    }
-
-    protected void upgradeChannel(final WebSocketHttpExchange exchange) {
-        exchange.endExchange();
-    }
-
-    /**
-     * Perform the upgrade using no payload
-     */
-    protected final void performUpgrade(final WebSocketHttpExchange exchange) {
-        performUpgrade(exchange, EMPTY);
+        HandshakeUtil.prepareUpgrade(config.getEndpointConfiguration(), exchange);
     }
 
     /**
@@ -148,7 +188,7 @@ public abstract class Handshake {
     }
 
 
-    protected final void selectExtensions(final WebSocketHttpExchange exchange) {
+    final List<WebSocketServerExtension> selectExtensions(final WebSocketHttpExchange exchange) {
         List<WebSocketExtensionData> requestedExtensions = WebSocketExtensionUtil.extractExtensions(exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING));
         List<WebSocketServerExtension> extensions = selectedExtension(requestedExtensions);
         if (extensions != null && !extensions.isEmpty()) {
@@ -160,7 +200,7 @@ public abstract class Handshake {
             }
             exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING, headerValue);
         }
-
+        return extensions;
     }
 
     /**
@@ -200,24 +240,12 @@ public abstract class Handshake {
         return ret;
     }
 
-
-    protected void upgradeChannel(final WebSocketHttpExchange exchange, byte[] data) {
-        HandshakeUtil.prepareUpgrade(config.getEndpointConfiguration(), exchange);
-        super.upgradeChannel(exchange, data);
-    }
-
-    public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection c, final ByteBufferPool buffers) {
-        WebSocketChannel channel = super.createChannel(exchange, c, buffers);
-        HandshakeUtil.setConfig(channel, config);
-        return channel;
-    }
-
     protected String supportedSubprotols(String[] requestedSubprotocolArray) {
         return HandshakeUtil.selectSubProtocol(config, requestedSubprotocolArray);
     }
 
     protected List<WebSocketServerExtension> selectedExtension(List<WebSocketExtensionData> extensionList) {
-        List<ExtensionImpl> ext = new ArrayList<>();
+        List<Extension> ext = new ArrayList<>();
         for (WebSocketExtensionData i : extensionList) {
             ext.add(new ExtensionImpl(i));
         }

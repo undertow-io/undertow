@@ -28,9 +28,8 @@ import javax.websocket.server.ServerEndpointConfig;
 
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
-import io.undertow.websockets.spi.WebSocketHttpExchange;
+import io.undertow.websockets.jsr.UndertowSession;
 
 /**
  * Internal util class for handshaking
@@ -69,15 +68,15 @@ public final class HandshakeUtil {
     /**
      * Set the {@link ConfiguredServerEndpoint} which is used to create the {@link WebSocketChannel}.
      */
-    public static void setConfig(WebSocketChannel channel, ConfiguredServerEndpoint config) {
-        channel.setAttribute(CONFIG_KEY, config);
+    public static void setConfig(UndertowSession channel, ConfiguredServerEndpoint config) {
+        channel.setConfiguredServerEndpoint(config);
     }
 
     /**
      * Returns the {@link ConfiguredServerEndpoint} which was used while create the {@link WebSocketChannel}.
      */
-    public static ConfiguredServerEndpoint getConfig(WebSocketChannel channel) {
-        return (ConfiguredServerEndpoint) channel.getAttribute(CONFIG_KEY);
+    public static ConfiguredServerEndpoint getConfig(UndertowSession channel) {
+        return channel.getConfiguredServerEndpoint();
     }
 
 
