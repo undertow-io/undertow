@@ -17,26 +17,6 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.ssl.SslHandler;
-import io.undertow.server.session.SecureRandomSessionIdGenerator;
-import io.undertow.servlet.api.InstanceHandle;
-import io.undertow.util.WorkerUtils;
-import io.undertow.websockets.client.WebSocketClient;
-import io.undertow.websockets.core.CloseMessage;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSockets;
-import org.xnio.ChannelListener;
-import org.xnio.IoFuture;
-import org.xnio.IoUtils;
-
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.Extension;
-import javax.websocket.MessageHandler;
-import javax.websocket.RemoteEndpoint;
-import javax.websocket.Session;
 import java.io.IOException;
 import java.net.URI;
 import java.security.Principal;
@@ -48,6 +28,22 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import javax.websocket.CloseReason;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.Extension;
+import javax.websocket.MessageHandler;
+import javax.websocket.RemoteEndpoint;
+import javax.websocket.Session;
+
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
+import io.undertow.server.session.SecureRandomSessionIdGenerator;
+import io.undertow.servlet.api.InstanceHandle;
 
 /**
  * {@link Session} implementation which makes use of the high-level WebSocket API of undertow under the hood.
@@ -81,11 +77,11 @@ public final class UndertowSession implements Session {
     private int failedCount = 0;
     private ConfiguredServerEndpoint configuredServerEndpoint;
 
-    UndertowSession(ChannelHandlerContext channelHandlerContext, URI requestUri, Map<String, String> pathParameters,
-                    Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
-                    InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString,
-                    final Encoding encoding, final SessionContainer openSessions, final String subProtocol,
-                    final List<Extension> extensions) {
+    public UndertowSession(ChannelHandlerContext channelHandlerContext, URI requestUri, Map<String, String> pathParameters,
+                            Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
+                            InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString,
+                            final Encoding encoding, final SessionContainer openSessions, final String subProtocol,
+                            final List<Extension> extensions) {
         assert openSessions != null;
         this.channelHandlerContext = channelHandlerContext;
         this.queryString = queryString;
@@ -166,6 +162,7 @@ public final class UndertowSession implements Session {
     @Override
     public long getMaxIdleTimeout() {
         //return webSocketChannel.getIdleTimeout();
+        return -1;
     }
 
     @Override
@@ -194,57 +191,21 @@ public final class UndertowSession implements Session {
     }
 
     public void closeInternal(CloseReason closeReason) throws IOException {
-        if(closed.compareAndSet(false, true)) {
-            try {
-                try {
-                    if (!channelHandlerContext.isCloseFrameReceived() && !channelHandlerContext.isCloseFrameSent()) {
-                        //if we have already recieved a close frame then the close frame handler
-                        //will deal with sending back the reason message
-                        if (closeReason == null || closeReason.getCloseCode().getCode() == CloseReason.CloseCodes.NO_STATUS_CODE.getCode()) {
-                            channelHandlerContext.sendClose();
-                        } else {
-                            WebSockets.sendClose(new CloseMessage(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()).toByteBuffer(), channelHandlerContext, null);
+        if (closed.compareAndSet(false, true)) {
+            channelHandlerContext.writeAndFlush(new CloseWebSocketFrame(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()))
+                    .addListener(new GenericFutureListener<Future<? super Void>>() {
+                        @Override
+                        public void operationComplete(Future<? super Void> future) throws Exception {
+                            channelHandlerContext.close();
                         }
-                    }
-                } finally {
-                    try {
-                        String reason = null;
-                        CloseReason.CloseCode code = CloseReason.CloseCodes.NO_STATUS_CODE;
-                        if(channelHandlerContext.getCloseCode() != -1) {
-                            reason = channelHandlerContext.getCloseReason();
-                            code = CloseReason.CloseCodes.getCloseCode(channelHandlerContext.getCloseCode());
-                        } else if(closeReason != null) {
-                            reason = closeReason.getReasonPhrase();
-                            code = closeReason.getCloseCode();
-                        }
-                        //horrible hack
-                        //the spec says that if we (the local container) close locally then we need to use 1006
-                        //although the TCK does not expect this behaviour for TOO_BIG and VIOLATED_POLICY
-                        //we need to really clean up the close behaviour in the next spec
-                        if(!channelHandlerContext.isCloseInitiatedByRemotePeer() && !localClose && code.getCode() != CloseReason.CloseCodes.TOO_BIG.getCode() && code.getCode() != CloseReason.CloseCodes.VIOLATED_POLICY.getCode()) {
-                            //2.1.5: we must use 1006 if the close was initiated locally
-                            //however we only do this for normal closure
-                            //if the close was due to another reason such as a message being too long we need to report the real reason
-                            code = CloseReason.CloseCodes.CLOSED_ABNORMALLY;
-                        }
-                        endpoint.getInstance().onClose(this, new CloseReason(code, reason));
-                    } catch (Exception e) {
-                        endpoint.getInstance().onError(this, e);
-                    }
+                    });
+            getContainer().invokeEndpointMethod(getExecutor(), new Runnable() {
+                @Override
+                public void run() {
+                    endpoint.getInstance().onClose(UndertowSession.this, closeReason);
                 }
-            } finally {
-                close0();
-                if(clientConnectionBuilder != null && !localClose) {
-                    WebSocketReconnectHandler webSocketReconnectHandler = container.getWebSocketReconnectHandler();
-                    if (webSocketReconnectHandler != null) {
-                        JsrWebSocketLogger.REQUEST_LOGGER.debugf("Calling reconnect handler for %s", this);
-                        long reconnect = webSocketReconnectHandler.disconnected(closeReason, requestUri, this, ++disconnectCount);
-                        if (reconnect >= 0) {
-                            handleReconnect(reconnect);
-                        }
-                    }
-                }
-            }
+            });
+            //TODO: there is a lot of spec required behaviour here
         }
     }
 

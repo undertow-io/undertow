@@ -89,25 +89,7 @@ public class UndertowContainerProvider extends ContainerProvider {
                 //but there is not much we can do
                 //todo: what options should we use here?
                 ByteBufferPool buffers = new DefaultByteBufferPool(directBuffers, 1024, 100, 12);
-                defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), new Supplier<XnioWorker>() {
-                    volatile XnioWorker worker;
-
-                    @Override
-                    public XnioWorker get() {
-                        if(worker == null) {
-                            synchronized (this) {
-                                if(worker == null) {
-                                    try {
-                                        worker = Xnio.getInstance().createWorker(OptionMap.create(Options.THREAD_DAEMON, true));
-                                    } catch (IOException e) {
-                                        throw new RuntimeException(e);
-                                    }
-                                }
-                            }
-                        }
-                        return worker;
-                    }
-                }, buffers, Collections.EMPTY_LIST, !invokeInIoThread);
+                defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), null, buffers, Collections.EMPTY_LIST, !invokeInIoThread);
             }
             return defaultContainer;
         }

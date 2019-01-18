@@ -17,26 +17,6 @@
  */
 package io.undertow.websockets.jsr;
 
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.handler.codec.http.HttpObject;
-import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import io.undertow.websockets.core.AbstractReceiveListener;
-import io.undertow.websockets.core.BufferedBinaryMessage;
-import io.undertow.websockets.core.BufferedTextMessage;
-import io.undertow.websockets.core.StreamSourceFrameChannel;
-import io.undertow.websockets.core.UTF8Output;
-import io.undertow.websockets.core.WebSocketCallback;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSockets;
-import io.undertow.websockets.jsr.util.ClassUtils;
-import org.xnio.Buffers;
-import org.xnio.Pooled;
-
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
-import javax.websocket.MessageHandler;
-import javax.websocket.PongMessage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -54,6 +34,27 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
+import javax.websocket.CloseReason;
+import javax.websocket.Endpoint;
+import javax.websocket.MessageHandler;
+import javax.websocket.PongMessage;
+
+import org.xnio.Buffers;
+import org.xnio.Pooled;
+
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.undertow.websockets.core.BufferedBinaryMessage;
+import io.undertow.websockets.core.BufferedTextMessage;
+import io.undertow.websockets.core.StreamSourceFrameChannel;
+import io.undertow.websockets.core.WebSocketCallback;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.jsr.util.ClassUtils;
+
 /**
  * @author Stuart Douglas
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -64,6 +65,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     protected static final byte[] EMPTY = new byte[0];
     private final ConcurrentMap<FrameType, HandlerWrapper> handlers = new ConcurrentHashMap<>();
     private final Executor executor;
+
 
     /**
      * Supported types of WebSocket frames for which a {@link MessageHandler} can be added.
@@ -89,33 +91,27 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     }
 
     @Override
-    protected void onFullCloseMessage(final WebSocketChannel channel, final BufferedBinaryMessage message) {
-        if(session.isSessionClosed()) {
+    protected void channelRead0(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
+        if (msg instanceof CloseWebSocketFrame) {
+            onCloseFrame((CloseWebSocketFrame) msg);
+        }
+    }
+
+    void onCloseFrame(final CloseWebSocketFrame message) {
+        if (session.isSessionClosed()) {
             //we have already handled this when we sent the close frame
-            message.getData().free();
             return;
         }
-        final Pooled<ByteBuffer[]> pooled = message.getData();
-        final ByteBuffer singleBuffer = toBuffer(pooled.getResource());
-        final ByteBuffer toSend = singleBuffer.duplicate();
-        //send the close immediatly
-        WebSockets.sendClose(toSend, channel, null);
+        String reason = message.reasonText();
+        int code = message.statusCode();
 
         session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override
             public void run() {
                 try {
-                    if (singleBuffer.remaining() > 1) {
-                        final CloseReason.CloseCode code = CloseReason.CloseCodes.getCloseCode(singleBuffer.getShort());
-                        final String reasonPhrase = singleBuffer.remaining() > 1 ? new UTF8Output(singleBuffer).extract() : null;
-                        session.closeInternal(new CloseReason(code, reasonPhrase));
-                    } else {
-                        session.closeInternal(new CloseReason(CloseReason.CloseCodes.NO_STATUS_CODE, null));
-                    }
+                    session.closeInternal(new CloseReason(CloseReason.CloseCodes.getCloseCode(code), reason));
                 } catch (IOException e) {
                     invokeOnError(e);
-                } finally {
-                    pooled.close();
                 }
             }
         });
@@ -130,19 +126,16 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         });
     }
 
-    @Override
-    protected void onFullPongMessage(final WebSocketChannel webSocketChannel, BufferedBinaryMessage bufferedBinaryMessage) {
-        if(session.isSessionClosed()) {
+    private void onPongMessage(final PongWebSocketFrame frame) {
+        if (session.isSessionClosed()) {
             //to bad, the channel has already been closed
             //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
             //this this should only happen if a message was on the wire when we called close()
-            bufferedBinaryMessage.getData().free();
             return;
         }
         final HandlerWrapper handler = getHandler(FrameType.PONG);
         if (handler != null) {
-            final Pooled<ByteBuffer[]> pooled = bufferedBinaryMessage.getData();
-            final PongMessage message = DefaultPongMessage.create(toBuffer(pooled.getResource()));
+            final PongMessage message = DefaultPongMessage.create(Unpooled.copiedBuffer(frame.content()).nioBuffer());
 
             session.getContainer().invokeEndpointMethod(executor, new Runnable() {
                 @Override
@@ -151,8 +144,6 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
                         ((MessageHandler.Whole) handler.getHandler()).onMessage(message);
                     } catch (Exception e) {
                         invokeOnError(e);
-                    } finally {
-                        pooled.close();
                     }
                 }
             });
@@ -161,7 +152,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 
     @Override
     protected void onText(WebSocketChannel webSocketChannel, StreamSourceFrameChannel messageChannel) throws IOException {
-        if(session.isSessionClosed()) {
+        if (session.isSessionClosed()) {
             //to bad, the channel has already been closed
             //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
             //this this should only happen if a message was on the wire when we called close()
@@ -190,7 +181,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 
     @Override
     protected void onBinary(WebSocketChannel webSocketChannel, StreamSourceFrameChannel messageChannel) throws IOException {
-        if(session.isSessionClosed()) {
+        if (session.isSessionClosed()) {
             //to bad, the channel has already been closed
             //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
             //this this should only happen if a message was on the wire when we called close()
@@ -227,7 +218,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
                     if (handler.isPartialHandler()) {
                         MessageHandler.Partial mHandler = (MessageHandler.Partial) handler.getHandler();
                         ByteBuffer[] payload = pooled.getResource();
-                        if(handler.decodingNeeded) {
+                        if (handler.decodingNeeded) {
                             Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
                             mHandler.onMessage(object, finalFragment);
                         } else if (handler.getMessageType() == ByteBuffer.class) {
@@ -242,7 +233,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
                     } else {
                         MessageHandler.Whole mHandler = (MessageHandler.Whole) handler.getHandler();
                         ByteBuffer[] payload = pooled.getResource();
-                        if(handler.decodingNeeded) {
+                        if (handler.decodingNeeded) {
                             Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
                             mHandler.onMessage(object);
                         } else if (handler.getMessageType() == ByteBuffer.class) {
@@ -283,7 +274,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
                             ((MessageHandler.Partial) handler.getHandler()).onMessage(new StringReader(message), finalFragment);
                         }
                     } else {
-                        if(handler.decodingNeeded) {
+                        if (handler.decodingNeeded) {
                             Object object = getSession().getEncoding().decodeText(handler.getMessageType(), message);
                             ((MessageHandler.Whole) handler.getHandler()).onMessage(object);
                         } else if (handler.getMessageType() == String.class) {
@@ -310,7 +301,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 
     @Override
     protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) {
-        if(session.isSessionClosed()) {
+        if (session.isSessionClosed()) {
             //to bad, the channel has already been closed
             //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
             //this this should only happen if a message was on the wire when we called close()
@@ -324,7 +315,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 
     @Override
     protected void onFullBinaryMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
-        if(session.isSessionClosed()) {
+        if (session.isSessionClosed()) {
             //to bad, the channel has already been closed
             //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
             //this this should only happen if a message was on the wire when we called close()
@@ -371,6 +362,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     public final void addHandler(Class<?> messageType, MessageHandler handler) {
         addHandlerInternal(handler, messageType, handler instanceof MessageHandler.Partial);
     }
+
     public final void addHandler(MessageHandler handler) {
         Map<Class<?>, Boolean> types = ClassUtils.getHandlerTypes(handler.getClass());
         for (Entry<Class<?>, Boolean> e : types.entrySet()) {
@@ -384,7 +376,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         verify(type, handler);
 
         List<HandlerWrapper> handlerWrappers = createHandlerWrappers(type, handler, partial);
-        for(HandlerWrapper handlerWrapper : handlerWrappers) {
+        for (HandlerWrapper handlerWrapper : handlerWrappers) {
             if (handlers.containsKey(handlerWrapper.getFrameType())) {
                 throw JsrWebSocketMessages.MESSAGES.handlerAlreadyRegistered(handlerWrapper.getFrameType());
             } else {
@@ -397,7 +389,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 
     /**
      * Return the {@link FrameType} for the given {@link Class}.
-     *
+     * <p>
      * Note that multiple wrappers can be returned if both text and binary frames can be decoded to the given type
      */
     protected List<HandlerWrapper> createHandlerWrappers(Class<?> type, MessageHandler handler, boolean partialHandler) {
@@ -410,7 +402,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         if (encoding.canDecodeBinary(type)) {
             ret.add(new HandlerWrapper(FrameType.BYTE, handler, type, true, false));
         }
-        if(!ret.isEmpty()) {
+        if (!ret.isEmpty()) {
             return ret;
         }
         if (partialHandler) {
@@ -448,7 +440,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         for (Entry<Class<?>, Boolean> e : types.entrySet()) {
             Class<?> type = e.getKey();
             List<HandlerWrapper> handlerWrappers = createHandlerWrappers(type, handler, e.getValue());
-            for(HandlerWrapper handlerWrapper : handlerWrappers) {
+            for (HandlerWrapper handlerWrapper : handlerWrappers) {
                 FrameType frameType = handlerWrapper.getFrameType();
                 HandlerWrapper wrapper = handlers.get(frameType);
                 if (wrapper != null && wrapper.getMessageType() == type) {
