@@ -18,6 +18,7 @@
 package io.undertow.websockets.jsr;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -39,20 +40,14 @@ import javax.websocket.Endpoint;
 import javax.websocket.MessageHandler;
 import javax.websocket.PongMessage;
 
-import org.xnio.Buffers;
-import org.xnio.Pooled;
-
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import io.undertow.websockets.core.BufferedBinaryMessage;
-import io.undertow.websockets.core.BufferedTextMessage;
-import io.undertow.websockets.core.StreamSourceFrameChannel;
-import io.undertow.websockets.core.WebSocketCallback;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.jsr.util.ClassUtils;
 
 /**
@@ -65,6 +60,8 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     protected static final byte[] EMPTY = new byte[0];
     private final ConcurrentMap<FrameType, HandlerWrapper> handlers = new ConcurrentHashMap<>();
     private final Executor executor;
+    private StringBuilder stringBuffer;
+    private ByteArrayOutputStream binaryBuffer;
 
 
     /**
@@ -82,9 +79,9 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 
         final Executor executor;
         if (session.getContainer().isDispatchToWorker()) {
-            executor = new OrderedExecutor(session.getWebSocketChannel().getWorker());
+            executor = new OrderedExecutor(session.getExecutor());
         } else {
-            executor = session.getWebSocketChannel().getIoThread();
+            executor = session.getChannelHandlerContext().executor();
         }
 
         this.executor = executor;
@@ -94,6 +91,10 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     protected void channelRead0(ChannelHandlerContext ctx, WebSocketFrame msg) throws Exception {
         if (msg instanceof CloseWebSocketFrame) {
             onCloseFrame((CloseWebSocketFrame) msg);
+        } else if (msg instanceof PongWebSocketFrame) {
+            onPongMessage((PongWebSocketFrame) msg);
+        } else if(msg instanceof TextWebSocketFrame) {
+            onText();
         }
     }
 
@@ -151,30 +152,27 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     }
 
     @Override
-    protected void onText(WebSocketChannel webSocketChannel, StreamSourceFrameChannel messageChannel) throws IOException {
+    protected void onText(TextWebSocketFrame frame) throws IOException {
         if (session.isSessionClosed()) {
             //to bad, the channel has already been closed
             //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
             //this this should only happen if a message was on the wire when we called close()
-            messageChannel.close();
+            session.close();
             return;
         }
         final HandlerWrapper handler = getHandler(FrameType.TEXT);
-        if (handler != null && handler.isPartialHandler()) {
-            BufferedTextMessage data = new BufferedTextMessage(false);
-            data.read(messageChannel, new WebSocketCallback<BufferedTextMessage>() {
-                @Override
-                public void complete(WebSocketChannel channel, BufferedTextMessage context) {
-                    invokeTextHandler(context, handler, context.isComplete());
-                }
-
-                @Override
-                public void onError(WebSocketChannel channel, BufferedTextMessage context, Throwable throwable) {
-                    invokeOnError(throwable);
-                }
-            });
-        } else {
-            bufferFullMessage(messageChannel);
+        if (handler != null &&
+                (handler.isPartialHandler() || (stringBuffer == null && frame.isFinalFragment()))) {
+            invokeTextHandler(frame.text(), handler, frame.isFinalFragment());
+        } else if(handler != null) {
+            if(stringBuffer == null) {
+                stringBuffer = new StringBuilder();
+            }
+            stringBuffer.append(frame.text());
+            if(frame.isFinalFragment()) {
+                invokeTextHandler(stringBuffer.toString(), handler, frame.isFinalFragment());
+                stringBuffer = null;
+            }
         }
     }
 
@@ -255,9 +253,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         });
     }
 
-    private void invokeTextHandler(final BufferedTextMessage data, final HandlerWrapper handler, final boolean finalFragment) {
-
-        final String message = data.getData();
+    private void invokeTextHandler(final String message, final HandlerWrapper handler, final boolean finalFragment) {
         session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override
             public void run() {
