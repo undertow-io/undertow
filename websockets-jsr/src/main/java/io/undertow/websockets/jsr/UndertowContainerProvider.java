@@ -18,23 +18,15 @@
 
 package io.undertow.websockets.jsr;
 
-import java.io.IOException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
 
 import javax.websocket.ContainerProvider;
 import javax.websocket.WebSocketContainer;
 
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import org.xnio.Xnio;
-import org.xnio.XnioWorker;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.servlet.api.ClassIntrospecter;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.util.DefaultClassIntrospector;
@@ -88,8 +80,7 @@ public class UndertowContainerProvider extends ContainerProvider {
                 //this is not great, as we have no way to control the lifecycle
                 //but there is not much we can do
                 //todo: what options should we use here?
-                ByteBufferPool buffers = new DefaultByteBufferPool(directBuffers, 1024, 100, 12);
-                defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), null, buffers, Collections.EMPTY_LIST, !invokeInIoThread);
+                defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), null, Collections.EMPTY_LIST, !invokeInIoThread);
             }
             return defaultContainer;
         }

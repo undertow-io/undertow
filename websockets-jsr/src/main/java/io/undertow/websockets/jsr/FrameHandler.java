@@ -43,8 +43,8 @@ import javax.websocket.PongMessage;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
@@ -93,8 +93,10 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
             onCloseFrame((CloseWebSocketFrame) msg);
         } else if (msg instanceof PongWebSocketFrame) {
             onPongMessage((PongWebSocketFrame) msg);
-        } else if(msg instanceof TextWebSocketFrame) {
-            onText();
+        } else if (msg instanceof TextWebSocketFrame) {
+            onText((TextWebSocketFrame) msg);
+        } else if (msg instanceof BinaryWebSocketFrame) {
+            onBinary((BinaryWebSocketFrame) msg);
         }
     }
 
@@ -151,8 +153,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         }
     }
 
-    @Override
-    protected void onText(TextWebSocketFrame frame) throws IOException {
+    private void onText(TextWebSocketFrame frame) throws IOException {
         if (session.isSessionClosed()) {
             //to bad, the channel has already been closed
             //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
@@ -164,90 +165,79 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         if (handler != null &&
                 (handler.isPartialHandler() || (stringBuffer == null && frame.isFinalFragment()))) {
             invokeTextHandler(frame.text(), handler, frame.isFinalFragment());
-        } else if(handler != null) {
-            if(stringBuffer == null) {
+        } else if (handler != null) {
+            if (stringBuffer == null) {
                 stringBuffer = new StringBuilder();
             }
             stringBuffer.append(frame.text());
-            if(frame.isFinalFragment()) {
+            if (frame.isFinalFragment()) {
                 invokeTextHandler(stringBuffer.toString(), handler, frame.isFinalFragment());
                 stringBuffer = null;
             }
         }
     }
 
-
-    @Override
-    protected void onBinary(WebSocketChannel webSocketChannel, StreamSourceFrameChannel messageChannel) throws IOException {
+    private void onBinary(BinaryWebSocketFrame frame) throws IOException {
         if (session.isSessionClosed()) {
             //to bad, the channel has already been closed
             //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
             //this this should only happen if a message was on the wire when we called close()
-            messageChannel.close();
+            session.close();
             return;
         }
         final HandlerWrapper handler = getHandler(FrameType.BYTE);
-        if (handler != null && handler.isPartialHandler()) {
-            BufferedBinaryMessage data = new BufferedBinaryMessage(session.getMaxBinaryMessageBufferSize(), false);
-            data.read(messageChannel, new WebSocketCallback<BufferedBinaryMessage>() {
-                @Overlride
-                public void complete(WebSocketChannel channel, BufferedBinaryMessage context) {
-                    invokeBinaryHandler(context, handler, context.isComplete());
-                }
-
-                @Override
-                public void onError(WebSocketChannel channel, BufferedBinaryMessage context, Throwable throwable) {
-                    invokeOnError(throwable);
-                }
-            });
-        } else {
-            bufferFullMessage(messageChannel);
+        if (handler != null &&
+                (handler.isPartialHandler() || (binaryBuffer == null && frame.isFinalFragment()))) {
+            byte[] data = new byte[frame.content().readableBytes()];
+            frame.content().readBytes(data);
+            invokeBinaryHandler(data, handler, frame.isFinalFragment());
+        } else if (handler != null) {
+            if (binaryBuffer == null) {
+                binaryBuffer = new ByteArrayOutputStream();
+            }
+            byte[] data = new byte[frame.content().readableBytes()];
+            frame.content().readBytes(data);
+            binaryBuffer.write(data);
+            if (frame.isFinalFragment()) {
+                invokeBinaryHandler(binaryBuffer.toByteArray(), handler, frame.isFinalFragment());
+                binaryBuffer = null;
+            }
         }
-
     }
 
-    private void invokeBinaryHandler(final BufferedBinaryMessage context, final HandlerWrapper handler, final boolean finalFragment) {
+    private void invokeBinaryHandler(final byte[] data, final HandlerWrapper handler, final boolean finalFragment) {
 
-        final Pooled<ByteBuffer[]> pooled = context.getData();
         session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override
             public void run() {
                 try {
                     if (handler.isPartialHandler()) {
                         MessageHandler.Partial mHandler = (MessageHandler.Partial) handler.getHandler();
-                        ByteBuffer[] payload = pooled.getResource();
                         if (handler.decodingNeeded) {
-                            Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
+                            Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), data);
                             mHandler.onMessage(object, finalFragment);
                         } else if (handler.getMessageType() == ByteBuffer.class) {
-                            mHandler.onMessage(toBuffer(payload), finalFragment);
+                            mHandler.onMessage(ByteBuffer.wrap(data), finalFragment);
                         } else if (handler.getMessageType() == byte[].class) {
-                            byte[] data = toArray(payload);
                             mHandler.onMessage(data, finalFragment);
                         } else if (handler.getMessageType() == InputStream.class) {
-                            byte[] data = toArray(payload);
                             mHandler.onMessage(new ByteArrayInputStream(data), finalFragment);
                         }
                     } else {
                         MessageHandler.Whole mHandler = (MessageHandler.Whole) handler.getHandler();
-                        ByteBuffer[] payload = pooled.getResource();
                         if (handler.decodingNeeded) {
-                            Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), toArray(payload));
+                            Object object = getSession().getEncoding().decodeBinary(handler.getMessageType(), data);
                             mHandler.onMessage(object);
                         } else if (handler.getMessageType() == ByteBuffer.class) {
-                            mHandler.onMessage(toBuffer(payload));
+                            mHandler.onMessage(ByteBuffer.wrap(data));
                         } else if (handler.getMessageType() == byte[].class) {
-                            byte[] data = toArray(payload);
                             mHandler.onMessage(data);
                         } else if (handler.getMessageType() == InputStream.class) {
-                            byte[] data = toArray(payload);
                             mHandler.onMessage(new ByteArrayInputStream(data));
                         }
                     }
                 } catch (Exception e) {
                     invokeOnError(e);
-                } finally {
-                    pooled.close();
                 }
             }
         });
@@ -284,75 +274,6 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
                 }
             }
         });
-    }
-
-    @Override
-    protected void onError(WebSocketChannel channel, Throwable error) {
-        try {
-            getEndpoint().onError(session, error);
-        } finally {
-            session.forceClose();
-        }
-    }
-
-    @Override
-    protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) {
-        if (session.isSessionClosed()) {
-            //to bad, the channel has already been closed
-            //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
-            //this this should only happen if a message was on the wire when we called close()
-            return;
-        }
-        HandlerWrapper handler = getHandler(FrameType.TEXT);
-        if (handler != null) {
-            invokeTextHandler(message, handler, true);
-        }
-    }
-
-    @Override
-    protected void onFullBinaryMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
-        if (session.isSessionClosed()) {
-            //to bad, the channel has already been closed
-            //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
-            //this this should only happen if a message was on the wire when we called close()
-            message.getData().close();
-            return;
-        }
-        HandlerWrapper handler = getHandler(FrameType.BYTE);
-        if (handler != null) {
-            invokeBinaryHandler(message, handler, true);
-        } else {
-            message.getData().close();
-        }
-    }
-
-    protected static ByteBuffer toBuffer(ByteBuffer... payload) {
-        if (payload.length == 1) {
-            return payload[0];
-        }
-        int size = (int) Buffers.remaining(payload);
-        if (size == 0) {
-            return Buffers.EMPTY_BYTE_BUFFER;
-        }
-        ByteBuffer buffer = ByteBuffer.allocate(size);
-        for (ByteBuffer buf : payload) {
-            buffer.put(buf);
-        }
-        buffer.flip();
-        return buffer;
-    }
-
-    protected static byte[] toArray(ByteBuffer... payload) {
-        if (payload.length == 1) {
-            ByteBuffer buf = payload[0];
-            if (buf.hasArray()
-                    && buf.arrayOffset() == 0
-                    && buf.position() == 0
-                    && buf.array().length == buf.remaining()) {
-                return buf.array();
-            }
-        }
-        return Buffers.take(payload, 0, payload.length);
     }
 
     public final void addHandler(Class<?> messageType, MessageHandler handler) {
@@ -463,15 +384,6 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
      */
     protected final HandlerWrapper getHandler(FrameType type) {
         return handlers.get(type);
-    }
-
-    @Override
-    protected long getMaxTextBufferSize() {
-        return session.getMaxTextMessageBufferSize();
-    }
-
-    protected long getMaxBinaryBufferSize() {
-        return session.getMaxBinaryMessageBufferSize();
     }
 
     static final class HandlerWrapper {

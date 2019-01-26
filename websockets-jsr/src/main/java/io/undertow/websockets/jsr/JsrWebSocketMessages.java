@@ -19,7 +19,6 @@
 package io.undertow.websockets.jsr;
 
 import io.undertow.util.PathTemplate;
-import io.undertow.websockets.WebSocketExtension;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
@@ -135,7 +134,7 @@ public interface JsrWebSocketMessages {
     DeploymentException invalidParametersWithWrongAnnotation(Method method, Set<Integer> allParams);
 
     @Message(id = 3034, value = "Server provided extension %s which was not in client supported extensions %s")
-    IOException extensionWasNotPresentInClientHandshake(String e, List<WebSocketExtension> supportedExtensions);
+    IOException extensionWasNotPresentInClientHandshake(String e, List supportedExtensions);
 
     @Message(id = 3035, value = "Connection timed out")
     IOException connectionTimedOut();

@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -44,6 +45,8 @@ import javax.websocket.server.ServerContainer;
 import org.xnio.ChannelListener;
 import org.xnio.StreamConnection;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.session.Session;
@@ -53,10 +56,8 @@ import io.undertow.servlet.websockets.ServletWebSocketHttpExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.PathTemplateMatcher;
 import io.undertow.util.StatusCodes;
-import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSockets;
-import io.undertow.websockets.core.protocol.Handshake;
+import io.undertow.websockets.jsr.handshake.Handshake;
 import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 
 /**
@@ -70,9 +71,9 @@ import io.undertow.websockets.jsr.handshake.HandshakeUtil;
  */
 public class JsrWebSocketFilter implements Filter {
 
-    private WebSocketConnectionCallback callback;
+    private EndpointSessionHandler callback;
     private PathTemplateMatcher<WebSocketHandshakeHolder> pathTemplateMatcher;
-    private Set<WebSocketChannel> peerConnections;
+    private Set<UndertowSession> peerConnections;
     private ServerWebSocketContainer container;
 
     private static final String SESSION_ATTRIBUTE = "io.undertow.websocket.current-connections";
@@ -80,11 +81,11 @@ public class JsrWebSocketFilter implements Filter {
 
     @Override
     public void init(final FilterConfig filterConfig) throws ServletException {
-        peerConnections = Collections.newSetFromMap(new ConcurrentHashMap<WebSocketChannel, Boolean>());
+        peerConnections = Collections.newSetFromMap(new ConcurrentHashMap<UndertowSession, Boolean>());
         container = (ServerWebSocketContainer) filterConfig.getServletContext().getAttribute(ServerContainer.class.getName());
         container.deploymentComplete();
         pathTemplateMatcher = new PathTemplateMatcher<>();
-        WebSocketDeploymentInfo info = (WebSocketDeploymentInfo)filterConfig.getServletContext().getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
+        WebSocketDeploymentInfo info = (WebSocketDeploymentInfo) filterConfig.getServletContext().getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
         for (ConfiguredServerEndpoint endpoint : container.getConfiguredServerEndpoints()) {
             if (info == null || info.getServerExtensions().isEmpty()) {
                 pathTemplateMatcher.add(endpoint.getPathTemplate(), ServerWebSocketContainer.handshakes(endpoint));
@@ -122,7 +123,7 @@ public class JsrWebSocketFilter implements Filter {
                 }
 
                 if (handshaker != null) {
-                    if(container.isClosed()) {
+                    if (container.isClosed()) {
                         resp.sendError(StatusCodes.SERVICE_UNAVAILABLE);
                         return;
                     }
@@ -131,13 +132,13 @@ public class JsrWebSocketFilter implements Filter {
                     final Handshake selected = handshaker;
                     ServletRequestContext src = ServletRequestContext.requireCurrent();
                     final HttpSessionImpl session = src.getCurrentServletContext().getSession(src.getExchange(), false);
-                    facade.upgradeChannel(new HttpUpgradeListener() {
+                    handshaker.handshake(facade, new Consumer<ChannelHandlerContext>() {
                         @Override
-                        public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
+                        public void accept(ChannelHandlerContext context) {
 
                             WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
                             peerConnections.add(channel);
-                            if(session != null) {
+                            if (session != null) {
                                 final Session underlying;
                                 if (System.getSecurityManager() == null) {
                                     underlying = session.getSession();
@@ -147,7 +148,7 @@ public class JsrWebSocketFilter implements Filter {
                                 List<WebSocketChannel> connections;
                                 synchronized (underlying) {
                                     connections = (List<WebSocketChannel>) underlying.getAttribute(SESSION_ATTRIBUTE);
-                                    if(connections == null) {
+                                    if (connections == null) {
                                         underlying.setAttribute(SESSION_ATTRIBUTE, connections = new ArrayList<>());
                                     }
                                     connections.add(channel);
@@ -165,7 +166,6 @@ public class JsrWebSocketFilter implements Filter {
                             callback.onConnect(facade, channel);
                         }
                     });
-                    handshaker.handshake(facade);
                     return;
                 }
             }
@@ -195,11 +195,15 @@ public class JsrWebSocketFilter implements Filter {
             } else {
                 underlying = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
             }
-            List<WebSocketChannel> connections = (List<WebSocketChannel>) underlying.getAttribute(SESSION_ATTRIBUTE);
-            if(connections != null) {
+            List<UndertowSession> connections = (List<UndertowSession>) underlying.getAttribute(SESSION_ATTRIBUTE);
+            if (connections != null) {
                 synchronized (underlying) {
-                    for(WebSocketChannel c : connections) {
-                        WebSockets.sendClose(CloseReason.CloseCodes.VIOLATED_POLICY.getCode(), "", c, null);
+                    for (UndertowSession c : connections) {
+                        try {
+                            c.close(new CloseReason(CloseReason.CloseCodes.VIOLATED_POLICY, ""));
+                        } catch (IOException e) {
+                            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+                        }
                     }
                 }
             }

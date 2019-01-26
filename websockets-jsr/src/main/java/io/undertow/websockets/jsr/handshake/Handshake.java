@@ -57,7 +57,7 @@ import io.undertow.websockets.jsr.UndertowSession;
  *
  * @author Mike Brock
  */
-public abstract class Handshake {
+public class Handshake {
 
 
     private static final String EXTENSION_SEPARATOR = ",";
@@ -75,7 +75,7 @@ public abstract class Handshake {
     protected boolean allowExtensions;
     private final ConfiguredServerEndpoint config;
 
-    protected Handshake(ConfiguredServerEndpoint config, final Set<String> subprotocols) {
+    public Handshake(ConfiguredServerEndpoint config, final Set<String> subprotocols) {
         this.subprotocols = subprotocols;
         this.config = config;
     }
