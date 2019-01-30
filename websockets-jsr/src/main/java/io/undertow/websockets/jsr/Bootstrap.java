@@ -18,6 +18,7 @@
 
 package io.undertow.websockets.jsr;
 
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -58,16 +59,6 @@ public class Bootstrap implements ServletExtension {
         if (info == null) {
             return;
         }
-        Supplier<XnioWorker> worker = info.getWorker();
-        ByteBufferPool buffers = info.getBuffers();
-        if(buffers == null) {
-            ServerWebSocketContainer defaultContainer = UndertowContainerProvider.getDefaultContainer();
-            if(defaultContainer == null) {
-                throw JsrWebSocketLogger.ROOT_LOGGER.bufferPoolWasNullAndNoDefault();
-            }
-            JsrWebSocketLogger.ROOT_LOGGER.bufferPoolWasNull();
-            buffers = defaultContainer.getBufferPool();
-        }
 
         final List<ThreadSetupHandler> setup = new ArrayList<>();
         setup.add(new ContextClassLoaderSetupAction(deploymentInfo.getClassLoader()));
@@ -78,7 +69,8 @@ public class Bootstrap implements ServletExtension {
             bind = new InetSocketAddress(info.getClientBindAddress(), 0);
         }
         List<Extension> extensions = new ArrayList<>();
-        for(ExtensionHandshake e: info.getServerExtensions()) {
+        for(WebSocketServerExtensionHandshaker e: info.getServerExtensions()) {
+            e.
             extensions.add(new ExtensionImpl(e.getName(), Collections.emptyList()));
         }
         ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), worker, buffers, setup, info.isDispatchToWorkerThread(), bind, info.getReconnectHandler(), extensions);

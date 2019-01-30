@@ -42,21 +42,14 @@ import javax.servlet.http.HttpSessionListener;
 import javax.websocket.CloseReason;
 import javax.websocket.server.ServerContainer;
 
-import org.xnio.ChannelListener;
-import org.xnio.StreamConnection;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.undertow.UndertowLogger;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.session.Session;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
-import io.undertow.servlet.websockets.ServletWebSocketHttpExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.PathTemplateMatcher;
 import io.undertow.util.StatusCodes;
-import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.jsr.handshake.Handshake;
 import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 
@@ -101,7 +94,7 @@ public class JsrWebSocketFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
         if (req.getHeader(Headers.UPGRADE_STRING) != null) {
-            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(req, resp, peerConnections);
+            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(req, resp);
 
             String path;
             if (req.getPathInfo() == null) {
@@ -135,8 +128,8 @@ public class JsrWebSocketFilter implements Filter {
                     handshaker.handshake(facade, new Consumer<ChannelHandlerContext>() {
                         @Override
                         public void accept(ChannelHandlerContext context) {
+                            UndertowSession connection = new UndertowSession(context, )
 
-                            WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
                             peerConnections.add(channel);
                             if (session != null) {
                                 final Session underlying;
@@ -145,9 +138,9 @@ public class JsrWebSocketFilter implements Filter {
                                 } else {
                                     underlying = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
                                 }
-                                List<WebSocketChannel> connections;
+                                List<UndertowSession> connections;
                                 synchronized (underlying) {
-                                    connections = (List<WebSocketChannel>) underlying.getAttribute(SESSION_ATTRIBUTE);
+                                    connections = (List<UndertowSession>) underlying.getAttribute(SESSION_ATTRIBUTE);
                                     if (connections == null) {
                                         underlying.setAttribute(SESSION_ATTRIBUTE, connections = new ArrayList<>());
                                     }

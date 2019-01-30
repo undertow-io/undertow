@@ -117,7 +117,11 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
                 endpointInstance = (InstanceHandle<Endpoint>) instance;
             }
 
-            UndertowSession session = new UndertowSession(context, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(), this, principal, endpointInstance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config, subprotocol, Collections.<Extension>emptyList());
+            UndertowSession session = new UndertowSession(context, URI.create(exchange.getRequestURI()),
+                    exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(),
+                    this, principal, endpointInstance, config.getEndpointConfiguration(), exchange.getQueryString(),
+                    config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config, subprotocol,
+                    Collections.<Extension>emptyList());
             config.addOpenSession(session);
 
             session.setMaxBinaryMessageBufferSize(getContainer().getDefaultMaxBinaryMessageBufferSize());

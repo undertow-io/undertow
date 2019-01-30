@@ -23,41 +23,30 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.nio.channels.ClosedChannelException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
-import javax.net.ssl.SSLContext;
 import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.websocket.ClientEndpoint;
 import javax.websocket.ClientEndpointConfig;
 import javax.websocket.CloseReason;
 import javax.websocket.DeploymentException;
 import javax.websocket.Endpoint;
 import javax.websocket.Extension;
-import javax.websocket.HandshakeResponse;
 import javax.websocket.Session;
 import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpoint;
 import javax.websocket.server.ServerEndpointConfig;
 
-
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.ClassIntrospecter;
@@ -66,13 +55,10 @@ import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ConstructorInstanceFactory;
-import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.PathTemplate;
-import io.undertow.util.StatusCodes;
 import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
 import io.undertow.websockets.jsr.handshake.Handshake;
-import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 
 
 /**
@@ -101,6 +87,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
     private final boolean dispatchToWorker;
     private final InetSocketAddress clientBindAddress;
     private final WebSocketReconnectHandler webSocketReconnectHandler;
+    private final Supplier<EventLoopGroup> eventLoopSupplier;
 
     private volatile long defaultAsyncSendTimeout;
     private volatile long defaultMaxSessionIdleTimeout;
@@ -111,7 +98,6 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     private ServletContextImpl contextToAddFilter = null;
 
-    private final List<WebsocketClientSslProvider> clientSslProviders;
     private final List<PauseListener> pauseListeners = new ArrayList<>();
     private final List<Extension> installedExtensions;
 
@@ -119,31 +105,24 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     private volatile boolean closed = false;
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final Supplier<XnioWorker> xnioWorker, ByteBufferPool bufferPool, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker, boolean clientMode) {
-        this(classIntrospecter, ServerWebSocketContainer.class.getClassLoader(), xnioWorker, bufferPool, threadSetupHandlers, dispatchToWorker, null, null);
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final Supplier<EventLoopGroup> eventLoopSupplier, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker, boolean clientMode) {
+        this(classIntrospecter, ServerWebSocketContainer.class.getClassLoader(), eventLoopSupplier, threadSetupHandlers, dispatchToWorker, null, null);
     }
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, Supplier<XnioWorker> xnioWorker, ByteBufferPool bufferPool, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker) {
-        this(classIntrospecter, classLoader, xnioWorker, bufferPool, threadSetupHandlers, dispatchToWorker, null, null);
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, Supplier<EventLoopGroup> eventLoopSupplier, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker) {
+        this(classIntrospecter, classLoader, eventLoopSupplier, threadSetupHandlers, dispatchToWorker, null, null);
     }
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, Supplier<XnioWorker> xnioWorker, ByteBufferPool bufferPool, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker, InetSocketAddress clientBindAddress, WebSocketReconnectHandler reconnectHandler) {
-        this(classIntrospecter, classLoader, xnioWorker, bufferPool, threadSetupHandlers, dispatchToWorker, clientBindAddress, reconnectHandler, Collections.emptyList());
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, Supplier<EventLoopGroup> eventLoopSupplier, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker, InetSocketAddress clientBindAddress, WebSocketReconnectHandler reconnectHandler) {
+        this(classIntrospecter, classLoader, eventLoopSupplier, threadSetupHandlers, dispatchToWorker, clientBindAddress, reconnectHandler, Collections.emptyList());
     }
 
-    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, Supplier<XnioWorker> xnioWorker, ByteBufferPool bufferPool, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker, InetSocketAddress clientBindAddress, WebSocketReconnectHandler reconnectHandler, List<Extension> installedExtensions) {
+    public ServerWebSocketContainer(final ClassIntrospecter classIntrospecter, final ClassLoader classLoader, Supplier<EventLoopGroup> eventLoopSupplier, List<ThreadSetupHandler> threadSetupHandlers, boolean dispatchToWorker, InetSocketAddress clientBindAddress, WebSocketReconnectHandler reconnectHandler, List<Extension> installedExtensions) {
         this.classIntrospecter = classIntrospecter;
-        this.bufferPool = bufferPool;
-        this.xnioWorker = xnioWorker;
+        this.eventLoopSupplier = eventLoopSupplier;
         this.dispatchToWorker = dispatchToWorker;
         this.clientBindAddress = clientBindAddress;
         this.installedExtensions = new ArrayList<>(installedExtensions);
-        List<WebsocketClientSslProvider> clientSslProviders = new ArrayList<>();
-        for (WebsocketClientSslProvider provider : ServiceLoader.load(WebsocketClientSslProvider.class, classLoader)) {
-            clientSslProviders.add(provider);
-        }
-
-        this.clientSslProviders = Collections.unmodifiableList(clientSslProviders);
         this.webSocketReconnectHandler = reconnectHandler;
         ThreadSetupHandler.Action<Void, Runnable> task = new ThreadSetupHandler.Action<Void, Runnable>() {
             @Override
@@ -168,355 +147,375 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         this.defaultAsyncSendTimeout = defaultAsyncSendTimeout;
     }
 
-    public Session connectToServer(final Object annotatedEndpointInstance, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
-        if (closed) {
-            throw new ClosedChannelException();
-        }
-        ConfiguredClientEndpoint config = getClientEndpoint(annotatedEndpointInstance.getClass(), false);
-        if (config == null) {
-            throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
-        }
-        Endpoint instance = config.getFactory().createInstance(new ImmediateInstanceHandle<>(annotatedEndpointInstance));
-        return connectToServerInternal(instance, config, connectionBuilder);
+    @Override
+    public Session connectToServer(Object annotatedEndpointInstance, URI path) throws DeploymentException, IOException {
+        throw new RuntimeException("NYI");
     }
 
     @Override
-    public Session connectToServer(final Object annotatedEndpointInstance, final URI path) throws DeploymentException, IOException {
-        if (closed) {
-            throw new ClosedChannelException();
-        }
-        ConfiguredClientEndpoint config = getClientEndpoint(annotatedEndpointInstance.getClass(), false);
-        if (config == null) {
-            throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
-        }
-        Endpoint instance = config.getFactory().createInstance(new ImmediateInstanceHandle<>(annotatedEndpointInstance));
-        XnioSsl ssl = null;
-        for (WebsocketClientSslProvider provider : clientSslProviders) {
-            ssl = provider.getSsl(xnioWorker.get(), annotatedEndpointInstance, path);
-            if (ssl != null) {
-                break;
-            }
-        }
-        if (ssl == null) {
-            try {
-                ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
-            } catch (NoSuchAlgorithmException e) {
-                //ignore
-            }
-        }
-        return connectToServerInternal(instance, ssl, config, path);
-    }
-
-    public Session connectToServer(Class<?> aClass, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
-        if (closed) {
-            throw new ClosedChannelException();
-        }
-        ConfiguredClientEndpoint config = getClientEndpoint(aClass, true);
-        if (config == null) {
-            throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(aClass);
-        }
-        try {
-            AnnotatedEndpointFactory factory = config.getFactory();
-            InstanceHandle<?> instance = config.getInstanceFactory().createInstance();
-            return connectToServerInternal(factory.createInstance(instance), config, connectionBuilder);
-        } catch (InstantiationException e) {
-            throw new RuntimeException(e);
-        }
+    public Session connectToServer(Class<?> annotatedEndpointClass, URI path) throws DeploymentException, IOException {
+        throw new RuntimeException("NYI");
     }
 
     @Override
-    public Session connectToServer(Class<?> aClass, URI uri) throws DeploymentException, IOException {
-        if (closed) {
-            throw new ClosedChannelException();
-        }
-        ConfiguredClientEndpoint config = getClientEndpoint(aClass, true);
-        if (config == null) {
-            throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(aClass);
-        }
-        try {
-            AnnotatedEndpointFactory factory = config.getFactory();
-
-
-            InstanceHandle<?> instance = config.getInstanceFactory().createInstance();
-            XnioSsl ssl = null;
-            for (WebsocketClientSslProvider provider : clientSslProviders) {
-                ssl = provider.getSsl(xnioWorker.get(), aClass, uri);
-                if (ssl != null) {
-                    break;
-                }
-            }
-            if (ssl == null) {
-                try {
-                    ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
-                } catch (NoSuchAlgorithmException e) {
-                    //ignore
-                }
-            }
-            return connectToServerInternal(factory.createInstance(instance), ssl, config, uri);
-        } catch (InstantiationException e) {
-            throw new RuntimeException(e);
-        }
+    public Session connectToServer(Endpoint endpointInstance, ClientEndpointConfig cec, URI path) throws DeploymentException, IOException {
+        throw new RuntimeException("NYI");
     }
 
     @Override
-    public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig config, final URI path) throws DeploymentException, IOException {
-        if (closed) {
-            throw new ClosedChannelException();
-        }
-        ClientEndpointConfig cec = config != null ? config : ClientEndpointConfig.Builder.create().build();
-        XnioSsl ssl = null;
-        for (WebsocketClientSslProvider provider : clientSslProviders) {
-            ssl = provider.getSsl(xnioWorker.get(), endpointInstance, cec, path);
-            if (ssl != null) {
-                break;
-            }
-        }
-        if (ssl == null) {
-            try {
-                ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
-            } catch (NoSuchAlgorithmException e) {
-                //ignore
-            }
-        }
-        //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
-        WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getPreferredSubprotocols(), toExtensionList(cec.getExtensions()), cec);
-
-
-        WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(xnioWorker.get(), bufferPool, path)
-                .setSsl(ssl)
-                .setBindAddress(clientBindAddress)
-                .setClientNegotiation(clientNegotiation);
-
-        return connectToServer(endpointInstance, config, connectionBuilder);
+    public Session connectToServer(Class<? extends Endpoint> endpointClass, ClientEndpointConfig cec, URI path) throws DeploymentException, IOException {
+        throw new RuntimeException("NYI");
     }
-
-    public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig config, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
-        if (closed) {
-            throw new ClosedChannelException();
-        }
-        ClientEndpointConfig cec = config != null ? config : ClientEndpointConfig.Builder.create().build();
-
-        WebSocketClientNegotiation clientNegotiation = connectionBuilder.getClientNegotiation();
-
-        IoFuture<WebSocketChannel> session = connectionBuilder
-                .connect();
-        Number timeout = (Number) cec.getUserProperties().get(TIMEOUT);
-        if (session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS : timeout.intValue(), TimeUnit.SECONDS) == IoFuture.Status.WAITING) {
-            //add a notifier to close the channel if the connection actually completes
-            session.cancel();
-            session.addNotifier(new IoFuture.HandlingNotifier<WebSocketChannel, Object>() {
-                @Override
-                public void handleDone(WebSocketChannel data, Object attachment) {
-                    IoUtils.safeClose(data);
-                }
-            }, null);
-            throw JsrWebSocketMessages.MESSAGES.connectionTimedOut();
-        }
-        WebSocketChannel channel;
-        try {
-            channel = session.get();
-        } catch (UpgradeFailedException e) {
-            throw new DeploymentException(e.getMessage(), e);
-        }
-        EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
-
-        final List<Extension> extensions = new ArrayList<>();
-        final Map<String, Extension> extMap = new HashMap<>();
-        for (Extension ext : cec.getExtensions()) {
-            extMap.put(ext.getName(), ext);
-        }
-        for (WebSocketExtension e : clientNegotiation.getSelectedExtensions()) {
-            Extension ext = extMap.get(e.getName());
-            if (ext == null) {
-                throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e.getName(), clientNegotiation.getSupportedExtensions());
-            }
-            extensions.add(ExtensionImpl.create(e));
-        }
-        ConfiguredClientEndpoint configured = clientEndpoints.get(endpointInstance.getClass());
-        if (configured == null) {
-            synchronized (clientEndpoints) {
-                configured = clientEndpoints.get(endpointInstance.getClass());
-                if (configured == null) {
-                    clientEndpoints.put(endpointInstance.getClass(), configured = new ConfiguredClientEndpoint());
-                }
-            }
-        }
-
-        EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
-        UndertowSession undertowSession = new UndertowSession(channel, connectionBuilder.getUri(), Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, connectionBuilder.getUri().getQuery(), encodingFactory.createEncoding(cec), configured, clientNegotiation.getSelectedSubProtocol(), extensions, connectionBuilder);
-        endpointInstance.onOpen(undertowSession, cec);
-        channel.resumeReceives();
-
-        return undertowSession;
-    }
-
-
-    @Override
-    public Session connectToServer(final Class<? extends Endpoint> endpointClass, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
-        if (closed) {
-            throw new ClosedChannelException();
-        }
-        try {
-            Endpoint endpoint = classIntrospecter.createInstanceFactory(endpointClass).createInstance().getInstance();
-            return connectToServer(endpoint, cec, path);
-        } catch (InstantiationException | NoSuchMethodException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-
-    public void doUpgrade(HttpServletRequest request,
-                          HttpServletResponse response, final ServerEndpointConfig sec,
-                          Map<String, String> pathParams)
-            throws ServletException, IOException {
-        ServerEndpointConfig.Configurator configurator = sec.getConfigurator();
-        try {
-            EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, sec.getDecoders(), sec.getEncoders());
-            PathTemplate pt = PathTemplate.create(sec.getPath());
-
-            InstanceFactory<?> instanceFactory = null;
-            try {
-                instanceFactory = classIntrospecter.createInstanceFactory(sec.getEndpointClass());
-            } catch (Exception e) {
-                //so it is possible that this is still valid if a custom configurator is in use
-                if (configurator == null || configurator.getClass() == ServerEndpointConfig.Configurator.class) {
-                    throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
-                } else {
-                    instanceFactory = new InstanceFactory<Object>() {
-                        @Override
-                        public InstanceHandle<Object> createInstance() throws InstantiationException {
-                            throw JsrWebSocketMessages.MESSAGES.endpointDoesNotHaveAppropriateConstructor(sec.getEndpointClass());
-                        }
-                    };
-                }
-            }
-            if (configurator == null) {
-                configurator = DefaultContainerConfigurator.INSTANCE;
-            }
-
-            ServerEndpointConfig config = ServerEndpointConfig.Builder.create(sec.getEndpointClass(), sec.getPath())
-                    .decoders(sec.getDecoders())
-                    .encoders(sec.getEncoders())
-                    .subprotocols(sec.getSubprotocols())
-                    .extensions(sec.getExtensions())
-                    .configurator(configurator)
-                    .build();
-
-
-            AnnotatedEndpointFactory annotatedEndpointFactory = null;
-            if (!Endpoint.class.isAssignableFrom(sec.getEndpointClass())) {
-                annotatedEndpointFactory = AnnotatedEndpointFactory.create(sec.getEndpointClass(), encodingFactory, pt.getParameterNames());
-            }
-
-
-            ConfiguredServerEndpoint confguredServerEndpoint;
-            if (annotatedEndpointFactory == null) {
-                confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory);
-            } else {
-                confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory, annotatedEndpointFactory, installedExtensions);
-            }
-            WebSocketHandshakeHolder hand;
-
-            WebSocketDeploymentInfo info = (WebSocketDeploymentInfo) request.getServletContext().getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
-            if (info == null || info.getServerExtensions() == null) {
-                hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint);
-            } else {
-                hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint, info.getServerExtensions());
-            }
-
-            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(request, response, new HashSet<WebSocketChannel>());
-            Handshake handshaker = null;
-            for (Handshake method : hand.handshakes) {
-                if (method.matches(facade)) {
-                    handshaker = method;
-                    break;
-                }
-            }
-
-            if (handshaker != null) {
-                if (isClosed()) {
-                    response.sendError(StatusCodes.SERVICE_UNAVAILABLE);
-                    return;
-                }
-                facade.putAttachment(HandshakeUtil.PATH_PARAMS, pathParams);
-                final Handshake selected = handshaker;
-                facade.upgradeChannel(new HttpUpgradeListener() {
-                    @Override
-                    public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
-                        WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
-                        new EndpointSessionHandler(ServerWebSocketContainer.this).onConnect(facade, channel);
-                    }
-                });
-                handshaker.handshake(facade);
-                return;
-            }
-        } catch (Exception e) {
-            throw new ServletException(e);
-        }
-    }
-
-    private Session connectToServerInternal(final Endpoint endpointInstance, XnioSsl ssl, final ConfiguredClientEndpoint cec, final URI path) throws DeploymentException, IOException {
-        //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
-        WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getConfig().getPreferredSubprotocols(), toExtensionList(cec.getConfig().getExtensions()), cec.getConfig());
-
-
-        WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(xnioWorker.get(), bufferPool, path)
-                .setSsl(ssl)
-                .setBindAddress(clientBindAddress)
-                .setClientNegotiation(clientNegotiation);
-        return connectToServerInternal(endpointInstance, cec, connectionBuilder);
-    }
-
-    private Session connectToServerInternal(final Endpoint endpointInstance, final ConfiguredClientEndpoint cec, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
-
-        IoFuture<WebSocketChannel> session = connectionBuilder
-                .connect();
-        Number timeout = (Number) cec.getConfig().getUserProperties().get(TIMEOUT);
-        IoFuture.Status result = session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS : timeout.intValue(), TimeUnit.SECONDS);
-        if (result == IoFuture.Status.WAITING) {
-            //add a notifier to close the channel if the connection actually completes
-
-            session.cancel();
-            session.addNotifier(new IoFuture.HandlingNotifier<WebSocketChannel, Object>() {
-                @Override
-                public void handleDone(WebSocketChannel data, Object attachment) {
-                    IoUtils.safeClose(data);
-                }
-            }, null);
-            throw JsrWebSocketMessages.MESSAGES.connectionTimedOut();
-        }
-
-        WebSocketChannel channel;
-        try {
-            channel = session.get();
-        } catch (UpgradeFailedException e) {
-            throw new DeploymentException(e.getMessage(), e);
-        }
-        EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
-
-        final List<Extension> extensions = new ArrayList<>();
-        final Map<String, Extension> extMap = new HashMap<>();
-        for (Extension ext : cec.getConfig().getExtensions()) {
-            extMap.put(ext.getName(), ext);
-        }
-        String subProtocol = null;
-        if (connectionBuilder.getClientNegotiation() != null) {
-            for (WebSocketExtension e : connectionBuilder.getClientNegotiation().getSelectedExtensions()) {
-                Extension ext = extMap.get(e.getName());
-                if (ext == null) {
-                    throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e.getName(), connectionBuilder.getClientNegotiation().getSupportedExtensions());
-                }
-                extensions.add(ExtensionImpl.create(e));
-            }
-            subProtocol = connectionBuilder.getClientNegotiation().getSelectedSubProtocol();
-        }
-
-        UndertowSession undertowSession = new UndertowSession(channel, connectionBuilder.getUri(), Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec.getConfig(), connectionBuilder.getUri().getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), cec, subProtocol, extensions, connectionBuilder);
-        endpointInstance.onOpen(undertowSession, cec.getConfig());
-        channel.resumeReceives();
-
-        return undertowSession;
-    }
+//
+//    public Session connectToServer(final Object annotatedEndpointInstance, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
+//        if (closed) {
+//            throw new ClosedChannelException();
+//        }
+//        ConfiguredClientEndpoint config = getClientEndpoint(annotatedEndpointInstance.getClass(), false);
+//        if (config == null) {
+//            throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
+//        }
+//        Endpoint instance = config.getFactory().createInstance(new ImmediateInstanceHandle<>(annotatedEndpointInstance));
+//        return connectToServerInternal(instance, config, connectionBuilder);
+//    }
+//
+//    @Override
+//    public Session connectToServer(final Object annotatedEndpointInstance, final URI path) throws DeploymentException, IOException {
+//        if (closed) {
+//            throw new ClosedChannelException();
+//        }
+//        ConfiguredClientEndpoint config = getClientEndpoint(annotatedEndpointInstance.getClass(), false);
+//        if (config == null) {
+//            throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
+//        }
+//        Endpoint instance = config.getFactory().createInstance(new ImmediateInstanceHandle<>(annotatedEndpointInstance));
+//        XnioSsl ssl = null;
+//        for (WebsocketClientSslProvider provider : clientSslProviders) {
+//            ssl = provider.getSsl(xnioWorker.get(), annotatedEndpointInstance, path);
+//            if (ssl != null) {
+//                break;
+//            }
+//        }
+//        if (ssl == null) {
+//            try {
+//                ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+//            } catch (NoSuchAlgorithmException e) {
+//                //ignore
+//            }
+//        }
+//        return connectToServerInternal(instance, ssl, config, path);
+//    }
+//
+//    public Session connectToServer(Class<?> aClass, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
+//        if (closed) {
+//            throw new ClosedChannelException();
+//        }
+//        ConfiguredClientEndpoint config = getClientEndpoint(aClass, true);
+//        if (config == null) {
+//            throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(aClass);
+//        }
+//        try {
+//            AnnotatedEndpointFactory factory = config.getFactory();
+//            InstanceHandle<?> instance = config.getInstanceFactory().createInstance();
+//            return connectToServerInternal(factory.createInstance(instance), config, connectionBuilder);
+//        } catch (InstantiationException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
+//
+//    @Override
+//    public Session connectToServer(Class<?> aClass, URI uri) throws DeploymentException, IOException {
+//        if (closed) {
+//            throw new ClosedChannelException();
+//        }
+//        ConfiguredClientEndpoint config = getClientEndpoint(aClass, true);
+//        if (config == null) {
+//            throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(aClass);
+//        }
+//        try {
+//            AnnotatedEndpointFactory factory = config.getFactory();
+//
+//
+//            InstanceHandle<?> instance = config.getInstanceFactory().createInstance();
+//            XnioSsl ssl = null;
+//            for (WebsocketClientSslProvider provider : clientSslProviders) {
+//                ssl = provider.getSsl(xnioWorker.get(), aClass, uri);
+//                if (ssl != null) {
+//                    break;
+//                }
+//            }
+//            if (ssl == null) {
+//                try {
+//                    ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+//                } catch (NoSuchAlgorithmException e) {
+//                    //ignore
+//                }
+//            }
+//            return connectToServerInternal(factory.createInstance(instance), ssl, config, uri);
+//        } catch (InstantiationException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
+//
+//    @Override
+//    public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig config, final URI path) throws DeploymentException, IOException {
+//        if (closed) {
+//            throw new ClosedChannelException();
+//        }
+//        ClientEndpointConfig cec = config != null ? config : ClientEndpointConfig.Builder.create().build();
+//        XnioSsl ssl = null;
+//        for (WebsocketClientSslProvider provider : clientSslProviders) {
+//            ssl = provider.getSsl(xnioWorker.get(), endpointInstance, cec, path);
+//            if (ssl != null) {
+//                break;
+//            }
+//        }
+//        if (ssl == null) {
+//            try {
+//                ssl = new UndertowXnioSsl(xnioWorker.get().getXnio(), OptionMap.EMPTY, SSLContext.getDefault());
+//            } catch (NoSuchAlgorithmException e) {
+//                //ignore
+//            }
+//        }
+//        //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
+//        WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getPreferredSubprotocols(), toExtensionList(cec.getExtensions()), cec);
+//
+//
+//        WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(xnioWorker.get(), bufferPool, path)
+//                .setSsl(ssl)
+//                .setBindAddress(clientBindAddress)
+//                .setClientNegotiation(clientNegotiation);
+//
+//        return connectToServer(endpointInstance, config, connectionBuilder);
+//    }
+//
+//    public Session connectToServer(final Endpoint endpointInstance, final ClientEndpointConfig config, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
+//        if (closed) {
+//            throw new ClosedChannelException();
+//        }
+//        ClientEndpointConfig cec = config != null ? config : ClientEndpointConfig.Builder.create().build();
+//
+//        WebSocketClientNegotiation clientNegotiation = connectionBuilder.getClientNegotiation();
+//
+//        IoFuture<WebSocketChannel> session = connectionBuilder
+//                .connect();
+//        Number timeout = (Number) cec.getUserProperties().get(TIMEOUT);
+//        if (session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS : timeout.intValue(), TimeUnit.SECONDS) == IoFuture.Status.WAITING) {
+//            //add a notifier to close the channel if the connection actually completes
+//            session.cancel();
+//            session.addNotifier(new IoFuture.HandlingNotifier<WebSocketChannel, Object>() {
+//                @Override
+//                public void handleDone(WebSocketChannel data, Object attachment) {
+//                    IoUtils.safeClose(data);
+//                }
+//            }, null);
+//            throw JsrWebSocketMessages.MESSAGES.connectionTimedOut();
+//        }
+//        WebSocketChannel channel;
+//        try {
+//            channel = session.get();
+//        } catch (UpgradeFailedException e) {
+//            throw new DeploymentException(e.getMessage(), e);
+//        }
+//        EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
+//
+//        final List<Extension> extensions = new ArrayList<>();
+//        final Map<String, Extension> extMap = new HashMap<>();
+//        for (Extension ext : cec.getExtensions()) {
+//            extMap.put(ext.getName(), ext);
+//        }
+//        for (WebSocketExtension e : clientNegotiation.getSelectedExtensions()) {
+//            Extension ext = extMap.get(e.getName());
+//            if (ext == null) {
+//                throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e.getName(), clientNegotiation.getSupportedExtensions());
+//            }
+//            extensions.add(ExtensionImpl.create(e));
+//        }
+//        ConfiguredClientEndpoint configured = clientEndpoints.get(endpointInstance.getClass());
+//        if (configured == null) {
+//            synchronized (clientEndpoints) {
+//                configured = clientEndpoints.get(endpointInstance.getClass());
+//                if (configured == null) {
+//                    clientEndpoints.put(endpointInstance.getClass(), configured = new ConfiguredClientEndpoint());
+//                }
+//            }
+//        }
+//
+//        EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
+//        UndertowSession undertowSession = new UndertowSession(channel, connectionBuilder.getUri(), Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, connectionBuilder.getUri().getQuery(), encodingFactory.createEncoding(cec), configured, clientNegotiation.getSelectedSubProtocol(), extensions, connectionBuilder);
+//        endpointInstance.onOpen(undertowSession, cec);
+//        channel.resumeReceives();
+//
+//        return undertowSession;
+//    }
+//
+//
+//    @Override
+//    public Session connectToServer(final Class<? extends Endpoint> endpointClass, final ClientEndpointConfig cec, final URI path) throws DeploymentException, IOException {
+//        if (closed) {
+//            throw new ClosedChannelException();
+//        }
+//        try {
+//            Endpoint endpoint = classIntrospecter.createInstanceFactory(endpointClass).createInstance().getInstance();
+//            return connectToServer(endpoint, cec, path);
+//        } catch (InstantiationException | NoSuchMethodException e) {
+//            throw new RuntimeException(e);
+//        }
+//    }
+//
+//
+//    public void doUpgrade(HttpServletRequest request,
+//                          HttpServletResponse response, final ServerEndpointConfig sec,
+//                          Map<String, String> pathParams)
+//            throws ServletException, IOException {
+//        ServerEndpointConfig.Configurator configurator = sec.getConfigurator();
+//        try {
+//            EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, sec.getDecoders(), sec.getEncoders());
+//            PathTemplate pt = PathTemplate.create(sec.getPath());
+//
+//            InstanceFactory<?> instanceFactory = null;
+//            try {
+//                instanceFactory = classIntrospecter.createInstanceFactory(sec.getEndpointClass());
+//            } catch (Exception e) {
+//                //so it is possible that this is still valid if a custom configurator is in use
+//                if (configurator == null || configurator.getClass() == ServerEndpointConfig.Configurator.class) {
+//                    throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
+//                } else {
+//                    instanceFactory = new InstanceFactory<Object>() {
+//                        @Override
+//                        public InstanceHandle<Object> createInstance() throws InstantiationException {
+//                            throw JsrWebSocketMessages.MESSAGES.endpointDoesNotHaveAppropriateConstructor(sec.getEndpointClass());
+//                        }
+//                    };
+//                }
+//            }
+//            if (configurator == null) {
+//                configurator = DefaultContainerConfigurator.INSTANCE;
+//            }
+//
+//            ServerEndpointConfig config = ServerEndpointConfig.Builder.create(sec.getEndpointClass(), sec.getPath())
+//                    .decoders(sec.getDecoders())
+//                    .encoders(sec.getEncoders())
+//                    .subprotocols(sec.getSubprotocols())
+//                    .extensions(sec.getExtensions())
+//                    .configurator(configurator)
+//                    .build();
+//
+//
+//            AnnotatedEndpointFactory annotatedEndpointFactory = null;
+//            if (!Endpoint.class.isAssignableFrom(sec.getEndpointClass())) {
+//                annotatedEndpointFactory = AnnotatedEndpointFactory.create(sec.getEndpointClass(), encodingFactory, pt.getParameterNames());
+//            }
+//
+//
+//            ConfiguredServerEndpoint confguredServerEndpoint;
+//            if (annotatedEndpointFactory == null) {
+//                confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory);
+//            } else {
+//                confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory, annotatedEndpointFactory, installedExtensions);
+//            }
+//            WebSocketHandshakeHolder hand;
+//
+//            WebSocketDeploymentInfo info = (WebSocketDeploymentInfo) request.getServletContext().getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
+//            if (info == null || info.getServerExtensions() == null) {
+//                hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint);
+//            } else {
+//                hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint, info.getServerExtensions());
+//            }
+//
+//            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(request, response, new HashSet<WebSocketChannel>());
+//            Handshake handshaker = null;
+//            for (Handshake method : hand.handshakes) {
+//                if (method.matches(facade)) {
+//                    handshaker = method;
+//                    break;
+//                }
+//            }
+//
+//            if (handshaker != null) {
+//                if (isClosed()) {
+//                    response.sendError(StatusCodes.SERVICE_UNAVAILABLE);
+//                    return;
+//                }
+//                facade.putAttachment(HandshakeUtil.PATH_PARAMS, pathParams);
+//                final Handshake selected = handshaker;
+//                facade.upgradeChannel(new HttpUpgradeListener() {
+//                    @Override
+//                    public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
+//                        WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
+//                        new EndpointSessionHandler(ServerWebSocketContainer.this).onConnect(facade, channel);
+//                    }
+//                });
+//                handshaker.handshake(facade);
+//                return;
+//            }
+//        } catch (Exception e) {
+//            throw new ServletException(e);
+//        }
+//    }
+//
+//    private Session connectToServerInternal(final Endpoint endpointInstance, XnioSsl ssl, final ConfiguredClientEndpoint cec, final URI path) throws DeploymentException, IOException {
+//        //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
+//        WebSocketClientNegotiation clientNegotiation = new ClientNegotiation(cec.getConfig().getPreferredSubprotocols(), toExtensionList(cec.getConfig().getExtensions()), cec.getConfig());
+//
+//
+//        WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(xnioWorker.get(), bufferPool, path)
+//                .setSsl(ssl)
+//                .setBindAddress(clientBindAddress)
+//                .setClientNegotiation(clientNegotiation);
+//        return connectToServerInternal(endpointInstance, cec, connectionBuilder);
+//    }
+//
+//    private Session connectToServerInternal(final Endpoint endpointInstance, final ConfiguredClientEndpoint cec, WebSocketClient.ConnectionBuilder connectionBuilder) throws DeploymentException, IOException {
+//
+//        IoFuture<WebSocketChannel> session = connectionBuilder
+//                .connect();
+//        Number timeout = (Number) cec.getConfig().getUserProperties().get(TIMEOUT);
+//        IoFuture.Status result = session.await(timeout == null ? DEFAULT_WEB_SOCKET_TIMEOUT_SECONDS : timeout.intValue(), TimeUnit.SECONDS);
+//        if (result == IoFuture.Status.WAITING) {
+//            //add a notifier to close the channel if the connection actually completes
+//
+//            session.cancel();
+//            session.addNotifier(new IoFuture.HandlingNotifier<WebSocketChannel, Object>() {
+//                @Override
+//                public void handleDone(WebSocketChannel data, Object attachment) {
+//                    IoUtils.safeClose(data);
+//                }
+//            }, null);
+//            throw JsrWebSocketMessages.MESSAGES.connectionTimedOut();
+//        }
+//
+//        WebSocketChannel channel;
+//        try {
+//            channel = session.get();
+//        } catch (UpgradeFailedException e) {
+//            throw new DeploymentException(e.getMessage(), e);
+//        }
+//        EndpointSessionHandler sessionHandler = new EndpointSessionHandler(this);
+//
+//        final List<Extension> extensions = new ArrayList<>();
+//        final Map<String, Extension> extMap = new HashMap<>();
+//        for (Extension ext : cec.getConfig().getExtensions()) {
+//            extMap.put(ext.getName(), ext);
+//        }
+//        String subProtocol = null;
+//        if (connectionBuilder.getClientNegotiation() != null) {
+//            for (WebSocketExtension e : connectionBuilder.getClientNegotiation().getSelectedExtensions()) {
+//                Extension ext = extMap.get(e.getName());
+//                if (ext == null) {
+//                    throw JsrWebSocketMessages.MESSAGES.extensionWasNotPresentInClientHandshake(e.getName(), connectionBuilder.getClientNegotiation().getSupportedExtensions());
+//                }
+//                extensions.add(ExtensionImpl.create(e));
+//            }
+//            subProtocol = connectionBuilder.getClientNegotiation().getSelectedSubProtocol();
+//        }
+//
+//        UndertowSession undertowSession = new UndertowSession(channel, connectionBuilder.getUri(), Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec.getConfig(), connectionBuilder.getUri().getQuery(), cec.getEncodingFactory().createEncoding(cec.getConfig()), cec, subProtocol, extensions, connectionBuilder);
+//        endpointInstance.onOpen(undertowSession, cec.getConfig());
+//        channel.resumeReceives();
+//
+//        return undertowSession;
+//    }
 
     @Override
     public long getDefaultMaxSessionIdleTimeout() {
@@ -824,67 +823,67 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         close(10000);
     }
 
-    private static List<WebSocketExtension> toExtensionList(final List<Extension> extensions) {
-        List<WebSocketExtension> ret = new ArrayList<>();
-        for (Extension e : extensions) {
-            final List<WebSocketExtension.Parameter> parameters = new ArrayList<>();
-            for (Extension.Parameter p : e.getParameters()) {
-                parameters.add(new WebSocketExtension.Parameter(p.getName(), p.getValue()));
-            }
-            ret.add(new WebSocketExtension(e.getName(), parameters));
-        }
-        return ret;
-    }
-
-    private static class ClientNegotiation extends WebSocketClientNegotiation {
-
-        private final ClientEndpointConfig config;
-
-        ClientNegotiation(List<String> supportedSubProtocols, List<WebSocketExtension> supportedExtensions, ClientEndpointConfig config) {
-            super(supportedSubProtocols, supportedExtensions);
-            this.config = config;
-        }
-
-        @Override
-        public void afterRequest(final Map<String, List<String>> headers) {
-
-            ClientEndpointConfig.Configurator configurator = config.getConfigurator();
-            if (configurator != null) {
-                final Map<String, List<String>> newHeaders = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-                for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-                    ArrayList<String> arrayList = new ArrayList<>();
-                    arrayList.addAll(entry.getValue());
-                    newHeaders.put(entry.getKey(), arrayList);
-                }
-                configurator.afterResponse(new HandshakeResponse() {
-                    @Override
-                    public Map<String, List<String>> getHeaders() {
-                        return newHeaders;
-                    }
-                });
-            }
-        }
-
-        @Override
-        public void beforeRequest(Map<String, List<String>> headers) {
-            ClientEndpointConfig.Configurator configurator = config.getConfigurator();
-            if (configurator != null) {
-                final Map<String, List<String>> newHeaders = new HashMap<>();
-                for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-                    ArrayList<String> arrayList = new ArrayList<>();
-                    arrayList.addAll(entry.getValue());
-                    newHeaders.put(entry.getKey(), arrayList);
-                }
-                configurator.beforeRequest(newHeaders);
-                headers.clear(); //TODO: more efficient way
-                for (Map.Entry<String, List<String>> entry : newHeaders.entrySet()) {
-                    if (!entry.getValue().isEmpty()) {
-                        headers.put(entry.getKey(), entry.getValue());
-                    }
-                }
-            }
-        }
-    }
+//    private static List<WebSocketExtension> toExtensionList(final List<Extension> extensions) {
+//        List<WebSocketExtension> ret = new ArrayList<>();
+//        for (Extension e : extensions) {
+//            final List<WebSocketExtension.Parameter> parameters = new ArrayList<>();
+//            for (Extension.Parameter p : e.getParameters()) {
+//                parameters.add(new WebSocketExtension.Parameter(p.getName(), p.getValue()));
+//            }
+//            ret.add(new WebSocketExtension(e.getName(), parameters));
+//        }
+//        return ret;
+//    }
+//
+//    private static class ClientNegotiation extends WebSocketClientNegotiation {
+//
+//        private final ClientEndpointConfig config;
+//
+//        ClientNegotiation(List<String> supportedSubProtocols, List<WebSocketExtension> supportedExtensions, ClientEndpointConfig config) {
+//            super(supportedSubProtocols, supportedExtensions);
+//            this.config = config;
+//        }
+//
+//        @Override
+//        public void afterRequest(final Map<String, List<String>> headers) {
+//
+//            ClientEndpointConfig.Configurator configurator = config.getConfigurator();
+//            if (configurator != null) {
+//                final Map<String, List<String>> newHeaders = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+//                for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+//                    ArrayList<String> arrayList = new ArrayList<>();
+//                    arrayList.addAll(entry.getValue());
+//                    newHeaders.put(entry.getKey(), arrayList);
+//                }
+//                configurator.afterResponse(new HandshakeResponse() {
+//                    @Override
+//                    public Map<String, List<String>> getHeaders() {
+//                        return newHeaders;
+//                    }
+//                });
+//            }
+//        }
+//
+//        @Override
+//        public void beforeRequest(Map<String, List<String>> headers) {
+//            ClientEndpointConfig.Configurator configurator = config.getConfigurator();
+//            if (configurator != null) {
+//                final Map<String, List<String>> newHeaders = new HashMap<>();
+//                for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+//                    ArrayList<String> arrayList = new ArrayList<>();
+//                    arrayList.addAll(entry.getValue());
+//                    newHeaders.put(entry.getKey(), arrayList);
+//                }
+//                configurator.beforeRequest(newHeaders);
+//                headers.clear(); //TODO: more efficient way
+//                for (Map.Entry<String, List<String>> entry : newHeaders.entrySet()) {
+//                    if (!entry.getValue().isEmpty()) {
+//                        headers.put(entry.getKey(), entry.getValue());
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     /**
      * Pauses the container
