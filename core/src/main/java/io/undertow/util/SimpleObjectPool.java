@@ -50,13 +50,13 @@ public class SimpleObjectPool<T> implements ObjectPool {
     }
 
     @Override
-    public PooledObject allocate() {
+    public PooledObject<T> allocate() {
         T obj = pool.poll();
         if(obj == null) {
             obj = supplier.get();
         }
         final T finObj = obj;
-        return new PooledObject() {
+        return new PooledObject<T>() {
 
             private volatile boolean closed = false;
 
@@ -70,10 +70,12 @@ public class SimpleObjectPool<T> implements ObjectPool {
 
             @Override
             public void close() {
-                closed = true;
-                recycler.accept(finObj);
-                if(!pool.offer(finObj)) {
-                    consumer.accept(finObj);
+                if (!closed) {
+                    closed = true;
+                    recycler.accept(finObj);
+                    if (!pool.offer(finObj)) {
+                        consumer.accept(finObj);
+                    }
                 }
             }
         };
