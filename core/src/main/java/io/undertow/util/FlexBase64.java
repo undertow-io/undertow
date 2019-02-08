@@ -251,7 +251,7 @@ public class FlexBase64 {
      * @return a new String representing the Base64url output
      */
     public static String encodeStringURL(ByteBuffer source, boolean wrap) {
-        return Encoder.encodeString(source, wrap, false);
+        return Encoder.encodeString(source, wrap, true);
     }
 
     /**
