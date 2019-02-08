@@ -20,6 +20,7 @@ package io.undertow.util;
 
 
 import io.undertow.testutils.category.UnitTest;
+import java.nio.ByteBuffer;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -37,5 +38,12 @@ public class FlexBase64TestCase {
         Assert.assertEquals("ello", new String(target, 0, read));
         Assert.assertEquals(8, decoder.getLastInputPosition());
 
+    }
+
+    @Test
+    public void testEncodeURLWithByteBufferUsesUrlTable() {
+        ByteBuffer source = ByteBuffer.wrap(new byte[]{0, 0x01, 0, 0, 0x10, 0, 0, 2, 0, 0, 0, 0x01, 0, 0x04, 0, 0, (byte) 0xff, (byte) 0xff, 0, 0x05, 0, 0, 0x40, 0});
+        String target = FlexBase64.encodeStringURL(source, false);
+        Assert.assertEquals("AAEAABAAAAIAAAABAAQAAP__AAUAAEAA", target);
     }
 }
