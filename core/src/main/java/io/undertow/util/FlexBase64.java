@@ -221,8 +221,8 @@ public class FlexBase64 {
      * {@link #createEncoder}, or {@link #createEncoderOutputStream} instead.</p>
      *
      * <pre><code>
-     *    // Encodes "ell"
-     *    FlexBase64.ecncodeString("hello".getBytes("US-ASCII"), 1, 4);
+     *    // Encodes "hello"
+     *    FlexBase64.encodeString(ByteBuffer.wrap("hello".getBytes("US-ASCII")), false);
      * </code></pre>
      *
      * @param source the byte buffer to encode from
@@ -242,8 +242,8 @@ public class FlexBase64 {
      * {@link #createEncoder}, or {@link #createEncoderOutputStream} instead.</p>
      *
      * <pre><code>
-     *    // Encodes "ell"
-     *    FlexBase64.ecncodeStringURL("hello".getBytes("US-ASCII"), 1, 4);
+     *    // Encodes "hello"
+     *    FlexBase64.encodeStringURL(ByteBuffer.wrap("hello".getBytes("US-ASCII")), false);
      * </code></pre>
      *
      * @param source the byte buffer to encode from
@@ -259,7 +259,7 @@ public class FlexBase64 {
      *
      * <pre><code>
      *    // Encodes "ell"
-     *    FlexBase64.ecncodeString("hello".getBytes("US-ASCII"), 1, 4);
+     *    FlexBase64.encodeString("hello".getBytes("US-ASCII"), 1, 4, false);
      * </code></pre>
      *
      * @param source the byte array to encode from
@@ -277,7 +277,7 @@ public class FlexBase64 {
      *
      * <pre><code>
      *    // Encodes "ell"
-     *    FlexBase64.ecncodeStringURL("hello".getBytes("US-ASCII"), 1, 4);
+     *    FlexBase64.encodeStringURL("hello".getBytes("US-ASCII"), 1, 4, false);
      * </code></pre>
      *
      * @param source the byte array to encode from
