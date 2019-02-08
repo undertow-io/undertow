@@ -75,6 +75,10 @@ public class ExchangeAttributes {
         return RemoteIPAttribute.INSTANCE;
     }
 
+    public static ExchangeAttribute remoteObfuscatedIp() {
+        return RemoteObfuscatedIPAttribute.INSTANCE;
+    }
+
     public static ExchangeAttribute remoteUser() {
         return RemoteUserAttribute.INSTANCE;
     }
