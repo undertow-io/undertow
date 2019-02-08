@@ -21,6 +21,7 @@ package io.undertow.util;
 import io.undertow.UndertowMessages;
 
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 
 /**
@@ -102,6 +103,19 @@ public class NetworkUtils {
         return InetAddress.getByAddress(data);
     }
 
+    public static String toObfuscatedString(InetAddress address) {
+        if (address == null) {
+            return null;
+        }
+        String s = address.getHostAddress();
+        if (address instanceof Inet4Address) {
+            // IPv4 addresses: cut off last byte 
+            return s.substring(0, s.lastIndexOf(".")+1);
+        }
+        // IPv6 addresses: cut off at second colon
+        return s.substring(0, s.indexOf(":", s.indexOf(":")+1)+1);
+    }
+    
     private NetworkUtils() {
 
     }
