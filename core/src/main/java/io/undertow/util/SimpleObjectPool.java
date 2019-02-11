@@ -19,6 +19,7 @@
 package io.undertow.util;
 
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -55,29 +56,38 @@ public class SimpleObjectPool<T> implements ObjectPool {
         if(obj == null) {
             obj = supplier.get();
         }
-        final T finObj = obj;
-        return new PooledObject<T>() {
+        return new SimplePooledObject<>(obj, this);
+    }
 
-            private volatile boolean closed = false;
+    private static final class SimplePooledObject<T> implements PooledObject<T> {
 
-            @Override
-            public T getObject() {
-                if (closed) {
-                    throw UndertowMessages.MESSAGES.objectIsClosed();
-                }
-                return finObj;
+        private static final AtomicIntegerFieldUpdater<SimplePooledObject> closedUpdater =
+                AtomicIntegerFieldUpdater.newUpdater(SimplePooledObject.class, "closed");
+        private volatile int closed;
+        private final T object;
+        private final SimpleObjectPool<T> objectPool;
+
+        SimplePooledObject(T object, SimpleObjectPool<T> objectPool) {
+            this.object = object;
+            this.objectPool = objectPool;
+        }
+
+        @Override
+        public T getObject() {
+            if (closedUpdater.get(this) != 0) {
+                throw UndertowMessages.MESSAGES.objectIsClosed();
             }
+            return object;
+        }
 
-            @Override
-            public void close() {
-                if (!closed) {
-                    closed = true;
-                    recycler.accept(finObj);
-                    if (!pool.offer(finObj)) {
-                        consumer.accept(finObj);
-                    }
+        @Override
+        public void close() {
+            if (closedUpdater.compareAndSet(this, 0, 1)) {
+                objectPool.recycler.accept(object);
+                if (!objectPool.pool.offer(object)) {
+                    objectPool.consumer.accept(object);
                 }
             }
-        };
+        }
     }
 }
