@@ -1,22 +1,48 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.undertow.websockets.jsr.test;
+
+import java.io.IOException;
+import java.net.URI;
+import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.servlet.ServletException;
+import javax.websocket.ClientEndpointConfig;
+import javax.websocket.ContainerProvider;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.OnMessage;
+import javax.websocket.RemoteEndpoint;
+import javax.websocket.Session;
+import javax.websocket.server.ServerEndpoint;
+
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import io.undertow.Handlers;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -28,33 +54,6 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.FlexBase64;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.FutureResult;
-
-import javax.servlet.ServletException;
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.ContainerProvider;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.OnMessage;
-import javax.websocket.RemoteEndpoint;
-import javax.websocket.Session;
-import javax.websocket.server.ServerEndpoint;
-import java.io.IOException;
-import java.net.URI;
-import java.nio.ByteBuffer;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 @RunWith(DefaultServer.class)
 @HttpOneOnly
@@ -77,8 +76,6 @@ public class TestMessagesReceivedInOrder {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
-                                .setBuffers(DefaultServer.getBufferPool())
-                                .setWorker(DefaultServer.getWorkerSupplier())
                                 .addEndpoint(EchoSocket.class)
                 )
                 .setDeploymentName("servletContext.war");
@@ -94,7 +91,7 @@ public class TestMessagesReceivedInOrder {
     @Test
     public void testMessagesReceivedInOrder() throws Exception {
         stacks.clear();
-        EchoSocket.receivedEchos = new FutureResult<>();
+        EchoSocket.receivedEchos = new CompletableFuture<>();
         final ClientEndpointConfig clientEndpointConfig = ClientEndpointConfig.Builder.create().build();
         final CountDownLatch done = new CountDownLatch(1);
         final AtomicReference<String> error = new AtomicReference<>();
@@ -114,7 +111,7 @@ public class TestMessagesReceivedInOrder {
                                                  messages.add(crc);
                                              }
 
-                                             List<String> received = EchoSocket.receivedEchos.getIoFuture().get();
+                                             List<String> received = EchoSocket.receivedEchos.get();
                                              StringBuilder sb = new StringBuilder();
                                              boolean fail = false;
                                              for (int i = 0; i < messages.size(); i++) {
@@ -128,7 +125,7 @@ public class TestMessagesReceivedInOrder {
                                                      }
                                                  }
                                              }
-                                             if(fail) {
+                                             if (fail) {
                                                  error.set(sb.toString());
                                              }
                                              done.countDown();
@@ -140,7 +137,7 @@ public class TestMessagesReceivedInOrder {
                                  }, clientEndpointConfig, new URI(DefaultServer.getDefaultServerURL() + "/webSocket")
                 );
         done.await(30, TimeUnit.SECONDS);
-        if(error.get() != null) {
+        if (error.get() != null) {
             Assert.fail(error.get());
         }
     }
@@ -148,7 +145,7 @@ public class TestMessagesReceivedInOrder {
     @ServerEndpoint("/webSocket")
     public static class EchoSocket {
         private final List<String> echos = new CopyOnWriteArrayList<>();
-        public static volatile FutureResult<List<String>> receivedEchos = new FutureResult<>();
+        public static volatile CompletableFuture<List<String>> receivedEchos = new CompletableFuture<>();
 
         @OnMessage
         public void onMessage(ByteBuffer dataBuffer, Session session) throws IOException {
@@ -158,7 +155,7 @@ public class TestMessagesReceivedInOrder {
             echos.add(hash);
             stacks.add(new RuntimeException());
             if (echos.size() == MESSAGES) {
-                receivedEchos.setResult(echos);
+                receivedEchos.complete(echos);
             }
             session.getBasicRemote().sendBinary(dataBuffer);
         }
