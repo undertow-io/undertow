@@ -34,7 +34,6 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.websockets.jsr.annotated.AnnotatedEndpoint;
 import io.undertow.websockets.jsr.handshake.HandshakeUtil;
-import io.undertow.websockets.jsr.handshake.WebSocketConnectionCallback;
 import io.undertow.websockets.jsr.handshake.WebSocketHttpExchange;
 
 /**
@@ -43,7 +42,7 @@ import io.undertow.websockets.jsr.handshake.WebSocketHttpExchange;
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
-public final class EndpointSessionHandler implements WebSocketConnectionCallback {
+public final class EndpointSessionHandler {
     private final ServerWebSocketContainer container;
 
     public EndpointSessionHandler(ServerWebSocketContainer container) {
@@ -57,13 +56,12 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
         return container;
     }
 
-    @Override
-    public void connected(ChannelHandlerContext context, ConfiguredServerEndpoint config, WebSocketHttpExchange exchange, String subprotocol) {
+    public UndertowSession connected(ChannelHandlerContext context, ConfiguredServerEndpoint config, WebSocketHttpExchange exchange, String subprotocol) {
         try {
             if (container.isClosed()) {
                 //if the underlying container is closed we just reject
                 context.write(new CloseWebSocketFrame());
-                return;
+                return null;
             }
             InstanceFactory<?> endpointFactory = config.getEndpointFactory();
             ServerEndpointConfig.Configurator configurator = config.getEndpointConfiguration().getConfigurator();
@@ -117,7 +115,7 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
                 endpointInstance = (InstanceHandle<Endpoint>) instance;
             }
 
-            UndertowSession session = new UndertowSession(context, URI.create(exchange.getRequestURI()),
+            UndertowSession session = new UndertowSession(context.channel(), URI.create(exchange.getRequestURI()),
                     exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(),
                     this, principal, endpointInstance, config.getEndpointConfiguration(), exchange.getQueryString(),
                     config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config, subprotocol,
@@ -134,9 +132,11 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
                 endpointInstance.getInstance().onError(session, e);
                 session.close();
             }
+            return session;
         } catch (Exception e) {
             JsrWebSocketLogger.REQUEST_LOGGER.endpointCreationFailed(e);
             context.close();
+            return null;
         }
     }
 }

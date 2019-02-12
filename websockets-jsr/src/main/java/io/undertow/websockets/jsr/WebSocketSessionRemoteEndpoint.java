@@ -83,7 +83,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         if (applicationData.remaining() > 125) {
             throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
         }
-        undertowSession.getChannelHandlerContext().writeAndFlush(new PingWebSocketFrame(Unpooled.copiedBuffer(applicationData)));
+        undertowSession.getChannel().writeAndFlush(new PingWebSocketFrame(Unpooled.copiedBuffer(applicationData)));
     }
 
     @Override
@@ -94,7 +94,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         if (applicationData.remaining() > 125) {
             throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
         }
-        undertowSession.getChannelHandlerContext().writeAndFlush(new PongWebSocketFrame(Unpooled.copiedBuffer(applicationData)));
+        undertowSession.getChannel().writeAndFlush(new PongWebSocketFrame(Unpooled.copiedBuffer(applicationData)));
     }
 
     class AsyncWebSocketSessionRemoteEndpoint implements Async {
@@ -119,7 +119,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if (text == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            undertowSession.getChannelHandlerContext().writeAndFlush(new TextWebSocketFrame(text))
+            undertowSession.getChannel().writeAndFlush(new TextWebSocketFrame(text))
                     .addListener(new SendHandlerAdapter(handler));
         }
 
@@ -128,7 +128,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if (text == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            return undertowSession.getChannelHandlerContext().writeAndFlush(new TextWebSocketFrame(text));
+            return undertowSession.getChannel().writeAndFlush(new TextWebSocketFrame(text));
         }
 
         @Override
@@ -136,7 +136,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if (data == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            return undertowSession.getChannelHandlerContext().writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(data)));
+            return undertowSession.getChannel().writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(data)));
         }
 
         @Override
@@ -148,7 +148,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if (data == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-            undertowSession.getChannelHandlerContext().writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(data))).addListener(new SendHandlerAdapter(completion));
+            undertowSession.getChannel().writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(data))).addListener(new SendHandlerAdapter(completion));
         }
 
         @Override
@@ -219,7 +219,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if (applicationData.remaining() > 125) {
                 throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
             }
-            undertowSession.getChannelHandlerContext().writeAndFlush(new PingWebSocketFrame(Unpooled.copiedBuffer(applicationData)));
+            undertowSession.getChannel().writeAndFlush(new PingWebSocketFrame(Unpooled.copiedBuffer(applicationData)));
         }
 
         @Override
@@ -230,7 +230,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if (applicationData.remaining() > 125) {
                 throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
             }
-            undertowSession.getChannelHandlerContext().writeAndFlush(new PongWebSocketFrame(Unpooled.copiedBuffer(applicationData)));
+            undertowSession.getChannel().writeAndFlush(new PongWebSocketFrame(Unpooled.copiedBuffer(applicationData)));
         }
     }
 
@@ -253,7 +253,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             }
             assertNotInFragment();
             try {
-                undertowSession.getChannelHandlerContext().writeAndFlush(new TextWebSocketFrame(text)).get();
+                undertowSession.getChannel().writeAndFlush(new TextWebSocketFrame(text)).get();
             } catch (InterruptedException | ExecutionException e) {
                 throw new IOException(e);
             }
@@ -266,7 +266,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             }
             assertNotInFragment();
             try {
-                undertowSession.getChannelHandlerContext().writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(data))).get();
+                undertowSession.getChannel().writeAndFlush(new BinaryWebSocketFrame(Unpooled.copiedBuffer(data))).get();
             } catch (InterruptedException | ExecutionException e) {
                 throw new IOException(e);
             }
@@ -284,7 +284,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             inTextFragment = !isLast;
 
             try {
-                undertowSession.getChannelHandlerContext().writeAndFlush(new TextWebSocketFrame(isLast, 0, partialMessage)).get();
+                undertowSession.getChannel().writeAndFlush(new TextWebSocketFrame(isLast, 0, partialMessage)).get();
             } catch (InterruptedException | ExecutionException e) {
                 throw new IOException(e);
             }
@@ -303,7 +303,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             inBinaryFragment = !isLast;
 
             try {
-                undertowSession.getChannelHandlerContext().writeAndFlush(new BinaryWebSocketFrame(isLast, 0, Unpooled.copiedBuffer(partialByte))).get();
+                undertowSession.getChannel().writeAndFlush(new BinaryWebSocketFrame(isLast, 0, Unpooled.copiedBuffer(partialByte))).get();
             } catch (InterruptedException | ExecutionException e) {
                 throw new IOException(e);
             }
@@ -373,7 +373,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
             }
             try {
-                undertowSession.getChannelHandlerContext().writeAndFlush(new PingWebSocketFrame(Unpooled.copiedBuffer(applicationData))).get();
+                undertowSession.getChannel().writeAndFlush(new PingWebSocketFrame(Unpooled.copiedBuffer(applicationData))).get();
             } catch (InterruptedException | ExecutionException e) {
                 throw new IOException(e);
             }
@@ -388,7 +388,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 throw JsrWebSocketMessages.MESSAGES.messageTooLarge(applicationData.remaining(), 125);
             }
             try {
-                undertowSession.getChannelHandlerContext().writeAndFlush(new PongWebSocketFrame(Unpooled.copiedBuffer(applicationData))).get();
+                undertowSession.getChannel().writeAndFlush(new PongWebSocketFrame(Unpooled.copiedBuffer(applicationData))).get();
             } catch (InterruptedException | ExecutionException e) {
                 throw new IOException(e);
             }

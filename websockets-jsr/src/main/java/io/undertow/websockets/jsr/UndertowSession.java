@@ -37,6 +37,7 @@ import javax.websocket.MessageHandler;
 import javax.websocket.RemoteEndpoint;
 import javax.websocket.Session;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.ssl.SslHandler;
@@ -53,7 +54,7 @@ import io.undertow.servlet.api.InstanceHandle;
 public final class UndertowSession implements Session {
 
     private final String sessionId;
-    private ChannelHandlerContext channelHandlerContext;
+    private Channel channel;
     private FrameHandler frameHandler;
     private final ServerWebSocketContainer container;
     private final Principal user;
@@ -77,13 +78,13 @@ public final class UndertowSession implements Session {
     private int failedCount = 0;
     private ConfiguredServerEndpoint configuredServerEndpoint;
 
-    public UndertowSession(ChannelHandlerContext channelHandlerContext, URI requestUri, Map<String, String> pathParameters,
-                            Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
-                            InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString,
-                            final Encoding encoding, final SessionContainer openSessions, final String subProtocol,
-                            final List<Extension> extensions) {
+    public UndertowSession(Channel channel, URI requestUri, Map<String, String> pathParameters,
+                           Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
+                           InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString,
+                           final Encoding encoding, final SessionContainer openSessions, final String subProtocol,
+                           final List<Extension> extensions) {
         assert openSessions != null;
-        this.channelHandlerContext = channelHandlerContext;
+        this.channel = channel;
         this.queryString = queryString;
         this.encoding = encoding;
         this.openSessions = openSessions;
@@ -99,11 +100,11 @@ public final class UndertowSession implements Session {
         this.attrs = Collections.synchronizedMap(new HashMap<>(config.getUserProperties()));
         this.extensions = extensions;
         this.subProtocol = subProtocol;
-        setupWebSocketChannel(channelHandlerContext);
+        setupWebSocketChannel(channel);
     }
 
-    public ChannelHandlerContext getChannelHandlerContext() {
-        return channelHandlerContext;
+    public Channel getChannel() {
+        return channel;
     }
 
     @Override
@@ -151,12 +152,12 @@ public final class UndertowSession implements Session {
 
     @Override
     public boolean isSecure() {
-        return channelHandlerContext.pipeline().get(SslHandler.class) != null;
+        return channel.pipeline().get(SslHandler.class) != null;
     }
 
     @Override
     public boolean isOpen() {
-        return channelHandlerContext.channel().isOpen();
+        return channel.isOpen();
     }
 
     @Override
@@ -192,11 +193,11 @@ public final class UndertowSession implements Session {
 
     public void closeInternal(CloseReason closeReason) throws IOException {
         if (closed.compareAndSet(false, true)) {
-            channelHandlerContext.writeAndFlush(new CloseWebSocketFrame(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()))
+            channel.writeAndFlush(new CloseWebSocketFrame(closeReason.getCloseCode().getCode(), closeReason.getReasonPhrase()))
                     .addListener(new GenericFutureListener<Future<? super Void>>() {
                         @Override
                         public void operationComplete(Future<? super Void> future) throws Exception {
-                            channelHandlerContext.close();
+                            channel.close();
                         }
                     });
             getContainer().invokeEndpointMethod(getExecutor(), new Runnable() {
@@ -238,7 +239,7 @@ public final class UndertowSession implements Session {
     }
 
     public void forceClose() {
-        channelHandlerContext.close();
+        channel.close();
     }
 
     @Override
@@ -343,7 +344,7 @@ public final class UndertowSession implements Session {
         return encoding;
     }
 
-    private void setupWebSocketChannel(ChannelHandlerContext webSocketChannel) {
+    private void setupWebSocketChannel(Channel webSocketChannel) {
         this.frameHandler = new FrameHandler(this, this.endpoint.getInstance());
         webSocketChannel.pipeline().addLast(frameHandler);
 

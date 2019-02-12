@@ -45,8 +45,6 @@ import javax.websocket.server.ServerEndpointConfig;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.FutureResult;
-import org.xnio.IoFuture;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
@@ -68,8 +66,6 @@ import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.UndertowSession;
 import io.undertow.websockets.jsr.test.annotated.AnnotatedClientEndpoint;
-import io.undertow.websockets.utils.FrameChecker;
-import io.undertow.websockets.utils.WebSocketTestClient;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

@@ -18,6 +18,7 @@
 
 package io.undertow.websockets.jsr;
 
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.Servlets;
@@ -25,9 +26,6 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.core.ContextClassLoaderSetupAction;
 import io.undertow.servlet.spec.ServletContextImpl;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.websockets.extensions.ExtensionHandshake;
-import org.xnio.XnioWorker;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.FilterRegistration;
@@ -68,12 +66,21 @@ public class Bootstrap implements ServletExtension {
         if(info.getClientBindAddress() != null) {
             bind = new InetSocketAddress(info.getClientBindAddress(), 0);
         }
+
         List<Extension> extensions = new ArrayList<>();
-        for(WebSocketServerExtensionHandshaker e: info.getServerExtensions()) {
-            e.
-            extensions.add(new ExtensionImpl(e.getName(), Collections.emptyList()));
-        }
-        ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), worker, buffers, setup, info.isDispatchToWorkerThread(), bind, info.getReconnectHandler(), extensions);
+//        for(WebSocketServerExtensionHandshaker e: info.getServerExtensions()) {
+//
+//            extensions.add(new ExtensionImpl(e.getName(), Collections.emptyList()));
+//        }
+        ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), new Supplier<EventLoopGroup>() {
+            @Override
+            public EventLoopGroup get() {
+                if(info.getEventLoopGroup() != null) {
+                    return info.getEventLoopGroup();
+                }
+                return null;//TODO fix this
+            }
+        }, setup, info.isDispatchToWorkerThread(), bind, info.getReconnectHandler(), extensions);
         try {
             for (Class<?> annotation : info.getAnnotatedEndpoints()) {
                 container.addEndpoint(annotation);

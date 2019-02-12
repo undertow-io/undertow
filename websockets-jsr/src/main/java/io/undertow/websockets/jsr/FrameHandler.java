@@ -81,7 +81,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         if (session.getContainer().isDispatchToWorker()) {
             executor = new OrderedExecutor(session.getExecutor());
         } else {
-            executor = session.getChannelHandlerContext().executor();
+            executor = session.getChannel().eventLoop();
         }
 
         this.executor = executor;
@@ -106,7 +106,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
             return;
         }
         String reason = message.reasonText();
-        int code = message.statusCode();
+        int code = message.statusCode() == -1 ? CloseReason.CloseCodes.NORMAL_CLOSURE.getCode() : message.statusCode();
 
         session.getContainer().invokeEndpointMethod(executor, new Runnable() {
             @Override

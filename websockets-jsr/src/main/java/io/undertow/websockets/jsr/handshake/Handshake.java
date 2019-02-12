@@ -80,6 +80,10 @@ public class Handshake {
         this.config = config;
     }
 
+    public ConfiguredServerEndpoint getConfig() {
+        return config;
+    }
+
     /**
      * Return the full url of the websocket location of the given {@link WebSocketHttpExchange}
      */
@@ -99,7 +103,6 @@ public class Handshake {
      * @param exchange The {@link WebSocketHttpExchange} for which the handshake and upgrade should occur.
      */
     public final void handshake(final WebSocketHttpExchange exchange, Consumer<ChannelHandlerContext> completeListener) {
-
         String origin = exchange.getRequestHeader(Headers.ORIGIN_STRING);
         if (origin != null) {
             exchange.setResponseHeader(Headers.ORIGIN_STRING, origin);
@@ -131,26 +134,13 @@ public class Handshake {
                 if (p.get(HttpContentCompressor.class) != null) {
                     p.remove(HttpContentCompressor.class);
                 }
-                ChannelHandlerContext ctx = p.context(HttpRequestDecoder.class);
-                if (ctx == null) {
-                    // this means the user use a HttpServerCodec
-                    ctx = p.context(HttpServerCodec.class);
-                    if (ctx == null) {
-                        //should never happen
-                        throw new IllegalStateException("No HttpDecoder and no HttpServerCodec in the pipeline");
-                    }
-                    p.addBefore(ctx.name(), "wsdecoder", decoder);
-                    p.addBefore(ctx.name(), "wsencoder", encoder);
-                    p.remove(ctx.name());
-                } else {
-                    p.replace(ctx.name(), "wsdecoder", decoder);
-                    p.replace(p.context(HttpResponseEncoder.class).name(), "wsencoder", encoder);
-                }
+                p.addLast("ws-encoder", encoder);
+                p.addLast("ws-decoder", decoder);
                 for(WebSocketServerExtension extension : extensions) {
                     WebSocketExtensionDecoder exdecoder = extension.newExtensionDecoder();
                     WebSocketExtensionEncoder exencoder = extension.newExtensionEncoder();
-                    ctx.pipeline().addAfter(ctx.name(), exdecoder.getClass().getName(), exdecoder);
-                    ctx.pipeline().addAfter(ctx.name(), exencoder.getClass().getName(), exencoder);
+                    p.addAfter("ws-decoder", exdecoder.getClass().getName(), exdecoder);
+                    p.addAfter("ws-encoder", exencoder.getClass().getName(), exencoder);
                 }
 
                 completeListener.accept(context);
@@ -189,7 +179,11 @@ public class Handshake {
 
 
     final List<WebSocketServerExtension> selectExtensions(final WebSocketHttpExchange exchange) {
-        List<WebSocketExtensionData> requestedExtensions = WebSocketExtensionUtil.extractExtensions(exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING));
+        String extensionHeader = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING);
+        if(extensionHeader == null) {
+            return Collections.emptyList();
+        }
+        List<WebSocketExtensionData> requestedExtensions = WebSocketExtensionUtil.extractExtensions(extensionHeader);
         List<WebSocketServerExtension> extensions = selectedExtension(requestedExtensions);
         if (extensions != null && !extensions.isEmpty()) {
             String headerValue = "";

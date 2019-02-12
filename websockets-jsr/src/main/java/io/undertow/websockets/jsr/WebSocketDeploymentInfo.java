@@ -24,6 +24,7 @@ import java.util.List;
 
 import javax.websocket.server.ServerEndpointConfig;
 
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
 
 /**
@@ -42,6 +43,7 @@ public class WebSocketDeploymentInfo implements Cloneable {
     private final List<WebSocketServerExtensionHandshaker> serverExtensions = new ArrayList<>();
     private String clientBindAddress = null;
     private WebSocketReconnectHandler reconnectHandler;
+    private EventLoopGroup eventLoopGroup;
 
     public WebSocketDeploymentInfo addEndpoint(final Class<?> annotated) {
         this.annotatedEndpoints.add(annotated);
@@ -60,6 +62,15 @@ public class WebSocketDeploymentInfo implements Cloneable {
 
     public WebSocketDeploymentInfo addProgramaticEndpoints(final Collection<ServerEndpointConfig> programaticEndpoints) {
         this.programaticEndpoints.addAll(programaticEndpoints);
+        return this;
+    }
+
+    public EventLoopGroup getEventLoopGroup() {
+        return eventLoopGroup;
+    }
+
+    public WebSocketDeploymentInfo setEventLoopGroup(EventLoopGroup eventLoopGroup) {
+        this.eventLoopGroup = eventLoopGroup;
         return this;
     }
 
