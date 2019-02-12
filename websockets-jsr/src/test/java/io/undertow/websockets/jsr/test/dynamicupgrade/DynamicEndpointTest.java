@@ -18,6 +18,14 @@
 
 package io.undertow.websockets.jsr.test.dynamicupgrade;
 
+import java.net.URI;
+import java.util.concurrent.CompletableFuture;
+
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
@@ -32,15 +40,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
-import io.undertow.websockets.utils.FrameChecker;
-import io.undertow.websockets.utils.WebSocketTestClient;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.FutureResult;
-
-import java.net.URI;
+import io.undertow.websockets.jsr.test.FrameChecker;
+import io.undertow.websockets.jsr.test.WebSocketTestClient;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -65,8 +66,6 @@ public class DynamicEndpointTest {
 
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
-                                .setBuffers(DefaultServer.getBufferPool())
-                                .setWorker(DefaultServer.getWorkerSupplier())
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
                                     @Override
                                     public void ready(ServerWebSocketContainer container) {
@@ -92,12 +91,12 @@ public class DynamicEndpointTest {
     @Test
     public void testDynamicAnnotatedEndpoint() throws Exception {
         final byte[] payload = "hello".getBytes();
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/dynamicEchoEndpoint?annotated=true"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "opened:true /dynamicEchoEndpoint hello".getBytes(), latch));
-        latch.getIoFuture().get();
+        latch.get();
         client.destroy();
     }
 
@@ -105,12 +104,12 @@ public class DynamicEndpointTest {
     @Test
     public void testDynamicProgramaticEndpoint() throws Exception {
         final byte[] payload = "hello".getBytes();
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture latch = new CompletableFuture();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/dynamicEchoEndpoint"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "/dynamicEchoEndpoint hello".getBytes(), latch));
-        latch.getIoFuture().get();
+        latch.get();
         client.destroy();
     }
 

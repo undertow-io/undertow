@@ -32,9 +32,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.websocket.ClientEndpoint;
 import javax.websocket.ClientEndpointConfig;
 import javax.websocket.CloseReason;
@@ -46,6 +50,7 @@ import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpoint;
 import javax.websocket.server.ServerEndpointConfig;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
 import io.undertow.server.HttpServerExchange;
@@ -57,8 +62,10 @@ import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ConstructorInstanceFactory;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.PathTemplate;
+import io.undertow.util.StatusCodes;
 import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
 import io.undertow.websockets.jsr.handshake.Handshake;
+import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 
 
 /**
@@ -364,95 +371,92 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 //    }
 //
 //
-//    public void doUpgrade(HttpServletRequest request,
-//                          HttpServletResponse response, final ServerEndpointConfig sec,
-//                          Map<String, String> pathParams)
-//            throws ServletException, IOException {
-//        ServerEndpointConfig.Configurator configurator = sec.getConfigurator();
-//        try {
-//            EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, sec.getDecoders(), sec.getEncoders());
-//            PathTemplate pt = PathTemplate.create(sec.getPath());
-//
-//            InstanceFactory<?> instanceFactory = null;
-//            try {
-//                instanceFactory = classIntrospecter.createInstanceFactory(sec.getEndpointClass());
-//            } catch (Exception e) {
-//                //so it is possible that this is still valid if a custom configurator is in use
-//                if (configurator == null || configurator.getClass() == ServerEndpointConfig.Configurator.class) {
-//                    throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
-//                } else {
-//                    instanceFactory = new InstanceFactory<Object>() {
-//                        @Override
-//                        public InstanceHandle<Object> createInstance() throws InstantiationException {
-//                            throw JsrWebSocketMessages.MESSAGES.endpointDoesNotHaveAppropriateConstructor(sec.getEndpointClass());
-//                        }
-//                    };
-//                }
-//            }
-//            if (configurator == null) {
-//                configurator = DefaultContainerConfigurator.INSTANCE;
-//            }
-//
-//            ServerEndpointConfig config = ServerEndpointConfig.Builder.create(sec.getEndpointClass(), sec.getPath())
-//                    .decoders(sec.getDecoders())
-//                    .encoders(sec.getEncoders())
-//                    .subprotocols(sec.getSubprotocols())
-//                    .extensions(sec.getExtensions())
-//                    .configurator(configurator)
-//                    .build();
-//
-//
-//            AnnotatedEndpointFactory annotatedEndpointFactory = null;
-//            if (!Endpoint.class.isAssignableFrom(sec.getEndpointClass())) {
-//                annotatedEndpointFactory = AnnotatedEndpointFactory.create(sec.getEndpointClass(), encodingFactory, pt.getParameterNames());
-//            }
-//
-//
-//            ConfiguredServerEndpoint confguredServerEndpoint;
-//            if (annotatedEndpointFactory == null) {
-//                confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory);
-//            } else {
-//                confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory, annotatedEndpointFactory, installedExtensions);
-//            }
-//            WebSocketHandshakeHolder hand;
-//
-//            WebSocketDeploymentInfo info = (WebSocketDeploymentInfo) request.getServletContext().getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
-//            if (info == null || info.getServerExtensions() == null) {
-//                hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint);
-//            } else {
-//                hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint, info.getServerExtensions());
-//            }
-//
-//            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(request, response, new HashSet<WebSocketChannel>());
-//            Handshake handshaker = null;
-//            for (Handshake method : hand.handshakes) {
-//                if (method.matches(facade)) {
-//                    handshaker = method;
-//                    break;
-//                }
-//            }
-//
-//            if (handshaker != null) {
-//                if (isClosed()) {
-//                    response.sendError(StatusCodes.SERVICE_UNAVAILABLE);
-//                    return;
-//                }
-//                facade.putAttachment(HandshakeUtil.PATH_PARAMS, pathParams);
-//                final Handshake selected = handshaker;
-//                facade.upgradeChannel(new HttpUpgradeListener() {
-//                    @Override
-//                    public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
-//                        WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
-//                        new EndpointSessionHandler(ServerWebSocketContainer.this).onConnect(facade, channel);
-//                    }
-//                });
-//                handshaker.handshake(facade);
-//                return;
-//            }
-//        } catch (Exception e) {
-//            throw new ServletException(e);
-//        }
-//    }
+    public void doUpgrade(HttpServletRequest request,
+                          HttpServletResponse response, final ServerEndpointConfig sec,
+                          Map<String, String> pathParams)
+            throws ServletException, IOException {
+        ServerEndpointConfig.Configurator configurator = sec.getConfigurator();
+        try {
+            EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, sec.getDecoders(), sec.getEncoders());
+            PathTemplate pt = PathTemplate.create(sec.getPath());
+
+            InstanceFactory<?> instanceFactory = null;
+            try {
+                instanceFactory = classIntrospecter.createInstanceFactory(sec.getEndpointClass());
+            } catch (Exception e) {
+                //so it is possible that this is still valid if a custom configurator is in use
+                if (configurator == null || configurator.getClass() == ServerEndpointConfig.Configurator.class) {
+                    throw JsrWebSocketMessages.MESSAGES.couldNotDeploy(e);
+                } else {
+                    instanceFactory = new InstanceFactory<Object>() {
+                        @Override
+                        public InstanceHandle<Object> createInstance() throws InstantiationException {
+                            throw JsrWebSocketMessages.MESSAGES.endpointDoesNotHaveAppropriateConstructor(sec.getEndpointClass());
+                        }
+                    };
+                }
+            }
+            if (configurator == null) {
+                configurator = DefaultContainerConfigurator.INSTANCE;
+            }
+
+            ServerEndpointConfig config = ServerEndpointConfig.Builder.create(sec.getEndpointClass(), sec.getPath())
+                    .decoders(sec.getDecoders())
+                    .encoders(sec.getEncoders())
+                    .subprotocols(sec.getSubprotocols())
+                    .extensions(sec.getExtensions())
+                    .configurator(configurator)
+                    .build();
+
+
+            AnnotatedEndpointFactory annotatedEndpointFactory = null;
+            if (!Endpoint.class.isAssignableFrom(sec.getEndpointClass())) {
+                annotatedEndpointFactory = AnnotatedEndpointFactory.create(sec.getEndpointClass(), encodingFactory, pt.getParameterNames());
+            }
+
+
+            ConfiguredServerEndpoint confguredServerEndpoint;
+            if (annotatedEndpointFactory == null) {
+                confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory);
+            } else {
+                confguredServerEndpoint = new ConfiguredServerEndpoint(config, instanceFactory, null, encodingFactory, annotatedEndpointFactory, installedExtensions);
+            }
+            WebSocketHandshakeHolder hand;
+
+            WebSocketDeploymentInfo info = (WebSocketDeploymentInfo) request.getServletContext().getAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME);
+            if (info == null || info.getServerExtensions() == null) {
+                hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint);
+            } else {
+                hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint, info.getServerExtensions());
+            }
+
+            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(request, response);
+            Handshake handshaker = null;
+            for (Handshake method : hand.handshakes) {
+                if (method.matches(facade)) {
+                    handshaker = method;
+                    break;
+                }
+            }
+
+            if (handshaker != null) {
+                if (isClosed()) {
+                    response.sendError(StatusCodes.SERVICE_UNAVAILABLE);
+                    return;
+                }
+                facade.putAttachment(HandshakeUtil.PATH_PARAMS, pathParams);
+                final Handshake selected = handshaker;
+                handshaker.handshake(facade, new Consumer<ChannelHandlerContext>() {
+                    @Override
+                    public void accept(ChannelHandlerContext context) {
+                        new EndpointSessionHandler(ServerWebSocketContainer.this).connected(context, confguredServerEndpoint, facade, null);
+                    }
+                });
+            }
+        } catch (Exception e) {
+            throw new ServletException(e);
+        }
+    }
 //
 //    private Session connectToServerInternal(final Endpoint endpointInstance, XnioSsl ssl, final ConfiguredClientEndpoint cec, final URI path) throws DeploymentException, IOException {
 //        //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
