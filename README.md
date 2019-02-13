@@ -11,7 +11,7 @@ Website: http://undertow.io
 
 Issues: https://issues.jboss.org/browse/UNDERTOW
 
-Project Lead: Stuart Douglas <sdouglas@redhat.com>
+Project Lead: Flavia Rainone <frainone@redhat.com>
 
 Mailing List: undertow-dev@lists.jboss.org
 http://lists.jboss.org/mailman/listinfo/undertow-dev
