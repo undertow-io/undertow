@@ -368,7 +368,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 FormEncodedDataDefinition formEncodedDataDefinition = new FormEncodedDataDefinition();
                 String reqEncoding = deploymentInfo.getDefaultRequestEncoding();
                 if(reqEncoding == null) {
-                    deploymentInfo.getDefaultEncoding();
+                    reqEncoding = deploymentInfo.getDefaultEncoding();
                 }
                 if (reqEncoding != null) {
                     formEncodedDataDefinition.setDefaultEncoding(reqEncoding);
