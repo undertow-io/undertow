@@ -252,7 +252,6 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
                     if (fallbackProtocol != null) {
                         ListenerEntry listener = listeners.get(fallbackProtocol);
                         if (listener != null) {
-                            listener.listener.handleEvent(channel);
                             selectedALPNEngine.complete(null);
                             return engine;
                         }
@@ -271,7 +270,6 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
                     if (fallbackProtocol != null) {
                         ListenerEntry listener = listeners.get(fallbackProtocol);
                         if (listener != null) {
-                            listener.listener.handleEvent(channel);
                             selectedALPNEngine.complete(null);
                             return engine;
                         }
