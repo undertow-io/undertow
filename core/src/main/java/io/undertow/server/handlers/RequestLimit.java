@@ -75,11 +75,11 @@ public class RequestLimit {
                     UndertowLogger.ROOT_LOGGER.error("Suspended request was skipped", e);
                 }
             }
-        
+
             if (!found) {
                 decrementRequests();
             }
-            
+
             nextListener.proceed();
         }
     };
