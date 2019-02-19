@@ -100,14 +100,15 @@
         <version.org.wildfly.openssl>1.0.4.Final</version.org.wildfly.openssl>
         <version.checkstyle>7.1</version.checkstyle>
 
+        <checkstyle.skip>true</checkstyle.skip>
     </properties>
 
     <modules>
         <module>core</module>
         <module>servlet</module>
-        <module>examples</module>
+        <!--<module>examples</module>-->
         <module>websockets-jsr</module>
-        <module>tmp-tests</module>
+        <!--<module>tmp-tests</module>-->
         <!--<module>karaf</module>-->
     </modules>
 
