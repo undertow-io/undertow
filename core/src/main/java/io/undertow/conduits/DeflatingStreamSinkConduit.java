@@ -540,8 +540,8 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             state = state & ~FLUSHING_BUFFER;
         }
         if (deflater != null) {
-            pooledObject.close();
             deflater = null;
+            pooledObject.close();
         }
     }
 }
