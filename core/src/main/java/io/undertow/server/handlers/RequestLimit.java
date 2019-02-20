@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.Connectors;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
@@ -62,19 +63,24 @@ public class RequestLimit {
 
         @Override
         public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
-            try {
-                synchronized (RequestLimit.this) {
-                    final SuspendedRequest task = queue.poll();
-                    if (task != null) {
-                        task.exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
-                        task.exchange.dispatch(task.next);
-                    } else {
-                        decrementRequests();
-                    }
+            SuspendedRequest task = null;
+            boolean found = false;
+            while ((task = queue.poll()) != null) {
+                try {
+                    task.exchange.addExchangeCompleteListener(COMPLETION_LISTENER);
+                    task.exchange.dispatch(task.next);
+                    found = true;
+                    break;
+                } catch (Throwable e) {
+                    UndertowLogger.ROOT_LOGGER.error("Suspended request was skipped", e);
                 }
-            } finally {
-                nextListener.proceed();
             }
+
+            if (!found) {
+                decrementRequests();
+            }
+
+            nextListener.proceed();
         }
     };
 
