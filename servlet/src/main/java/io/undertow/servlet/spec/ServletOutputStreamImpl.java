@@ -59,7 +59,7 @@ import io.undertow.util.Headers;
  * Once the write listener has been set operations must only be invoked on this stream from the write
  * listener callback. Attempting to invoke from a different thread will result in an IllegalStateException.
  * <p>
- * Async listener tasks are queued in the {@link AsyncContextImpl}. At most one lister can be active at
+ * Async listener tasks are queued in the {@link AsyncContextImpl}. At most one listener can be active at
  * one time, which simplifies the thread safety requirements.
  *
  * @author Stuart Douglas
