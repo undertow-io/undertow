@@ -30,6 +30,7 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.util.AttachmentKey;
 import io.undertow.util.PathTemplateMatch;
 import io.undertow.util.URLUtils;
 
@@ -45,6 +46,9 @@ import io.undertow.util.URLUtils;
  */
 public class URLDecodingHandler implements HttpHandler {
 
+    private static final ThreadLocal<StringBuilder> DECODING_BUFFER_CACHE = ThreadLocal.withInitial(StringBuilder::new);
+    private static final AttachmentKey<Object> ALREADY_DECODED = AttachmentKey.create(Object.class);
+
     private final HttpHandler next;
     private final String charset;
 
@@ -55,38 +59,65 @@ public class URLDecodingHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        boolean decodeDone = exchange.getConnection().getUndertowOptions().get(UndertowOptions.DECODE_URL, true);
-        if (!decodeDone) {
-            final StringBuilder sb = new StringBuilder();
-            final boolean decodeSlash = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
-            exchange.setRequestPath(URLUtils.decode(exchange.getRequestPath(), charset, decodeSlash, false, sb));
-            exchange.setRelativePath(URLUtils.decode(exchange.getRelativePath(), charset, decodeSlash, false, sb));
-            exchange.setResolvedPath(URLUtils.decode(exchange.getResolvedPath(), charset, decodeSlash, false, sb));
-            if (!exchange.getQueryString().isEmpty()) {
-                final TreeMap<String, Deque<String>> newParams = new TreeMap<>();
-                for (Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
-                    final Deque<String> newVales = new ArrayDeque<>(param.getValue().size());
-                    for (String val : param.getValue()) {
-                        newVales.add(URLUtils.decode(val, charset, true, true, sb));
-                    }
-                    newParams.put(URLUtils.decode(param.getKey(), charset, true, true, sb), newVales);
-                }
-                exchange.getQueryParameters().clear();
-                exchange.getQueryParameters().putAll(newParams);
-                PathTemplateMatch pathTemplateMatch = exchange.getAttachment(PathTemplateMatch.ATTACHMENT_KEY);
-                if (pathTemplateMatch != null) {
-                    Map<String, String> parameters = pathTemplateMatch.getParameters();
-                    if (parameters != null) {
-                        for (Map.Entry<String, String> entry : parameters.entrySet()) {
-                            entry.setValue(URLUtils.decode(entry.getValue(), charset, true, true, sb));
-                        }
-                    }
-                }
-            }
+        if (shouldDecode(exchange)) {
+            final StringBuilder sb = getStringBuilderForDecoding(exchange);
+            decodePath(exchange, charset, sb);
+            decodeQueryString(exchange, charset, sb);
+            decodePathTemplateMatch(exchange, charset, sb);
         }
         next.handleRequest(exchange);
     }
 
+    // Returns true if the exchange should be decoded.  This method updates the ALREADY_DECODED
+    // attachment so that subsequent invocations will always return false.
+    private static boolean shouldDecode(final HttpServerExchange exchange) {
+        return !exchange.getConnection().getUndertowOptions().get(UndertowOptions.DECODE_URL, true)
+                && exchange.putAttachment(ALREADY_DECODED, Boolean.TRUE) == null;
+    }
+
+    private static void decodePath(HttpServerExchange exchange, String charset, StringBuilder sb) {
+        final boolean decodeSlash = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
+        exchange.setRequestPath(URLUtils.decode(exchange.getRequestPath(), charset, decodeSlash, false, sb));
+        exchange.setRelativePath(URLUtils.decode(exchange.getRelativePath(), charset, decodeSlash, false, sb));
+        exchange.setResolvedPath(URLUtils.decode(exchange.getResolvedPath(), charset, decodeSlash, false, sb));
+    }
+
+    private static void decodeQueryString(HttpServerExchange exchange, String charset, StringBuilder sb) {
+        if (!exchange.getQueryString().isEmpty()) {
+            final TreeMap<String, Deque<String>> newParams = new TreeMap<>();
+            for (Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
+                final Deque<String> newValues = new ArrayDeque<>(param.getValue().size());
+                for (String val : param.getValue()) {
+                    newValues.add(URLUtils.decode(val, charset, true, true, sb));
+                }
+                newParams.put(URLUtils.decode(param.getKey(), charset, true, true, sb), newValues);
+            }
+            exchange.getQueryParameters().clear();
+            exchange.getQueryParameters().putAll(newParams);
+        }
+    }
+
+    private static void decodePathTemplateMatch(HttpServerExchange exchange, String charset, StringBuilder sb) {
+        PathTemplateMatch pathTemplateMatch = exchange.getAttachment(PathTemplateMatch.ATTACHMENT_KEY);
+        if (pathTemplateMatch != null) {
+            Map<String, String> parameters = pathTemplateMatch.getParameters();
+            if (parameters != null) {
+                for (Map.Entry<String, String> entry : parameters.entrySet()) {
+                    entry.setValue(URLUtils.decode(entry.getValue(), charset, true, false, sb));
+                }
+            }
+        }
+    }
+
+    private static StringBuilder getStringBuilderForDecoding(HttpServerExchange exchange) {
+        if (exchange.isInIoThread()) {
+            // Unnecessary to clear the buffer here, URLUtils.decode updates the buffer length before usage.
+            // We don't need to check the size after use because decoded size is bounded to the request line,
+            // which cannot exceed one buffer.
+            return DECODING_BUFFER_CACHE.get();
+        }
+        return new StringBuilder();
+    }
 
     public static class Builder implements HandlerBuilder {
 
