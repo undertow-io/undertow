@@ -179,6 +179,10 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         request.removeAttribute(INCLUDE_PATH_INFO);
         request.removeAttribute(INCLUDE_QUERY_STRING);
 
+        final String oldURI = requestImpl.getExchange().getRequestURI();
+        final String oldRequestPath = requestImpl.getExchange().getRequestPath();
+        final String oldPath = requestImpl.getExchange().getRelativePath();
+        final ServletPathMatch oldServletPathMatch = requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletPathMatch();
         if (!named) {
 
             //only update if this is the first forward
@@ -249,6 +253,10 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         } finally {
             servletRequestContext.setServletRequest(oldRequest);
             servletRequestContext.setServletResponse(oldResponse);
+            requestImpl.getExchange().setRelativePath(oldPath);
+            requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(oldServletPathMatch);
+            requestImpl.getExchange().setRequestPath(oldRequestPath);
+            requestImpl.getExchange().setRequestURI(oldURI);
         }
     }
 
