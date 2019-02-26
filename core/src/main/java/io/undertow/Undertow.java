@@ -145,7 +145,6 @@ public final class Undertow {
                     b.option(ChannelOption.SO_BACKLOG, 1024);
                     b.group(bossGroup, workerGroup)
                             .channel(NioServerSocketChannel.class)
-                            .handler(new LoggingHandler(LogLevel.INFO))
                             .childHandler(new NettyHttpServerInitializer(worker, rootHandler, null));
                     Channel ch = b.bind(listener.host, listener.port).sync().channel();
 
@@ -164,7 +163,6 @@ public final class Undertow {
                     b.option(ChannelOption.SO_BACKLOG, 1024);
                     b.group(bossGroup, workerGroup)
                             .channel(NioServerSocketChannel.class)
-                            .handler(new LoggingHandler(LogLevel.INFO))
                             .childHandler(new NettyHttpServerInitializer(worker, rootHandler, sslCtx));
                     Channel ch = b.bind(listener.host, listener.port).sync().channel();
 
