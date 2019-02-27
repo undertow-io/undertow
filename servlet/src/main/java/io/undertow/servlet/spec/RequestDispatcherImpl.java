@@ -253,10 +253,13 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         } finally {
             servletRequestContext.setServletRequest(oldRequest);
             servletRequestContext.setServletResponse(oldResponse);
-            requestImpl.getExchange().setRelativePath(oldPath);
-            requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(oldServletPathMatch);
-            requestImpl.getExchange().setRequestPath(oldRequestPath);
-            requestImpl.getExchange().setRequestURI(oldURI);
+            final boolean preservePath = servletRequestContext.getDeployment().getDeploymentInfo().isPreservePathOnForward();
+            if (preservePath) {
+                requestImpl.getExchange().setRelativePath(oldPath);
+                requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(oldServletPathMatch);
+                requestImpl.getExchange().setRequestPath(oldRequestPath);
+                requestImpl.getExchange().setRequestURI(oldURI);
+            }
         }
     }
 

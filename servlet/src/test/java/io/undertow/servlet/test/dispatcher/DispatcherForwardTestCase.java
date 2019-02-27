@@ -122,7 +122,6 @@ public class DispatcherForwardTestCase {
     }
 
     @Test
-    @Ignore("UT3 - P1")
     public void testPathBasedInclude() throws IOException, InterruptedException {
         resetLatch();
         TestHttpClient client = new TestHttpClient();
