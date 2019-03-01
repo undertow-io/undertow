@@ -124,11 +124,19 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
                     <!--
-                        The Javadoc comments contains a lot of minor HTML errors
-                        which will cause Javadoc generation to fail without the
+                        The Javadoc comments contain a lot of warnings
+                        that add a lot of noise to the build without the
                         following setting.
                     -->
                     <doclint>none</doclint>
+                    <!-- @implNote is a non-standard tag and must be declared or the build will fail -->
+                    <tags>
+                        <tag>
+                            <name>implNote</name>
+                            <placement>a</placement>
+                            <head>Implementation Note:</head>
+                        </tag>
+                    </tags>
                 </configuration>
                 <executions>
                     <execution>
