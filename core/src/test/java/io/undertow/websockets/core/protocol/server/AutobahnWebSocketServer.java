@@ -44,38 +44,38 @@ import java.net.InetSocketAddress;
 /**
  * This class is intended for use with testing against the Python
  * <a href="http://www.tavendo.de/autobahn/testsuite.html">AutoBahn test suite</a>.
- * <p/>
+ * <p>
  * Autobahn installation documentation can be found <a href="http://autobahn.ws/testsuite/installation">here</a>.
- * <p/>
+ * <p>
  * <h3>How to run the tests on Linux/OSX.</h3>
- * <p/>
+ * <p>
  * <p>01. Install AutoBahn: <tt>sudo easy_install autobahntestsuite</tt>.  Test using <tt>wstest --help</tt>.
- * <p/>
+ * <p>
  * <p>02. Create a directory for test configuration and results: <tt>mkdir ~/autobahn</tt> <tt>cd ~/autobahn</tt>.
- * <p/>
+ * <p>
  * <p>03. Create <tt>fuzzing_client_spec.json</tt> in the above directory
  * {@code
  * {
  * "options": {"failByDrop": false},
  * "outdir": "./reports/servers",
- * <p/>
+ * <p>
  * "servers": [
  * {"agent": "Netty4",
  * "url": "ws://localhost:9000",
  * "options": {"version": 18}}
  * ],
- * <p/>
+ * <p>
  * "cases": ["*"],
  * "exclude-cases": [],
  * "exclude-agent-cases": {}
  * }
  * }
- * <p/>
+ * <p>
  * <p>04. Run the <tt>AutobahnServer</tt> located in this package. If you are in Eclipse IDE, right click on
  * <tt>AutobahnServer.java</tt> and select Run As > Java Application.
- * <p/>
+ * <p>
  * <p>05. Run the Autobahn test <tt>wstest -m fuzzingclient -s fuzzing_client_spec.json</tt>.
- * <p/>
+ * <p>
  * <p>06. See the results in <tt>./reports/servers/index.html</tt>
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

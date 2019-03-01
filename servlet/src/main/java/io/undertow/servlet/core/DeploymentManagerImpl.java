@@ -302,7 +302,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     /**
      * sets up the outer security handlers.
-     * <p/>
+     * <p>
      * the handler that actually performs the access check happens later in the chain, it is not setup here
      *
      * @param initialHandler The handler to wrap with security handlers

@@ -28,7 +28,7 @@ import io.undertow.UndertowMessages;
 /**
  * Stream sink channel that serves as the basis for channels that do not have the ability
  * to write data.
- * <p/>
+ * <p>
  * In particular these are:
  * - PING
  * - GO_AWAY

@@ -99,12 +99,12 @@ public class ResourceHandler implements HttpHandler {
     private volatile ResourceManager resourceManager;
     /**
      * If this is set this will be the maximum time (in seconds) the client will cache the resource.
-     * <p/>
+     * <p>
      * Note: Do not set this for private resources, as it will cause a Cache-Control: public
      * to be sent.
-     * <p/>
+     * <p>
      * TODO: make this more flexible
-     * <p/>
+     * <p>
      * This will only be used if the {@link #cachable} predicate returns true
      */
     private volatile Integer cacheTime;

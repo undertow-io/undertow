@@ -34,7 +34,7 @@ public class HPackHuffman {
 
     /**
      * array based tree representation of a huffman code.
-     * <p/>
+     * <p>
      * the high two bytes corresponds to the tree node if the bit is set, and the low two bytes for if it is clear
      * if the high bit is set it is a terminal node, otherwise it contains the next node position.
      */

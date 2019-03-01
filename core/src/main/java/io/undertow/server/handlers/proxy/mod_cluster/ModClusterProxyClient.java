@@ -35,7 +35,7 @@ class ModClusterProxyClient implements ProxyClient {
 
     /**
      * The attachment key that is used to attach the proxy connection to the exchange.
-     * <p/>
+     * <p>
      * This cannot be static as otherwise a connection from a different client could be re-used.
      */
     private final AttachmentKey<ExclusiveConnectionHolder> exclusiveConnectionKey = AttachmentKey

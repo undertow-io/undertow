@@ -36,9 +36,9 @@ import java.nio.ByteBuffer;
 
 /**
  * Basic test of the HTTP parser functionality.
- * <p/>
+ * <p>
  * This tests parsing the same basic request, over and over, with minor differences.
- * <p/>
+ * <p>
  *
  * @author Stuart Douglas
  */

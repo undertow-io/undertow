@@ -48,7 +48,7 @@ import java.util.ServiceLoader;
 
 /**
  * Parser for the undertow-handlers.conf file.
- * <p/>
+ * <p>
  * This file has a line by line syntax, specifying predicate -&gt; handler. If no predicate is specified then
  * the line is assumed to just contain a handler.
  *

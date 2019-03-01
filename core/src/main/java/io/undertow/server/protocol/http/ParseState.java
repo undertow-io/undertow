@@ -22,7 +22,7 @@ import io.undertow.util.HttpString;
 
 /**
  * The current state of the tokenizer state machine. This class is mutable and not thread safe.
- * <p/>
+ * <p>
  * As the machine changes state this class is updated rather than allocating a new one each time.
  *
  * fields are not private to allow for efficient putfield / getfield access

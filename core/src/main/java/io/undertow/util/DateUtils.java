@@ -47,7 +47,7 @@ public class DateUtils {
     /**
      * Thread local cache of this date format. This is technically a small memory leak, however
      * in practice it is fine, as it will only be used by server threads.
-     * <p/>
+     * <p>
      * This is the most common date format, which is why we cache it.
      */
     private static final ThreadLocal<SimpleDateFormat> RFC1123_PATTERN_FORMAT = new ThreadLocal<SimpleDateFormat>() {

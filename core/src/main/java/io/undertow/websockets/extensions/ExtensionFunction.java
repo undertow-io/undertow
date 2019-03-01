@@ -26,12 +26,12 @@ import java.io.IOException;
 
 /**
  * Base interface for WebSocket Extensions implementation.
- * <p/>
+ * <p>
  * It interacts at the connection phase. It is responsible to apply extension's logic before to write and after to read to/from
  * a WebSocket Endpoint.
- * <p/>
+ * <p>
  * Several extensions can be present in a WebSocket Endpoint being executed in a chain pattern.
- * <p/>
+ * <p>
  * Extension state is stored per WebSocket connection.
  *
  * @author Lucas Ponce

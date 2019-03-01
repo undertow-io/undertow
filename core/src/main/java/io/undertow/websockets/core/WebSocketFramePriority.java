@@ -34,9 +34,9 @@ public class WebSocketFramePriority implements FramePriority<WebSocketChannel, S
 
     /**
      * Strict ordering queue. Makes sure that the initial frame for a stream is sent in the order that send() is called.
-     * <p/>
+     * <p>
      * Required to pass the autobahn test suite with no non-strict performance.
-     * <p/>
+     * <p>
      * TODO: provide a way to disable this.
      */
     private final Queue<StreamSinkFrameChannel> strictOrderQueue = new ConcurrentLinkedDeque<>();
