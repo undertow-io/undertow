@@ -129,14 +129,16 @@ public class DirectoryUtils {
         if (parent != null) {
             i++;
             builder.append("<tr class='odd'><td><a class='icon up' href='").append(parent).append("'>[..]</a></td><td>");
-            builder.append(format.format(resource.getLastModified())).append("</td><td>--</td></tr>\n");
+            builder.append(format.format((resource.getLastModified() == null ? new Date(0L) : resource.getLastModified())))
+                    .append("</td><td>--</td></tr>\n");
         }
 
         for (Resource entry : resource.list()) {
             builder.append("<tr class='").append((++i & 1) == 1 ? "odd" : "even").append("'><td><a class='icon ");
             builder.append(entry.isDirectory() ? "dir" : "file");
             builder.append("' href='").append(path).append(entry.getName()).append("'>").append(entry.getName()).append("</a></td><td>");
-            builder.append(format.format(entry.getLastModified())).append("</td><td>");
+            builder.append(format.format((entry.getLastModified() == null) ? new Date(0L) : entry.getLastModified()))
+                    .append("</td><td>");
             if (entry.isDirectory()) {
                 builder.append("--");
             } else {

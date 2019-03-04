@@ -20,8 +20,12 @@ package io.undertow.server.handlers.file;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
@@ -73,10 +77,15 @@ public class FileHandlerIndexTestCase {
     public void testDirectoryIndex() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        Path badSymlink = null;
         try {
             DefaultServer.setRootHandler(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 10485760))
                                     .setDirectoryListingEnabled(true)));
+
+            badSymlink = rootPath.resolve("tmp2");
+            Path badSymlinkTarget = rootPath.resolve("/tmp2");
+            Files.createSymbolicLink(badSymlink, badSymlinkTarget);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             HttpResponse result = client.execute(get);
@@ -93,9 +102,15 @@ public class FileHandlerIndexTestCase {
             headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html; charset=UTF-8", headers[0].getValue());
             Assert.assertTrue(response, response.contains("page.html"));
-
+            Assert.assertTrue(response, response.contains("tmp2"));
+            // All invalid symlinks have their date set to epoch
+            SimpleDateFormat format = new SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.US);
+            Assert.assertTrue(response, response.contains(format.format((new Date(0L)))));
         } finally {
             client.getConnectionManager().shutdown();
+            if (badSymlink != null) {
+                Files.deleteIfExists(badSymlink);
+            }
         }
     }
 }
