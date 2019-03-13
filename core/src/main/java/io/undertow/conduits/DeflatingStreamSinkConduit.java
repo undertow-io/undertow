@@ -29,6 +29,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
+import io.undertow.UndertowMessages;
 import io.undertow.server.Connectors;
 import org.xnio.IoUtils;
 import io.undertow.connector.PooledByteBuffer;
@@ -486,6 +487,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
 
             final boolean shutdown = anyAreSet(state, SHUTDOWN);
             ByteBuffer buf = arrayPooled.getBuffer();
+            int iterationsWithZeroBytes = 0;
             while (force || !deflater.needsInput() || (shutdown && !deflater.finished())) {
                 int count = deflater.deflate(buf.array(), buf.arrayOffset(), buf.remaining(), force ? Deflater.SYNC_FLUSH: Deflater.NO_FLUSH);
                 Connectors.updateResponseBytesSent(exchange, count);
@@ -511,9 +513,14 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                         if (!performFlushIfRequired()) {
                             return;
                         }
+                        iterationsWithZeroBytes = 0;
                     }
                 } else {
                     force = false;
+                    if (iterationsWithZeroBytes++ > 10) {
+                        throw UndertowMessages.MESSAGES.deflaterInfiniteLoopDetected(
+                                shutdown, deflater.finished(), deflater.needsInput());
+                    }
                 }
             }
         } finally {
