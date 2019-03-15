@@ -598,6 +598,6 @@ public interface UndertowMessages {
     @Message(id = 192, value = "Form value is a in-memory file, use getFileItem() instead")
     IllegalStateException formValueIsInMemoryFile();
 
-    @Message(id = 193, value = "Encountered an infinite loop deflating data. shutdown: %s, finished %s, needsInput: %s")
-    IOException deflaterInfiniteLoopDetected(boolean shutdown, boolean finished, boolean needsInput);
+    @Message(id = 193, value = "Encountered an infinite loop deflating data. state: %s, finished %s, needsInput: %s")
+    IOException deflaterInfiniteLoopDetected(int state, boolean finished, boolean needsInput);
 }

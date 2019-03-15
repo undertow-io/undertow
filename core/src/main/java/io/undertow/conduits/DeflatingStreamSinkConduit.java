@@ -519,7 +519,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                     force = false;
                     if (iterationsWithZeroBytes++ > 10) {
                         throw UndertowMessages.MESSAGES.deflaterInfiniteLoopDetected(
-                                shutdown, deflater.finished(), deflater.needsInput());
+                                state, deflater.finished(), deflater.needsInput());
                     }
                 }
             }
