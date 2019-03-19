@@ -57,6 +57,9 @@ public class PathResource implements RangeAwareResource {
     @Override
     public Date getLastModified() {
         try {
+            if (Files.isSymbolicLink(file) && Files.notExists(file)) {
+                return null;
+            }
             return new Date(Files.getLastModifiedTime(file).toMillis());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -257,6 +260,9 @@ public class PathResource implements RangeAwareResource {
     @Override
     public Long getContentLength() {
         try {
+            if (Files.isSymbolicLink(file) && Files.notExists(file)) {
+                return null;
+            }
             return Files.size(file);
         } catch (IOException e) {
             throw new RuntimeException(e);
