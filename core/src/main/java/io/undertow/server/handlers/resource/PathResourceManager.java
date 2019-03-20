@@ -194,7 +194,7 @@ public class PathResourceManager implements ResourceManager  {
             path = p;
         }
         try {
-            Path file = fileSystem.getPath(base, path);
+            Path file = fileSystem.getPath(base, path).normalize();
             String normalizedFile = file.normalize().toString();
             if(!normalizedFile.startsWith(base)) {
                 if(normalizedFile.length() == base.length() - 1) {
