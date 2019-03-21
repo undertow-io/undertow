@@ -1063,7 +1063,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (anyAreSet(state, FLAG_REQUEST_TERMINATED)) {
             return null;
         }
-        return connection.readBlocking();
+        return connection.readBlocking(this);
     }
 
     public void send1ContinueIfRequired() {
@@ -1130,7 +1130,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     public <T> void scheduleIoCallback(IoCallback<T> callback, T context) {
-        getConnection().scheduleIoCallback(callback, context);
+        getConnection().scheduleIoCallback(callback, context, this);
     }
 
     /**
@@ -1441,7 +1441,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
         if (!isRequestComplete()) {
-            connection.readAsync(DRAIN_CALLBACK);
+            connection.readAsync(DRAIN_CALLBACK,this);
         }
 
         if (!isResponseComplete() && allAreClear(state, FLAG_LAST_DATA_QUEUED)) {
@@ -1509,11 +1509,11 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     public void readAsync(IoCallback<ByteBuf> cb) {
-        connection.readAsync(cb);
+        connection.readAsync(cb, this);
     }
 
     public int readBytesAvailable() {
-        return connection.readBytesAvailable();
+        return connection.readBytesAvailable(this);
     }
 
     /**
@@ -1526,7 +1526,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         if(isRequestComplete()) {
             return;
         }
-        connection.discardRequest();
+        connection.discardRequest(this);
     }
 
     /**

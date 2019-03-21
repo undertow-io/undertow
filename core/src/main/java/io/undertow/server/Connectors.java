@@ -75,7 +75,7 @@ public class Connectors {
      * @param buffers  The buffers to attach
      */
     public static void ungetRequestBytes(final HttpServerExchange exchange, ByteBuf buffer) {
-        exchange.getConnection().ungetRequestBytes(buffer);
+        exchange.getConnection().ungetRequestBytes(buffer, exchange);
         exchange.resetRequestChannel();
     }
 
@@ -296,9 +296,9 @@ public class Connectors {
 
     public static void executeRootHandler(final HttpHandler handler, final HttpServerExchange exchange) {
         try {
-            exchange.getConnection().beginExecutingHandlerChain();
+            exchange.getConnection().beginExecutingHandlerChain(exchange);
             handler.handleRequest(exchange);
-            exchange.getConnection().endExecutingHandlerChain();
+            exchange.getConnection().endExecutingHandlerChain(exchange);
             boolean resumed = exchange.getConnection().isIoOperationQueued();
             if (exchange.isDispatched()) {
                 if (resumed) {
@@ -328,7 +328,7 @@ public class Connectors {
             }
         } catch (Throwable t) {
             exchange.putAttachment(DefaultResponseListener.EXCEPTION, t);
-            exchange.getConnection().endExecutingHandlerChain();
+            exchange.getConnection().endExecutingHandlerChain(exchange);
             if (!exchange.isResponseStarted()) {
                 exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
             }

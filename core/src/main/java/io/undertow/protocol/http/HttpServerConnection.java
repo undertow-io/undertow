@@ -19,6 +19,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.SocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -155,7 +156,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     }
 
     @Override
-    protected void ungetRequestBytes(ByteBuf buffer) {
+    protected void ungetRequestBytes(ByteBuf buffer, HttpServerExchange exchange) {
         contents.addFirst(buffer);
         if (currentExchange.isRequestComplete()) {
             contents.add(LAST);
@@ -166,8 +167,8 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     }
 
     @Override
-    public void discardRequest() {
-        if (currentExchange == null) {
+    public void discardRequest(HttpServerExchange exchange) {
+        if (currentExchange != exchange) {
             return;
         }
         discardMode = true;
@@ -317,13 +318,20 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         return inHandlerChain;
     }
 
-    protected void beginExecutingHandlerChain() {
+    @Override
+    protected void beginExecutingHandlerChain(HttpServerExchange exchange) {
+        if(exchange != currentExchange) {
+            return;
+        }
         //TODO: can we just use one var for this?
         inHandlerChain = true;
         canInvokeIoCallback = false;
     }
 
-    protected void endExecutingHandlerChain() {
+    protected void endExecutingHandlerChain(HttpServerExchange exchange) {
+        if(exchange != currentExchange) {
+            return;
+        }
         inHandlerChain = false;
         canInvokeIoCallback = true;
 
@@ -359,7 +367,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     }
 
     @Override
-    public void setSslSessionInfo(SSLSessionInfo sessionInfo) {
+    public void setSslSessionInfo(SSLSessionInfo sessionInfo, HttpServerExchange exchange) {
         throw new RuntimeException("NYI");
     }
 
@@ -475,7 +483,10 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     }
 
     @Override
-    protected <T> void scheduleIoCallback(IoCallback<T> callback, T context) {
+    protected <T> void scheduleIoCallback(IoCallback<T> callback, T context, HttpServerExchange exchange) {
+        if(exchange != currentExchange) {
+            callback.onException(exchange, context, new ClosedChannelException());
+        }
         queuedCallbacks.add(new QueuedCallback(callback, context));
         runIoCallbackLoop();
     }
@@ -593,9 +604,11 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         }
     }
 
-
-    protected void readAsync(IoCallback<ByteBuf> callback) {
-        HttpServerExchange exchange = this.currentExchange;
+    @Override
+    protected void readAsync(IoCallback<ByteBuf> callback, HttpServerExchange exchange) {
+        if(exchange != currentExchange) {
+            callback.onException(exchange, null, new ClosedChannelException());
+        }
         this.readCallback = callback;
         if (!Connectors.isRunningHandlerChain(exchange) && !contents.isEmpty()) {
             runIoCallbackLoop();
@@ -660,7 +673,10 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     }
 
     @Override
-    public ByteBuf readBlocking() throws IOException {
+    public ByteBuf readBlocking(HttpServerExchange exchange) throws IOException {
+        if(exchange != currentExchange) {
+            throw new ClosedChannelException();
+        }
         ByteBuf buf = null;
         try {
             buf = contents.takeFirst();
@@ -678,7 +694,10 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
     }
 
     @Override
-    protected int readBytesAvailable() {
+    protected int readBytesAvailable(HttpServerExchange exchange) {
+        if(exchange != currentExchange) {
+            return -1;
+        }
         int c = 0;
         for (ByteBuf i : contents) {
             c += i.readableBytes();

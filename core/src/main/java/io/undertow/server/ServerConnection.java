@@ -78,7 +78,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
 
     protected abstract boolean isIoOperationQueued();
 
-    protected abstract <T> void scheduleIoCallback(IoCallback<T> callback, T context);
+    protected abstract <T> void scheduleIoCallback(IoCallback<T> callback, T context, HttpServerExchange exchange);
 
     /**
      *
@@ -118,8 +118,9 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
 
     protected abstract boolean isExecutingHandlerChain();
 
-    protected abstract void beginExecutingHandlerChain();
-    protected abstract void endExecutingHandlerChain();
+    protected abstract void beginExecutingHandlerChain(HttpServerExchange exchange);
+
+    protected abstract void endExecutingHandlerChain(HttpServerExchange exchange);
 
     /**
      * Returns the actual address of the remote connection. This will not take things like X-Forwarded-for
@@ -159,7 +160,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      *
      * @param sessionInfo The ssl session information
      */
-    public abstract void setSslSessionInfo(SSLSessionInfo sessionInfo);
+    public abstract void setSslSessionInfo(SSLSessionInfo sessionInfo, HttpServerExchange exchange);
 
     /**
      * Adds a close listener, than will be invoked with the connection is closed
@@ -196,9 +197,9 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      * @return
      * @throws IOException
      */
-    protected abstract void readAsync(IoCallback<ByteBuf> callback);
-    protected abstract ByteBuf readBlocking() throws IOException;
-    protected abstract int readBytesAvailable();
+    protected abstract void readAsync(IoCallback<ByteBuf> callback, HttpServerExchange exchange);
+    protected abstract ByteBuf readBlocking(HttpServerExchange exchange) throws IOException;
+    protected abstract int readBytesAvailable(HttpServerExchange exchange);
 
     /**
      * Callback that is invoked if the max entity size is updated.
@@ -267,9 +268,9 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
         throw UndertowMessages.MESSAGES.upgradeNotSupported();
     }
 
-    protected abstract void ungetRequestBytes(ByteBuf buffer);
+    protected abstract void ungetRequestBytes(ByteBuf buffer, HttpServerExchange exchange);
 
-    public abstract void discardRequest();
+    public abstract void discardRequest(HttpServerExchange exchange);
 
     public interface CloseListener {
 
