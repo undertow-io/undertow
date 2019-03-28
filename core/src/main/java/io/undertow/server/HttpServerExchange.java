@@ -2441,6 +2441,6 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     @Override
     public String toString() {
-        return "HttpServerExchange{ " + getRequestMethod().toString() + " " + getRequestURI() + " request " + requestHeaders + " response " + responseHeaders + '}';
+        return "HttpServerExchange{ " + getRequestMethod().toString() + " " + getRequestURI() + '}';
     }
 }
