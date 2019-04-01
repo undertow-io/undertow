@@ -768,6 +768,14 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 this.unwrappedData = unwrappedData;
             }
 
+            if (result.getStatus() == SSLEngineResult.Status.CLOSED) {
+                if(dataToUnwrap != null) {
+                    dataToUnwrap.close();
+                    dataToUnwrap = null;
+                }
+                notifyReadClosed();
+                return -1;
+            }
             if (!handleHandshakeResult(result)) {
                 if (this.dataToUnwrap.getBuffer().hasRemaining()
                         && result.getStatus() != SSLEngineResult.Status.BUFFER_UNDERFLOW
@@ -777,14 +785,6 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     state &= ~FLAG_DATA_TO_UNWRAP;
                 }
                 return 0;
-            }
-            if (result.getStatus() == SSLEngineResult.Status.CLOSED) {
-                if(dataToUnwrap != null) {
-                    dataToUnwrap.close();
-                    dataToUnwrap = null;
-                }
-                notifyReadClosed();
-                return -1;
             }
             if (result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
                 state &= ~FLAG_DATA_TO_UNWRAP;
