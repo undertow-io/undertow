@@ -25,6 +25,7 @@ import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -42,6 +43,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletException;
@@ -64,7 +66,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
-import io.netty.handler.ssl.SslContext;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.ClassIntrospecter;
 import io.undertow.servlet.api.InstanceFactory;
@@ -198,18 +199,21 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             throw JsrWebSocketMessages.MESSAGES.notAValidClientEndpointType(annotatedEndpointInstance.getClass());
         }
         Endpoint instance = config.getFactory().createInstance(new ImmediateInstanceHandle<>(annotatedEndpointInstance));
-        SslContext ssl = null;
-        for (WebsocketClientSslProvider provider : clientSslProviders) {
-            ssl = provider.getSsl(eventLoopSupplier.get(), annotatedEndpointInstance, path);
-            if (ssl != null) {
-                break;
+        SSLContext ssl = null;
+
+        if(path.getScheme().equals("wss")) {
+            for (WebsocketClientSslProvider provider : clientSslProviders) {
+                ssl = provider.getSsl(eventLoopSupplier.get(), annotatedEndpointInstance, path);
+                if (ssl != null) {
+                    break;
+                }
             }
-        }
-        if (ssl == null) {
-            try {
-                ssl = SslContext.newClientContext();
-            } catch (SSLException e) {
-                //ignore
+            if (ssl == null) {
+                try {
+                    ssl = SSLContext.getDefault();
+                } catch (NoSuchAlgorithmException e) {
+                    //ignore
+                }
             }
         }
         return connectToServerInternal(instance, ssl, config, path);
@@ -246,7 +250,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
 
             InstanceHandle<?> instance = config.getInstanceFactory().createInstance();
-            SslContext ssl = null;
+            SSLContext ssl = null;
             for (WebsocketClientSslProvider provider : clientSslProviders) {
                 ssl = provider.getSsl(eventLoopSupplier.get(), aClass, uri);
                 if (ssl != null) {
@@ -255,8 +259,8 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             }
             if (ssl == null) {
                 try {
-                    ssl = SslContext.newClientContext();
-                } catch (SSLException e) {
+                    ssl = SSLContext.getDefault();
+                } catch (NoSuchAlgorithmException e) {
                     //ignore
                 }
             }
@@ -273,18 +277,20 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
         ClientEndpointConfig cec = config != null ? config : ClientEndpointConfig.Builder.create().build();
 
-        SslContext ssl = null;
-        for (WebsocketClientSslProvider provider : clientSslProviders) {
-            ssl = provider.getSsl(eventLoopSupplier.get(), endpointInstance, cec, path);
-            if (ssl != null) {
-                break;
+        SSLContext ssl = null;
+        if(path.getScheme().equals("wss")) {
+            for (WebsocketClientSslProvider provider : clientSslProviders) {
+                ssl = provider.getSsl(eventLoopSupplier.get(), endpointInstance, cec, path);
+                if (ssl != null) {
+                    break;
+                }
             }
-        }
-        if (ssl == null) {
-            try {
-                ssl = SslContext.newClientContext();
-            } catch (SSLException e) {
-                //ignore
+            if (ssl == null) {
+                try {
+                    ssl = SSLContext.getDefault();
+                } catch (NoSuchAlgorithmException e) {
+                    //ignore
+                }
             }
         }
         //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
@@ -465,7 +471,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
     }
 
-    private Session connectToServerInternal(final Endpoint endpointInstance, SslContext ssl, final ConfiguredClientEndpoint cec, final URI path) throws DeploymentException, IOException {
+    private Session connectToServerInternal(final Endpoint endpointInstance, SSLContext ssl, final ConfiguredClientEndpoint cec, final URI path) throws DeploymentException, IOException {
         //in theory we should not be able to connect until the deployment is complete, but the definition of when a deployment is complete is a bit nebulous.
         ClientNegotiation clientNegotiation = new ClientNegotiation(cec.getConfig().getPreferredSubprotocols(), toExtensionList(cec.getConfig().getExtensions()), cec.getConfig());
 

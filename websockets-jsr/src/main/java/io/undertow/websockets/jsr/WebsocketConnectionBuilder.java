@@ -15,10 +15,12 @@
 
 package io.undertow.websockets.jsr;
 
-import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -39,8 +41,8 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.util.CharsetUtil;
-import io.netty.util.concurrent.FailedFuture;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.undertow.util.UndertowOptionMap;
@@ -49,7 +51,7 @@ class WebsocketConnectionBuilder {
     private final URI uri;
     private final EventLoopGroup eventLoopGroup;
 
-    private SslContext ssl;
+    private SSLContext ssl;
     private UndertowOptionMap optionMap = UndertowOptionMap.EMPTY;
     private InetSocketAddress bindAddress;
     private WebSocketVersion version = WebSocketVersion.V13;
@@ -68,11 +70,11 @@ class WebsocketConnectionBuilder {
         return uri;
     }
 
-    public SslContext getSsl() {
+    public SSLContext getSsl() {
         return ssl;
     }
 
-    public WebsocketConnectionBuilder setSsl(SslContext ssl) {
+    public WebsocketConnectionBuilder setSsl(SSLContext ssl) {
         this.ssl = ssl;
         return this;
     }
@@ -161,6 +163,11 @@ class WebsocketConnectionBuilder {
                     @Override
                     public void initChannel(SocketChannel ch) throws Exception {
                         ChannelPipeline pipeline = ch.pipeline();
+                        if (ssl != null) {
+                            SSLEngine sslEngine = ssl.createSSLEngine();
+                            sslEngine.setUseClientMode(true);
+                            pipeline.addLast("ssl", new SslHandler(sslEngine));
+                        }
                         pipeline.addLast("http-codec", new HttpClientCodec());
                         pipeline.addLast("aggregator", new HttpObjectAggregator(65536));
                         pipeline.addLast("ws-handler", handler);
@@ -248,7 +255,7 @@ class WebsocketConnectionBuilder {
                 handshakeFuture.addListener(new GenericFutureListener<Future<? super Void>>() {
                     @Override
                     public void operationComplete(Future<? super Void> future) throws Exception {
-                        if(future.isSuccess()) {
+                        if (future.isSuccess()) {
                             promise.setSuccess();
                         } else {
                             promise.setFailure(future.cause());

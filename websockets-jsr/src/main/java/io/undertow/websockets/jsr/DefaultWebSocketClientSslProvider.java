@@ -17,11 +17,11 @@ package io.undertow.websockets.jsr;
 
 import java.net.URI;
 
+import javax.net.ssl.SSLContext;
 import javax.websocket.ClientEndpointConfig;
 import javax.websocket.Endpoint;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.ssl.SslContext;
 
 /**
  * Client SSL provider that gets the SSL context in one of two ways.
@@ -38,26 +38,26 @@ public class DefaultWebSocketClientSslProvider implements WebsocketClientSslProv
 
     public static final String SSL_CONTEXT = "io.undertow.websocket.SSL_CONTEXT";
 
-    private static final ThreadLocal<SslContext> LOCAL_SSL_CONTEXT = new ThreadLocal<>();
+    private static final ThreadLocal<SSLContext> LOCAL_SSL_CONTEXT = new ThreadLocal<>();
 
     @Override
-    public SslContext getSsl(EventLoopGroup worker, Class<?> annotatedEndpoint, URI uri) {
+    public SSLContext getSsl(EventLoopGroup worker, Class<?> annotatedEndpoint, URI uri) {
         return getThreadLocalSsl(worker);
     }
 
     @Override
-    public SslContext getSsl(EventLoopGroup worker, Object annotatedEndpointInstance, URI uri) {
+    public SSLContext getSsl(EventLoopGroup worker, Object annotatedEndpointInstance, URI uri) {
         return getThreadLocalSsl(worker);
     }
 
     @Override
-    public SslContext getSsl(EventLoopGroup worker, Endpoint endpoint, ClientEndpointConfig cec, URI uri) {
-        SslContext ssl = getThreadLocalSsl(worker);
+    public SSLContext getSsl(EventLoopGroup worker, Endpoint endpoint, ClientEndpointConfig cec, URI uri) {
+        SSLContext ssl = getThreadLocalSsl(worker);
         if (ssl != null) {
             return ssl;
         }
         //look for some SSL config
-        SslContext sslContext = (SslContext) cec.getUserProperties().get(SSL_CONTEXT);
+        SSLContext sslContext = (SSLContext) cec.getUserProperties().get(SSL_CONTEXT);
 
         if (sslContext != null) {
             return sslContext;
@@ -65,11 +65,11 @@ public class DefaultWebSocketClientSslProvider implements WebsocketClientSslProv
         return null;
     }
 
-    public static void setSslContext(final SslContext context) {
+    public static void setSslContext(final SSLContext context) {
         LOCAL_SSL_CONTEXT.set(context);
     }
 
-    private SslContext getThreadLocalSsl(EventLoopGroup worker) {
+    private SSLContext getThreadLocalSsl(EventLoopGroup worker) {
         return LOCAL_SSL_CONTEXT.get();
     }
 

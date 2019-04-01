@@ -45,6 +45,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
@@ -62,6 +63,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
     private final Executor executor;
     private StringBuilder stringBuffer;
     private ByteArrayOutputStream binaryBuffer;
+    private FrameType expectedContinuation;
 
 
     /**
@@ -94,9 +96,15 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         } else if (msg instanceof PongWebSocketFrame) {
             onPongMessage((PongWebSocketFrame) msg);
         } else if (msg instanceof TextWebSocketFrame) {
-            onText((TextWebSocketFrame) msg);
+            onText(msg, ((TextWebSocketFrame) msg).text());
         } else if (msg instanceof BinaryWebSocketFrame) {
-            onBinary((BinaryWebSocketFrame) msg);
+            onBinary(msg);
+        }else if (msg instanceof ContinuationWebSocketFrame) {
+            if(expectedContinuation == FrameType.BYTE) {
+                onBinary(msg);
+            } else if(expectedContinuation == FrameType.TEXT) {
+                onText(msg, ((ContinuationWebSocketFrame)msg).text());
+            }
         }
     }
 
@@ -153,7 +161,7 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         }
     }
 
-    private void onText(TextWebSocketFrame frame) throws IOException {
+    private void onText(WebSocketFrame frame, String text) throws IOException {
         if (session.isSessionClosed()) {
             //to bad, the channel has already been closed
             //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
@@ -161,15 +169,21 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
             session.close();
             return;
         }
+
+        if(!frame.isFinalFragment()) {
+            expectedContinuation = FrameType.TEXT;
+        } else {
+            expectedContinuation = null;
+        }
         final HandlerWrapper handler = getHandler(FrameType.TEXT);
         if (handler != null &&
                 (handler.isPartialHandler() || (stringBuffer == null && frame.isFinalFragment()))) {
-            invokeTextHandler(frame.text(), handler, frame.isFinalFragment());
+            invokeTextHandler(text, handler, frame.isFinalFragment());
         } else if (handler != null) {
             if (stringBuffer == null) {
                 stringBuffer = new StringBuilder();
             }
-            stringBuffer.append(frame.text());
+            stringBuffer.append(text);
             if (frame.isFinalFragment()) {
                 invokeTextHandler(stringBuffer.toString(), handler, frame.isFinalFragment());
                 stringBuffer = null;
@@ -177,13 +191,18 @@ class FrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
         }
     }
 
-    private void onBinary(BinaryWebSocketFrame frame) throws IOException {
+    private void onBinary(WebSocketFrame frame) throws IOException {
         if (session.isSessionClosed()) {
             //to bad, the channel has already been closed
             //we just ignore messages that are received after we have closed, as the endpoint is no longer in a valid state to deal with them
             //this this should only happen if a message was on the wire when we called close()
             session.close();
             return;
+        }
+        if(!frame.isFinalFragment()) {
+            expectedContinuation = FrameType.BYTE;
+        } else {
+            expectedContinuation = null;
         }
         final HandlerWrapper handler = getHandler(FrameType.BYTE);
         if (handler != null &&

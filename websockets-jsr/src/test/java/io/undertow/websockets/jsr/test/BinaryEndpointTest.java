@@ -60,7 +60,7 @@ public class BinaryEndpointTest {
     @BeforeClass
     public static void setup() throws Exception {
 
-        bytes = new byte[256 * 1024];
+        bytes = new byte[50 * 1024];
         new Random().nextBytes(bytes);
 
         final ServletContainer container = ServletContainer.Factory.newInstance();

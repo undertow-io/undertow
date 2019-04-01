@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package io.undertow.websockets.jsr;
+package io.undertow.websockets.jsr.test;
 
 import java.net.URI;
 
@@ -22,19 +22,22 @@ import javax.websocket.ClientEndpointConfig;
 import javax.websocket.Endpoint;
 
 import io.netty.channel.EventLoopGroup;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.websockets.jsr.WebsocketClientSslProvider;
 
-/**
- * Interface that is loaded from a service loader, that allows
- * you to configure SSL for web socket client connections.
- *
- * @author Stuart Douglas
- */
-public interface WebsocketClientSslProvider {
+public class TestSslProvider implements WebsocketClientSslProvider {
+    @Override
+    public SSLContext getSsl(EventLoopGroup worker, Class<?> annotatedEndpoint, URI uri) {
+        return DefaultServer.getClientSSLContext();
+    }
 
-    SSLContext getSsl(EventLoopGroup worker, final Class<?> annotatedEndpoint, URI uri);
+    @Override
+    public SSLContext getSsl(EventLoopGroup worker, Object annotatedEndpointInstance, URI uri) {
+        return DefaultServer.getClientSSLContext();
+    }
 
-    SSLContext getSsl(EventLoopGroup worker, final Object annotatedEndpointInstance, URI uri);
-
-    SSLContext getSsl(EventLoopGroup worker, final Endpoint endpoint, final ClientEndpointConfig cec, URI uri);
-
+    @Override
+    public SSLContext getSsl(EventLoopGroup worker, Endpoint endpoint, ClientEndpointConfig cec, URI uri) {
+        return DefaultServer.getClientSSLContext();
+    }
 }
