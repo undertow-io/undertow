@@ -24,7 +24,12 @@ package io.undertow.server;
  *
  * At this point it is too late to modify the exchange further.
  *
- * Completion listeners are invoked in reverse order,
+ * Implementations are required invoke {@link NextListener#proceed()} to allow other listeners to release
+ * resources, even in failure scenarios. This chain allows transfer of request ownership between
+ * listeners in order to complete using non-blocking mechanisms, and must not be used to conditionally
+ * proceed.
+ *
+ * Completion listeners are invoked in reverse order.
  *
  * @author Stuart Douglas
  */
@@ -34,6 +39,12 @@ public interface ExchangeCompletionListener {
 
     interface NextListener {
 
+        /**
+         * Invokes the next {@link ExchangeCompletionListener listener}. This must be executed by
+         * every {@link ExchangeCompletionListener} implementation, and may be invoked from a
+         * different thread as a callback. Failure to proceed will cause resource leaks, and
+         * potentially cause requests to hang.
+         */
         void proceed();
 
     }
