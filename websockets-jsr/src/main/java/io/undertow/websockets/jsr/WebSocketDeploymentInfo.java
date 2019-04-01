@@ -21,6 +21,7 @@ package io.undertow.websockets.jsr;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 import javax.websocket.server.ServerEndpointConfig;
 
@@ -44,6 +45,7 @@ public class WebSocketDeploymentInfo implements Cloneable {
     private String clientBindAddress = null;
     private WebSocketReconnectHandler reconnectHandler;
     private EventLoopGroup eventLoopGroup;
+    private Executor executor;
 
     public WebSocketDeploymentInfo addEndpoint(final Class<?> annotated) {
         this.annotatedEndpoints.add(annotated);
@@ -67,6 +69,15 @@ public class WebSocketDeploymentInfo implements Cloneable {
 
     public EventLoopGroup getEventLoopGroup() {
         return eventLoopGroup;
+    }
+
+    public Executor getExecutor() {
+        return executor;
+    }
+
+    public WebSocketDeploymentInfo setExecutor(Executor executor) {
+        this.executor = executor;
+        return this;
     }
 
     public WebSocketDeploymentInfo setEventLoopGroup(EventLoopGroup eventLoopGroup) {

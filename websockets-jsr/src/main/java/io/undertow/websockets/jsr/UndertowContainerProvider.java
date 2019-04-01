@@ -23,10 +23,15 @@ import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 
 import javax.websocket.ContainerProvider;
 import javax.websocket.WebSocketContainer;
 
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import io.undertow.servlet.api.ClassIntrospecter;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.util.DefaultClassIntrospector;
@@ -45,6 +50,7 @@ public class UndertowContainerProvider extends ContainerProvider {
 
     private static volatile ServerWebSocketContainer defaultContainer;
     private static volatile boolean defaultContainerDisabled = false;
+    private static volatile EventLoopGroup defaultEventLoopGroup;
 
     private static final SwitchableClassIntrospector defaultIntrospector = new SwitchableClassIntrospector();
 
@@ -79,11 +85,33 @@ public class UndertowContainerProvider extends ContainerProvider {
             if (defaultContainer == null) {
                 //this is not great, as we have no way to control the lifecycle
                 //but there is not much we can do
-                //todo: what options should we use here?
-                defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), null, Collections.EMPTY_LIST, !invokeInIoThread);
+                Supplier<EventLoopGroup> supplier = new Supplier<EventLoopGroup>() {
+
+                    @Override
+                    public EventLoopGroup get() {
+                        return getDefaultEventLoopGroup();
+                    }
+                };
+                defaultContainer = new ServerWebSocketContainer(defaultIntrospector, UndertowContainerProvider.class.getClassLoader(), supplier, Collections.EMPTY_LIST, !invokeInIoThread, new Supplier<Executor>() {
+                    @Override
+                    public Executor get() {
+                        return GlobalEventExecutor.INSTANCE;
+                    }
+                });
             }
             return defaultContainer;
         }
+    }
+
+    public static EventLoopGroup getDefaultEventLoopGroup() {
+        if (defaultEventLoopGroup == null) {
+            synchronized (UndertowContainerProvider.class) {
+                if (defaultEventLoopGroup == null) {
+                    defaultEventLoopGroup = new NioEventLoopGroup();
+                }
+            }
+        }
+        return defaultEventLoopGroup;
     }
 
     public static void addContainer(final ClassLoader classLoader, final WebSocketContainer webSocketContainer) {
@@ -92,6 +120,14 @@ public class UndertowContainerProvider extends ContainerProvider {
             sm.checkPermission(PERMISSION);
         }
         webSocketContainers.put(classLoader, webSocketContainer);
+    }
+
+    public static void setDefaultContainer(ServerWebSocketContainer container) {
+        SecurityManager sm = System.getSecurityManager();
+        if (sm != null) {
+            sm.checkPermission(PERMISSION);
+        }
+        defaultContainer = container;
     }
 
     public static void removeContainer(final ClassLoader classLoader) {

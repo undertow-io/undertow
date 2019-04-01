@@ -119,7 +119,7 @@ public final class EndpointSessionHandler {
                     exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(),
                     this, principal, endpointInstance, config.getEndpointConfiguration(), exchange.getQueryString(),
                     config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config, subprotocol,
-                    Collections.<Extension>emptyList());
+                    Collections.<Extension>emptyList(), null, exchange.getExecutor());
             config.addOpenSession(session);
 
             session.setMaxBinaryMessageBufferSize(getContainer().getDefaultMaxBinaryMessageBufferSize());

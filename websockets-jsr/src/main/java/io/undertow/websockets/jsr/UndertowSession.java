@@ -27,7 +27,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;
@@ -38,7 +40,7 @@ import javax.websocket.RemoteEndpoint;
 import javax.websocket.Session;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.concurrent.Future;
@@ -71,18 +73,22 @@ public final class UndertowSession implements Session {
     private final String subProtocol;
     private final List<Extension> extensions;
     private final EndpointConfig config;
+    private final Executor executor;
     private volatile int maximumBinaryBufferSize = 0;
     private volatile int maximumTextBufferSize = 0;
     private volatile boolean localClose;
     private int disconnectCount = 0;
     private int failedCount = 0;
     private ConfiguredServerEndpoint configuredServerEndpoint;
+    private final WebsocketConnectionBuilder clientConnectionBuilder;
 
     public UndertowSession(Channel channel, URI requestUri, Map<String, String> pathParameters,
                            Map<String, List<String>> requestParameterMap, EndpointSessionHandler handler, Principal user,
                            InstanceHandle<Endpoint> endpoint, EndpointConfig config, final String queryString,
                            final Encoding encoding, final SessionContainer openSessions, final String subProtocol,
-                           final List<Extension> extensions) {
+                           final List<Extension> extensions, WebsocketConnectionBuilder clientConnectionBuilder,
+                           Executor executor) {
+        this.clientConnectionBuilder = clientConnectionBuilder;
         assert openSessions != null;
         this.channel = channel;
         this.queryString = queryString;
@@ -100,6 +106,7 @@ public final class UndertowSession implements Session {
         this.attrs = Collections.synchronizedMap(new HashMap<>(config.getUserProperties()));
         this.extensions = extensions;
         this.subProtocol = subProtocol;
+        this.executor = executor;
         setupWebSocketChannel(channel);
     }
 
@@ -211,35 +218,40 @@ public final class UndertowSession implements Session {
     }
 
     private void handleReconnect(final long reconnect) {
-//        JsrWebSocketLogger.REQUEST_LOGGER.debugf("Attempting reconnect in %s ms for session %s", reconnect, this);
-//        webSocketChannel.executor().schedule(new Runnable() {
-//            @Override
-//            public void run() {
-//                clientConnectionBuilder.connect().addNotifier(new IoFuture.HandlingNotifier<WebSocketChannel, Object>() {
-//                    @Override
-//                    public void handleDone(WebSocketChannel data, Object attachment) {
-//                        closed.set(false);
-//                        UndertowSession.this.webSocketChannel = data;
-//                        UndertowSession.this.setupWebSocketChannel(data);
-//                        localClose = false;
-//                        endpoint.getInstance().onOpen(UndertowSession.this, config);
-//                        webSocketChannel.resumeReceives();
-//                    }
-//
-//                    @Override
-//                    public void handleFailed(IOException exception, Object attachment) {
-//                        long timeout = container.getWebSocketReconnectHandler().reconnectFailed(exception, getRequestURI(), UndertowSession.this, ++failedCount);
-//                        if(timeout >= 0) {
-//                            handleReconnect(timeout);
-//                        }
-//                    }
-//                }, null);
-//            }
-//        }, reconnect, TimeUnit.MILLISECONDS);
+        JsrWebSocketLogger.REQUEST_LOGGER.debugf("Attempting reconnect in %s ms for session %s", reconnect, this);
+        channel.eventLoop().schedule(new Runnable() {
+            @Override
+            public void run() {
+                ChannelFuture channelFuture = clientConnectionBuilder.connect();
+                channelFuture
+                        .addListener(new GenericFutureListener<Future<? super Void>>() {
+                            @Override
+                            public void operationComplete(Future<? super Void> future) throws Exception {
+                                if (!future.isSuccess()) {
+                                    long timeout = container.getWebSocketReconnectHandler().reconnectFailed(new IOException(future.cause()), getRequestURI(), UndertowSession.this, ++failedCount);
+                                    if (timeout >= 0) {
+                                        handleReconnect(timeout);
+                                    }
+                                } else {
+                                    closed.set(false);
+                                    channel = channelFuture.channel();
+                                    UndertowSession.this.setupWebSocketChannel(channel);
+                                    localClose = false;
+                                    endpoint.getInstance().onOpen(UndertowSession.this, config);
+
+                                }
+                            }
+                        });
+            }
+        }, reconnect, TimeUnit.MILLISECONDS);
     }
 
     public void forceClose() {
-        channel.close();
+        try {
+            channel.close().sync();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -351,7 +363,7 @@ public final class UndertowSession implements Session {
     }
 
     public Executor getExecutor() {
-        return frameHandler.getExecutor();
+        return executor;
     }
 
     boolean isSessionClosed() {

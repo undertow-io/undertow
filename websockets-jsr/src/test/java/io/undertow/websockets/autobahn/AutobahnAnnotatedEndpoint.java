@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package io.undertow.websockets.jsr.test.autobahn;
+package io.undertow.websockets.autobahn;
 
 import java.io.IOException;
 import java.io.OutputStream;

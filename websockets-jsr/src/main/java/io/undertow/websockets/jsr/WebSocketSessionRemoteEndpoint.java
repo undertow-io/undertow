@@ -29,8 +29,10 @@ import javax.websocket.RemoteEndpoint;
 import javax.websocket.SendHandler;
 import javax.websocket.SendResult;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
@@ -281,10 +283,15 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if (inBinaryFragment) {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
+            boolean fragmented = inTextFragment;
             inTextFragment = !isLast;
 
             try {
-                undertowSession.getChannel().writeAndFlush(new TextWebSocketFrame(isLast, 0, partialMessage)).get();
+                if (fragmented) {
+                    undertowSession.getChannel().writeAndFlush(new ContinuationWebSocketFrame(isLast, 0, partialMessage)).get();
+                } else {
+                    undertowSession.getChannel().writeAndFlush(new TextWebSocketFrame(isLast, 0, partialMessage)).get();
+                }
             } catch (InterruptedException | ExecutionException e) {
                 throw new IOException(e);
             }
@@ -300,10 +307,15 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if (inTextFragment) {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
+            boolean fragmented = inBinaryFragment;
             inBinaryFragment = !isLast;
 
             try {
-                undertowSession.getChannel().writeAndFlush(new BinaryWebSocketFrame(isLast, 0, Unpooled.copiedBuffer(partialByte))).get();
+                if (fragmented) {
+                    undertowSession.getChannel().writeAndFlush(new ContinuationWebSocketFrame(isLast, 0, Unpooled.copiedBuffer(partialByte))).get();
+                } else {
+                    undertowSession.getChannel().writeAndFlush(new BinaryWebSocketFrame(isLast, 0, Unpooled.copiedBuffer(partialByte))).get();
+                }
             } catch (InterruptedException | ExecutionException e) {
                 throw new IOException(e);
             }

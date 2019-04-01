@@ -55,14 +55,12 @@ public final class WebSocketTestClient {
     private final Bootstrap bootstrap = new Bootstrap();
     private Channel ch;
     private final URI uri;
-    private final WebSocketVersion version;
     private volatile boolean closed;
 
     private static final AtomicInteger count = new AtomicInteger();
 
-    public WebSocketTestClient(WebSocketVersion version, URI uri) {
+    public WebSocketTestClient(URI uri) {
         this.uri = uri;
-        this.version = version;
     }
 
     /**
@@ -77,7 +75,7 @@ public final class WebSocketTestClient {
         }
         final WebSocketClientHandshaker handshaker =
                 WebSocketClientHandshakerFactory.newHandshaker(
-                        uri, version, null, false, new DefaultHttpHeaders());
+                        uri, WebSocketVersion.V13, null, false, new DefaultHttpHeaders());
 
         EventLoopGroup group = new NioEventLoopGroup();
         final CountDownLatch handshakeLatch = new CountDownLatch(1);

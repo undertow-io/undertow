@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package io.undertow.websockets.jsr.test.reconnect;
+package io.undertow.websockets.reconnect;
 
 import javax.websocket.ClientEndpoint;
 import javax.websocket.OnClose;

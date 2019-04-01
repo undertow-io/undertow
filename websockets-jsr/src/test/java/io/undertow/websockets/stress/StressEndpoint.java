@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package io.undertow.websockets.jsr.test.stress;
+package io.undertow.websockets.stress;
 
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;

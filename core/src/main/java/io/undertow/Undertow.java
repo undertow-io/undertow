@@ -220,6 +220,14 @@ public final class Undertow {
         return worker;
     }
 
+    public EventLoopGroup getBossGroup() {
+        return bossGroup;
+    }
+
+    public EventLoopGroup getWorkerGroup() {
+        return workerGroup;
+    }
+
     public List<ListenerInfo> getListenerInfo() {
         if (listenerInfo == null) {
             throw UndertowMessages.MESSAGES.serverNotStarted();

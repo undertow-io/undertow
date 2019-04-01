@@ -15,16 +15,22 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package io.undertow.websockets.jsr.test;
 
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
+package io.undertow.websockets.suspendresume;
+
+import javax.websocket.OnMessage;
+import javax.websocket.server.ServerEndpoint;
 
 /**
- * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
+ * @author Stuart Douglas
  */
-public class JsrWebSocketServer08Test extends JsrWebSocketServer07Test{
-    @Override
-    protected WebSocketVersion getVersion() {
-        return WebSocketVersion.V08;
+@ServerEndpoint(value = "/")
+public class SuspendResumeEndpoint {
+
+    @OnMessage
+    public String handleMessage(final String message) throws InterruptedException {
+        Thread.sleep(2000);
+        return message;
     }
+
 }

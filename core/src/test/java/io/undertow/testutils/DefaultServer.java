@@ -44,6 +44,7 @@ import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
 import org.wildfly.openssl.OpenSSLProvider;
 
+import io.netty.channel.EventLoopGroup;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -183,6 +184,15 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     public static Undertow getUndertow() {
         return undertow;
+    }
+
+    public static Supplier<EventLoopGroup> getEventLoopSupplier() {
+        return new Supplier<EventLoopGroup>() {
+            @Override
+            public EventLoopGroup get() {
+                return undertow.getWorkerGroup();
+            }
+        };
     }
 
     @Override

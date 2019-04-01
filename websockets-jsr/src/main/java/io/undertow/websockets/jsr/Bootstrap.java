@@ -19,7 +19,7 @@
 package io.undertow.websockets.jsr;
 
 import io.netty.channel.EventLoopGroup;
-import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -38,9 +38,9 @@ import javax.websocket.server.ServerContainer;
 import javax.websocket.server.ServerEndpointConfig;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
 /**
@@ -75,12 +75,20 @@ public class Bootstrap implements ServletExtension {
         ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), new Supplier<EventLoopGroup>() {
             @Override
             public EventLoopGroup get() {
-                if(info.getEventLoopGroup() != null) {
+                if (info.getEventLoopGroup() != null) {
                     return info.getEventLoopGroup();
                 }
-                return null;//TODO fix this
+                return UndertowContainerProvider.getDefaultEventLoopGroup();
             }
-        }, setup, info.isDispatchToWorkerThread(), bind, info.getReconnectHandler(), extensions);
+        }, setup, info.isDispatchToWorkerThread(), bind, info.getReconnectHandler(), new Supplier<Executor>() {
+            @Override
+            public Executor get() {
+                if (info.getExecutor() != null) {
+                    return info.getExecutor();
+                }
+                return GlobalEventExecutor.INSTANCE;
+            }
+        }, extensions);
         try {
             for (Class<?> annotation : info.getAnnotatedEndpoints()) {
                 container.addEndpoint(annotation);

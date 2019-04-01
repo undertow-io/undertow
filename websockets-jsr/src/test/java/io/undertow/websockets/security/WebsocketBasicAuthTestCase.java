@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package io.undertow.websockets.jsr.test.security;
+package io.undertow.websockets.security;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.Servlets;
@@ -111,8 +111,6 @@ public class WebsocketBasicAuthTestCase {
                 .addFilterUrlMapping("wrapper", "/wrapper/*", DispatcherType.REQUEST)
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
-                                .setBuffers(DefaultServer.getBufferPool())
-                                .setWorker(DefaultServer.getWorker())
                                 .addEndpoint(SecuredEndpoint.class)
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
                                     @Override

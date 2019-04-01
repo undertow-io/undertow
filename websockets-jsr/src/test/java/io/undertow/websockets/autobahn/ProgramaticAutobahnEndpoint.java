@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package io.undertow.websockets.jsr.test.autobahn;
+package io.undertow.websockets.autobahn;
 
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;

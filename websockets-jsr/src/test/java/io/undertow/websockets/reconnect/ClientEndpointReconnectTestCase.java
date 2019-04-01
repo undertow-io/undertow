@@ -16,10 +16,21 @@
  *  limitations under the License.
  */
 
-package io.undertow.websockets.jsr.test.reconnect;
+package io.undertow.websockets.reconnect;
+
+import java.io.IOException;
+import java.net.URI;
+
+import javax.websocket.CloseReason;
+import javax.websocket.Session;
+
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import io.undertow.Handlers;
-import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
@@ -30,16 +41,6 @@ import io.undertow.testutils.HttpOneOnly;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import io.undertow.websockets.jsr.WebSocketReconnectHandler;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
-import javax.websocket.CloseReason;
-import javax.websocket.Session;
-import java.io.IOException;
-import java.net.URI;
 
 /**
  * @author Stuart Douglas
@@ -63,8 +64,6 @@ public class ClientEndpointReconnectTestCase {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
-                                .setBuffers(new DefaultByteBufferPool(true, 8192))
-                                .setWorker(DefaultServer.getWorkerSupplier())
                                 .addEndpoint(DisconnectServerEndpoint.class)
                                 .addEndpoint(AnnotatedClientReconnectEndpoint.class)
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {

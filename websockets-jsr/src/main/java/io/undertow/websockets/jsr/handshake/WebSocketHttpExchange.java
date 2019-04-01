@@ -19,6 +19,7 @@ import java.io.Closeable;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -135,4 +136,6 @@ public interface WebSocketHttpExchange extends Closeable {
     Principal getUserPrincipal();
 
     boolean isUserInRole(String role);
+
+    Executor getExecutor();
 }

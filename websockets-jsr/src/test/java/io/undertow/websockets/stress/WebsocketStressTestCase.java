@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package io.undertow.websockets.jsr.test.stress;
+package io.undertow.websockets.stress;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -82,8 +82,6 @@ public class WebsocketStressTestCase {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
-                                .setBuffers(DefaultServer.getBufferPool())
-                                .setWorker(DefaultServer.getWorker())
                                 .addEndpoint(StressEndpoint.class)
                                 .setDispatchToWorkerThread(true)
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
@@ -145,7 +143,9 @@ public class WebsocketStressTestCase {
 
         }
         for (CountDownLatch future : latches) {
-            future.await(40, TimeUnit.SECONDS);
+            if(!future.await(40, TimeUnit.SECONDS)) {
+                Assert.fail();
+            }
         }
         for (int t = 0; t < NUM_THREADS; ++t) {
             for (int i = 0; i < NUM_REQUESTS; ++i) {

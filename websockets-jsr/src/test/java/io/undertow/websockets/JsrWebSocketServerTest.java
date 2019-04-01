@@ -1,21 +1,18 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-package io.undertow.websockets.jsr.test;
+package io.undertow.websockets;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -23,12 +20,14 @@ import java.io.Writer;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -45,13 +44,13 @@ import javax.websocket.server.ServerEndpointConfig;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -65,6 +64,9 @@ import io.undertow.util.NetworkUtils;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.UndertowSession;
+import io.undertow.websockets.jsr.test.FrameChecker;
+import io.undertow.websockets.jsr.test.ProgramaticErrorEndpoint;
+import io.undertow.websockets.jsr.test.WebSocketTestClient;
 import io.undertow.websockets.jsr.test.annotated.AnnotatedClientEndpoint;
 
 /**
@@ -73,14 +75,14 @@ import io.undertow.websockets.jsr.test.annotated.AnnotatedClientEndpoint;
 @RunWith(DefaultServer.class)
 @AjpIgnore
 @HttpOneOnly
-public class JsrWebSocketServer07Test {
+public class JsrWebSocketServerTest {
 
     @org.junit.Test
     public void testBinaryWithByteBuffer() throws Exception {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture latch = new CompletableFuture<>();
 
         class TestEndPoint extends Endpoint {
             @Override
@@ -98,15 +100,15 @@ public class JsrWebSocketServer07Test {
             }
         }
 
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.getIoFuture().get();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -116,7 +118,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture<>();
         class TestEndPoint extends Endpoint {
             @Override
             public void onOpen(final Session session, EndpointConfig config) {
@@ -129,15 +131,15 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.getIoFuture().get();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -147,7 +149,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture<>();
 
         class TestEndPoint extends Endpoint {
             @Override
@@ -161,14 +163,14 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
-        latch.getIoFuture().get();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -178,8 +180,8 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<SendResult> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
-        final FutureResult latch2 = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture<>();
+        final CompletableFuture<?> latch2 = new CompletableFuture<>();
 
         class TestEndPoint extends Endpoint {
             @Override
@@ -196,9 +198,9 @@ public class JsrWebSocketServer07Test {
                             public void onResult(SendResult result) {
                                 sendResult.set(result);
                                 if (result.getException() != null) {
-                                    latch2.setException(new IOException(result.getException()));
+                                    latch2.completeExceptionally(new IOException(result.getException()));
                                 } else {
-                                    latch2.setResult(null);
+                                    latch2.complete(null);
                                 }
                             }
                         });
@@ -206,16 +208,16 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.getIoFuture().get();
-        latch2.getIoFuture().get();
+        latch.get();
+        latch2.get();
 
         SendResult result = sendResult.get();
         Assert.assertNotNull(result);
@@ -229,8 +231,8 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<SendResult> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
-        final FutureResult latch2 = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture<>();
+        final CompletableFuture<?> latch2 = new CompletableFuture<>();
 
         class TestEndPoint extends Endpoint {
             @Override
@@ -244,9 +246,9 @@ public class JsrWebSocketServer07Test {
                             public void onResult(SendResult result) {
                                 sendResult.set(result);
                                 if (result.getException() != null) {
-                                    latch2.setException(new IOException(result.getException()));
+                                    latch2.completeExceptionally(new IOException(result.getException()));
                                 } else {
-                                    latch2.setResult(null);
+                                    latch2.complete(null);
                                 }
                             }
                         });
@@ -254,17 +256,17 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
-        latch.getIoFuture().get();
-        latch2.getIoFuture().get();
+        latch.get();
+        latch2.get();
 
         SendResult result = sendResult.get();
         Assert.assertNotNull(result);
@@ -278,7 +280,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Future<Void>> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture<>();
 
         class TestEndPoint extends Endpoint {
             @Override
@@ -296,15 +298,15 @@ public class JsrWebSocketServer07Test {
             }
 
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.getIoFuture().get();
+        latch.get();
 
         Future<Void> result = sendResult.get();
 
@@ -316,7 +318,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Future<Void>> sendResult = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture<>();
 
         class TestEndPoint extends Endpoint {
             @Override
@@ -330,14 +332,14 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
-        latch.getIoFuture().get();
+        latch.get();
 
         sendResult.get();
 
@@ -349,7 +351,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture<>();
         class TestEndPoint extends Endpoint {
             @Override
             public void onOpen(final Session session, EndpointConfig config) {
@@ -357,7 +359,7 @@ public class JsrWebSocketServer07Test {
                 session.addMessageHandler(new MessageHandler.Whole<byte[]>() {
                     @Override
                     public void onMessage(final byte[] message) {
-                        DefaultServer.getWorker().execute(new Runnable() {
+                        DefaultServer.getUndertow().getWorker().execute(new Runnable() {
                             @Override
                             public void run() {
 
@@ -369,7 +371,7 @@ public class JsrWebSocketServer07Test {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
-                                    latch.setException(e);
+                                    latch.completeExceptionally(e);
                                 }
                             }
                         });
@@ -377,16 +379,16 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
 
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.getIoFuture().get();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -396,7 +398,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture<>();
 
         class TestEndPoint extends Endpoint {
             @Override
@@ -405,7 +407,7 @@ public class JsrWebSocketServer07Test {
                 session.addMessageHandler(new MessageHandler.Whole<String>() {
                     @Override
                     public void onMessage(final String message) {
-                        DefaultServer.getWorker().execute(new Runnable() {
+                        DefaultServer.getUndertow().getWorker().execute(new Runnable() {
                             @Override
                             public void run() {
                                 try {
@@ -415,7 +417,7 @@ public class JsrWebSocketServer07Test {
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                     cause.set(e);
-                                    latch.setException(e);
+                                    latch.completeExceptionally(e);
                                 }
                             }
                         });
@@ -423,15 +425,15 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
-        latch.getIoFuture().get();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -441,7 +443,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture<>();
 
         class TestEndPoint extends Endpoint {
             @Override
@@ -449,15 +451,15 @@ public class JsrWebSocketServer07Test {
                 connected.set(true);
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new PingWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(PongWebSocketFrame.class, payload, latch));
-        latch.getIoFuture().get();
+        latch.get(10, TimeUnit.SECONDS);
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -473,7 +475,7 @@ public class JsrWebSocketServer07Test {
         payload.flip();
 
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture<>();
         final CountDownLatch clientLatch = new CountDownLatch(1);
         final AtomicInteger closeCount = new AtomicInteger();
 
@@ -490,15 +492,15 @@ public class JsrWebSocketServer07Test {
                 clientLatch.countDown();
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new CloseWebSocketFrame(code, reasonText), new FrameChecker(CloseWebSocketFrame.class, payload.array(), latch));
-        latch.getIoFuture().get();
+        latch.get();
         clientLatch.await();
         Assert.assertEquals(code, reason.get().getCloseCode().getCode());
         Assert.assertEquals(reasonText, reason.get().getReasonPhrase());
@@ -518,7 +520,7 @@ public class JsrWebSocketServer07Test {
         payload.flip();
 
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture<>();
         final CountDownLatch clientLatch = new CountDownLatch(1);
         final AtomicInteger closeCount = new AtomicInteger();
 
@@ -535,18 +537,15 @@ public class JsrWebSocketServer07Test {
                 clientLatch.countDown();
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new CloseWebSocketFrame(code, null), new FrameChecker(CloseWebSocketFrame.class, payload.array(), latch));
-        if (latch.getIoFuture().await(10, TimeUnit.SECONDS) != IoFuture.Status.DONE) {
-            Assert.fail();
-        }
-        latch.getIoFuture().get();
+        latch.get(10, TimeUnit.SECONDS);
         clientLatch.await();
         Assert.assertEquals(code, reason.get().getCloseCode().getCode());
         Assert.assertEquals("", reason.get().getReasonPhrase());
@@ -559,7 +558,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture<>();
 
         class TestEndPoint extends Endpoint {
             @Override
@@ -578,15 +577,15 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(BinaryWebSocketFrame.class, payload, latch));
-        latch.getIoFuture().get();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -596,7 +595,7 @@ public class JsrWebSocketServer07Test {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<>();
         final AtomicBoolean connected = new AtomicBoolean(false);
-        final FutureResult latch = new FutureResult();
+        final CompletableFuture<?> latch = new CompletableFuture<>();
         class TestEndPoint extends Endpoint {
             @Override
             public void onOpen(final Session session, EndpointConfig config) {
@@ -616,15 +615,15 @@ public class JsrWebSocketServer07Test {
                 });
             }
         }
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(TestEndPoint.class, "/").configurator(new InstanceConfigurator(new TestEndPoint())).build());
         deployServlet(builder);
 
-        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, payload, latch));
-        latch.getIoFuture().get();
+        latch.get();
         Assert.assertNull(cause.get());
         client.destroy();
     }
@@ -634,7 +633,7 @@ public class JsrWebSocketServer07Test {
     public void testErrorHandling() throws Exception {
 
 
-        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getWorkerSupplier(), DefaultServer.getBufferPool(), Collections.EMPTY_LIST, false, false);
+        ServerWebSocketContainer builder = new ServerWebSocketContainer(TestClassIntrospector.INSTANCE, DefaultServer.getEventLoopSupplier(), Collections.EMPTY_LIST, false, false);
 
         builder.addEndpoint(ServerEndpointConfig.Builder.create(ProgramaticErrorEndpoint.class, "/").configurator(new InstanceConfigurator(new ProgramaticErrorEndpoint())).build());
         deployServlet(builder);
@@ -642,6 +641,7 @@ public class JsrWebSocketServer07Test {
         AnnotatedClientEndpoint c = new AnnotatedClientEndpoint();
 
         Session session = ContainerProvider.getWebSocketContainer().connectToServer(c, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/"));
+
         Assert.assertEquals("hi", ProgramaticErrorEndpoint.getMessage());
         session.getAsyncRemote().sendText("app-error");
         Assert.assertEquals("app-error", ProgramaticErrorEndpoint.getMessage());
@@ -655,10 +655,6 @@ public class JsrWebSocketServer07Test {
         ((UndertowSession) session).forceClose();
         Assert.assertEquals("CLOSED", ProgramaticErrorEndpoint.getMessage());
 
-    }
-
-    protected WebSocketVersion getVersion() {
-        return WebSocketVersion.V07;
     }
 
     private ServletContext deployServlet(final ServerWebSocketContainer deployment) throws ServletException {

@@ -16,7 +16,27 @@
  *  limitations under the License.
  */
 
-package io.undertow.websockets.jsr.test.suspendresume;
+package io.undertow.websockets.suspendresume;
+
+import java.io.IOException;
+import java.net.URI;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.servlet.ServletException;
+import javax.websocket.ClientEndpointConfig;
+import javax.websocket.CloseReason;
+import javax.websocket.ContainerProvider;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.MessageHandler;
+import javax.websocket.Session;
+
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import io.undertow.Handlers;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -26,32 +46,9 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
-import io.undertow.websockets.client.WebSocketClient;
-import io.undertow.websockets.core.AbstractReceiveListener;
-import io.undertow.websockets.core.BufferedBinaryMessage;
-import io.undertow.websockets.core.BufferedTextMessage;
-import io.undertow.websockets.core.StreamSourceFrameChannel;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import io.undertow.websockets.jsr.test.TestMessagesReceivedInOrder;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.channels.Channels;
-import org.xnio.http.UpgradeFailedException;
-
-import javax.servlet.ServletException;
-import java.io.IOException;
-import java.net.URI;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Stuart Douglas
@@ -74,8 +71,6 @@ public class SuspendResumeTestCase {
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
                         new WebSocketDeploymentInfo()
-                                .setBuffers(DefaultServer.getBufferPool())
-                                .setWorker(DefaultServer.getWorker())
                                 .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
                                     @Override
                                     public void ready(ServerWebSocketContainer c) {
@@ -99,31 +94,35 @@ public class SuspendResumeTestCase {
     public void testConnectionWaitsForMessageEnd() throws Exception {
         final CountDownLatch done = new CountDownLatch(1);
         final AtomicReference<String> message = new AtomicReference<>();
-        WebSocketChannel channel = WebSocketClient.connectionBuilder(DefaultServer.getWorker(), DefaultServer.getBufferPool(), new URI(DefaultServer.getDefaultServerURL() + "/"))
-                .connect().get();
-        channel.getReceiveSetter().set(new AbstractReceiveListener() {
+
+        Session session = ContainerProvider.getWebSocketContainer().connectToServer(new Endpoint() {
             @Override
-            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage msg) throws IOException {
-                message.set(msg.getData());
+            public void onOpen(Session session, EndpointConfig config) {
+                session.addMessageHandler(new MessageHandler.Whole<String>() {
+                    @Override
+                    public void onMessage(String m) {
+                        message.set(m);
+                        done.countDown();
+                    }
+                });
+            }
+
+            @Override
+            public void onClose(Session session, CloseReason closeReason) {
                 done.countDown();
             }
 
             @Override
-            protected void onError(WebSocketChannel channel, Throwable error) {
-                error.printStackTrace();
-                message.set("error");
-                done.countDown();
+            public void onError(Session session, Throwable thr) {
+                if (message.get() == null) {
+                    thr.printStackTrace();
+                    message.set("error");
+                    done.countDown();
+                }
             }
-
-            @Override
-            protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
-                message.getData().free();
-                done.countDown();
-            }
-        });
-        channel.resumeReceives();
-        Assert.assertTrue(channel.isOpen());
-        WebSockets.sendText("Hello World", channel, null);
+        }, ClientEndpointConfig.Builder.create().build(), new URI(DefaultServer.getDefaultServerURL() + "/"));
+        Assert.assertTrue(session.isOpen());
+        session.getBasicRemote().sendText("Hello World");
         Thread.sleep(500);
         serverContainer.pause(null);
         try {
@@ -138,32 +137,30 @@ public class SuspendResumeTestCase {
     public void testConnectionClosedOnPause() throws Exception {
         final CountDownLatch done = new CountDownLatch(1);
         final AtomicReference<String> message = new AtomicReference<>();
-        WebSocketChannel channel = WebSocketClient.connectionBuilder(DefaultServer.getWorker(), DefaultServer.getBufferPool(), new URI(DefaultServer.getDefaultServerURL() + "/"))
-                .connect().get();
-        channel.getReceiveSetter().set(new ChannelListener<WebSocketChannel>() {
+
+        Session session = ContainerProvider.getWebSocketContainer().connectToServer(new Endpoint() {
             @Override
-            public void handleEvent(WebSocketChannel channel) {
-                try {
-                    StreamSourceFrameChannel res = channel.receive();
-                    if(res == null) {
-                        return;
-                    }
-                    if (res.getType() == WebSocketFrameType.CLOSE) {
-                        message.set("closed");
-                        done.countDown();
-                    }
-                    Channels.drain(res, Long.MAX_VALUE);
-                } catch (IOException e) {
-                    if(message.get() == null) {
-                        e.printStackTrace();
-                        message.set("error");
-                        done.countDown();
-                    }
+            public void onOpen(Session session, EndpointConfig config) {
+
+            }
+
+            @Override
+            public void onClose(Session session, CloseReason closeReason) {
+                message.set("closed");
+                done.countDown();
+            }
+
+            @Override
+            public void onError(Session session, Throwable thr) {
+                if (message.get() == null) {
+                    thr.printStackTrace();
+                    message.set("error");
+                    done.countDown();
                 }
             }
-        });
-        channel.resumeReceives();
-        Assert.assertTrue(channel.isOpen());
+        }, ClientEndpointConfig.Builder.create().build(), new URI(DefaultServer.getDefaultServerURL() + "/"));
+
+        Assert.assertTrue(session.isOpen());
         Thread.sleep(500);
         serverContainer.pause(null);
         try {
@@ -179,11 +176,13 @@ public class SuspendResumeTestCase {
     public void testRejectWhenSuspended() throws Exception {
         try {
             serverContainer.pause(null);
-            WebSocketChannel channel = WebSocketClient.connectionBuilder(DefaultServer.getWorker(), DefaultServer.getBufferPool(), new URI(DefaultServer.getDefaultServerURL() + "/"))
-                    .connect().get();
-            IoUtils.safeClose(channel);
-            Assert.fail();
-        } catch (UpgradeFailedException e) {
+            ContainerProvider.getWebSocketContainer().connectToServer(new Endpoint() {
+                @Override
+                public void onOpen(Session session, EndpointConfig config) {
+
+                }
+            }, new URI(DefaultServer.getDefaultServerURL() + "/"));
+        } catch (IOException e) {
             //expected
         } finally {
             serverContainer.resume();

@@ -28,7 +28,6 @@ import org.junit.runner.RunWith;
 
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.undertow.Handlers;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -93,7 +92,7 @@ public class DynamicEndpointTest {
         final byte[] payload = "hello".getBytes();
         final CompletableFuture<?> latch = new CompletableFuture();
 
-        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/dynamicEchoEndpoint?annotated=true"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/dynamicEchoEndpoint?annotated=true"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "opened:true /dynamicEchoEndpoint hello".getBytes(), latch));
         latch.get();
@@ -106,7 +105,7 @@ public class DynamicEndpointTest {
         final byte[] payload = "hello".getBytes();
         final CompletableFuture latch = new CompletableFuture();
 
-        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/dynamicEchoEndpoint"));
+        WebSocketTestClient client = new WebSocketTestClient(new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/dynamicEchoEndpoint"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "/dynamicEchoEndpoint hello".getBytes(), latch));
         latch.get();

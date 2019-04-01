@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 import javax.servlet.http.HttpServletRequest;
@@ -170,5 +171,10 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
     @Override
     public boolean isUserInRole(String role) {
         return request.isUserInRole(role);
+    }
+
+    @Override
+    public Executor getExecutor() {
+        return exchange.getConnection().getWorker();
     }
 }
