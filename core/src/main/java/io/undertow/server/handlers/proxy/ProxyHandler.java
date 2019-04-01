@@ -137,7 +137,7 @@ public final class ProxyHandler implements HttpHandler {
       }
 
     /**
-     *  @param proxyClient the client to use to make the proxy call
+     * @param proxyClient the client to use to make the proxy call
      * @param maxRequestTime the maximum amount of time to allow the request to be processed
      * @param next the next handler in line
      * @param rewriteHostHeader should the HOST header be rewritten to use the target host of the call.

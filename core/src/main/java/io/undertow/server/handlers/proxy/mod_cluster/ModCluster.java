@@ -55,6 +55,7 @@ public class ModCluster {
     private final ModClusterContainer container;
     private final int maxRetries;
     private final boolean deterministicFailover;
+    private final String rankedAffinityDelimiter;
 
     private final boolean reuseXForwarded;
 
@@ -69,6 +70,7 @@ public class ModCluster {
         this.healthCheckInterval = builder.healthCheckInterval;
         this.removeBrokenNodes = builder.removeBrokenNodes;
         this.deterministicFailover = builder.deterministicFailover;
+        this.rankedAffinityDelimiter = builder.rankedAffinityDelimiter;
         this.healthChecker = builder.healthChecker;
         this.maxRequestTime = builder.maxRequestTime;
         this.ttl = builder.ttl;
@@ -128,6 +130,10 @@ public class ModCluster {
 
     public boolean isDeterministicFailover() {
         return deterministicFailover;
+    }
+
+    public String rankedAffinityDelimiter() {
+        return this.rankedAffinityDelimiter;
     }
 
     /**
@@ -229,6 +235,7 @@ public class ModCluster {
         private OptionMap clientOptions = OptionMap.EMPTY;
         private int maxRetries;
         private boolean deterministicFailover = false;
+        private String rankedAffinityDelimiter = null;
 
         private boolean reuseXForwarded;
 
@@ -294,6 +301,18 @@ public class ModCluster {
 
         public Builder setDeterministicFailover(boolean deterministicFailover) {
             this.deterministicFailover = deterministicFailover;
+            return this;
+        }
+
+        /**
+         * Setting any value, enables ranked affinity feature and uses specified delimiter for splitting multiple routes.
+         * Web requests will have an affinity for the first available node in a list.
+         *
+         * @param rankedAffinityDelimiter delimiter splitting multiple routes; typically a "."
+         * @return this builder
+         */
+        public Builder setRankedAffinityDelimiter(String rankedAffinityDelimiter) {
+            this.rankedAffinityDelimiter = rankedAffinityDelimiter;
             return this;
         }
 
