@@ -135,7 +135,7 @@ public class QValueParser {
 
         /**
          * we keep the qvalue as a string to avoid parsing the double.
-         * <p/>
+         * <p>
          * This should give both performance and also possible security improvements
          */
         private String qvalue = "1";

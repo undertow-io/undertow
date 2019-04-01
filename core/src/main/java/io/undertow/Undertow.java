@@ -558,7 +558,7 @@ public final class Undertow {
          * to the various worker-related configuration (ioThreads, workerThreads, workerOptions)
          * when {@link Undertow#start()} is called.
          * Additionally, this newly created worker will be shutdown when {@link Undertow#stop()} is called.
-         * <br/>
+         * <br>
          * <p>
          * When non-null, the provided {@link XnioWorker} will be reused instead of creating a new {@link XnioWorker}
          * when {@link Undertow#start()} is called.

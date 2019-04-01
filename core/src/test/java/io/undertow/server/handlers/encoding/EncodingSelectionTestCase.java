@@ -47,7 +47,7 @@ public class EncodingSelectionTestCase {
 
     /**
      * Tests encoding selection with no qvalue
-     * <p/>
+     * <p>
      * Also tests a lot of non standard formats for Accept-Encoding to make sure that
      * we are liberal in what we accept
      *

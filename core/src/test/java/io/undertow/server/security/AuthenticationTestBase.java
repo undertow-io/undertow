@@ -317,7 +317,7 @@ public abstract class AuthenticationTestBase {
 
     /**
      * A simple end of chain handler to set a header and cause the call to return.
-     * <p/>
+     * <p>
      * Reaching this handler is a sign the mechanism handlers have allowed the request through.
      */
     protected static class ResponseHandler implements HttpHandler {

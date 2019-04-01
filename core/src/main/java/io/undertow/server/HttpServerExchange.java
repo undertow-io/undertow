@@ -1762,18 +1762,18 @@ public final class HttpServerExchange extends AbstractAttachable {
     /**
      * Transmit the response headers. After this method successfully returns,
      * the response channel may become writable.
-     * <p/>
+     * <p>
      * If this method fails the request and response channels will be closed.
-     * <p/>
+     * <p>
      * This method runs asynchronously. If the channel is writable it will
      * attempt to write as much of the response header as possible, and then
      * queue the rest in a listener and return.
-     * <p/>
+     * <p>
      * If future handlers in the chain attempt to write before this is finished
      * XNIO will just magically sort it out so it works. This is not actually
      * implemented yet, so we just terminate the connection straight away at
      * the moment.
-     * <p/>
+     * <p>
      * TODO: make this work properly
      *
      * @throws IllegalStateException if the response headers were already sent
@@ -1939,10 +1939,10 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * Channel implementation that is actually provided to clients of the exchange.
-     * <p/>
+     * <p>
      * We do not provide the underlying conduit channel, as this is shared between requests, so we need to make sure that after this request
      * is done the the channel cannot affect the next request.
-     * <p/>
+     * <p>
      * It also delays a wakeup/resumesWrites calls until the current call stack has returned, thus ensuring that only 1 thread is
      * active in the exchange at any one time.
      */
@@ -2110,10 +2110,10 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Channel implementation that is actually provided to clients of the exchange. We do not provide the underlying
      * conduit channel, as this will become the next requests conduit channel, so if a thread is still hanging onto this
      * exchange it can result in problems.
-     * <p/>
+     * <p>
      * It also delays a readResume call until the current call stack has returned, thus ensuring that only 1 thread is
      * active in the exchange at any one time.
-     * <p/>
+     * <p>
      * It also handles buffered request data.
      */
     private final class ReadDispatchChannel extends DetachableStreamSourceChannel implements StreamSourceChannel {

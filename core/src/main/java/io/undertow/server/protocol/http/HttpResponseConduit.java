@@ -109,7 +109,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
      * Handles writing out the header data. It can also take a byte buffer of user
      * data, to enable both user data and headers to be written out in a single operation,
      * which has a noticeable performance impact.
-     * <p/>
+     * <p>
      * It is up to the caller to note the current position of this buffer before and after they
      * call this method, and use this to figure out how many bytes (if any) have been written.
      *

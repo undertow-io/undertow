@@ -103,7 +103,7 @@ public class RedirectBuilder {
 
     /**
      * perform URL encoding
-     * <p/>
+     * <p>
      * TODO: this whole thing is kinda crappy.
      *
      * @return

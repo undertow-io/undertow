@@ -577,7 +577,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     /**
      * When using the default SSL settings returns the corresponding client context.
-     * <p/>
+     * <p>
      * If a test case is initialising a custom server side SSLContext then the test case will be responsible for creating it's
      * own client side.
      *
@@ -592,7 +592,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     /**
      * Start the SSL server using the default settings.
-     * <p/>
+     * <p>
      * The default settings initialise a server with a key for 'localhost' and a trust store containing the certificate of a
      * single client, the client authentication mode is set to 'REQUESTED' to optionally allow progression to CLIENT-CERT
      * authentication.
@@ -622,7 +622,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     /**
      * Start the SSL server using the default ssl context and the provided option map
-     * <p/>
+     * <p>
      * The default settings initialise a server with a key for 'localhost' and a trust store containing the certificate of a
      * single client. Client cert mode is not set by default
      */
@@ -633,7 +633,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     /**
      * Start the SSL server using the default ssl context and the provided option map
-     * <p/>
+     * <p>
      * The default settings initialise a server with a key for 'localhost' and a trust store containing the certificate of a
      * single client. Client cert mode is not set by default
      */
@@ -793,7 +793,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     /**
      * The root handler is tied to the connection, and AJP can re-use connections for different tests, so we
      * use a delegating handler to chance the next handler after the root.
-     * <p/>
+     * <p>
      * TODO: should we re-read the root handler for every request?
      */
     private static final class DelegatingHandler implements HttpHandler {

@@ -46,7 +46,7 @@ public class ConnectionUtils {
 
     /**
      * Cleanly close a connection, by shutting down and flushing writes and then draining reads.
-     * <p/>
+     * <p>
      * If this fails the connection is forcibly closed.
      *
      * @param connection The connection

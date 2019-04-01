@@ -140,7 +140,7 @@ final class Hpack {
      * Decodes an integer in the HPACK prefex format. If the return value is -1
      * it means that there was not enough data in the buffer to complete the decoding
      * sequence.
-     * <p/>
+     * <p>
      * If this method returns -1 then the source buffer will not have been modified.
      *
      * @param source The buffer that contains the integer
@@ -188,7 +188,7 @@ final class Hpack {
 
     /**
      * Encodes an integer in the HPACK prefix format.
-     * <p/>
+     * <p>
      * This method assumes that the buffer has already had the first 8-n bits filled.
      * As such it will modify the last byte that is already present in the buffer, and
      * potentially add more if required

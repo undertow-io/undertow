@@ -468,7 +468,7 @@ public class NonStandardResponseWrapper implements HttpServletResponse {
      * The default behaviour of this method is to call
      * {@link HttpServletResponse#getHeaders} on the wrapped response
      * object.
-     * <p/>
+     * <p>
      * <p>Any changes to the returned <code>Collection</code> must not
      * affect this <code>HttpServletResponseWrapper</code>.
      *
@@ -486,7 +486,7 @@ public class NonStandardResponseWrapper implements HttpServletResponse {
      * The default behaviour of this method is to call
      * {@link HttpServletResponse#getHeaderNames} on the wrapped response
      * object.
-     * <p/>
+     * <p>
      * <p>Any changes to the returned <code>Collection</code> must not
      * affect this <code>HttpServletResponseWrapper</code>.
      *

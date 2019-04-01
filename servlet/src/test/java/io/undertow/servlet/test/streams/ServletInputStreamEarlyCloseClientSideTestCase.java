@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Tests the behaviour of the input stream when the connection is closed on the client side
- * <p/>
+ * <p>
  * https://issues.jboss.org/browse/WFLY-4827
  *
  * @author Stuart Douglas

@@ -52,7 +52,7 @@ public class FileUtils {
     }
 
     /**
-     * Reads the {@link InputStream file} and converting it to {@link String using UTF-8 encoding.
+     * Reads the {@link InputStream file} and converting it to {@link String} using UTF-8 encoding.
      */
     public static String readFile(InputStream file) {
         try (BufferedInputStream stream = new BufferedInputStream(file)) {

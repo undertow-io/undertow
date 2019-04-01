@@ -66,7 +66,7 @@ public class SecurityInitialHandler extends AbstractSecurityContextAssociationHa
     }
 
     /**
-     * @see io.undertow.security.handlers.AbstractSecurityContextAssociationHandler#createSecurityContext()
+     * @see io.undertow.security.handlers.AbstractSecurityContextAssociationHandler#createSecurityContext
      */
     @Override
     public SecurityContext createSecurityContext(final HttpServerExchange exchange) {

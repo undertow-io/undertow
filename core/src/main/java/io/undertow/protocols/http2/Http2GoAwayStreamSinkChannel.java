@@ -25,7 +25,7 @@ import io.undertow.util.ImmediatePooledByteBuffer;
 
 /**
  * The go away
- * <p/>
+ * <p>
  * TODO: at the moment we don't allow the additional debug data
  *
  * @author Stuart Douglas

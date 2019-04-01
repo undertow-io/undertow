@@ -259,7 +259,7 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
 
     /**
      * For tests only. Blocks the current thread until all messages are written Just does a busy wait.
-     * <p/>
+     * <p>
      * DO NOT USE THIS OUTSIDE OF A TEST
      */
     void awaitWrittenForTest() throws InterruptedException {

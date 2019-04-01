@@ -37,11 +37,11 @@ import java.util.zip.Inflater;
 
 /**
  * Implementation of {@code permessage-deflate} WebSocket Extension.
- * <p/>
+ * <p>
  * This implementation supports parameters: {@code server_no_context_takeover, client_no_context_takeover} .
- * <p/>
+ * <p>
  * This implementation does not support parameters: {@code server_max_window_bits, client_max_window_bits} .
- * <p/>
+ * <p>
  * It uses the DEFLATE implementation algorithm packaged on {@link Deflater} and {@link Inflater} classes.
  *
  * @author Lucas Ponce

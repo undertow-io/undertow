@@ -298,7 +298,7 @@ public class HpackDecoder {
     /**
      * because we use a ring buffer type construct, and don't actually shuffle
      * items in the array, we need to figure out he real index to use.
-     * <p/>
+     * <p>
      * package private for unit tests
      *
      * @param index The index from the hpack
