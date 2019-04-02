@@ -19,6 +19,7 @@
 package io.undertow.util;
 
 import java.util.AbstractCollection;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Deque;
@@ -28,60 +29,41 @@ import java.util.ListIterator;
 import java.util.NoSuchElementException;
 import java.util.RandomAccess;
 
+import io.netty.handler.codec.http.HttpHeaders;
+
 /**
  * An array-backed list/deque for header string values.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
+@Deprecated
 public final class HeaderValues extends AbstractCollection<String> implements Deque<String>, List<String>, RandomAccess {
 
-    private static final String[] NO_STRINGS = new String[0];
-    final HttpString key;
-    byte size;
-    Object value;
+    final HttpHeaders headers;
+    final String headerName;
+    final List<String> currentValues;
 
-    HeaderValues(final HttpString key) {
-        this.key = key;
+    public HeaderValues(HttpHeaders headers, String headerName, List<String> currentValues) {
+        this.headers = headers;
+        this.headerName = headerName;
+        this.currentValues = new ArrayList<>(currentValues);
     }
 
     public HttpString getHeaderName() {
-        return key;
+        return new HttpString(headerName);
     }
 
     public int size() {
-        return size;
+        return currentValues.size();
     }
 
     public boolean isEmpty() {
-        return size == 0;
+        return currentValues.size() == 0;
     }
 
     public void clear() {
-        final byte size = this.size;
-        if (size == 0) return;
-        clearInternal();
-    }
-
-    private void clearInternal() {
-        final Object value = this.value;
-        if (value instanceof String[]) {
-            final String[] strings = (String[]) value;
-            final int len = strings.length;
-            Arrays.fill(strings, 0, len, null);
-        } else {
-            this.value = null;
-        }
-        this.size = 0;
-    }
-
-    private int index(int idx) {
-        assert idx >= 0;
-        assert idx < size;
-        final int len = ((String[]) value).length;
-        if (idx > len) {
-            idx -= len;
-        }
-        return idx;
+        currentValues.clear();
+        headers.remove(headerName);
     }
 
     public ListIterator<String> listIterator() {
@@ -106,7 +88,7 @@ public final class HeaderValues extends AbstractCollection<String> implements De
             int returned = -1;
 
             public boolean hasNext() {
-                return idx < size;
+                return idx < size();
             }
 
             public boolean hasPrevious() {
@@ -189,276 +171,77 @@ public final class HeaderValues extends AbstractCollection<String> implements De
     }
 
     public boolean offerFirst(final String headerValue) {
-        int size = this.size;
-        if (headerValue == null || size == Byte.MAX_VALUE) return false;
-        final Object value = this.value;
-        if (value instanceof String[]) {
-            final String[] strings = (String[]) value;
-            final int len = strings.length;
-            if (size == len) {
-                final String[] newStrings = new String[len + 2];
-                System.arraycopy(strings, 0, newStrings, 1, len);
-                newStrings[0] = headerValue;
-                this.value = newStrings;
-            } else {
-                System.arraycopy(strings, 0, strings, 1, strings.length - 1);
-                strings[0] = headerValue;
-            }
-            this.size = (byte) (size + 1);
-        } else {
-            if (size == 0) {
-                this.value = headerValue;
-                this.size = (byte) 1;
-            } else {
-                this.value = new String[] { headerValue, (String) value, null, null };
-                this.size = (byte) 2;
-            }
-        }
+        currentValues.add(0, headerValue);
+        update();
         return true;
     }
 
     public boolean offerLast(final String headerValue) {
-        int size = this.size;
-        if (headerValue == null || size == Byte.MAX_VALUE) return false;
-        final Object value = this.value;
-        if (value instanceof String[]) {
-            offerLastMultiValue(headerValue, size, (String[]) value);
-        } else {
-            if (size == 0) {
-                this.value = headerValue;
-                this.size = (byte) 1;
-            } else {
-                this.value = new String[] { (String) value, headerValue, null, null };
-                this.size = (byte) 2;
-            }
-        }
-        return true;
-    }
-
-    private void offerLastMultiValue(String headerValue, int size, String[] value) {
-        final String[] strings = value;
-        final int len = strings.length;
-        if (size == len) {
-            final String[] newStrings = new String[len + 2];
-            System.arraycopy(strings, 0, newStrings, 0, len);
-            newStrings[len] = headerValue;
-            this.value = newStrings;
-        } else {
-            strings[size] = headerValue;
-        }
-        this.size = (byte) (size + 1);
-    }
-
-    private boolean offer(int idx, final String headerValue) {
-        int size = this.size;
-        if (idx < 0 || idx > size || size == Byte.MAX_VALUE || headerValue == null) return false;
-        if (idx == 0) return offerFirst(headerValue);
-        if (idx == size) return offerLast(headerValue);
-        assert size >= 2; // must be >= 2 to pass the last two checks
-        final Object value = this.value;
-        assert value instanceof String[];
-        final String[] strings = (String[]) value;
-        final int len = strings.length;
-        // This stuff is all algebraically derived.
-        if (size == len) {
-            // Grow the list, copy each segment into new spots so that head = 0
-            final int newLen = len + 2;
-            final String[] newStrings = new String[newLen];
-            System.arraycopy(value, 0, newStrings, 0, idx);
-            System.arraycopy(value, idx, newStrings, idx + 1, len - idx);
-
-            // finally fill in the new value
-            newStrings[idx] = headerValue;
-            this.value = newStrings;
-        } else{
-            System.arraycopy(value, idx, value, idx + 1, len - idx);
-
-            // finally fill in the new value
-            strings[idx] = headerValue;
-        }
-        this.size = (byte) (size + 1);
+        currentValues.add(headerValue);
+        update();
         return true;
     }
 
     public String pollFirst() {
-        final byte size = this.size;
-        if (size == 0) return null;
-
-        final Object value = this.value;
-        if (value instanceof String) {
-            this.size = 0;
-            this.value = null;
-            return (String) value;
-        } else {
-            final String[] strings = (String[]) value;
-            String ret = strings[0];
-            System.arraycopy(strings, 1, strings, 0, strings.length - 1);
-            this.size = (byte) (size - 1);
-            return ret;
+        if(currentValues.isEmpty()) {
+            return null;
         }
+        return currentValues.remove(0);
     }
 
     public String pollLast() {
-        final byte size = this.size;
-        if (size == 0) return null;
-
-        final Object value = this.value;
-        if (value instanceof String) {
-            this.size = 0;
-            this.value = null;
-            return (String) value;
-        } else {
-            final String[] strings = (String[]) value;
-            int idx = (this.size = (byte) (size - 1));
-            final int len = strings.length;
-            if (idx > len) idx -= len;
-            try {
-                return strings[idx];
-            } finally {
-                strings[idx] = null;
-            }
+        if(currentValues.isEmpty()) {
+            return null;
         }
+        return currentValues.remove(currentValues.size() - 1);
     }
 
     public String remove(int idx) {
-        final int size = this.size;
-        if (idx < 0 || idx >= size) throw new IndexOutOfBoundsException();
-        if (idx == 0) return removeFirst();
-        if (idx == size - 1) return removeLast();
-        assert size > 2; // must be > 2 to pass the last two checks
-        // value must be an array since size > 2
-        final String[] value = (String[]) this.value;
-        final int len = value.length;
-        String ret = value[idx];
-        System.arraycopy(value, idx + 1, value, idx, len - idx - 1);
-        value[len - 1] = null;
-        this.size = (byte) (size - 1);
-        return ret;
+        String res = currentValues.remove(idx);
+        update();
+        return res;
     }
 
     public String get(int idx) {
-        if (idx > size) {
-            throw new IndexOutOfBoundsException();
-        }
-        Object value = this.value;
-        assert value != null;
-        if (value instanceof String) {
-            assert size == 1;
-            return (String) value;
-        }
-        final String[] a = (String[]) value;
-        return a[index(idx)];
+        return currentValues.get(idx);
     }
 
     public int indexOf(final Object o) {
-        if (o == null || size == 0) return -1;
-        if (value instanceof String[]) {
-            final String[] list = (String[]) value;
-            final int len = list.length;
-            for (int i = 0; i < size; i ++) {
-                if ((i > len ? list[i - len] : list[i]).equals(o)) {
-                    return i;
-                }
-            }
-        } else if (o.equals(value)) {
-            return 0;
-        }
-        return -1;
+        return currentValues.indexOf(o);
     }
 
     public int lastIndexOf(final Object o) {
-        if (o == null || size == 0) return -1;
-        if (value instanceof String[]) {
-            final String[] list = (String[]) value;
-            final int len = list.length;
-            int idx;
-            for (int i = size - 1; i >= 0; i --) {
-                idx = i;
-                if ((idx > len ? list[idx - len] : list[idx]).equals(o)) {
-                    return i;
-                }
-            }
-        } else if (o.equals(value)) {
-            return 0;
-        }
-        return -1;
+        return currentValues.lastIndexOf(o);
     }
 
     public String set(final int index, final String element) {
-        if (element == null) throw new IllegalArgumentException();
+        String ret = currentValues.set(index, element);
+        update();
+        return ret;
+    }
 
-        final byte size = this.size;
-        if (index < 0 || index >= size) throw new IndexOutOfBoundsException();
-
-        final Object value = this.value;
-        if (size == 1 && value instanceof String) try {
-            return (String) value;
-        } finally {
-            this.value = element;
-        } else {
-            final String[] list = (String[]) value;
-            final int i = index(index);
-            try {
-                return list[i];
-            } finally {
-                list[i] = element;
-            }
-        }
+    private void update() {
+        headers.set(headerName, currentValues);
     }
 
     public boolean addAll(int index, final Collection<? extends String> c) {
-        final int size = this.size;
-        if (index < 0 || index > size) throw new IndexOutOfBoundsException();
-        final Iterator<? extends String> iterator = c.iterator();
-        boolean result = false;
-        while (iterator.hasNext()) {
-            result |= offer(index, iterator.next());
-        }
+        boolean result = currentValues.addAll(index, c);
+        update();
         return result;
     }
 
     public List<String> subList(final int fromIndex, final int toIndex) {
-        // todo - this is about 75% correct, by spec...
-        if (fromIndex < 0 || toIndex > size || fromIndex > toIndex) throw new IndexOutOfBoundsException();
-        final int len = toIndex - fromIndex;
-        final String[] strings = new String[len];
-        for (int i = 0; i < len; i ++) {
-            strings[i] = get(i + fromIndex);
-        }
-        return Arrays.asList(strings);
+        List<String> result = currentValues.subList(fromIndex, toIndex);
+        update();
+        return result;
     }
 
     public String[] toArray() {
-        int size = this.size;
-        if (size == 0) {
-            return NO_STRINGS;
-        }
-        final Object v = this.value;
-        if (v instanceof String) return new String[] { (String) v };
-        final String[] list = (String[]) v;
-        final int len = list.length;
-        final int copyEnd =  size;
-        if (copyEnd < len) {
-            return Arrays.copyOfRange(list, 0, copyEnd);
-        } else {
-            String[] ret = Arrays.copyOfRange(list, 0, copyEnd);
-            System.arraycopy(list, 0, ret, len, copyEnd - len);
-            return ret;
-        }
+        return (String[]) currentValues.toArray();
     }
 
     public <T> T[] toArray(final T[] a) {
-        int size = this.size;
-        if (size == 0) return a;
-        final int inLen = a.length;
-        final Object[] target = inLen < size ? Arrays.copyOfRange(a, inLen, inLen + size) : a;
-        final Object v = this.value;
-        if (v instanceof String) {
-            target[0] = v;
-        } else {
-            System.arraycopy(v, 0, target, 0, size);
-        }
-        return (T[]) target;
+        return currentValues.toArray(a);
     }
 
     //======================================
@@ -478,8 +261,8 @@ public final class HeaderValues extends AbstractCollection<String> implements De
     }
 
     public void add(final int index, final String s) {
-        if (s == null) return;
-        if (! offer(index, s)) throw new IllegalStateException();
+        currentValues.add(index, s);
+        update();
     }
 
     public boolean contains(final Object o) {
@@ -487,11 +270,11 @@ public final class HeaderValues extends AbstractCollection<String> implements De
     }
 
     public String peekFirst() {
-        return size == 0 ? null : get(0);
+        return currentValues.size() == 0 ? null : get(0);
     }
 
     public String peekLast() {
-        return size == 0 ? null : get(size - 1);
+        return size() == 0 ? null : get(size() - 1);
     }
 
     public boolean removeFirstOccurrence(final Object o) {
