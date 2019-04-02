@@ -45,7 +45,8 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
         private final boolean forceStickySession;
         private final ModClusterContainer container;
 
-        private Context resolved;
+        private boolean resolved;
+        private Context resolvedContext;
 
         public ExistingSessionTarget(String session, Iterator<CharSequence> routes, VirtualHost.HostEntry entry, ModClusterContainer container, boolean forceStickySession) {
             this.session = session;
@@ -57,13 +58,15 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
 
         @Override
         public Context resolveContext(HttpServerExchange exchange) {
-            if(resolved == null) {
-                resolveNode();
-            }
-            return resolved;
+            resolveContextIfUnresolved();
+
+            return resolvedContext;
         }
 
-        void resolveNode() {
+        void resolveContextIfUnresolved() {
+            if (resolved) return;
+
+            resolved = true;
             boolean firstResolved = false;
             String firstRoute = null;
             String firstRouteDomain = null;
@@ -75,7 +78,7 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
                 if (context != null && context.checkAvailable(true)) {
                     final Node node = context.getNode();
                     node.elected(); // Maybe move this to context#handleRequest
-                    this.resolved = context;
+                    this.resolvedContext = context;
                     return;
                 }
 
@@ -86,18 +89,17 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
                 }
             }
 
-            this.resolved = container.findFailoverNode(entry, firstRouteDomain, session, firstRoute, forceStickySession);
+            this.resolvedContext = container.findFailoverNode(entry, firstRouteDomain, session, firstRoute, forceStickySession);
         }
 
         @Override
         public int getMaxRetries() {
-            if(resolved == null) {
-                resolveNode();
-            }
-            if(resolved == null) {
+            resolveContextIfUnresolved();
+
+            if (resolvedContext == null) {
                 return 0;
             }
-            Balancer balancer = resolved.getNode().getBalancer();
+            Balancer balancer = resolvedContext.getNode().getBalancer();
             if(balancer == null) {
                 return 0;
             }
