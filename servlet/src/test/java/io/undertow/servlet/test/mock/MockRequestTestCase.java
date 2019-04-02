@@ -49,6 +49,7 @@ import javax.servlet.http.Part;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -67,6 +68,7 @@ import io.undertow.testutils.DefaultServer;
  * @author Ales Justin
  */
 @RunWith(DefaultServer.class)
+@Ignore("UT3 - P4")
 public class MockRequestTestCase {
 
     public static final String HELLO_WORLD = "Hello World";

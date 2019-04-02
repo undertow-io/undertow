@@ -56,7 +56,7 @@ public class SimpleErrorPageHandler implements HttpHandler {
     private final DefaultResponseListener responseListener = new DefaultResponseListener() {
         @Override
         public boolean handleDefaultResponse(final HttpServerExchange exchange) {
-            if (!exchange.isResponseStarted()) {
+            if (exchange.isResponseStarted()) {
                 return false;
             }
             Set<Integer> codes = responseCodes;

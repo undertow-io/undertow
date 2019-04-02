@@ -182,6 +182,9 @@ public final class Undertow {
     }
 
     public synchronized void stop() {
+        if(bossGroup == null) {
+            return;
+        }
         UndertowLogger.ROOT_LOGGER.debugf("stopping undertow server %s", this);
         if (channels != null) {
             for (Channel channel : channels) {

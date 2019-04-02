@@ -43,6 +43,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HttpContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -69,6 +70,7 @@ import io.undertow.util.StatusCodes;
  * @author Pedro Igor
  */
 @RunWith(DefaultServer.class)
+@Ignore("UT3 - P2")
 public class SaveOriginalPostRequestTestCase {
 
     @BeforeClass

@@ -42,6 +42,7 @@ import javax.websocket.Session;
 import javax.websocket.server.ServerEndpointConfig;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -439,6 +440,7 @@ public class JsrWebSocketServerTest {
     }
 
     @org.junit.Test
+    @Ignore("UT3 - P4")
     public void testPingPong() throws Exception {
         final byte[] payload = "payload".getBytes();
         final AtomicReference<Throwable> cause = new AtomicReference<>();
@@ -630,6 +632,7 @@ public class JsrWebSocketServerTest {
 
 
     @Test
+    @Ignore("UT3 - P2")
     public void testErrorHandling() throws Exception {
 
 

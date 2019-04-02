@@ -26,6 +26,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -98,6 +99,7 @@ public class SSLMetaDataTestCase {
     }
 
     @Test
+    @Ignore("UT3 - P4")
     public void testCert() throws IOException {
         internalTest("/cert");
     }

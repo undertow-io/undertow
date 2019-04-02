@@ -31,6 +31,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -121,6 +122,7 @@ public class DispatcherForwardTestCase {
     }
 
     @Test
+    @Ignore("UT3 - P1")
     public void testPathBasedInclude() throws IOException, InterruptedException {
         resetLatch();
         TestHttpClient client = new TestHttpClient();

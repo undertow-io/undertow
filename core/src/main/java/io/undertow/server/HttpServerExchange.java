@@ -46,6 +46,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.io.BlockingReceiverImpl;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
@@ -1643,8 +1644,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public Receiver getReceiver() {
-            //return new BlockingReceiverImpl(exchange, getInputStream());
-            throw new RuntimeException("NYI");
+            return new BlockingReceiverImpl(exchange, getInputStream());
         }
     }
 

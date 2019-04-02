@@ -33,6 +33,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -62,6 +63,7 @@ import io.undertow.testutils.TestHttpClient;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@Ignore("UT3 - P2")
 public class ServletClientCertAuthTestCase {
     private static final String REALM_NAME = "Servlet_Realm";
 

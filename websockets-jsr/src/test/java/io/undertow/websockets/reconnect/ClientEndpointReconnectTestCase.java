@@ -27,6 +27,7 @@ import javax.websocket.Session;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -101,6 +102,7 @@ public class ClientEndpointReconnectTestCase {
     }
 
     @Test
+    @Ignore("UT3 - P3")
     public void testAnnotatedClientEndpoint() throws Exception {
         AnnotatedClientReconnectEndpoint endpoint = new AnnotatedClientReconnectEndpoint();
         Session session = deployment.connectToServer(endpoint, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/"));

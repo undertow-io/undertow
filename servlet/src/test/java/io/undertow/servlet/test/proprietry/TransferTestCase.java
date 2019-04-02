@@ -29,6 +29,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -50,6 +51,7 @@ import io.undertow.util.StatusCodes;
  * @author Jason T. Greene
  */
 @RunWith(DefaultServer.class)
+@Ignore("UT3 - P2")
 public class TransferTestCase {
 
     @BeforeClass

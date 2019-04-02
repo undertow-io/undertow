@@ -21,6 +21,7 @@ package io.undertow.servlet.test.streams;
 import javax.servlet.ServletContext;
 
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 
 import io.undertow.servlet.ServletExtension;
@@ -33,6 +34,7 @@ import io.undertow.testutils.DefaultServer;
  * @author Carter Kozak
  */
 @RunWith(DefaultServer.class)
+@Ignore("UT3 - P3")
 public class ServletInputStreamRequestBufferingTestCase extends AbstractServletInputStreamTestCase {
 
     @BeforeClass

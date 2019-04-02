@@ -31,6 +31,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -59,6 +60,7 @@ import io.undertow.util.StatusCodes;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
+@Ignore("UT3 - P1")
 public class DefaultServletCachingTestCase {
 
     private static final int METADATA_MAX_AGE = 2000;

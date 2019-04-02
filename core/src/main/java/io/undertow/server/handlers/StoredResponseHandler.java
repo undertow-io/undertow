@@ -52,7 +52,7 @@ public class StoredResponseHandler implements HttpHandler {
 //                return new StoredResponseStreamSinkConduit(factory.create(), exchange);
 //            }
 //        });
-//        next.handleRequest(exchange);
+        next.handleRequest(exchange);
     }
 
     public static class Builder implements HandlerBuilder {

@@ -215,7 +215,7 @@ class WebsocketConnectionBuilder {
     private class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> {
 
         private final WebSocketClientHandshaker handshaker;
-        private ChannelPromise handshakeFuture;
+        private volatile ChannelPromise handshakeFuture;
         private ChannelPromise promise;
 
         public WebSocketClientHandler(WebSocketClientHandshaker handshaker) {

@@ -18,6 +18,7 @@
 
 package io.undertow.websockets.extension;
 
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 
 import io.undertow.servlet.api.DeploymentInfo;
@@ -35,6 +36,7 @@ import io.undertow.testutils.HttpOneOnly;
  */
 @HttpOneOnly
 @RunWith(DefaultServer.class)
+@Ignore("UT3 - P3")
 public class JsrWebsocketExtensionTestCase {
 
 //    public static final int MSG_COUNT = 1000;
