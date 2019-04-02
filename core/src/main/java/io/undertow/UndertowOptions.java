@@ -324,8 +324,6 @@ public class UndertowOptions {
 
     public static final Option<Boolean> ALLOW_UNESCAPED_CHARACTERS_IN_URL = Option.simple(UndertowOptions.class,"ALLOW_UNESCAPED_CHARACTERS_IN_URL", Boolean.class);
 
-    public static final Option<Boolean> PRESERVE_PATH_ON_FORWARD = Option.simple(UndertowOptions.class,"PRESERVE_PATH_ON_FORWARD", Boolean.class);
-
     /**
      * The server shutdown timeout in milliseconds after which the executor will be forcefully shut down interrupting
      * tasks which are still executing.

@@ -107,6 +107,7 @@ public class DeploymentInfo implements Cloneable {
     private boolean escapeErrorMessage = true;
     private boolean sendCustomReasonPhraseOnError = false;
     private boolean useCachedAuthenticationMechanism = true;
+    private boolean preservePathOnForward = true;
     private AuthenticationMode authenticationMode = AuthenticationMode.PRO_ACTIVE;
     private ExceptionHandler exceptionHandler;
     private final Map<String, ServletInfo> servlets = new HashMap<>();
@@ -1365,6 +1366,14 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    public boolean isPreservePathOnForward() {
+        return preservePathOnForward;
+    }
+
+    public void setPreservePathOnForward(boolean preservePathOnForward) {
+        this.preservePathOnForward = preservePathOnForward;
+    }
+
     /**
      * Add's a listener that is only invoked once all other deployment steps have been completed
      *
@@ -1477,6 +1486,7 @@ public class DeploymentInfo implements Cloneable {
         info.containerMajorVersion = containerMajorVersion;
         info.containerMinorVersion = containerMinorVersion;
         info.deploymentCompleteListeners.addAll(deploymentCompleteListeners);
+        info.preservePathOnForward = preservePathOnForward;
         return info;
     }
 
