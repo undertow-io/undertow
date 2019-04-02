@@ -27,18 +27,18 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.undertow.util.UndertowOptions;
-import io.undertow.util.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
-import io.undertow.util.HttpAttachments;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
+import io.undertow.util.HttpAttachments;
 import io.undertow.util.StatusCodes;
+import io.undertow.util.UndertowOptionMap;
+import io.undertow.util.UndertowOptions;
 
 /**
  * @author Stuart Douglas

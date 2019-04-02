@@ -24,7 +24,6 @@ import java.util.Map;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 
-
 import io.netty.handler.ssl.ClientAuth;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;

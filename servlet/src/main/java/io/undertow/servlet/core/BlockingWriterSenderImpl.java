@@ -18,17 +18,12 @@
 
 package io.undertow.servlet.core;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 
 import javax.servlet.DispatcherType;
-
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;

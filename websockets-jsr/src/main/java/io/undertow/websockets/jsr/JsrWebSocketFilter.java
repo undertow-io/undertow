@@ -21,13 +21,9 @@ package io.undertow.websockets.jsr;
 import static io.undertow.websockets.jsr.ServerWebSocketContainer.WebSocketHandshakeHolder;
 
 import java.io.IOException;
-import java.net.URI;
 import java.security.AccessController;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 import javax.servlet.Filter;

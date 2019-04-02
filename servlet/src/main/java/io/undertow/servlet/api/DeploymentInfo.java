@@ -37,7 +37,6 @@ import javax.servlet.MultipartConfigElement;
 import javax.servlet.ServletContextListener;
 import javax.servlet.descriptor.JspConfigDescriptor;
 
-import io.undertow.util.UndertowOptions;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
 import io.undertow.security.api.AuthenticationMode;
@@ -55,6 +54,7 @@ import io.undertow.servlet.core.DefaultAuthorizationManager;
 import io.undertow.servlet.core.InMemorySessionManagerFactory;
 import io.undertow.servlet.util.DefaultClassIntrospector;
 import io.undertow.util.ImmediateAuthenticationMechanismFactory;
+import io.undertow.util.UndertowOptions;
 
 /**
  * Represents a servlet deployment.

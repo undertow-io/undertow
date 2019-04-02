@@ -24,7 +24,6 @@ import static io.undertow.util.Headers.WWW_AUTHENTICATE;
 import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;

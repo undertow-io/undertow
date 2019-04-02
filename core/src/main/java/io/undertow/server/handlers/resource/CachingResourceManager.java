@@ -19,10 +19,8 @@
 package io.undertow.server.handlers.resource;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Set;
 
-import io.undertow.UndertowLogger;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.cache.LRUCache;
 

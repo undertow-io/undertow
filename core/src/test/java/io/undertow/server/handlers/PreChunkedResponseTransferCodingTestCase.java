@@ -30,12 +30,12 @@ import org.junit.runner.RunWith;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
-import io.undertow.util.HttpAttachments;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpAttachments;
 import io.undertow.util.StatusCodes;
 
 /**

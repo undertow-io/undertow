@@ -18,14 +18,15 @@
 
 package io.undertow.websockets.jsr;
 
-import javax.websocket.Decoder;
-import javax.websocket.Encoder;
-import javax.websocket.Extension;
-import javax.websocket.server.ServerEndpointConfig;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import javax.websocket.Decoder;
+import javax.websocket.Encoder;
+import javax.websocket.Extension;
+import javax.websocket.server.ServerEndpointConfig;
 
 /**
  * @author Stuart Douglas

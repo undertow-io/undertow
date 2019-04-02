@@ -35,7 +35,6 @@ import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;

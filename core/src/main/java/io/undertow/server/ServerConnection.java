@@ -22,12 +22,10 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.SocketAddress;
-import java.nio.channels.FileChannel;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 import javax.net.ssl.SSLSession;
-
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -36,10 +34,10 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
-import io.undertow.util.UndertowOptionMap;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.util.UndertowOptionMap;
 
 /**
  * A server connection.

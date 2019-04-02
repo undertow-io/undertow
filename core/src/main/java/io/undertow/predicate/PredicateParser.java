@@ -49,7 +49,7 @@ import io.undertow.server.handlers.builder.PredicatedHandlersParser;
  */
 public class PredicateParser {
 
-    public static final Predicate parse(String string, final ClassLoader classLoader) {
+    public static Predicate parse(String string, final ClassLoader classLoader) {
         return PredicatedHandlersParser.parsePredicate(string, classLoader);
     }
 

@@ -39,9 +39,7 @@ import org.xnio.Xnio;
 
 import io.undertow.Handlers;
 import io.undertow.Undertow;
-import io.undertow.util.UndertowOptions;
 import io.undertow.attribute.ExchangeAttributes;
-import io.undertow.util.UndertowOptionMap;
 import io.undertow.examples.UndertowExample;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -54,6 +52,8 @@ import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
+import io.undertow.util.UndertowOptionMap;
+import io.undertow.util.UndertowOptions;
 import io.undertow.xnio.protocols.ssl.UndertowXnioSsl;
 
 /**

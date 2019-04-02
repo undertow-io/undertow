@@ -28,8 +28,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.undertow.util.UndertowOptions;
-import io.undertow.util.UndertowOptionMap;
 import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -38,6 +36,8 @@ import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
+import io.undertow.util.UndertowOptionMap;
+import io.undertow.util.UndertowOptions;
 
 /**
  * @author Stuart Douglas

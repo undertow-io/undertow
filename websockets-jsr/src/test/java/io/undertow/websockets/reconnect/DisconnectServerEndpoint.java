@@ -18,10 +18,11 @@
 
 package io.undertow.websockets.reconnect;
 
+import java.io.IOException;
+
 import javax.websocket.OnMessage;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
-import java.io.IOException;
 
 /**
  * @author Stuart Douglas

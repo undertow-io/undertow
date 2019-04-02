@@ -21,10 +21,6 @@ package io.undertow.websockets.extension;
 import org.junit.Ignore;
 import org.junit.runner.RunWith;
 
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.ServletContainer;
-import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 

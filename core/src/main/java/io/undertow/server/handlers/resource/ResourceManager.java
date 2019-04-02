@@ -21,8 +21,6 @@ package io.undertow.server.handlers.resource;
 import java.io.Closeable;
 import java.io.IOException;
 
-import io.undertow.UndertowMessages;
-
 /**
  *
  * Representation of a resource manager. A resource manager knows how to obtain

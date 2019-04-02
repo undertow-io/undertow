@@ -20,11 +20,11 @@ package io.undertow.server.handlers;
 
 import java.util.Date;
 
-import io.undertow.util.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.UndertowOptions;
 
 /**
  * Class that adds the Date: header to a HTTP response.

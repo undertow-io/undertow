@@ -18,8 +18,6 @@ package io.undertow.util;
 
 import javax.security.sasl.Sasl;
 
-import io.undertow.util.UndertowOption;
-
 /**
  * @author Stuart Douglas
  */

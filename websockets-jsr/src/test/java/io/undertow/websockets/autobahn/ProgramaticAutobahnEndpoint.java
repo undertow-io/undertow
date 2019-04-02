@@ -18,11 +18,12 @@
 
 package io.undertow.websockets.autobahn;
 
+import java.nio.ByteBuffer;
+
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
 import javax.websocket.MessageHandler;
 import javax.websocket.Session;
-import java.nio.ByteBuffer;
 
 /**
  * @author Stuart Douglas

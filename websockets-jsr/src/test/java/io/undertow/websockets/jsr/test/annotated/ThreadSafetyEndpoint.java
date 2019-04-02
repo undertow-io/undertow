@@ -20,6 +20,7 @@ package io.undertow.websockets.jsr.test.annotated;
 
 import java.util.HashSet;
 import java.util.Set;
+
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
@@ -36,7 +37,7 @@ public class ThreadSafetyEndpoint {
     public static final int NUM_THREADS = 100;
     public static final int NUM_MESSAGES = 100;
 
-    public static final Set<String> expected() {
+    public static Set<String> expected() {
         Set<String> ret = new HashSet<>();
         for (int i = 0; i < NUM_THREADS; ++i) {
             for (int j = 0; j < NUM_MESSAGES; ++j) {

@@ -25,12 +25,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import io.undertow.util.UndertowOptions;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.URLUtils;
+import io.undertow.util.UndertowOptions;
 
 /**
  * A handler that will decode the URL and query parameters to the specified charset.

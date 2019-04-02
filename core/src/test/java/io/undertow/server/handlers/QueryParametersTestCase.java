@@ -27,8 +27,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.undertow.util.UndertowOptions;
-import io.undertow.util.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
@@ -37,6 +35,8 @@ import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.URLUtils;
+import io.undertow.util.UndertowOptionMap;
+import io.undertow.util.UndertowOptions;
 
 /**
  * Tests that query parameters are handled correctly.

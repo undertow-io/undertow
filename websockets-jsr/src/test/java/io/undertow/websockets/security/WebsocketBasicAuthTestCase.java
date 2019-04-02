@@ -18,29 +18,19 @@
 
 package io.undertow.websockets.security;
 
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.servlet.Servlets;
-import io.undertow.servlet.api.AuthMethodConfig;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.LoginConfig;
-import io.undertow.servlet.api.SecurityConstraint;
-import io.undertow.servlet.api.SecurityInfo;
-import io.undertow.servlet.api.ServletContainer;
-import io.undertow.servlet.api.WebResourceCollection;
-import io.undertow.servlet.test.SimpleServletTestCase;
-import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.util.FlexBase64;
-import io.undertow.websockets.jsr.ServerWebSocketContainer;
-import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
-import io.undertow.websockets.jsr.test.annotated.ClientConfigurator;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.BASIC;
+
+import java.io.IOException;
+import java.net.URI;
+import java.security.Principal;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
@@ -60,19 +50,31 @@ import javax.websocket.MessageHandler;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
-import java.io.IOException;
-import java.net.URI;
-import java.security.Principal;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.servlet.Servlets;
+import io.undertow.servlet.api.AuthMethodConfig;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.LoginConfig;
+import io.undertow.servlet.api.SecurityConstraint;
+import io.undertow.servlet.api.SecurityInfo;
+import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.api.WebResourceCollection;
+import io.undertow.servlet.test.SimpleServletTestCase;
+import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
+import io.undertow.servlet.test.util.TestClassIntrospector;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.util.FlexBase64;
+import io.undertow.websockets.jsr.ServerWebSocketContainer;
+import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
+import io.undertow.websockets.jsr.test.annotated.ClientConfigurator;
 
 /**
  * @author Stuart Douglas

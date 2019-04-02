@@ -21,7 +21,6 @@ package io.undertow.servlet.util;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
-import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,7 +32,6 @@ import javax.servlet.http.HttpSession;
 
 import io.netty.buffer.Unpooled;
 import io.undertow.UndertowLogger;
-import io.undertow.util.UndertowOptions;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
@@ -43,6 +41,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.UndertowOptions;
 
 /**
  * Saved servlet request.

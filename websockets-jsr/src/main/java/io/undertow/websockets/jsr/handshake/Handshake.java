@@ -29,18 +29,12 @@ import java.util.regex.Pattern;
 
 import javax.websocket.Extension;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpContentCompressor;
 import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponseEncoder;
-import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocket13FrameDecoder;
 import io.netty.handler.codec.http.websocketx.WebSocket13FrameEncoder;
-import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionDecoder;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncoder;
@@ -50,7 +44,6 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensio
 import io.undertow.util.Headers;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.jsr.ExtensionImpl;
-import io.undertow.websockets.jsr.UndertowSession;
 
 /**
  * Abstract base class for doing a WebSocket Handshake.

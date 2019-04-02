@@ -29,7 +29,6 @@ import javax.websocket.RemoteEndpoint;
 import javax.websocket.SendHandler;
 import javax.websocket.SendResult;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame;

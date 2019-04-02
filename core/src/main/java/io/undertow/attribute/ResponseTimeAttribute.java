@@ -20,9 +20,9 @@ package io.undertow.attribute;
 
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.util.UndertowOptions;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.UndertowOptions;
 
 /**
  * The response time

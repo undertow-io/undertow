@@ -18,16 +18,12 @@ import java.util.concurrent.ExecutorService;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLParameters;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http.HttpServerExpectContinueHandler;
-import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.ssl.SslProvider;
 import io.undertow.server.HttpHandler;
 
 public class NettyHttpServerInitializer extends ChannelInitializer<SocketChannel> {

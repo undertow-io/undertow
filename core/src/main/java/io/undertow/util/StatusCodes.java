@@ -216,7 +216,7 @@ public class StatusCodes {
     private StatusCodes() {
     }
 
-    public static final String getReason(final int code) {
+    public static String getReason(final int code) {
         final Entry result = TABLE[code & SIZE];
         if (result == null || result.code != code) {
             return "Unknown";

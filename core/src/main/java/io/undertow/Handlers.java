@@ -33,7 +33,6 @@ import io.undertow.server.handlers.DateHandler;
 import io.undertow.server.handlers.DisableCacheHandler;
 import io.undertow.server.handlers.ExceptionHandler;
 import io.undertow.server.handlers.GracefulShutdownHandler;
-import io.undertow.server.handlers.HttpContinueAcceptingHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
 import io.undertow.server.handlers.HttpTraceHandler;
 import io.undertow.server.handlers.IPAddressAccessControlHandler;
@@ -270,7 +269,7 @@ public class Handlers {
      * @param defaultAllow Determine if a non-matching address will be allowed by default
      * @return A new IP access control handler
      */
-    public static final IPAddressAccessControlHandler ipAccessControl(final HttpHandler next, boolean defaultAllow) {
+    public static IPAddressAccessControlHandler ipAccessControl(final HttpHandler next, boolean defaultAllow) {
         return new IPAddressAccessControlHandler(next).setDefaultAllow(defaultAllow);
     }
 
@@ -281,7 +280,7 @@ public class Handlers {
      * @param defaultAllow Determine if a non-matching user agent will be allowed by default
      * @return A new user agent access control handler
      */
-    public static final AccessControlListHandler acl(final HttpHandler next, boolean defaultAllow, ExchangeAttribute attribute) {
+    public static AccessControlListHandler acl(final HttpHandler next, boolean defaultAllow, ExchangeAttribute attribute) {
         return new AccessControlListHandler(next, attribute).setDefaultAllow(defaultAllow);
     }
 
@@ -292,7 +291,7 @@ public class Handlers {
      * @param next The next handler in the chain
      * @return A new continue handler
      */
-    public static final HttpContinueReadHandler httpContinueRead(final HttpHandler next) {
+    public static HttpContinueReadHandler httpContinueRead(final HttpHandler next) {
         return new HttpContinueReadHandler(next);
     }
 
@@ -308,7 +307,7 @@ public class Handlers {
      * @param charset The charset to decode to
      * @return a new url decoding handler
      */
-    public static final URLDecodingHandler urlDecoding(final HttpHandler next, final String charset) {
+    public static URLDecodingHandler urlDecoding(final HttpHandler next, final String charset) {
         return new URLDecodingHandler(next, charset);
     }
 

@@ -17,7 +17,6 @@ package io.undertow.websockets.jsr;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;

@@ -18,7 +18,6 @@ package io.undertow.server.handlers;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.nio.ByteBuffer;
 import java.util.Deque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;

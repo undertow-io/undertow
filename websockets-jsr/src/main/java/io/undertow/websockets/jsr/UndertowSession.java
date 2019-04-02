@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
 
 import javax.websocket.CloseReason;
 import javax.websocket.Endpoint;

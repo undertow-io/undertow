@@ -18,12 +18,13 @@
 
 package io.undertow.websockets.reconnect;
 
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
+
 import javax.websocket.ClientEndpoint;
 import javax.websocket.OnClose;
 import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author Stuart Douglas

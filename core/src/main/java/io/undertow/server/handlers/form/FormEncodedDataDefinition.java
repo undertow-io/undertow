@@ -17,7 +17,6 @@ package io.undertow.server.handlers.form;
 
 import java.io.IOException;
 
-
 import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;

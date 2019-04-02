@@ -22,8 +22,6 @@ import java.security.PrivilegedAction;
 
 import javax.websocket.WebSocketContainer;
 
-import io.undertow.servlet.handlers.ServletRequestContext;
-
 class SecurityActions {
     static void addContainer(final ClassLoader classLoader, final WebSocketContainer webSocketContainer) {
         if (System.getSecurityManager() == null) {

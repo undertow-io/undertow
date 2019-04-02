@@ -18,8 +18,6 @@
 
 package io.undertow.servlet.handlers;
 
-import java.io.IOException;
-import java.net.SocketAddress;
 import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
@@ -33,12 +31,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.util.UndertowOptionMap;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.SSLSessionInfo;
-import io.undertow.server.ServerConnection;
 import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.ExceptionHandler;
 import io.undertow.servlet.api.LoggingExceptionHandler;
@@ -52,9 +46,7 @@ import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
-import io.undertow.util.Protocols;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
 

@@ -44,7 +44,6 @@ import javax.servlet.http.HttpSession;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HttpAttachments;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.CanonicalPathUtils;
@@ -52,6 +51,7 @@ import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpAttachments;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.RedirectBuilder;

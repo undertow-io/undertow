@@ -37,7 +37,7 @@ public interface ThreadSetupAction {
      */
     Handle setup(final HttpServerExchange exchange);
 
-    public interface Handle {
+    interface Handle {
         void tearDown();
     }
 

@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
-
 import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowLogger;
 import io.undertow.server.handlers.Cookie;

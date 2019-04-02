@@ -20,7 +20,6 @@ package io.undertow.security.impl;
 import static io.undertow.UndertowMessages.MESSAGES;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

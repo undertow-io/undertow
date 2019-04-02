@@ -22,12 +22,10 @@ import static io.undertow.util.Methods.GET;
 import static io.undertow.util.Methods.HEAD;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
-import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.DateUtils;
