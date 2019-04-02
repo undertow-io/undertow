@@ -19,9 +19,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 
-public class WebSocketClientNegotiation {
+public abstract class WebSocketClientNegotiation {
 
     private final List<String> supportedSubProtocols;
     private final List<WebSocketExtensionData> supportedExtensions;
@@ -49,10 +50,10 @@ public class WebSocketClientNegotiation {
         return selectedExtensions;
     }
 
-    public void beforeRequest(final Map<String, List<String>> headers) {
+    public void beforeRequest(final HttpHeaders headers) {
 
     }
-    public void afterRequest(final Map<String, List<String>> headers) {
+    public void afterRequest(final HttpHeaders headers) {
 
     }
 

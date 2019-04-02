@@ -32,11 +32,14 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker13;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
@@ -149,13 +152,35 @@ class WebsocketConnectionBuilder {
 //            throw new IllegalArgumentException("Unsupported protocol: " + protocol);
 //        }
 
-        // Connect with V13 (RFC 6455 aka HyBi-17). You can change it to V08 or V00.
-        // If you change it to V00, ping is not supported and remember to change
-        // HttpResponseDecoder to WebSocketHttpResponseDecoder in the pipeline.
+
         final WebSocketClientHandler handler =
                 new WebSocketClientHandler(
-                        WebSocketClientHandshakerFactory.newHandshaker(
-                                uri, WebSocketVersion.V13, null, false, HttpHeaders.EMPTY_HEADERS, 1280000));
+                        new WebSocketClientHandshaker13(
+                                uri, WebSocketVersion.V13, null, false, HttpHeaders.EMPTY_HEADERS, 1280000) {
+
+                            @Override
+                            protected FullHttpRequest newHandshakeRequest() {
+                                FullHttpRequest request = super.newHandshakeRequest();
+                                if(clientNegotiation.getSupportedSubProtocols() != null) {
+                                    StringBuilder sb = new StringBuilder();
+                                    for(int i = 0; i < clientNegotiation.getSupportedSubProtocols().size(); ++i) {
+                                        if(i > 0) {
+                                            sb.append(", ");
+                                        }
+                                        sb.append(clientNegotiation.getSupportedSubProtocols().get(i));
+                                    }
+                                    request.headers().add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, sb.toString());
+                                }
+                                clientNegotiation.beforeRequest(request.headers());
+                                return request;
+                            }
+
+                            @Override
+                            protected void verify(FullHttpResponse response) {
+                                super.verify(response);
+                                clientNegotiation.afterRequest(response.headers());
+                            }
+                        });
 
         b.group(eventLoopGroup)
                 .channel(NioSocketChannel.class)

@@ -37,6 +37,7 @@ import javax.websocket.server.ServerEndpointConfig;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -144,6 +145,7 @@ public class AnnotatedEndpointTest {
     }
 
     @Test
+    @Ignore
     public void testRedirectHandling() throws Exception {
         AnnotatedClientEndpoint.reset();
         Session session = deployment.connectToServer(AnnotatedClientEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/redirect"));

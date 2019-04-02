@@ -29,6 +29,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -64,6 +65,8 @@ import javax.websocket.server.ServerEndpointConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionData;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
 import io.undertow.server.HttpServerExchange;
@@ -247,21 +250,21 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
         try {
             AnnotatedEndpointFactory factory = config.getFactory();
-
-
             InstanceHandle<?> instance = config.getInstanceFactory().createInstance();
             SSLContext ssl = null;
-            for (WebsocketClientSslProvider provider : clientSslProviders) {
-                ssl = provider.getSsl(eventLoopSupplier.get(), aClass, uri);
-                if (ssl != null) {
-                    break;
+            if(uri.getScheme().equals("wss")) {
+                for (WebsocketClientSslProvider provider : clientSslProviders) {
+                    ssl = provider.getSsl(eventLoopSupplier.get(), aClass, uri);
+                    if (ssl != null) {
+                        break;
+                    }
                 }
-            }
-            if (ssl == null) {
-                try {
-                    ssl = SSLContext.getDefault();
-                } catch (NoSuchAlgorithmException e) {
-                    //ignore
+                if (ssl == null) {
+                    try {
+                        ssl = SSLContext.getDefault();
+                    } catch (NoSuchAlgorithmException e) {
+                        //ignore
+                    }
                 }
             }
             return connectToServerInternal(factory.createInstance(instance), ssl, config, uri);
@@ -841,14 +844,12 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
 
         @Override
-        public void afterRequest(final Map<String, List<String>> headers) {
-
+        public void afterRequest(final HttpHeaders headers) {
             ClientEndpointConfig.Configurator configurator = config.getConfigurator();
             if (configurator != null) {
                 final Map<String, List<String>> newHeaders = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-                for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-                    ArrayList<String> arrayList = new ArrayList<>();
-                    arrayList.addAll(entry.getValue());
+                for (Map.Entry<String, String> entry : headers) {
+                    ArrayList<String> arrayList = new ArrayList<>(headers.getAll(entry.getKey()));
                     newHeaders.put(entry.getKey(), arrayList);
                 }
                 configurator.afterResponse(new HandshakeResponse() {
@@ -858,23 +859,24 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                     }
                 });
             }
+            headers.remove(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL);
+            super.afterRequest(headers);
         }
 
         @Override
-        public void beforeRequest(Map<String, List<String>> headers) {
+        public void beforeRequest(HttpHeaders headers) {
             ClientEndpointConfig.Configurator configurator = config.getConfigurator();
             if (configurator != null) {
-                final Map<String, List<String>> newHeaders = new HashMap<>();
-                for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-                    ArrayList<String> arrayList = new ArrayList<>();
-                    arrayList.addAll(entry.getValue());
+                final Map<String, List<String>> newHeaders = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+                for (Map.Entry<String, String> entry : headers) {
+                    ArrayList<String> arrayList = new ArrayList<>(headers.getAll(entry.getKey()));
                     newHeaders.put(entry.getKey(), arrayList);
                 }
                 configurator.beforeRequest(newHeaders);
-                headers.clear(); //TODO: more efficient way
+                headers.clear();
                 for (Map.Entry<String, List<String>> entry : newHeaders.entrySet()) {
                     if (!entry.getValue().isEmpty()) {
-                        headers.put(entry.getKey(), entry.getValue());
+                        headers.add(entry.getKey(), entry.getValue());
                     }
                 }
             }

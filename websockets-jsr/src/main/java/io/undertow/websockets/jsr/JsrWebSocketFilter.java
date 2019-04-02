@@ -44,6 +44,7 @@ import javax.websocket.CloseReason;
 import javax.websocket.server.ServerContainer;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.undertow.UndertowLogger;
@@ -129,7 +130,7 @@ public class JsrWebSocketFilter implements Filter {
                     handshaker.handshake(facade, new Consumer<ChannelHandlerContext>() {
                         @Override
                         public void accept(ChannelHandlerContext context) {
-                            UndertowSession channel = callback.connected(context, selected.getConfig(), facade, null);
+                            UndertowSession channel = callback.connected(context, selected.getConfig(), facade, src.getOriginalResponse().getHeader(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL.toString()));
                             if (session != null && channel != null) {
                                 final Session underlying;
                                 if (System.getSecurityManager() == null) {
