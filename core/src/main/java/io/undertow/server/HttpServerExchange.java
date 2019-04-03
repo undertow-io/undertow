@@ -1566,8 +1566,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     *
-     * @return The request start time, or -1 if this was not recorded
+     * @return The request start time using the JVM's high-resolution time source,
+     * in nanoseconds, or -1 if this was not recorded
+     * @see UndertowOptions#RECORD_REQUEST_START_TIME
+     * @see Connectors#setRequestStartTime(HttpServerExchange)
      */
     public long getRequestStartTime() {
         return requestStartTime;
