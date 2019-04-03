@@ -113,12 +113,28 @@ public class FormParserFactory {
             this.parsers = parsers;
         }
 
+        /**
+         * A chainable version of {@link #setParsers}.
+         */
+        public Builder withParsers(List<ParserDefinition> parsers) {
+            setParsers(parsers);
+            return this;
+        }
+
         public String getDefaultCharset() {
             return defaultCharset;
         }
 
         public void setDefaultCharset(String defaultCharset) {
             this.defaultCharset = defaultCharset;
+        }
+
+        /**
+         * A chainable version of {@link #setDefaultCharset}.
+         */
+        public Builder withDefaultCharset(String defaultCharset) {
+            setDefaultCharset(defaultCharset);
+            return this;
         }
 
         public FormParserFactory build() {
