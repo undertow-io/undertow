@@ -18,11 +18,14 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import java.util.Iterator;
+
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.proxy.ProxyClient;
 
 /**
  * @author Emanuel Muckenhuber
+ * @author Radoslav Husar
  */
 public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyClient.MaxRetriesProxyTarget {
 
@@ -37,16 +40,17 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
     class ExistingSessionTarget implements ModClusterProxyTarget {
 
         private final String session;
-        private final String jvmRoute;
+        private final Iterator<CharSequence> routes;
         private final VirtualHost.HostEntry entry;
         private final boolean forceStickySession;
         private final ModClusterContainer container;
 
-        private Context resolved;
+        private boolean resolved;
+        private Context resolvedContext;
 
-        public ExistingSessionTarget(String session, String jvmRoute, VirtualHost.HostEntry entry, ModClusterContainer container, boolean forceStickySession) {
+        public ExistingSessionTarget(String session, Iterator<CharSequence> routes, VirtualHost.HostEntry entry, ModClusterContainer container, boolean forceStickySession) {
             this.session = session;
-            this.jvmRoute = jvmRoute;
+            this.routes = routes;
             this.entry = entry;
             this.container = container;
             this.forceStickySession = forceStickySession;
@@ -54,33 +58,48 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
 
         @Override
         public Context resolveContext(HttpServerExchange exchange) {
-            if(resolved == null) {
-                resolveNode();
-            }
-            return resolved;
+            resolveContextIfUnresolved();
+
+            return resolvedContext;
         }
 
-        void resolveNode() {
-            final Context context = entry.getContextForNode(jvmRoute);
-            if (context != null && context.checkAvailable(true)) {
-                final Node node = context.getNode();
-                node.elected(); // Maybe move this to context#handleRequest
-                this.resolved = context;
-                return;
+        void resolveContextIfUnresolved() {
+            if (resolved) return;
+
+            resolved = true;
+            boolean firstResolved = false;
+            String firstRoute = null;
+            String firstRouteDomain = null;
+
+            while (routes.hasNext()) {
+                final String jvmRoute = routes.next().toString();
+
+                final Context context = entry.getContextForNode(jvmRoute);
+                if (context != null && context.checkAvailable(true)) {
+                    final Node node = context.getNode();
+                    node.elected(); // Maybe move this to context#handleRequest
+                    this.resolvedContext = context;
+                    return;
+                }
+
+                if (!firstResolved) {
+                    firstResolved = true;
+                    firstRoute = jvmRoute;
+                    firstRouteDomain = context != null ? context.getNode().getNodeConfig().getDomain() : null;
+                }
             }
-            final String domain = context != null ? context.getNode().getNodeConfig().getDomain() : null;
-            this.resolved = container.findFailoverNode(entry, domain, session, jvmRoute, forceStickySession);
+
+            this.resolvedContext = container.findFailoverNode(entry, firstRouteDomain, session, firstRoute, forceStickySession);
         }
 
         @Override
         public int getMaxRetries() {
-            if(resolved == null) {
-                resolveNode();
-            }
-            if(resolved == null) {
+            resolveContextIfUnresolved();
+
+            if (resolvedContext == null) {
                 return 0;
             }
-            Balancer balancer = resolved.getNode().getBalancer();
+            Balancer balancer = resolvedContext.getNode().getBalancer();
             if(balancer == null) {
                 return 0;
             }
