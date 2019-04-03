@@ -43,8 +43,8 @@ public final class DirectByteBufferDeallocator {
                 supported = false;
             }
         } else {
-            tmpUnsafe = getUnsafe();
             try {
+                tmpUnsafe = getUnsafe();
                 tmpCleanerClean = tmpUnsafe.getClass().getDeclaredMethod("invokeCleaner", ByteBuffer.class);
                 tmpCleanerClean.setAccessible(true);
                 supported = true;
