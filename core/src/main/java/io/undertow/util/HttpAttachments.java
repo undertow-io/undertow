@@ -17,6 +17,8 @@ package io.undertow.util;
 
 import java.util.function.Supplier;
 
+import io.netty.handler.codec.http.HttpHeaders;
+
 /**
  * Exchange attachments that have specific meaning when using the HTTP protocol
  *
@@ -28,7 +30,7 @@ public class HttpAttachments {
      * Attachment key for request trailers when using chunked encoding. When the request is parsed the trailers
      * will be attached under this key.
      */
-    public static final AttachmentKey<HeaderMap> REQUEST_TRAILERS = AttachmentKey.create(HeaderMap.class);
+    public static final AttachmentKey<HttpHeaders> REQUEST_TRAILERS = AttachmentKey.create(HttpHeaders.class);
 
     /**
      * Attachment key for response trailers. If a header map is attached under this key then the contents will be written
@@ -40,7 +42,7 @@ public class HttpAttachments {
      * Note that if pre chunked streams are being used then the trailers will not be appended to the response, however any
      * trailers parsed out of the chunked stream will be attached here instead.
      */
-    public static final AttachmentKey<HeaderMap> RESPONSE_TRAILERS = AttachmentKey.create(HeaderMap.class);
+    public static final AttachmentKey<HttpHeaders> RESPONSE_TRAILERS = AttachmentKey.create(HttpHeaders.class);
 
 
     /**
@@ -53,7 +55,7 @@ public class HttpAttachments {
      * Note that if pre chunked streams are being used then the trailers will not be appended to the response, however any
      * trailers parsed out of the chunked stream will be attached here instead.
      */
-    public static final AttachmentKey<Supplier<HeaderMap>> RESPONSE_TRAILER_SUPPLIER = AttachmentKey.create(Supplier.class);
+    public static final AttachmentKey<Supplier<HttpHeaders>> RESPONSE_TRAILER_SUPPLIER = AttachmentKey.create(Supplier.class);
 
     /**
      * If the value {@code true} is attached to the exchange under this key then Undertow will assume that the underlying application

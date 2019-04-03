@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.concurrent.Executor;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
@@ -39,7 +40,7 @@ import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.IoUtils;
 import io.undertow.util.MalformedMessageException;
 import io.undertow.util.SameThreadExecutor;
@@ -73,9 +74,9 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
     @Override
     public FormDataParser create(final HttpServerExchange exchange) {
-        String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
+        String mimeType = exchange.requestHeaders().get(HttpHeaderNames.CONTENT_TYPE);
         if (mimeType != null && mimeType.startsWith(MULTIPART_FORM_DATA)) {
-            String boundary = Headers.extractQuotedValueFromHeader(mimeType, "boundary");
+            String boundary = HttpHeaderNames.extractQuotedValueFromHeader(mimeType, "boundary");
             if (boundary == null) {
                 UndertowLogger.REQUEST_LOGGER.debugf("Could not find boundary in multipart request with ContentType: %s, multipart data will not be available", mimeType);
                 return null;
@@ -153,7 +154,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         private String fileName;
         private Path file;
         private FileChannel fileChannel;
-        private HeaderMap headers;
+        private HttpHeaders headers;
         private HttpHandler handler;
         private long currentFileSize;
         private final MultipartParser.ParseState parser;
@@ -166,9 +167,9 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             this.fileSizeThreshold = fileSizeThreshold;
             this.data = new FormData(exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, 1000));
             String charset = defaultEncoding;
-            String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
+            String contentType = exchange.requestHeaders().get(HttpHeaderNames.CONTENT_TYPE);
             if (contentType != null) {
-                String value = Headers.extractQuotedValueFromHeader(contentType, "charset");
+                String value = HttpHeaderNames.extractQuotedValueFromHeader(contentType, "charset");
                 if (value != null) {
                     charset = value;
                 }
@@ -230,14 +231,14 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         }
 
         @Override
-        public void beginPart(final HeaderMap headers) {
+        public void beginPart(final HttpHeaders headers) {
             this.currentFileSize = 0;
             this.headers = headers;
-            final String disposition = headers.getFirst(Headers.CONTENT_DISPOSITION);
+            final String disposition = headers.get(HttpHeaderNames.CONTENT_DISPOSITION);
             if (disposition != null) {
                 if (disposition.startsWith("form-data")) {
-                    currentName = Headers.extractQuotedValueFromHeader(disposition, "name");
-                    fileName = Headers.extractQuotedValueFromHeaderWithEncoding(disposition, "filename");
+                    currentName = HttpHeaderNames.extractQuotedValueFromHeader(disposition, "name");
+                    fileName = HttpHeaderNames.extractQuotedValueFromHeaderWithEncoding(disposition, "filename");
                     if (fileName != null && fileSizeThreshold == 0) {
                         try {
                             if (tempFileLocation != null) {
@@ -308,9 +309,9 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
                 try {
                     String charset = defaultEncoding;
-                    String contentType = headers.getFirst(Headers.CONTENT_TYPE);
+                    String contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
                     if (contentType != null) {
-                        String cs = Headers.extractQuotedValueFromHeader(contentType, "charset");
+                        String cs = HttpHeaderNames.extractQuotedValueFromHeader(contentType, "charset");
                         if (cs != null) {
                             charset = cs;
                         }

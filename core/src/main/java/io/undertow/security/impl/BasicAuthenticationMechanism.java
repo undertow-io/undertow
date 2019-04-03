@@ -18,9 +18,9 @@
 package io.undertow.security.impl;
 
 import static io.undertow.UndertowMessages.MESSAGES;
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.HttpHeaderNames.AUTHORIZATION;
+import static io.undertow.util.HttpHeaderNames.BASIC;
+import static io.undertow.util.HttpHeaderNames.WWW_AUTHENTICATE;
 import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 
 import java.io.IOException;
@@ -46,7 +46,7 @@ import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.FlexBase64;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 
 /**
  * The authentication handler responsible for BASIC authentication as described by RFC2617
@@ -126,7 +126,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
     @Override
     public AuthenticationMechanismOutcome authenticate(HttpServerExchange exchange, SecurityContext securityContext) {
 
-        List<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
+        List<String> authHeaders = exchange.requestHeaders().getAll(AUTHORIZATION);
         if (authHeaders != null) {
             for (String current : authHeaders) {
                 if (current.toLowerCase(Locale.ENGLISH).startsWith(LOWERCASE_BASIC_PREFIX)) {
@@ -138,7 +138,7 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
 
                         Charset charset = this.charset;
                         if(!userAgentCharsets.isEmpty()) {
-                            String ua = exchange.getRequestHeaders().getFirst(Headers.USER_AGENT);
+                            String ua = exchange.requestHeaders().get(HttpHeaderNames.USER_AGENT);
                             if(ua != null) {
                                 for (Map.Entry<Pattern, Charset> entry : userAgentCharsets.entrySet()) {
                                     if(entry.getKey().matcher(ua).find()) {
@@ -193,12 +193,12 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
         if(silent) {
             //if this is silent we only send a challenge if the request contained auth headers
             //otherwise we assume another method will send the challenge
-            String authHeader = exchange.getRequestHeaders().getFirst(AUTHORIZATION);
+            String authHeader = exchange.requestHeaders().get(AUTHORIZATION);
             if(authHeader == null) {
                 return ChallengeResult.NOT_SENT;
             }
         }
-        exchange.getResponseHeaders().add(WWW_AUTHENTICATE, challenge);
+        exchange.responseHeaders().add(WWW_AUTHENTICATE, challenge);
         UndertowLogger.SECURITY_LOGGER.debugf("Sending basic auth challenge %s for %s", challenge, exchange);
         return new ChallengeResult(true, UNAUTHORIZED);
     }

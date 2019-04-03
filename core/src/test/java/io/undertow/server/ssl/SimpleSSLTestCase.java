@@ -42,7 +42,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 
@@ -58,7 +58,7 @@ public class SimpleSSLTestCase {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
+                exchange.responseHeaders().set("scheme", exchange.getRequestScheme());
                 exchange.endExchange();
             }
         });
@@ -85,8 +85,8 @@ public class SimpleSSLTestCase {
         DefaultServer.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
-                exchange.getResponseHeaders().put(Headers.CONNECTION, "close");
+                exchange.responseHeaders().set("scheme", exchange.getRequestScheme());
+                exchange.responseHeaders().set(HttpHeaderNames.CONNECTION, "close");
                 exchange.endExchange();
             }
         });
@@ -115,7 +115,7 @@ public class SimpleSSLTestCase {
         runTest(32, new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
+                exchange.responseHeaders().set("scheme", exchange.getRequestScheme());
                 exchange.endExchange();
             }
         });
@@ -127,7 +127,7 @@ public class SimpleSSLTestCase {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.dispatch(() -> {
-                    exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
+                    exchange.responseHeaders().set("scheme", exchange.getRequestScheme());
                     exchange.endExchange();
                 });
             }
@@ -144,7 +144,7 @@ public class SimpleSSLTestCase {
                     return;
                 }
                 exchange.startBlocking();
-                exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
+                exchange.responseHeaders().set("scheme", exchange.getRequestScheme());
                 exchange.endExchange();
             }
         });

@@ -23,7 +23,7 @@ import java.util.Date;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.UndertowOptions;
 
 /**
@@ -55,13 +55,13 @@ public class DateHandler implements HttpHandler {
         // better method is used in DateUtils#addDateHeaderIfRequired
         long time = System.nanoTime();
         if(time < nextUpdateTime) {
-            exchange.getResponseHeaders().put(Headers.DATE, cachedDateString);
+            exchange.responseHeaders().set(HttpHeaderNames.DATE, cachedDateString);
         } else {
             long realTime = System.currentTimeMillis();
             String dateString = DateUtils.toDateString(new Date(realTime));
             cachedDateString = dateString;
             nextUpdateTime = time + 1000000000;
-            exchange.getResponseHeaders().put(Headers.DATE, dateString);
+            exchange.responseHeaders().set(HttpHeaderNames.DATE, dateString);
         }
         next.handleRequest(exchange);
     }

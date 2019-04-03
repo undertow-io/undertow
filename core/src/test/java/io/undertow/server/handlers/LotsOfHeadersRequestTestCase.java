@@ -16,6 +16,7 @@
 package io.undertow.server.handlers;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -27,6 +28,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
@@ -88,10 +90,10 @@ public class LotsOfHeadersRequestTestCase {
         blockingHandler.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) {
-                HeaderMap headers = exchange.getRequestHeaders();
-                for (HeaderValues header : headers) {
-                    for (String val : header) {
-                        exchange.getResponseHeaders().put(HttpString.tryFromString(header.getHeaderName().toString()), val);
+                HttpHeaders headers = exchange.requestHeaders();
+                for (Map.Entry<String, String> header : headers) {
+                    for (String val : exchange.requestHeaders().getAll(header.getKey())) {
+                        exchange.responseHeaders().set(header.getKey(), val);
                     }
                 }
             }

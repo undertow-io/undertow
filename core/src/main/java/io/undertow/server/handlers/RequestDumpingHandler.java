@@ -32,7 +32,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.LocaleUtils;
 
 /**
@@ -55,9 +55,9 @@ public class RequestDumpingHandler implements HttpHandler {
         final SecurityContext sc = exchange.getSecurityContext();
         sb.append("\n----------------------------REQUEST---------------------------\n");
         sb.append("               URI=" + exchange.getRequestURI() + "\n");
-        sb.append(" characterEncoding=" + exchange.getRequestHeaders().get(Headers.CONTENT_ENCODING) + "\n");
+        sb.append(" characterEncoding=" + exchange.requestHeaders().get(HttpHeaderNames.CONTENT_ENCODING) + "\n");
         sb.append("     contentLength=" + exchange.getRequestContentLength() + "\n");
-        sb.append("       contentType=" + exchange.getRequestHeaders().get(Headers.CONTENT_TYPE) + "\n");
+        sb.append("       contentType=" + exchange.requestHeaders().get(HttpHeaderNames.CONTENT_TYPE) + "\n");
         //sb.append("       contextPath=" + exchange.getContextPath());
         if (sc != null) {
             if (sc.isAuthenticated()) {
@@ -76,12 +76,12 @@ public class RequestDumpingHandler implements HttpHandler {
                         cookie.getValue() + "\n");
             }
         }
-        for (HeaderValues header : exchange.getRequestHeaders()) {
-            for (String value : header) {
-                sb.append("            header=" + header.getHeaderName() + "=" + value + "\n");
+        for (Map.Entry<String, String> header : exchange.requestHeaders()) {
+            for (String value : exchange.requestHeaders().getAll(header.getKey())) {
+                sb.append("            header=" + header.getKey() + "=" + value + "\n");
             }
         }
-        sb.append("            locale=" + LocaleUtils.getLocalesFromHeader(exchange.getRequestHeaders().get(Headers.ACCEPT_LANGUAGE)) + "\n");
+        sb.append("            locale=" + LocaleUtils.getLocalesFromHeader(exchange.requestHeaders().get(HttpHeaderNames.ACCEPT_LANGUAGE)) + "\n");
         sb.append("            method=" + exchange.getRequestMethod() + "\n");
         Map<String, Deque<String>> pnames = exchange.getQueryParameters();
         for (Map.Entry<String, Deque<String>> entry : pnames.entrySet()) {
@@ -105,7 +105,7 @@ public class RequestDumpingHandler implements HttpHandler {
         sb.append("        remoteHost=" + exchange.getSourceAddress().getHostName() + "\n");
         //sb.append("requestedSessionId=" + exchange.getRequestedSessionId());
         sb.append("            scheme=" + exchange.getRequestScheme() + "\n");
-        sb.append("              host=" + exchange.getRequestHeaders().getFirst(Headers.HOST) + "\n");
+        sb.append("              host=" + exchange.requestHeaders().get(HttpHeaderNames.HOST) + "\n");
         sb.append("        serverPort=" + exchange.getDestinationAddress().getPort() + "\n");
         //sb.append("       servletPath=" + exchange.getServletPath());
         sb.append("          isSecure=" + exchange.isSecure() + "\n");
@@ -127,16 +127,16 @@ public class RequestDumpingHandler implements HttpHandler {
                     }
                 }
                 sb.append("     contentLength=" + exchange.getResponseContentLength() + "\n");
-                sb.append("       contentType=" + exchange.getResponseHeaders().getFirst(Headers.CONTENT_TYPE) + "\n");
+                sb.append("       contentType=" + exchange.responseHeaders().get(HttpHeaderNames.CONTENT_TYPE) + "\n");
                 Map<String, Cookie> cookies = exchange.getResponseCookies();
                 if (cookies != null) {
                     for (Cookie cookie : cookies.values()) {
                         sb.append("            cookie=" + cookie.getName() + "=" + cookie.getValue() + "; domain=" + cookie.getDomain() + "; path=" + cookie.getPath() + "\n");
                     }
                 }
-                for (HeaderValues header : exchange.getResponseHeaders()) {
-                    for (String value : header) {
-                        sb.append("            header=" + header.getHeaderName() + "=" + value + "\n");
+                for (Map.Entry<String, String> header : exchange.responseHeaders()) {
+                    for (String value : exchange.responseHeaders().getAll(header.getKey())) {
+                        sb.append("            header=" + header.getKey() + "=" + value + "\n");
                     }
                 }
                 sb.append("            status=" + exchange.getStatusCode() + "\n");
@@ -178,7 +178,7 @@ public class RequestDumpingHandler implements HttpHandler {
 //                            sb.append("headers=\n");
 //                            for (HeaderValues header : formValue.getHeaders()) {
 //                                sb.append("\t")
-//                                        .append(header.getHeaderName()).append("=").append(header.getFirst()).append("\n");
+//                                        .append(header.getHeaderName()).append("=").append(header.get()).append("\n");
 //
 //                            }
 //                        }

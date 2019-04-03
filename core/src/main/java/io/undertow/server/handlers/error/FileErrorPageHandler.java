@@ -44,7 +44,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.IoUtils;
 import io.undertow.util.MimeMappings;
 
@@ -120,7 +120,7 @@ public class FileErrorPageHandler implements HttpHandler {
         if (index > 0) {
             String contentType = mimeMappings.getMimeType(fileName.substring(index + 1));
             if (contentType != null) {
-                exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, contentType);
+                exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, contentType);
             }
         }
         exchange.dispatch(new Runnable() {
@@ -140,7 +140,7 @@ public class FileErrorPageHandler implements HttpHandler {
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
-                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, size);
+                exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, size);
                 final Sender response = exchange.getResponseSender();
                 exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
                     @Override

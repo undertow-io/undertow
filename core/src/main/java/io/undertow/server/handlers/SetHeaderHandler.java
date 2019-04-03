@@ -39,7 +39,7 @@ import io.undertow.util.HttpString;
  */
 public class SetHeaderHandler implements HttpHandler {
 
-    private final HttpString header;
+    private final String header;
     private final ExchangeAttribute value;
     private final HttpHandler next;
 
@@ -52,7 +52,7 @@ public class SetHeaderHandler implements HttpHandler {
         }
         this.next = ResponseCodeHandler.HANDLE_404;
         this.value = ExchangeAttributes.constant(value);
-        this.header = new HttpString(header);
+        this.header = header;
     }
 
     public SetHeaderHandler(final HttpHandler next, final String header, final ExchangeAttribute value) {
@@ -67,7 +67,7 @@ public class SetHeaderHandler implements HttpHandler {
         }
         this.next = next;
         this.value = value;
-        this.header = new HttpString(header);
+        this.header = header;
     }
 
     public SetHeaderHandler(final HttpHandler next, final String header, final String value) {
@@ -82,11 +82,11 @@ public class SetHeaderHandler implements HttpHandler {
         }
         this.next = next;
         this.value = ExchangeAttributes.constant(value);
-        this.header = new HttpString(header);
+        this.header = header;
     }
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        exchange.getResponseHeaders().put(header, value.readAttribute(exchange));
+        exchange.responseHeaders().set(header, value.readAttribute(exchange));
         next.handleRequest(exchange);
     }
 
@@ -94,7 +94,7 @@ public class SetHeaderHandler implements HttpHandler {
         return value;
     }
 
-    public HttpString getHeader() {
+    public String getHeader() {
         return header;
     }
 

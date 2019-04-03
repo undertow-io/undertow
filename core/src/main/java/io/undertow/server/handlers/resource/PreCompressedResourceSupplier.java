@@ -31,7 +31,7 @@ import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.ETag;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.MimeMappings;
 import io.undertow.util.QValueParser;
 
@@ -55,7 +55,7 @@ public class PreCompressedResourceSupplier implements ResourceSupplier {
     @Override
     public Resource getResource(HttpServerExchange exchange, String path) throws IOException {
         Resource originalResource = resourceManager.getResource(path);
-        if(exchange.getRequestHeaders().contains(Headers.RANGE)) {
+        if(exchange.requestHeaders().contains(HttpHeaderNames.RANGE)) {
             //we don't use serve pre compressed resources for range requests
             return originalResource;
         }
@@ -68,7 +68,7 @@ public class PreCompressedResourceSupplier implements ResourceSupplier {
 
 
     private Resource getEncodedResource(final HttpServerExchange exchange, String path, Resource originalResource) throws IOException {
-        final List<String> res = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
+        final List<String> res = exchange.requestHeaders().getAll(HttpHeaderNames.ACCEPT_ENCODING);
         if (res == null || res.isEmpty()) {
             return null;
         }
@@ -123,7 +123,7 @@ public class PreCompressedResourceSupplier implements ResourceSupplier {
 
                             @Override
                             public void serve(Sender sender, HttpServerExchange exchange, IoCallback completionCallback) {
-                                exchange.getResponseHeaders().put(Headers.CONTENT_ENCODING, value.getValue());
+                                exchange.responseHeaders().set(HttpHeaderNames.CONTENT_ENCODING, value.getValue());
                                 resource.serve(sender, exchange, completionCallback);
                             }
 

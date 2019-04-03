@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers;
 
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HeaderMap;
@@ -34,7 +36,7 @@ public class ConfiguredPushHandler implements HttpHandler {
 
     private final PathMatcher<String[]> pathMatcher = new PathMatcher<>();
     private final HttpHandler next;
-    private final HeaderMap requestHeaders = new HeaderMap();
+    private final HttpHeaders requestHeaders = new DefaultHttpHeaders();
 
     public ConfiguredPushHandler(HttpHandler next) {
         this.next = next;
@@ -54,8 +56,8 @@ public class ConfiguredPushHandler implements HttpHandler {
         next.handleRequest(exchange);
     }
 
-    public ConfiguredPushHandler addRequestHeader(HttpString name, String value) {
-        requestHeaders.put(name, value);
+    public ConfiguredPushHandler addRequestHeader(String name, String value) {
+        requestHeaders.set(name, value);
         return this;
     }
 

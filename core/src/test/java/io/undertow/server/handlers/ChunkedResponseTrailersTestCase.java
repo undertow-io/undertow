@@ -35,6 +35,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
@@ -82,10 +84,10 @@ public class ChunkedResponseTrailersTestCase {
                         outputStream.close();
                         return;
                     }
-                    HeaderMap trailers = new HeaderMap();
+                    HttpHeaders trailers = new DefaultHttpHeaders();
                     exchange.putAttachment(HttpAttachments.RESPONSE_TRAILERS, trailers);
-                    trailers.put(HttpString.tryFromString("foo"), "fooVal");
-                    trailers.put(HttpString.tryFromString("bar"), "barVal");
+                    trailers.set("foo", "fooVal");
+                    trailers.set("bar", "barVal");
                     exchange.getResponseSender().send(message);
 
                 } catch (IOException e) {

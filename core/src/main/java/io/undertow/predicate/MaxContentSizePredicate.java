@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 
 /**
  * Predicate that returns true if the Content-Size of a request is above a
@@ -41,7 +41,7 @@ public class MaxContentSizePredicate implements Predicate {
 
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        final String length = value.getResponseHeaders().getFirst(Headers.CONTENT_LENGTH);
+        final String length = value.responseHeaders().get(HttpHeaderNames.CONTENT_LENGTH);
         if (length == null) {
             return false;
         }

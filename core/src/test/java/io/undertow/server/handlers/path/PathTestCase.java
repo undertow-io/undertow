@@ -135,10 +135,10 @@ public class PathTestCase {
 
         @Override
         public void handleRequest(HttpServerExchange exchange) throws Exception {
-            exchange.getResponseHeaders().add(new HttpString(MATCHED), matched);
-            exchange.getResponseHeaders().add(new HttpString(PATH), exchange.getRelativePath());
+            exchange.responseHeaders().add(MATCHED, matched);
+            exchange.responseHeaders().add(PATH, exchange.getRelativePath());
             for(Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
-                exchange.getResponseHeaders().put(new HttpString(param.getKey()), param.getValue().getFirst());
+                exchange.responseHeaders().set(param.getKey(), param.getValue().getFirst());
             }
             exchange.endExchange();
         }

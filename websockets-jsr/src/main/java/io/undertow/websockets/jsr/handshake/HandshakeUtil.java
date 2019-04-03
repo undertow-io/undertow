@@ -27,7 +27,7 @@ import javax.websocket.Extension;
 import javax.websocket.server.ServerEndpointConfig;
 
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.jsr.UndertowSession;
 
@@ -51,7 +51,7 @@ public final class HandshakeUtil {
      */
     public static boolean checkOrigin(ServerEndpointConfig config, WebSocketHttpExchange exchange) {
         ServerEndpointConfig.Configurator c = config.getConfigurator();
-        return c.checkOrigin(exchange.getRequestHeader(Headers.ORIGIN_STRING));
+        return c.checkOrigin(exchange.getRequestHeader(HttpHeaderNames.ORIGIN));
     }
 
     /**

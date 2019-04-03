@@ -53,8 +53,7 @@ import io.undertow.attribute.ResponseTimeAttribute;
 import io.undertow.attribute.SecureExchangeAttribute;
 import io.undertow.attribute.SubstituteEmptyWrapper;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 
 /**
@@ -428,7 +427,7 @@ public class ExtendedAccessLogParser {
             return new QuotingExchangeAttribute(new ExchangeAttribute() {
                 @Override
                 public String readAttribute(HttpServerExchange exchange) {
-                    HeaderValues values = exchange.getResponseHeaders().get(parameter);
+                    List<String> values = exchange.responseHeaders().getAll(parameter);
                     if (values != null && values.size() > 0) {
                         StringBuilder buffer = new StringBuilder();
                         for (int i = 0; i < values.size(); i++) {
@@ -464,7 +463,7 @@ public class ExtendedAccessLogParser {
         } else if ("requestedSessionIdValid".equals(parameter)) {
             return parser.parse("%{REQUESTED_SESSION_ID_VALID}");
         } else if ("contentLength".equals(parameter)) {
-            return new QuotingExchangeAttribute(new RequestHeaderAttribute(Headers.CONTENT_LENGTH));
+            return new QuotingExchangeAttribute(new RequestHeaderAttribute(HttpHeaderNames.CONTENT_LENGTH));
         } else if ("characterEncoding".equals(parameter)) {
             return parser.parse("%{REQUEST_CHARACTER_ENCODING}");
         } else if ("locale".equals(parameter)) {

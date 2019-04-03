@@ -31,7 +31,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 
@@ -145,26 +145,26 @@ public class ResponseCache {
 
         //we are going to proceed. Set the appropriate headers
         if(existingKey.getContentType() != null) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, existingKey.getContentType());
+            exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, existingKey.getContentType());
         }
-        if(existingKey.getContentEncoding() != null && !Headers.IDENTITY.equals(HttpString.tryFromString(existingKey.getContentEncoding()))) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_ENCODING, existingKey.getContentEncoding());
+        if(existingKey.getContentEncoding() != null && !HttpHeaderNames.IDENTITY.equals(existingKey.getContentEncoding())) {
+            exchange.responseHeaders().set(HttpHeaderNames.CONTENT_ENCODING, existingKey.getContentEncoding());
         }
         if(existingKey.getLastModified() != null) {
-            exchange.getResponseHeaders().put(Headers.LAST_MODIFIED, DateUtils.toDateString(existingKey.getLastModified()));
+            exchange.responseHeaders().set(HttpHeaderNames.LAST_MODIFIED, DateUtils.toDateString(existingKey.getLastModified()));
         }
         if(existingKey.getContentLocation() != null) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_LOCATION, existingKey.getContentLocation());
+            exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LOCATION, existingKey.getContentLocation());
         }
         if(existingKey.getLanguage() != null) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_LANGUAGE, existingKey.getLanguage());
+            exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LANGUAGE, existingKey.getLanguage());
         }
         if(etag != null) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_LANGUAGE, etag.toString());
+            exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LANGUAGE, etag.toString());
         }
 
         //TODO: support if-range
-        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(entry.size()));
+        exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, Long.toString(entry.size()));
         if (exchange.getRequestMethod().equals(HEAD)) {
             exchange.endExchange();
             return true;

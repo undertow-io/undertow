@@ -53,11 +53,11 @@ public class GenericHeaderAuthenticationMechanism implements AuthenticationMecha
     public static final String SESSION_HEADER = "session-header";
 
     private final String mechanismName;
-    private final List<HttpString> identityHeaders;
+    private final List<String> identityHeaders;
     private final List<String> sessionCookieNames;
     private final IdentityManager identityManager;
 
-    public GenericHeaderAuthenticationMechanism(String mechanismName, List<HttpString> identityHeaders, List<String> sessionCookieNames, IdentityManager identityManager) {
+    public GenericHeaderAuthenticationMechanism(String mechanismName, List<String> identityHeaders, List<String> sessionCookieNames, IdentityManager identityManager) {
         this.mechanismName = mechanismName;
         this.identityHeaders = identityHeaders;
         this.sessionCookieNames = sessionCookieNames;
@@ -94,8 +94,8 @@ public class GenericHeaderAuthenticationMechanism implements AuthenticationMecha
     }
 
     private String getPrincipal(HttpServerExchange exchange) {
-        for (HttpString header : identityHeaders) {
-            String res = exchange.getRequestHeaders().getFirst(header);
+        for (String header : identityHeaders) {
+            String res = exchange.requestHeaders().get(header);
             if (res != null) {
                 return res;
             }
@@ -129,9 +129,9 @@ public class GenericHeaderAuthenticationMechanism implements AuthenticationMecha
             if (session == null) {
                 throw UndertowMessages.MESSAGES.authenticationPropertyNotSet(mechanismName, SESSION_HEADER);
             }
-            List<HttpString> ids = new ArrayList<>();
+            List<String> ids = new ArrayList<>();
             for (String s : identity.split(",")) {
-                ids.add(new HttpString(s));
+                ids.add(s);
             }
             List<String> sessions = new ArrayList<>();
             for (String s : session.split(",")) {

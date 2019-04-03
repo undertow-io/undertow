@@ -52,7 +52,7 @@ import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
 
@@ -275,13 +275,13 @@ public class DefaultServlet extends HttpServlet {
         final ETag etag = resource.getETag();
         final Date lastModified = resource.getLastModified();
         if (req.getDispatcherType() != DispatcherType.INCLUDE) {
-            if (!ETagUtils.handleIfMatch(req.getHeader(Headers.IF_MATCH_STRING), etag, false) ||
-                    !DateUtils.handleIfUnmodifiedSince(req.getHeader(Headers.IF_UNMODIFIED_SINCE_STRING), lastModified)) {
+            if (!ETagUtils.handleIfMatch(req.getHeader(HttpHeaderNames.IF_MATCH), etag, false) ||
+                    !DateUtils.handleIfUnmodifiedSince(req.getHeader(HttpHeaderNames.IF_UNMODIFIED_SINCE), lastModified)) {
                 resp.setStatus(StatusCodes.PRECONDITION_FAILED);
                 return;
             }
-            if (!ETagUtils.handleIfNoneMatch(req.getHeader(Headers.IF_NONE_MATCH_STRING), etag, true) ||
-                    !DateUtils.handleIfModifiedSince(req.getHeader(Headers.IF_MODIFIED_SINCE_STRING), lastModified)) {
+            if (!ETagUtils.handleIfNoneMatch(req.getHeader(HttpHeaderNames.IF_NONE_MATCH), etag, true) ||
+                    !DateUtils.handleIfModifiedSince(req.getHeader(HttpHeaderNames.IF_MODIFIED_SINCE), lastModified)) {
                 if (req.getMethod().equals(Methods.GET_STRING) || req.getMethod().equals(Methods.HEAD_STRING)) {
                     resp.setStatus(StatusCodes.NOT_MODIFIED);
                 } else {
@@ -303,10 +303,10 @@ public class DefaultServlet extends HttpServlet {
             }
         }
         if (lastModified != null) {
-            resp.setHeader(Headers.LAST_MODIFIED_STRING, resource.getLastModifiedString());
+            resp.setHeader(HttpHeaderNames.LAST_MODIFIED, resource.getLastModifiedString());
         }
         if (etag != null) {
-            resp.setHeader(Headers.ETAG_STRING, etag.toString());
+            resp.setHeader(HttpHeaderNames.ETAG, etag.toString());
         }
         ByteRange.RangeResponseResult rangeResponse = null;
         long start = -1, end = -1;
@@ -325,16 +325,16 @@ public class DefaultServlet extends HttpServlet {
                     resp.setContentLength(contentLength.intValue());
                 }
                 if (resource instanceof RangeAwareResource && ((RangeAwareResource) resource).isRangeSupported() && resource.getContentLength() != null) {
-                    resp.setHeader(Headers.ACCEPT_RANGES_STRING, "bytes");
+                    resp.setHeader(HttpHeaderNames.ACCEPT_RANGES, "bytes");
                     //TODO: figure out what to do with the content encoded resource manager
-                    final ByteRange range = ByteRange.parse(req.getHeader(Headers.RANGE_STRING));
+                    final ByteRange range = ByteRange.parse(req.getHeader(HttpHeaderNames.RANGE));
                     if (range != null) {
-                        rangeResponse = range.getResponseResult(resource.getContentLength(), req.getHeader(Headers.IF_RANGE_STRING), resource.getLastModified(), resource.getETag() == null ? null : resource.getETag().getTag());
+                        rangeResponse = range.getResponseResult(resource.getContentLength(), req.getHeader(HttpHeaderNames.IF_RANGE), resource.getLastModified(), resource.getETag() == null ? null : resource.getETag().getTag());
                         if (rangeResponse != null) {
                             start = rangeResponse.getStart();
                             end = rangeResponse.getEnd();
                             resp.setStatus(rangeResponse.getStatusCode());
-                            resp.setHeader(Headers.CONTENT_RANGE_STRING, rangeResponse.getContentRange());
+                            resp.setHeader(HttpHeaderNames.CONTENT_RANGE, rangeResponse.getContentRange());
                             long length = rangeResponse.getContentLength();
                             if (length > Integer.MAX_VALUE) {
                                 resp.setContentLengthLong(length);

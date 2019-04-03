@@ -35,7 +35,7 @@ import io.undertow.server.ServerConnection;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -70,7 +70,7 @@ public class FixedLengthResponseTestCase {
                     sender.send("Connection not persistent");
                     return;
                 }
-                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
+                exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, message.length() + "");
                 final Sender sender = exchange.getResponseSender();
                 sender.send(message);
             }

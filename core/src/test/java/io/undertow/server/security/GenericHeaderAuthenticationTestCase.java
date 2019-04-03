@@ -48,7 +48,7 @@ import io.undertow.util.StatusCodes;
 public class GenericHeaderAuthenticationTestCase extends AuthenticationTestBase {
 
     static AuthenticationMechanism getTestMechanism() {
-        return new GenericHeaderAuthenticationMechanism(NAME, Collections.singletonList(new HttpString("user")), Collections.singletonList("sessionid"), identityManager);
+        return new GenericHeaderAuthenticationMechanism(NAME, Collections.singletonList("user"), Collections.singletonList("sessionid"), identityManager);
     }
 
     @Override

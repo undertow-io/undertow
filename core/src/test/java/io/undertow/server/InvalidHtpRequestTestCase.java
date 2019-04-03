@@ -33,7 +33,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -96,8 +96,8 @@ public class InvalidHtpRequestTestCase {
         final TestHttpClient client = new TestHttpClient();
         try {
             HttpRequestBase method = new HttpGet(DefaultServer.getDefaultServerURL());
-            method.addHeader(Headers.CONTENT_LENGTH_STRING, "0");
-            method.addHeader(Headers.CONTENT_LENGTH_STRING, "10");
+            method.addHeader(HttpHeaderNames.CONTENT_LENGTH, "0");
+            method.addHeader(HttpHeaderNames.CONTENT_LENGTH, "10");
             HttpResponse result = client.execute(method);
             Assert.assertEquals(StatusCodes.BAD_REQUEST, result.getStatusLine().getStatusCode());
         } finally {
@@ -109,8 +109,8 @@ public class InvalidHtpRequestTestCase {
         final TestHttpClient client = new TestHttpClient();
         try {
             HttpRequestBase method = new HttpGet(DefaultServer.getDefaultServerURL());
-            method.addHeader(Headers.CONTENT_LENGTH_STRING, "0");
-            method.addHeader(Headers.TRANSFER_ENCODING_STRING, "chunked");
+            method.addHeader(HttpHeaderNames.CONTENT_LENGTH, "0");
+            method.addHeader(HttpHeaderNames.TRANSFER_ENCODING, "chunked");
             HttpResponse result = client.execute(method);
             Assert.assertEquals(StatusCodes.BAD_REQUEST, result.getStatusLine().getStatusCode());
         } finally {
@@ -123,8 +123,8 @@ public class InvalidHtpRequestTestCase {
         final TestHttpClient client = new TestHttpClient();
         try {
             HttpRequestBase method = new HttpGet(DefaultServer.getDefaultServerURL());
-            method.addHeader(Headers.TRANSFER_ENCODING_STRING, "chunked");
-            method.addHeader(Headers.TRANSFER_ENCODING_STRING, "gzip, chunked");
+            method.addHeader(HttpHeaderNames.TRANSFER_ENCODING, "chunked");
+            method.addHeader(HttpHeaderNames.TRANSFER_ENCODING, "gzip, chunked");
             HttpResponse result = client.execute(method);
             Assert.assertEquals(StatusCodes.BAD_REQUEST, result.getStatusLine().getStatusCode());
         } finally {

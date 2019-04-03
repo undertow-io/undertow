@@ -18,7 +18,7 @@
 
 package io.undertow.websockets.jsr.test.annotated;
 
-import static io.undertow.util.Headers.SEC_WEB_SOCKET_PROTOCOL_STRING;
+import static io.undertow.util.HttpHeaderNames.SEC_WEB_SOCKET_PROTOCOL;
 
 import java.util.Collections;
 import java.util.List;
@@ -41,9 +41,9 @@ public class ClientConfigurator extends ClientEndpointConfig.Configurator {
 
     @Override
     public void beforeRequest(Map<String, List<String>> headers) {
-        if (headers.containsKey(SEC_WEB_SOCKET_PROTOCOL_STRING)) {
-            sentSubProtocol = headers.get(SEC_WEB_SOCKET_PROTOCOL_STRING).get(0);
-            headers.put(SEC_WEB_SOCKET_PROTOCOL_STRING, Collections.singletonList("configured-proto"));
+        if (headers.containsKey(SEC_WEB_SOCKET_PROTOCOL)) {
+            sentSubProtocol = headers.get(SEC_WEB_SOCKET_PROTOCOL).get(0);
+            headers.put(SEC_WEB_SOCKET_PROTOCOL, Collections.singletonList("configured-proto"));
         } else {
             sentSubProtocol = null;
         }
@@ -52,8 +52,8 @@ public class ClientConfigurator extends ClientEndpointConfig.Configurator {
     @Override
     public void afterResponse(HandshakeResponse hr) {
         Map<String, List<String>> headers = hr.getHeaders();
-        if (headers.containsKey(SEC_WEB_SOCKET_PROTOCOL_STRING.toLowerCase(Locale.ENGLISH))) {
-            receivedSubProtocol = headers.get(SEC_WEB_SOCKET_PROTOCOL_STRING.toLowerCase(Locale.ENGLISH)).get(0);
+        if (headers.containsKey(SEC_WEB_SOCKET_PROTOCOL.toLowerCase(Locale.ENGLISH))) {
+            receivedSubProtocol = headers.get(SEC_WEB_SOCKET_PROTOCOL.toLowerCase(Locale.ENGLISH)).get(0);
         } else {
             receivedSubProtocol = null;
         }

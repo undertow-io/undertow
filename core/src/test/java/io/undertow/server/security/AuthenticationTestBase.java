@@ -41,6 +41,7 @@ import org.ietf.jgss.GSSException;
 import org.junit.Before;
 import org.junit.Test;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.api.NotificationReceiver;
@@ -304,10 +305,10 @@ public abstract class AuthenticationTestBase {
         return null;
     }
 
-    protected static String getAuthHeader(final HttpString prefix, final Header[] values) {
+    protected static String getAuthHeader(final String prefix, final Header[] values) {
         for (Header current : values) {
             String currentValue = current.getValue();
-            if (currentValue.startsWith(prefix.toString())) {
+            if (currentValue.startsWith(prefix)) {
                 return currentValue;
             }
         }
@@ -323,12 +324,12 @@ public abstract class AuthenticationTestBase {
      */
     protected static class ResponseHandler implements HttpHandler {
 
-        static final HttpString PROCESSED_BY = new HttpString("ProcessedBy");
-        static final HttpString AUTHENTICATED_USER = new HttpString("AuthenticatedUser");
+        static final String PROCESSED_BY = "ProcessedBy";
+        static final String AUTHENTICATED_USER = "AuthenticatedUser";
 
         @Override
         public void handleRequest(HttpServerExchange exchange) throws Exception {
-            HeaderMap responseHeader = exchange.getResponseHeaders();
+            HttpHeaders responseHeader = exchange.responseHeaders();
             responseHeader.add(PROCESSED_BY, "ResponseHandler");
             String user = getAuthenticatedUser(exchange);
             if (user != null) {

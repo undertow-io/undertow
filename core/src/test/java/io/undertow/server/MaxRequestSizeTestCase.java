@@ -34,7 +34,7 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.UndertowOptionMap;
 import io.undertow.util.UndertowOptions;
@@ -74,7 +74,7 @@ public class MaxRequestSizeTestCase {
         try {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
-            post.addHeader(Headers.CONNECTION_STRING, "close");
+            post.addHeader(HttpHeaderNames.CONNECTION, "close");
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
@@ -110,7 +110,7 @@ public class MaxRequestSizeTestCase {
         try {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
-            post.addHeader(Headers.CONNECTION_STRING, "close");
+            post.addHeader(HttpHeaderNames.CONNECTION, "close");
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
@@ -128,7 +128,7 @@ public class MaxRequestSizeTestCase {
             DefaultServer.setUndertowOptions(maxSize);
             post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
-            post.addHeader(Headers.CONNECTION_STRING, "close");
+            post.addHeader(HttpHeaderNames.CONNECTION, "close");
             result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);

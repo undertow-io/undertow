@@ -59,7 +59,7 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
     public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) {
         if (msg instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) msg;
-            if(connection == null) {
+            if (connection == null) {
                 connection = new HttpServerConnection(ctx, blockingExecutor, engine == null ? null : new ConnectionSSLSessionInfo(engine.getSession()));
                 ctx.channel().closeFuture().addListener(new GenericFutureListener<Future<? super Void>>() {
                     @Override
@@ -68,27 +68,24 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
                     }
                 });
             }
-            HttpServerExchange exchange = new HttpServerExchange(connection);
-            for(String header : request.headers().names()) {
-                exchange.getRequestHeaders().putAll(new HttpString(header), request.headers().getAll(header));
-            }
+            HttpServerExchange exchange = new HttpServerExchange(connection, request.headers());
             Connectors.setExchangeRequestPath(exchange, request.uri(), "UTF-8", true, false, new StringBuilder());
             exchange.setRequestMethod(new HttpString(request.method().name()));
-            if(engine == null) {
+            if (engine == null) {
                 exchange.setRequestScheme("http");
             } else {
                 exchange.setRequestScheme("https");
             }
             exchange.setProtocol(Protocols.HTTP_1_1);
-            if(msg instanceof HttpContent) {
-                connection.addData((HttpContent)msg);
+            if (msg instanceof HttpContent) {
+                connection.addData((HttpContent) msg);
             }
-            if(msg instanceof LastHttpContent) {
+            if (msg instanceof LastHttpContent) {
                 Connectors.terminateRequest(exchange);
             }
 
             connection.newExchange(exchange, rootHandler);
-        } else if(msg instanceof HttpContent) {
+        } else if (msg instanceof HttpContent) {
             connection.addData((HttpContent) msg);
         }
     }
@@ -96,7 +93,7 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
-         connection.closed(new IOException(cause));
+        connection.closed(new IOException(cause));
         ctx.close();
     }
 }

@@ -35,7 +35,7 @@ public class HeadersUtilsTestCase {
     @Test
     public void testTokenExtraction() {
 
-        Assert.assertEquals("--xyz", Headers.extractTokenFromHeader("multipart/form-data; boundary=--xyz; param=abc", "boundary"));
+        Assert.assertEquals("--xyz", HttpHeaderNames.extractTokenFromHeader("multipart/form-data; boundary=--xyz; param=abc", "boundary"));
     }
 
 }

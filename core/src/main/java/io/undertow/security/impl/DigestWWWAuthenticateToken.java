@@ -23,7 +23,7 @@ import java.util.Map;
 
 import io.undertow.util.HeaderToken;
 import io.undertow.util.HeaderTokenParser;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 
 /**
@@ -33,14 +33,14 @@ import io.undertow.util.HttpString;
  */
 public enum DigestWWWAuthenticateToken implements HeaderToken {
 
-    REALM(Headers.REALM, true),
-    DOMAIN(Headers.DOMAIN, true),
-    NONCE(Headers.NONCE, true),
-    OPAQUE(Headers.OPAQUE, true),
-    STALE(Headers.STALE, false),
-    ALGORITHM(Headers.ALGORITHM, false),
-    MESSAGE_QOP(Headers.QOP, true),
-    AUTH_PARAM(Headers.AUTH_PARAM, false);
+    REALM(HttpHeaderNames.REALM, true),
+    DOMAIN(HttpHeaderNames.DOMAIN, true),
+    NONCE(HttpHeaderNames.NONCE, true),
+    OPAQUE(HttpHeaderNames.OPAQUE, true),
+    STALE(HttpHeaderNames.STALE, false),
+    ALGORITHM(HttpHeaderNames.ALGORITHM, false),
+    MESSAGE_QOP(HttpHeaderNames.QOP, true),
+    AUTH_PARAM(HttpHeaderNames.AUTH_PARAM, false);
 
     private static final HeaderTokenParser<DigestWWWAuthenticateToken> TOKEN_PARSER;
 
@@ -57,7 +57,7 @@ public enum DigestWWWAuthenticateToken implements HeaderToken {
     private final String name;
     private final boolean quoted;
 
-    DigestWWWAuthenticateToken(final HttpString name, final boolean quoted) {
+    DigestWWWAuthenticateToken(final String name, final boolean quoted) {
         this.name = name.toString();
         this.quoted = quoted;
     }

@@ -25,6 +25,7 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.codec.digest.DigestUtils;
@@ -49,7 +50,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.IoUtils;
 import io.undertow.util.StatusCodes;
 
@@ -121,7 +122,7 @@ public class MultipartFormDataParserTestCase {
         try {
 
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
-            post.setHeader(Headers.CONTENT_TYPE_STRING, "multipart/form-data; boundary=\"s58IGsuzbg6GBG1yIgUO8;n4WkVf7clWMje\"");
+            post.setHeader(HttpHeaderNames.CONTENT_TYPE, "multipart/form-data; boundary=\"s58IGsuzbg6GBG1yIgUO8;n4WkVf7clWMje\"");
             StringEntity entity = new StringEntity("--s58IGsuzbg6GBG1yIgUO8;n4WkVf7clWMje\r\n" +
                     "Content-Disposition: form-data; name=\"formValue\"\r\n" +
                     "\r\n" +
@@ -234,7 +235,7 @@ public class MultipartFormDataParserTestCase {
             }
 
             private String getFileName(FormData.FormValue data) {
-                HeaderValues cdHeaders = data.getHeaders().get("content-disposition");
+                List<String> cdHeaders = data.getHeaders().getAll("content-disposition");
                 for (String cdHeader : cdHeaders) {
                     if (cdHeader.startsWith("form-data")) {
                         return cdHeader.substring(cdHeader.indexOf("filename=") + "filename=".length()).replace("\"", "");

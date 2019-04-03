@@ -26,6 +26,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.undertow.predicate.ContainsPredicate;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -193,7 +194,7 @@ public class PredicatedHandlersParserTestCase {
 
         List<PredicatedHandler> ret = PredicatedHandlersParser.parse(value, getClass().getClassLoader());
         Assert.assertEquals(1, ret.size());
-        HttpServerExchange exchange = new HttpServerExchange(null);
+        HttpServerExchange exchange = new HttpServerExchange(null, new DefaultHttpHeaders());
         exchange.getRequestHeaders().put(Headers.USER_AGENT, "firefox");
         ret.get(0).getHandler().wrap(ResponseCodeHandler.HANDLE_200).handleRequest(exchange);
         Assert.assertNull(exchange.getRequestHeaders().get(Headers.USER_AGENT));

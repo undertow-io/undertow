@@ -45,7 +45,7 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.Methods;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
@@ -132,7 +132,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         //as there is a good chance the web socket client won't understand the redirect
         //we make an exception for HTTP2 upgrade requests, as this would have already be handled at
         //the connector level if it was going to be handled.
-        String upgradeString = exchange.getRequestHeaders().getFirst(Headers.UPGRADE);
+        String upgradeString = exchange.requestHeaders().get(HttpHeaderNames.UPGRADE);
         boolean isUpgradeRequest = upgradeString != null && !upgradeString.startsWith(HTTP2_UPGRADE_PREFIX);
         if (info.getType() == ServletPathMatch.Type.REDIRECT && !isUpgradeRequest) {
             //UNDERTOW-89
@@ -142,7 +142,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             } else {
                 exchange.setStatusCode(StatusCodes.TEMPORARY_REDIRECT);
             }
-            exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
+            exchange.responseHeaders().set(HttpHeaderNames.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
             return;
         } else if (info.getType() == ServletPathMatch.Type.REWRITE) {
             //this can only happen if the path ends with a /
@@ -293,7 +293,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 if (!exchange.isResponseStarted()) {
                     response.reset();                       //reset the response
                     exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                    exchange.getResponseHeaders().clear();
+                    exchange.responseHeaders().clear();
                     String location = servletContext.getDeployment().getErrorPages().getErrorLocation(t);
                     if (location == null) {
                         location = servletContext.getDeployment().getErrorPages().getErrorLocation(StatusCodes.INTERNAL_SERVER_ERROR);

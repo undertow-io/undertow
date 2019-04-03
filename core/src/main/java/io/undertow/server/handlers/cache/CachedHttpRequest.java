@@ -24,7 +24,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 
 /**
  * @author Stuart Douglas
@@ -43,10 +43,10 @@ public class CachedHttpRequest {
     public CachedHttpRequest(final HttpServerExchange exchange) {
         this.path = exchange.getRequestPath();
         this.etag = ETagUtils.getETag(exchange);
-        this.contentLocation = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LOCATION);
-        this.language = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LANGUAGE);
-        this.contentType = exchange.getResponseHeaders().getFirst(Headers.CONTENT_TYPE);
-        String lmString = exchange.getResponseHeaders().getFirst(Headers.LAST_MODIFIED);
+        this.contentLocation = exchange.responseHeaders().get(HttpHeaderNames.CONTENT_LOCATION);
+        this.language = exchange.responseHeaders().get(HttpHeaderNames.CONTENT_LANGUAGE);
+        this.contentType = exchange.responseHeaders().get(HttpHeaderNames.CONTENT_TYPE);
+        String lmString = exchange.responseHeaders().get(HttpHeaderNames.LAST_MODIFIED);
         if (lmString == null) {
             this.lastModified = null;
         } else {
@@ -54,7 +54,7 @@ public class CachedHttpRequest {
         }
         //the content encoding can be decided dynamically, based on the current state of the request
         //as the decision to compress generally depends on size and mime type
-        this.contentEncoding = exchange.getResponseHeaders().getFirst(Headers.CONTENT_ENCODING);
+        this.contentEncoding = exchange.responseHeaders().get(HttpHeaderNames.CONTENT_ENCODING);
         this.responseCode = exchange.getStatusCode();
     }
 

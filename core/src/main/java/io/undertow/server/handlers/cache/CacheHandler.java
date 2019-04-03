@@ -60,7 +60,7 @@ public class CacheHandler implements HttpHandler {
 //                        return factory.create();
 //                    }
 //                }
-//                String lengthString = exchange.getResponseHeaders().getFirst(CONTENT_LENGTH);
+//                String lengthString = exchange.responseHeaders().get(CONTENT_LENGTH);
 //                if(lengthString == null) {
 //                    //we don't cache chunked requests
 //                    return factory.create();

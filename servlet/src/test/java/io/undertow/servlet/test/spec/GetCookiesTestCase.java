@@ -36,7 +36,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -76,7 +76,7 @@ public class GetCookiesTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() +
                                               "/servletContext/aaa");
-            get.setHeader(Headers.COOKIE_STRING, "testcookie=works");
+            get.setHeader(HttpHeaderNames.COOKIE, "testcookie=works");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
@@ -93,7 +93,7 @@ public class GetCookiesTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() +
                                               "/servletContext/aaa");
-            get.setHeader(Headers.COOKIE_STRING, "ctx:123=456");
+            get.setHeader(HttpHeaderNames.COOKIE, "ctx:123=456");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
@@ -109,7 +109,7 @@ public class GetCookiesTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() +
                                               "/servletContext/aaa");
-            get.setHeader(Headers.COOKIE_STRING, "testcookie=works; ctx:123=456");
+            get.setHeader(HttpHeaderNames.COOKIE, "testcookie=works; ctx:123=456");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);

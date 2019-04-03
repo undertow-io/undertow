@@ -45,7 +45,7 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -173,13 +173,13 @@ public class PreCompressedResourceTestCase {
     private String assertResponse(HttpResponse response, boolean encoding, String compareWith, String extension) throws IOException {
         Assert.assertEquals(StatusCodes.OK, response.getStatusLine().getStatusCode());
         String body = HttpClientUtils.readResponse(response);
-        Header[] headers = response.getHeaders(Headers.CONTENT_TYPE_STRING);
+        Header[] headers = response.getHeaders(HttpHeaderNames.CONTENT_TYPE);
         Assert.assertEquals("text/html", headers[0].getValue());
 
         if (encoding) {
             assert response.getEntity() instanceof DecompressingEntity; //no other nice way to be sure we get back gzipped content
         } else {
-            Assert.assertNull(response.getFirstHeader(Headers.CONTENT_ENCODING_STRING));
+            Assert.assertNull(response.getFirstHeader(HttpHeaderNames.CONTENT_ENCODING));
         }
 
         if (compareWith != null) {

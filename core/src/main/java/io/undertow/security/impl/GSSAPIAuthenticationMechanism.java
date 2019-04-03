@@ -17,10 +17,10 @@
  */
 package io.undertow.security.impl;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.HOST;
-import static io.undertow.util.Headers.NEGOTIATE;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.HttpHeaderNames.AUTHORIZATION;
+import static io.undertow.util.HttpHeaderNames.HOST;
+import static io.undertow.util.HttpHeaderNames.NEGOTIATE;
+import static io.undertow.util.HttpHeaderNames.WWW_AUTHENTICATE;
 import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 
 import java.io.IOException;
@@ -127,7 +127,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
             }
         }
 
-        List<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
+        List<String> authHeaders = exchange.requestHeaders().getAll(AUTHORIZATION);
         if (authHeaders != null) {
             for (String current : authHeaders) {
                 if (current.startsWith(NEGOTIATE_PREFIX)) {
@@ -172,7 +172,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
             }
         }
 
-        exchange.getResponseHeaders().add(WWW_AUTHENTICATE, header);
+        exchange.responseHeaders().add(WWW_AUTHENTICATE, header);
 
         UndertowLogger.SECURITY_LOGGER.debugf("Sending GSSAPI challenge for %s", exchange);
         return new ChallengeResult(true, UNAUTHORIZED);
@@ -195,7 +195,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     private String getHostName(final HttpServerExchange exchange) {
-        String hostName = exchange.getRequestHeaders().getFirst(HOST);
+        String hostName = exchange.requestHeaders().get(HOST);
         if (hostName != null) {
             if (hostName.startsWith("[") && hostName.contains("]")) {
                 hostName = hostName.substring(0, hostName.indexOf(']') + 1);
@@ -249,7 +249,7 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
 
                 if (respToken != null) {
                     // There will be no further challenge but we do have a token so set it here.
-                    exchange.getResponseHeaders().add(WWW_AUTHENTICATE,
+                    exchange.responseHeaders().add(WWW_AUTHENTICATE,
                             NEGOTIATE_PREFIX + FlexBase64.encodeString(respToken, false));
                 }
                 IdentityManager identityManager = securityContext.getIdentityManager();

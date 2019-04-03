@@ -23,7 +23,7 @@ import java.io.OutputStream;
 
 import io.netty.buffer.ByteBuf;
 import io.undertow.UndertowMessages;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 
 /**
  * Buffering output stream that wraps a channel.
@@ -150,9 +150,9 @@ public class UndertowOutputStream extends OutputStream {
         state |= FLAG_CLOSED;
         if (anyAreClear(state, FLAG_WRITE_STARTED)) {
             if (pooledBuffer == null) {
-                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
+                exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "0");
             } else {
-                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + pooledBuffer.readableBytes());
+                exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "" + pooledBuffer.readableBytes());
             }
         }
         try {

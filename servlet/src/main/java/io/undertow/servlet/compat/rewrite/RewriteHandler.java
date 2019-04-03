@@ -29,7 +29,7 @@ import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.QueryParameterUtils;
 import io.undertow.util.UndertowOptions;
 
@@ -165,7 +165,7 @@ public class RewriteHandler implements HttpHandler {
             // - content type (note: this will not force the content type, use a filter
             //   to do that)
             if (rules[i].isType() && newtest != null) {
-                exchange.getRequestHeaders().put(Headers.CONTENT_TYPE, rules[i].getTypeValue());
+                exchange.requestHeaders().set(HttpHeaderNames.CONTENT_TYPE, rules[i].getTypeValue());
             }
             // - qsappend
             if (rules[i].isQsappend() && newtest != null) {
@@ -230,7 +230,7 @@ public class RewriteHandler implements HttpHandler {
                 }
                 // Set the new host if it changed
                 if (!host.equals(request.getServerName())) {
-                    exchange.getRequestHeaders().put(Headers.HOST, host + ":" + exchange.getHostPort());
+                    exchange.requestHeaders().set(HttpHeaderNames.HOST, host + ":" + exchange.getHostPort());
                 }
                 // Reinvoke the whole request recursively
                 src.getDeployment().getHandler().handleRequest(exchange);

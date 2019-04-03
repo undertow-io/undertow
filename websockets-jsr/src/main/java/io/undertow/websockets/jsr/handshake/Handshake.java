@@ -41,7 +41,7 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionEncod
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionUtil;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtension;
 import io.netty.handler.codec.http.websocketx.extensions.WebSocketServerExtensionHandshaker;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.websockets.jsr.ConfiguredServerEndpoint;
 import io.undertow.websockets.jsr.ExtensionImpl;
 
@@ -87,7 +87,7 @@ public class Handshake {
         } else {
             scheme = "ws";
         }
-        return scheme + "://" + exchange.getRequestHeader(Headers.HOST_STRING) + exchange.getRequestURI();
+        return scheme + "://" + exchange.getRequestHeader(HttpHeaderNames.HOST) + exchange.getRequestURI();
     }
 
     /**
@@ -96,18 +96,18 @@ public class Handshake {
      * @param exchange The {@link WebSocketHttpExchange} for which the handshake and upgrade should occur.
      */
     public final void handshake(final WebSocketHttpExchange exchange, Consumer<ChannelHandlerContext> completeListener) {
-        String origin = exchange.getRequestHeader(Headers.ORIGIN_STRING);
+        String origin = exchange.getRequestHeader(HttpHeaderNames.ORIGIN);
         if (origin != null) {
-            exchange.setResponseHeader(Headers.ORIGIN_STRING, origin);
+            exchange.setResponseHeader(HttpHeaderNames.ORIGIN, origin);
         }
         selectSubprotocol(exchange);
         List<WebSocketServerExtension> extensions = selectExtensions(exchange);
-        exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_LOCATION_STRING, getWebSocketLocation(exchange));
+        exchange.setResponseHeader(HttpHeaderNames.SEC_WEB_SOCKET_LOCATION, getWebSocketLocation(exchange));
 
-        final String key = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY_STRING);
+        final String key = exchange.getRequestHeader(HttpHeaderNames.SEC_WEB_SOCKET_KEY);
         try {
             final String solution = solve(key);
-            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_ACCEPT_STRING, solution);
+            exchange.setResponseHeader(HttpHeaderNames.SEC_WEB_SOCKET_ACCEPT, solution);
             performUpgrade(exchange);
         } catch (NoSuchAlgorithmException e) {
             exchange.endExchange();
@@ -148,8 +148,8 @@ public class Handshake {
      * convenience method to perform the upgrade
      */
     protected final void performUpgrade(final WebSocketHttpExchange exchange) {
-        exchange.setResponseHeader(Headers.UPGRADE_STRING, "WebSocket");
-        exchange.setResponseHeader(Headers.CONNECTION_STRING, "Upgrade");
+        exchange.setResponseHeader(HttpHeaderNames.UPGRADE, "WebSocket");
+        exchange.setResponseHeader(HttpHeaderNames.CONNECTION, "Upgrade");
         HandshakeUtil.prepareUpgrade(config.getEndpointConfiguration(), exchange);
     }
 
@@ -157,7 +157,7 @@ public class Handshake {
      * Selects the first matching supported sub protocol and add it the the headers of the exchange.
      */
     protected final void selectSubprotocol(final WebSocketHttpExchange exchange) {
-        String requestedSubprotocols = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING);
+        String requestedSubprotocols = exchange.getRequestHeader(HttpHeaderNames.SEC_WEB_SOCKET_PROTOCOL);
         if (requestedSubprotocols == null) {
             return;
         }
@@ -165,14 +165,14 @@ public class Handshake {
         String[] requestedSubprotocolArray = PATTERN.split(requestedSubprotocols);
         String subProtocol = supportedSubprotols(requestedSubprotocolArray);
         if (subProtocol != null && !subProtocol.isEmpty()) {
-            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_PROTOCOL_STRING, subProtocol);
+            exchange.setResponseHeader(HttpHeaderNames.SEC_WEB_SOCKET_PROTOCOL, subProtocol);
         }
 
     }
 
 
     final List<WebSocketServerExtension> selectExtensions(final WebSocketHttpExchange exchange) {
-        String extensionHeader = exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING);
+        String extensionHeader = exchange.getRequestHeader(HttpHeaderNames.SEC_WEB_SOCKET_EXTENSIONS);
         if(extensionHeader == null) {
             return Collections.emptyList();
         }
@@ -185,7 +185,7 @@ public class Handshake {
                 headerValue = appendExtension(headerValue,
                         extensionData.name(), extensionData.parameters());
             }
-            exchange.setResponseHeader(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING, headerValue);
+            exchange.setResponseHeader(HttpHeaderNames.SEC_WEB_SOCKET_EXTENSIONS, headerValue);
         }
         return extensions;
     }
@@ -207,8 +207,8 @@ public class Handshake {
      * @return a list of {@code ExtensionFunction} with the implementation of the extensions
      */
     protected final List<WebSocketServerExtension> initExtensions(final WebSocketHttpExchange exchange) {
-        String extHeader = exchange.getResponseHeaders().get(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING) != null ?
-                exchange.getResponseHeaders().get(Headers.SEC_WEB_SOCKET_EXTENSIONS_STRING).get(0) : null;
+        String extHeader = exchange.getResponseHeaders().get(HttpHeaderNames.SEC_WEB_SOCKET_EXTENSIONS) != null ?
+                exchange.getResponseHeaders().get(HttpHeaderNames.SEC_WEB_SOCKET_EXTENSIONS).get(0) : null;
 
         List<WebSocketServerExtension> ret = new ArrayList<>();
         if (extHeader != null) {
@@ -276,9 +276,9 @@ public class Handshake {
     }
 
     public boolean matches(final WebSocketHttpExchange exchange) {
-        if (exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_KEY_STRING) != null &&
-                exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_VERSION_STRING) != null) {
-            if (exchange.getRequestHeader(Headers.SEC_WEB_SOCKET_VERSION_STRING)
+        if (exchange.getRequestHeader(HttpHeaderNames.SEC_WEB_SOCKET_KEY) != null &&
+                exchange.getRequestHeader(HttpHeaderNames.SEC_WEB_SOCKET_VERSION) != null) {
+            if (exchange.getRequestHeader(HttpHeaderNames.SEC_WEB_SOCKET_VERSION)
                     .equals(WEB_SOCKET_VERSION)) {
                 return HandshakeUtil.checkOrigin(config.getEndpointConfiguration(), exchange);
             }

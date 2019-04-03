@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -42,6 +43,8 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
@@ -50,7 +53,7 @@ import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpAttachments;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
@@ -109,7 +112,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public boolean containsHeader(final String name) {
-        return exchange.getResponseHeaders().contains(name);
+        return exchange.responseHeaders().contains(name);
     }
 
     @Override
@@ -192,7 +195,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         setStatus(StatusCodes.FOUND);
         String realPath;
         if (isAbsoluteUrl(location)) {//absolute url
-            exchange.getResponseHeaders().put(Headers.LOCATION, location);
+            exchange.responseHeaders().set(HttpHeaderNames.LOCATION, location);
         } else {
             if (location.startsWith("/")) {
                 realPath = location;
@@ -205,7 +208,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
                 realPath = CanonicalPathUtils.canonicalize(servletContext.getContextPath() + current + location);
             }
             String loc = exchange.getRequestScheme() + "://" + exchange.getHostAndPort() + realPath;
-            exchange.getResponseHeaders().put(Headers.LOCATION, loc);
+            exchange.responseHeaders().set(HttpHeaderNames.LOCATION, loc);
         }
         responseDone();
     }
@@ -220,48 +223,31 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         addHeader(name, DateUtils.toDateString(new Date(date)));
     }
 
-    @Override
     public void setHeader(final String name, final String value) {
-        if(name == null) {
-            throw UndertowServletMessages.MESSAGES.headerNameWasNull();
-        }
-        setHeader(HttpString.tryFromString(name), value);
-    }
-
-
-    public void setHeader(final HttpString name, final String value) {
         if(name == null) {
             throw UndertowServletMessages.MESSAGES.headerNameWasNull();
         }
         if (insideInclude || ignoredFlushPerformed) {
             return;
         }
-        if(name.equals(Headers.CONTENT_TYPE)) {
+        if(name.equals(HttpHeaderNames.CONTENT_TYPE)) {
             setContentType(value);
         } else {
-            exchange.getResponseHeaders().put(name, value);
+            exchange.responseHeaders().set(name, value);
         }
     }
 
-    @Override
     public void addHeader(final String name, final String value) {
-        if(name == null) {
-            throw UndertowServletMessages.MESSAGES.headerNameWasNull();
-        }
-        addHeader(HttpString.tryFromString(name), value);
-    }
-
-    public void addHeader(final HttpString name, final String value) {
         if(name == null) {
             throw UndertowServletMessages.MESSAGES.headerNameWasNull();
         }
         if (insideInclude || ignoredFlushPerformed || treatAsCommitted) {
             return;
         }
-        if(name.equals(Headers.CONTENT_TYPE) && !exchange.getResponseHeaders().contains(Headers.CONTENT_TYPE)) {
+        if(name.equals(HttpHeaderNames.CONTENT_TYPE) && !exchange.responseHeaders().contains(HttpHeaderNames.CONTENT_TYPE)) {
             setContentType(value);
         } else {
-            exchange.getResponseHeaders().add(name, value);
+            exchange.responseHeaders().add(name, value);
         }
     }
 
@@ -301,12 +287,12 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public String getHeader(final String name) {
-        return exchange.getResponseHeaders().getFirst(name);
+        return exchange.responseHeaders().get(name);
     }
 
     @Override
     public Collection<String> getHeaders(final String name) {
-        HeaderValues headers = exchange.getResponseHeaders().get(name);
+        List<String> headers = exchange.responseHeaders().getAll(name);
         if(headers == null) {
             return Collections.emptySet();
         }
@@ -316,8 +302,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public Collection<String> getHeaderNames() {
         final Set<String> headers = new HashSet<>();
-        for (final HttpString i : exchange.getResponseHeaders().getHeaderNames()) {
-            headers.add(i.toString());
+        for (final Map.Entry<String, String> i : exchange.responseHeaders()) {
+            headers.add(i.getKey());
         }
         return headers;
     }
@@ -388,7 +374,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         charsetSet = charset != null;
         this.charset = charset;
         if (contentType != null) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
+            exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, getContentType());
         }
     }
 
@@ -403,9 +389,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             return;
         }
         if(len >= 0) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Long.toString(len));
+            exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, Long.toString(len));
         } else {
-            exchange.getResponseHeaders().remove(Headers.CONTENT_LENGTH);
+            exchange.responseHeaders().remove(HttpHeaderNames.CONTENT_LENGTH);
         }
         this.contentLength = len;
     }
@@ -436,11 +422,11 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             useCharset = true;
         }
         if(useCharset || !charsetSet) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getHeader());
+            exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, ct.getHeader());
         } else if(ct.getCharset() == null) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getHeader() + "; charset=" + charset);
+            exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, ct.getHeader() + "; charset=" + charset);
         }else {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getContentType() + "; charset=" + charset);
+            exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, ct.getContentType() + "; charset=" + charset);
         }
     }
 
@@ -524,7 +510,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         }
         writer = null;
         responseState = ResponseState.NONE;
-        exchange.getResponseHeaders().clear();
+        exchange.responseHeaders().clear();
         exchange.setStatusCode(StatusCodes.OK);
         treatAsCommitted = false;
     }
@@ -535,7 +521,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             return;
         }
         this.locale = loc;
-        exchange.getResponseHeaders().put(Headers.CONTENT_LANGUAGE, loc.getLanguage() + "-" + loc.getCountry());
+        exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LANGUAGE, loc.getLanguage() + "-" + loc.getCountry());
         if (!charsetSet && writer == null) {
             final Map<String, String> localeCharsetMapping = servletContext.getDeployment().getDeploymentInfo().getLocaleCharsetMapping();
             // Match full language_country_variant first, then language_country,
@@ -551,7 +537,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             if (charset != null) {
                 this.charset = charset;
                 if (contentType != null) {
-                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
+                    exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, getContentType());
                 }
             }
         }
@@ -785,16 +771,16 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if(exchange.getProtocol() == Protocols.HTTP_1_0) {
             throw UndertowServletMessages.MESSAGES.trailersNotSupported("HTTP/1.0 request");
         } else if(exchange.getProtocol() == Protocols.HTTP_1_1) {
-            if(exchange.getResponseHeaders().contains(Headers.CONTENT_LENGTH)) {
+            if(exchange.responseHeaders().contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 throw UndertowServletMessages.MESSAGES.trailersNotSupported("not chunked");
             }
         }
         this.trailerSupplier = supplier;
         exchange.putAttachment(HttpAttachments.RESPONSE_TRAILER_SUPPLIER, () -> {
-            HeaderMap trailers = new HeaderMap();
+            HttpHeaders trailers = new DefaultHttpHeaders();
             Map<String, String> map = supplier.get();
             for(Map.Entry<String, String> e : map.entrySet()) {
-                trailers.put(new HttpString(e.getKey()), e.getValue());
+                trailers.set(e.getKey(), e.getValue());
             }
             return trailers;
         });

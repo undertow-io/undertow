@@ -30,7 +30,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.StoredResponseHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -57,7 +57,7 @@ public class AccessLogTestCase {
     private static final HttpHandler HELLO_HANDLER = new HttpHandler() {
         @Override
         public void handleRequest(final HttpServerExchange exchange) throws Exception {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
+            exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, "text/plain");
             exchange.getResponseSender().send("HelloResponse");
         }
     };

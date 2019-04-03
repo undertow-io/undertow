@@ -34,7 +34,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpAttachments;
 import io.undertow.util.StatusCodes;
 
@@ -68,7 +68,7 @@ public class PreChunkedResponseTransferCodingTestCase {
                         outputStream.close();
                         return;
                     }
-                    exchange.getResponseHeaders().put(Headers.TRANSFER_ENCODING, Headers.CHUNKED.toString());
+                    exchange.responseHeaders().set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderNames.CHUNKED);
                     exchange.putAttachment(HttpAttachments.PRE_CHUNKED_RESPONSE, true);
                     exchange.getResponseSender().send(chunkedMessage);
                 } catch (IOException e) {

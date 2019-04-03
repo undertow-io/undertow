@@ -33,7 +33,7 @@ import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.server.session.Session;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.Methods;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.Sessions;
@@ -154,7 +154,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
                 exchange.addDefaultResponseListener(new DefaultResponseListener() {
                     @Override
                     public boolean handleDefaultResponse(final HttpServerExchange exchange) {
-                        exchange.getResponseHeaders().put(Headers.LOCATION, location);
+                        exchange.responseHeaders().set(HttpHeaderNames.LOCATION, location);
                         exchange.setStatusCode(StatusCodes.FOUND);
                         exchange.endExchange();
                         return true;
@@ -197,6 +197,6 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     static void sendRedirect(final HttpServerExchange exchange, final String location) {
         // TODO - String concatenation to construct URLS is extremely error prone - switch to a URI which will better handle this.
         String loc = exchange.getRequestScheme() + "://" + exchange.getHostAndPort() + location;
-        exchange.getResponseHeaders().put(Headers.LOCATION, loc);
+        exchange.responseHeaders().set(HttpHeaderNames.LOCATION, loc);
     }
 }

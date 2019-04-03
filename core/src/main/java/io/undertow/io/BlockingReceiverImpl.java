@@ -27,7 +27,7 @@ import java.nio.charset.StandardCharsets;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -96,7 +96,7 @@ public class BlockingReceiverImpl implements Receiver {
             callback.handle(exchange, "");
             return;
         }
-        String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        String contentLengthString = exchange.requestHeaders().get(HttpHeaderNames.CONTENT_LENGTH);
         long contentLength;
         final ByteArrayOutputStream sb;
         if (contentLengthString != null) {
@@ -147,7 +147,7 @@ public class BlockingReceiverImpl implements Receiver {
             callback.handle(exchange, "", true);
             return;
         }
-        String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        String contentLengthString = exchange.requestHeaders().get(HttpHeaderNames.CONTENT_LENGTH);
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
@@ -197,7 +197,7 @@ public class BlockingReceiverImpl implements Receiver {
             callback.handle(exchange, EMPTY_BYTE_ARRAY);
             return;
         }
-        String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        String contentLengthString = exchange.requestHeaders().get(HttpHeaderNames.CONTENT_LENGTH);
         long contentLength;
         final ByteArrayOutputStream sb;
         if (contentLengthString != null) {
@@ -248,7 +248,7 @@ public class BlockingReceiverImpl implements Receiver {
             callback.handle(exchange, EMPTY_BYTE_ARRAY, true);
             return;
         }
-        String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        String contentLengthString = exchange.requestHeaders().get(HttpHeaderNames.CONTENT_LENGTH);
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);

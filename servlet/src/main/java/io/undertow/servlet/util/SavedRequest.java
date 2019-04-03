@@ -31,6 +31,8 @@ import java.util.Map;
 import javax.servlet.http.HttpSession;
 
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.UndertowLogger;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
@@ -39,7 +41,7 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 import io.undertow.util.UndertowOptions;
 
@@ -56,16 +58,14 @@ public class SavedRequest implements Serializable {
     private final int dataLength;
     private final HttpString method;
     private final String requestPath;
-    private final HashMap<HttpString, List<String>> headerMap = new HashMap<>();
+    private final HttpHeaders headerMap;
 
-    public SavedRequest(byte[] data, int dataLength, HttpString method, String requestPath, HeaderMap headerMap) {
+    public SavedRequest(byte[] data, int dataLength, HttpString method, String requestPath, HttpHeaders headerMap) {
         this.data = data;
         this.dataLength = dataLength;
         this.method = method;
         this.requestPath = requestPath;
-        for(HeaderValues val : headerMap) {
-            this.headerMap.put(val.getHeaderName(), new ArrayList<>(val));
-        }
+        this.headerMap = headerMap;
     }
 
     /**
@@ -121,16 +121,16 @@ public class SavedRequest implements Serializable {
             }
             //TODO: we should really be used pooled buffers
             //TODO: we should probably limit the number of saved requests at any given time
-            HeaderMap headers = new HeaderMap();
-            for (HeaderValues entry : exchange.getRequestHeaders()) {
-                if (entry.getHeaderName().equals(Headers.CONTENT_LENGTH) ||
-                        entry.getHeaderName().equals(Headers.TRANSFER_ENCODING) ||
-                        entry.getHeaderName().equals(Headers.CONNECTION)) {
+            HttpHeaders headers = new DefaultHttpHeaders();
+            for (Map.Entry<String, String> entry : exchange.requestHeaders()) {
+                if (entry.getKey().equals(HttpHeaderNames.CONTENT_LENGTH) ||
+                        entry.getKey().equals(HttpHeaderNames.TRANSFER_ENCODING) ||
+                        entry.getKey().equals(HttpHeaderNames.CONNECTION)) {
                     continue;
                 }
-                headers.putAll(entry.getHeaderName(), entry);
+                headers.set(entry.getKey(), exchange.requestHeaders().getAll(entry.getKey()));
             }
-            SavedRequest request = new SavedRequest(buffer, length, exchange.getRequestMethod(), exchange.getRelativePath(), exchange.getRequestHeaders());
+            SavedRequest request = new SavedRequest(buffer, length, exchange.getRequestMethod(), exchange.getRelativePath(), exchange.requestHeaders());
             final ServletRequestContext sc = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
             HttpSessionImpl session = sc.getCurrentServletContext().getSession(exchange, true);
             Session underlyingSession;
@@ -161,15 +161,15 @@ public class SavedRequest implements Serializable {
                     underlyingSession.removeAttribute(SESSION_KEY);
                     //clear the existing header map of everything except the connection header
                     //TODO: are there other headers we should preserve?
-                    Iterator<HeaderValues> headerIterator = exchange.getRequestHeaders().iterator();
+                    Iterator<Map.Entry<String, String>> headerIterator = exchange.requestHeaders().iterator();
                     while (headerIterator.hasNext()) {
-                        HeaderValues header = headerIterator.next();
-                        if(!header.getHeaderName().equals(Headers.CONNECTION)) {
+                        Map.Entry<String, String> header = headerIterator.next();
+                        if(!header.getKey().equals(HttpHeaderNames.CONNECTION)) {
                             headerIterator.remove();
                         }
                     }
-                    for(Map.Entry<HttpString, List<String>> header : request.headerMap.entrySet()) {
-                        exchange.getRequestHeaders().putAll(header.getKey(), header.getValue());
+                    for(Map.Entry<String, String> header : request.headerMap) {
+                        exchange.requestHeaders().add(header.getKey(), request.headerMap.getAll(header.getKey()));
                     }
                 }
             }

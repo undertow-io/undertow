@@ -39,7 +39,7 @@ import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 
@@ -65,7 +65,7 @@ public class FormDataParserTestCase {
                     while (it.hasNext()) {
                         String fd = it.next();
                         for (FormData.FormValue val : data.get(fd)) {
-                            exchange.getResponseHeaders().add(new HttpString("res"), fd + ":" + val.getValue());
+                            exchange.responseHeaders().add("res", fd + ":" + val.getValue());
                         }
                     }
                 } catch (IOException e) {
@@ -93,7 +93,7 @@ public class FormDataParserTestCase {
                         while (it.hasNext()) {
                             String fd = it.next();
                             for (FormData.FormValue val : data.get(fd)) {
-                                exchange.getResponseHeaders().add(new HttpString("res"), fd + ":" + val.getValue());
+                                exchange.responseHeaders().add("res", fd + ":" + val.getValue());
                             }
                         }
                     }
@@ -121,7 +121,7 @@ public class FormDataParserTestCase {
             final List<NameValuePair> data = new ArrayList<>();
             data.addAll(Arrays.asList(pairs));
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
-            post.setHeader(Headers.CONTENT_TYPE_STRING, FormEncodedDataDefinition.APPLICATION_X_WWW_FORM_URLENCODED);
+            post.setHeader(HttpHeaderNames.CONTENT_TYPE, FormEncodedDataDefinition.APPLICATION_X_WWW_FORM_URLENCODED);
             post.setEntity(new UrlEncodedFormEntity(data));
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());

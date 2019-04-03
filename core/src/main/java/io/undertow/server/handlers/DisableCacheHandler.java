@@ -8,7 +8,7 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 
 /**
  *
@@ -27,9 +27,9 @@ public class DisableCacheHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        exchange.getResponseHeaders().add(Headers.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
-        exchange.getResponseHeaders().add(Headers.PRAGMA, "no-cache");
-        exchange.getResponseHeaders().add(Headers.EXPIRES, "0");
+        exchange.responseHeaders().add(HttpHeaderNames.CACHE_CONTROL, "no-cache, no-store, must-revalidate");
+        exchange.responseHeaders().add(HttpHeaderNames.PRAGMA, "no-cache");
+        exchange.responseHeaders().add(HttpHeaderNames.EXPIRES, "0");
         next.handleRequest(exchange);
     }
 

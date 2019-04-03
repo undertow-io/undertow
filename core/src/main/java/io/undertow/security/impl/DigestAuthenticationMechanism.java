@@ -20,11 +20,11 @@ package io.undertow.security.impl;
 import static io.undertow.UndertowLogger.REQUEST_LOGGER;
 import static io.undertow.UndertowMessages.MESSAGES;
 import static io.undertow.security.impl.DigestAuthorizationToken.parseHeader;
-import static io.undertow.util.Headers.AUTHENTICATION_INFO;
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.DIGEST;
-import static io.undertow.util.Headers.NEXT_NONCE;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.HttpHeaderNames.AUTHENTICATION_INFO;
+import static io.undertow.util.HttpHeaderNames.AUTHORIZATION;
+import static io.undertow.util.HttpHeaderNames.DIGEST;
+import static io.undertow.util.HttpHeaderNames.NEXT_NONCE;
+import static io.undertow.util.HttpHeaderNames.WWW_AUTHENTICATE;
 import static io.undertow.util.StatusCodes.UNAUTHORIZED;
 
 import java.nio.charset.StandardCharsets;
@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
@@ -50,7 +51,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HexConverter;
 import io.undertow.util.StatusCodes;
 
@@ -150,7 +151,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
                                                        final SecurityContext securityContext) {
-        List<String> authHeaders = exchange.getRequestHeaders().get(AUTHORIZATION);
+        List<String> authHeaders = exchange.requestHeaders().getAll(AUTHORIZATION);
         if (authHeaders != null) {
             for (String current : authHeaders) {
                 if (current.startsWith(DIGEST_PREFIX)) {
@@ -449,26 +450,26 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         boolean stale = context == null ? false : context.isStale();
 
         StringBuilder rb = new StringBuilder(DIGEST_PREFIX);
-        rb.append(Headers.REALM.toString()).append("=\"").append(realmName).append("\",");
-        rb.append(Headers.DOMAIN.toString()).append("=\"").append(domain).append("\",");
+        rb.append(HttpHeaderNames.REALM.toString()).append("=\"").append(realmName).append("\",");
+        rb.append(HttpHeaderNames.DOMAIN.toString()).append("=\"").append(domain).append("\",");
         // based on security constraints.
-        rb.append(Headers.NONCE.toString()).append("=\"").append(nonceManager.nextNonce(null, exchange)).append("\",");
+        rb.append(HttpHeaderNames.NONCE.toString()).append("=\"").append(nonceManager.nextNonce(null, exchange)).append("\",");
         // Not currently using OPAQUE as it offers no integrity, used for session data leaves it vulnerable to
         // session fixation type issues as well.
-        rb.append(Headers.OPAQUE.toString()).append("=\"00000000000000000000000000000000\"");
+        rb.append(HttpHeaderNames.OPAQUE.toString()).append("=\"00000000000000000000000000000000\"");
         if (stale) {
             rb.append(",stale=true");
         }
         if (supportedAlgorithms.size() > 0) {
             // This header will need to be repeated once for each algorithm.
-            rb.append(",").append(Headers.ALGORITHM.toString()).append("=%s");
+            rb.append(",").append(HttpHeaderNames.ALGORITHM.toString()).append("=%s");
         }
         if (qopString != null) {
-            rb.append(",").append(Headers.QOP.toString()).append("=\"").append(qopString).append("\"");
+            rb.append(",").append(HttpHeaderNames.QOP.toString()).append("=\"").append(qopString).append("\"");
         }
 
         String theChallenge = rb.toString();
-        HeaderMap responseHeader = exchange.getResponseHeaders();
+        HttpHeaders responseHeader = exchange.responseHeaders();
         if (supportedAlgorithms.isEmpty()) {
             responseHeader.add(WWW_AUTHENTICATE, theChallenge);
         } else {
@@ -490,7 +491,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
             sb.append(NEXT_NONCE).append("=\"").append(nextNonce).append("\"");
             if (qop != null) {
                 Map<DigestAuthorizationToken, String> parsedHeader = context.getParsedHeader();
-                sb.append(",").append(Headers.QOP.toString()).append("=\"").append(qop.getToken()).append("\"");
+                sb.append(",").append(HttpHeaderNames.QOP.toString()).append("=\"").append(qop.getToken()).append("\"");
                 byte[] ha1 = context.getHa1();
                 byte[] ha2;
 
@@ -500,12 +501,12 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                     ha2 = createHA2AuthInt();
                 }
                 String rspauth = new String(createRFC2617RequestDigest(ha1, ha2, context), StandardCharsets.UTF_8);
-                sb.append(",").append(Headers.RESPONSE_AUTH.toString()).append("=\"").append(rspauth).append("\"");
-                sb.append(",").append(Headers.CNONCE.toString()).append("=\"").append(parsedHeader.get(DigestAuthorizationToken.CNONCE)).append("\"");
-                sb.append(",").append(Headers.NONCE_COUNT.toString()).append("=").append(parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT));
+                sb.append(",").append(HttpHeaderNames.RESPONSE_AUTH.toString()).append("=\"").append(rspauth).append("\"");
+                sb.append(",").append(HttpHeaderNames.CNONCE.toString()).append("=\"").append(parsedHeader.get(DigestAuthorizationToken.CNONCE)).append("\"");
+                sb.append(",").append(HttpHeaderNames.NONCE_COUNT.toString()).append("=").append(parsedHeader.get(DigestAuthorizationToken.NONCE_COUNT));
             }
 
-            HeaderMap responseHeader = exchange.getResponseHeaders();
+            HttpHeaders responseHeader = exchange.responseHeaders();
             responseHeader.add(AUTHENTICATION_INFO, sb.toString());
         }
 

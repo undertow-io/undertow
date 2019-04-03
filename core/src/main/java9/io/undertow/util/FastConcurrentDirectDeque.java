@@ -899,7 +899,7 @@ public class FastConcurrentDirectDeque<E>
     /**
      * @throws NoSuchElementException {@inheritDoc}
      */
-    public E getFirst() {
+    public E get() {
         return screenNullResult(peekFirst());
     }
 
@@ -999,7 +999,7 @@ public class FastConcurrentDirectDeque<E>
      * @throws NoSuchElementException {@inheritDoc}
      */
     public E element() {
-        return getFirst();
+        return get();
     }
 
     /**

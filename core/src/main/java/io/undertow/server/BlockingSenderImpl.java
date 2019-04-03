@@ -28,7 +28,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.IoUtils;
 
 /**
@@ -64,7 +64,7 @@ public class BlockingSenderImpl implements Sender {
                 return;
             }
             if (!exchange.isResponseStarted() && callback == IoCallback.END_EXCHANGE) {
-                if (responseContentLength == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
+                if (responseContentLength == -1 && !exchange.responseHeaders().contains(HttpHeaderNames.TRANSFER_ENCODING)) {
                     exchange.setResponseContentLength(buffer.readableBytes());
                 }
             }
@@ -87,7 +87,7 @@ public class BlockingSenderImpl implements Sender {
             return;
         }
         if (!exchange.isResponseStarted() && callback == IoCallback.END_EXCHANGE) {
-            if (responseContentLength == -1 && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
+            if (responseContentLength == -1 && !exchange.responseHeaders().contains(HttpHeaderNames.TRANSFER_ENCODING)) {
                 exchange.setResponseContentLength(bytes.length);
             }
         }

@@ -29,7 +29,7 @@ import io.undertow.server.DefaultResponseListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ResponseCodeHandler;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -62,8 +62,8 @@ public class SimpleErrorPageHandler implements HttpHandler {
             Set<Integer> codes = responseCodes;
             if (codes == null ? exchange.getStatusCode() >= StatusCodes.BAD_REQUEST : codes.contains(Integer.valueOf(exchange.getStatusCode()))) {
                 final String errorPage = "<html><head><title>Error</title></head><body>" + exchange.getStatusCode() + " - " + StatusCodes.getReason(exchange.getStatusCode()) + "</body></html>";
-                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + errorPage.length());
-                exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/html");
+                exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "" + errorPage.length());
+                exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, "text/html");
                 Sender sender = exchange.getResponseSender();
                 sender.send(errorPage);
                 return true;

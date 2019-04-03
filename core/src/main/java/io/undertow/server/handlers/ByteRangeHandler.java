@@ -28,7 +28,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ResponseCommitListener;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 
 /**
  * Handler for Range requests. This is a generic handler that can handle range requests to any resource
@@ -50,11 +50,11 @@ public class ByteRangeHandler implements HttpHandler {
     private static final ResponseCommitListener ACCEPT_RANGE_LISTENER = new ResponseCommitListener() {
         @Override
         public void beforeCommit(HttpServerExchange exchange) {
-            if (!exchange.getResponseHeaders().contains(Headers.ACCEPT_RANGES)) {
-                if (exchange.getResponseHeaders().contains(Headers.CONTENT_LENGTH)) {
-                    exchange.getResponseHeaders().put(Headers.ACCEPT_RANGES, "bytes");
+            if (!exchange.responseHeaders().contains(HttpHeaderNames.ACCEPT_RANGES)) {
+                if (exchange.responseHeaders().contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                    exchange.responseHeaders().set(HttpHeaderNames.ACCEPT_RANGES, "bytes");
                 } else {
-                    exchange.getResponseHeaders().put(Headers.ACCEPT_RANGES, "none");
+                    exchange.responseHeaders().set(HttpHeaderNames.ACCEPT_RANGES, "none");
                 }
             }
         }
@@ -77,7 +77,7 @@ public class ByteRangeHandler implements HttpHandler {
 //        if (sendAcceptRanges) {
 //            exchange.addResponseCommitListener(ACCEPT_RANGE_LISTENER);
 //        }
-//        final ByteRange range = ByteRange.parse(exchange.getRequestHeaders().getFirst(Headers.RANGE));
+//        final ByteRange range = ByteRange.parse(exchange.requestHeaders().get(Headers.RANGE));
 //        if (range != null && range.getRanges() == 1) {
 //            exchange.addResponseWrapper(new ConduitWrapper<StreamSinkConduit>() {
 //                @Override
@@ -85,18 +85,18 @@ public class ByteRangeHandler implements HttpHandler {
 //                    if(exchange.getStatusCode() != StatusCodes.OK ) {
 //                        return factory.create();
 //                    }
-//                    String length = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LENGTH);
+//                    String length = exchange.responseHeaders().get(Headers.CONTENT_LENGTH);
 //                    if (length == null) {
 //                        return factory.create();
 //                    }
 //                    long responseLength = Long.parseLong(length);
-//                    String lastModified = exchange.getResponseHeaders().getFirst(Headers.LAST_MODIFIED);
-//                    ByteRange.RangeResponseResult rangeResponse = range.getResponseResult(responseLength, exchange.getRequestHeaders().getFirst(Headers.IF_RANGE), lastModified == null ? null : DateUtils.parseDate(lastModified), exchange.getResponseHeaders().getFirst(Headers.ETAG));
+//                    String lastModified = exchange.responseHeaders().get(Headers.LAST_MODIFIED);
+//                    ByteRange.RangeResponseResult rangeResponse = range.getResponseResult(responseLength, exchange.requestHeaders().get(Headers.IF_RANGE), lastModified == null ? null : DateUtils.parseDate(lastModified), exchange.responseHeaders().get(Headers.ETAG));
 //                    if(rangeResponse != null){
 //                        long start = rangeResponse.getStart();
 //                        long end = rangeResponse.getEnd();
 //                        exchange.setStatusCode(rangeResponse.getStatusCode());
-//                        exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, rangeResponse.getContentRange());
+//                        exchange.responseHeaders().put(Headers.CONTENT_RANGE, rangeResponse.getContentRange());
 //                        exchange.setResponseContentLength(rangeResponse.getContentLength());
 //                        if(rangeResponse.getStatusCode() == StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE) {
 //                            return new HeadStreamSinkConduit(factory.create(), null, true);

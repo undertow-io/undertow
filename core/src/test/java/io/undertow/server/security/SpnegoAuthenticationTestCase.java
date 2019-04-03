@@ -19,9 +19,9 @@
 package io.undertow.server.security;
 
 import static io.undertow.server.security.KerberosKDCUtil.login;
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.NEGOTIATE;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.HttpHeaderNames.AUTHORIZATION;
+import static io.undertow.util.HttpHeaderNames.NEGOTIATE;
+import static io.undertow.util.HttpHeaderNames.WWW_AUTHENTICATE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -29,6 +29,7 @@ import static org.junit.Assert.fail;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
@@ -95,9 +96,11 @@ public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
         HttpResponse result = client.execute(get);
         assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+        Header[] values = result.getHeaders(WWW_AUTHENTICATE);
+        System.out.println(Arrays.toString(values));
+        System.out.println(Arrays.toString(result.getAllHeaders()));
         String header = getAuthHeader(NEGOTIATE, values);
-        assertEquals(NEGOTIATE.toString(), header);
+        assertEquals(NEGOTIATE, header);
         HttpClientUtils.readResponse(result);
 
         Subject clientSubject = login("jduke", "theduke".toCharArray());

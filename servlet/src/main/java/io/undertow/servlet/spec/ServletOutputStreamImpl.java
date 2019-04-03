@@ -36,7 +36,7 @@ import io.undertow.io.IoCallback;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.IoUtils;
 
 /**
@@ -222,11 +222,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
     public void close() throws IOException {
         if (anyAreSet(state, FLAG_CLOSED)) return;
         setFlags(FLAG_CLOSED);
-        if (anyAreClear(state, FLAG_WRITE_STARTED) && servletRequestContext.getOriginalResponse().getHeader(Headers.CONTENT_LENGTH_STRING) == null) {
+        if (anyAreClear(state, FLAG_WRITE_STARTED) && servletRequestContext.getOriginalResponse().getHeader(HttpHeaderNames.CONTENT_LENGTH) == null) {
             if (pooledBuffer == null) {
-                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
+                exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "0");
             } else {
-                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "" + pooledBuffer.readableBytes());
+                exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, "" + pooledBuffer.readableBytes());
             }
         }
         try {

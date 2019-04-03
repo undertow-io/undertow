@@ -1,27 +1,22 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2018 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package io.undertow.util;
 
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.net.URLDecoder;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Collections;
@@ -29,10 +24,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * NOTE: if you add a new header here you must also add it to {@link io.undertow.server.protocol.http.HttpRequestParser}
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
+@Deprecated
 public final class Headers {
 
     private Headers() {
@@ -298,24 +293,7 @@ public final class Headers {
      */
     @Deprecated
     public static String extractTokenFromHeader(final String header, final String key) {
-        int pos = header.indexOf(' ' + key + '=');
-        if (pos == -1) {
-            if(!header.startsWith(key + '=')) {
-                return null;
-            }
-            pos = 0;
-        } else {
-            pos++;
-        }
-        int end;
-        int start = pos + key.length() + 1;
-        for (end = start; end < header.length(); ++end) {
-            char c = header.charAt(end);
-            if (c == ' ' || c == '\t' || c == ';') {
-                break;
-            }
-        }
-        return header.substring(start, end);
+       return HttpHeaderNames.extractTokenFromHeader(header, key);
     }
 
     /**
@@ -330,67 +308,7 @@ public final class Headers {
      * @return The token, or null if it was not found
      */
     public static String extractQuotedValueFromHeader(final String header, final String key) {
-
-        int keypos = 0;
-        int pos = -1;
-        boolean whiteSpace = true;
-        boolean inQuotes = false;
-        for (int i = 0; i < header.length() - 1; ++i) { //-1 because we need room for the = at the end
-            //TODO: a more efficient matching algorithm
-            char c = header.charAt(i);
-            if (inQuotes) {
-                if (c == '"') {
-                    inQuotes = false;
-                }
-            } else {
-                if (key.charAt(keypos) == c && (whiteSpace || keypos > 0)) {
-                    keypos++;
-                    whiteSpace = false;
-                } else if (c == '"') {
-                    keypos = 0;
-                    inQuotes = true;
-                    whiteSpace = false;
-                } else {
-                    keypos = 0;
-                    whiteSpace = c == ' ' || c == ';' || c == '\t';
-                }
-                if (keypos == key.length()) {
-                    if (header.charAt(i + 1) == '=') {
-                        pos = i + 2;
-                        break;
-                    } else {
-                        keypos = 0;
-                    }
-                }
-            }
-
-        }
-        if (pos == -1) {
-            return null;
-        }
-
-        int end;
-        int start = pos;
-        if (header.charAt(start) == '"') {
-            start++;
-            for (end = start; end < header.length(); ++end) {
-                char c = header.charAt(end);
-                if (c == '"') {
-                    break;
-                }
-            }
-            return header.substring(start, end);
-
-        } else {
-            //no quotes
-            for (end = start; end < header.length(); ++end) {
-                char c = header.charAt(end);
-                if (c == ' ' || c == '\t' || c == ';') {
-                    break;
-                }
-            }
-            return header.substring(start, end);
-        }
+        return HttpHeaderNames.extractQuotedValueFromHeader(header, key);
     }
 
     /**
@@ -405,22 +323,6 @@ public final class Headers {
      * @return The token, or null if it was not found
      */
     public static String extractQuotedValueFromHeaderWithEncoding(final String header, final String key) {
-        String value = extractQuotedValueFromHeader(header, key);
-        if (value != null) {
-            return value;
-        }
-        value = extractQuotedValueFromHeader(header , key + "*");
-        if(value != null) {
-            int characterSetDelimiter = value.indexOf('\'');
-            int languageDelimiter = value.lastIndexOf('\'', characterSetDelimiter + 1);
-            String characterSet = value.substring(0, characterSetDelimiter);
-            try {
-                String fileNameURLEncoded = value.substring(languageDelimiter + 1);
-                return URLDecoder.decode(fileNameURLEncoded, characterSet);
-            } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return null;
+        return HttpHeaderNames.extractQuotedValueFromHeaderWithEncoding(header, key);
     }
 }

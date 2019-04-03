@@ -19,6 +19,7 @@ package io.undertow.servlet.handlers;
 
 import java.io.Serializable;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -33,7 +34,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.api.CrawlerSessionManagerConfig;
 import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 
 /**
  * Web crawlers can trigger the creation of many thousands of sessions as they
@@ -75,7 +76,7 @@ public class CrawlerSessionManagerHandler implements HttpHandler {
         if ( src.getOriginalRequest().getSession(false) == null) {
 
             // Is this a crawler - check the UA headers
-            HeaderValues userAgentHeaders = exchange.getRequestHeaders().get(Headers.USER_AGENT);
+            List<String> userAgentHeaders = exchange.requestHeaders().getAll(HttpHeaderNames.USER_AGENT);
             if (userAgentHeaders != null) {
                 Iterator<String> uaHeaders = userAgentHeaders.iterator();
                 String uaHeader = null;

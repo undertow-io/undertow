@@ -40,6 +40,7 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
+import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.HttpChunkedInput;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpResponseStatus;
@@ -59,8 +60,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.UndertowOptionMap;
 
 /**
@@ -173,7 +173,7 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         }
         discardMode = true;
         if (!currentExchange.isResponseStarted()) {
-            currentExchange.getResponseHeaders().put(Headers.CONNECTION, "close");
+            currentExchange.responseHeaders().set(HttpHeaderNames.CONNECTION, "close");
             currentExchange.setPersistent(false);
         }
         while (!contents.isEmpty()) {
@@ -523,12 +523,9 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
             return ctx.writeAndFlush(new DefaultHttpContent(data));
         } else {
             responseCommited = true;
-            DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(exchange.getStatusCode()));
-            for (HeaderValues i : exchange.getResponseHeaders()) {
-                response.headers().add(i.getHeaderName().toString(), i.getFirst());
-            }
-            if (!response.headers().contains(Headers.CONTENT_LENGTH_STRING)) {
-                response.headers().set(Headers.TRANSFER_ENCODING_STRING, "chunked");
+            DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(exchange.getStatusCode()), exchange.responseHeaders());
+            if (!response.headers().contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                response.headers().set(HttpHeaderNames.TRANSFER_ENCODING, "chunked");
             }
             if (data == null && flush) {
                 return ctx.writeAndFlush(response);
@@ -557,13 +554,10 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
                 resp = new DefaultLastHttpContent(data);
             }
         } else {
-            DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(exchange.getStatusCode()), data == null ? Unpooled.EMPTY_BUFFER : data);
-            for (HeaderValues i : exchange.getResponseHeaders()) {
-                response.headers().add(i.getHeaderName().toString(), i);
-            }
-            response.headers().remove(Headers.TRANSFER_ENCODING_STRING);
-            if (!response.headers().contains(Headers.CONTENT_LENGTH_STRING)) {
-                response.headers().add(Headers.CONTENT_LENGTH_STRING, data == null ? 0 : data.readableBytes());
+            DefaultFullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.valueOf(exchange.getStatusCode()), data == null ? Unpooled.EMPTY_BUFFER : data,exchange.responseHeaders(), EmptyHttpHeaders.INSTANCE);
+            response.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
+            if (!response.headers().contains(HttpHeaderNames.CONTENT_LENGTH)) {
+                response.headers().add(HttpHeaderNames.CONTENT_LENGTH, data == null ? 0 : data.readableBytes());
             }
             resp = response;
 

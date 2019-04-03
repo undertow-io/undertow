@@ -23,7 +23,7 @@ import java.net.URISyntaxException;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -49,7 +49,7 @@ public abstract class AbstractConfidentialityHandler implements HttpHandler {
                 URI redirectUri = getRedirectURI(exchange);
                 UndertowLogger.SECURITY_LOGGER.debugf("Redirecting request %s to %s to meet confidentiality requirements", exchange, redirectUri);
                 exchange.setStatusCode(StatusCodes.FOUND);
-                exchange.getResponseHeaders().put(Headers.LOCATION, redirectUri.toString());
+                exchange.responseHeaders().set(HttpHeaderNames.LOCATION, redirectUri.toString());
             } catch (Exception e) {
                 UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
                 exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);

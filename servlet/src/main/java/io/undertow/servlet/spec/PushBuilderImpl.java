@@ -21,18 +21,21 @@ package io.undertow.servlet.spec;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.http.HttpSession;
 import javax.servlet.http.PushBuilder;
 
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 
@@ -41,28 +44,28 @@ import io.undertow.util.Methods;
  */
 public class PushBuilderImpl implements PushBuilder {
 
-    private static final Set<HttpString> IGNORE;
-    private static final Set<HttpString> CONDITIONAL;
+    private static final Set<String> IGNORE;
+    private static final Set<String> CONDITIONAL;
     private static final Set<String> INVALID_METHOD;
     static {
-        final Set<HttpString> ignore = new HashSet<>();
-        ignore.add(Headers.IF_MATCH);
-        ignore.add(Headers.IF_NONE_MATCH);
-        ignore.add(Headers.IF_MODIFIED_SINCE);
-        ignore.add(Headers.IF_UNMODIFIED_SINCE);
-        ignore.add(Headers.IF_RANGE);
-        ignore.add(Headers.RANGE);
-        ignore.add(Headers.ACCEPT_RANGES);
-        ignore.add(Headers.EXPECT);
-        ignore.add(Headers.REFERER);
+        final Set<String> ignore = new HashSet<>();
+        ignore.add(HttpHeaderNames.IF_MATCH);
+        ignore.add(HttpHeaderNames.IF_NONE_MATCH);
+        ignore.add(HttpHeaderNames.IF_MODIFIED_SINCE);
+        ignore.add(HttpHeaderNames.IF_UNMODIFIED_SINCE);
+        ignore.add(HttpHeaderNames.IF_RANGE);
+        ignore.add(HttpHeaderNames.RANGE);
+        ignore.add(HttpHeaderNames.ACCEPT_RANGES);
+        ignore.add(HttpHeaderNames.EXPECT);
+        ignore.add(HttpHeaderNames.REFERER);
         IGNORE = Collections.unmodifiableSet(ignore);
 
-        final Set<HttpString> conditional = new HashSet<>();
-        conditional.add(Headers.IF_MATCH);
-        conditional.add(Headers.IF_NONE_MATCH);
-        conditional.add(Headers.IF_MODIFIED_SINCE);
-        conditional.add(Headers.IF_UNMODIFIED_SINCE);
-        conditional.add(Headers.IF_RANGE);
+        final Set<String> conditional = new HashSet<>();
+        conditional.add(HttpHeaderNames.IF_MATCH);
+        conditional.add(HttpHeaderNames.IF_NONE_MATCH);
+        conditional.add(HttpHeaderNames.IF_MODIFIED_SINCE);
+        conditional.add(HttpHeaderNames.IF_UNMODIFIED_SINCE);
+        conditional.add(HttpHeaderNames.IF_RANGE);
         CONDITIONAL = Collections.unmodifiableSet(conditional);
         final Set<String> invalid = new HashSet<>();
         invalid.add(Methods.OPTIONS_STRING);
@@ -79,7 +82,7 @@ public class PushBuilderImpl implements PushBuilder {
     private String method;
     private String queryString;
     private String sessionId;
-    private final HeaderMap headers = new HeaderMap();
+    private final HttpHeaders headers = new DefaultHttpHeaders();
     private String path;
 
     public PushBuilderImpl(HttpServletRequestImpl servletRequest) {
@@ -94,21 +97,22 @@ public class PushBuilderImpl implements PushBuilder {
             this.sessionId = servletRequest.getRequestedSessionId();
         }
 
-        for(HeaderValues header : servletRequest.getExchange().getRequestHeaders()) {
-            if(!IGNORE.contains(header.getHeaderName())) {
-                headers.addAll(header.getHeaderName(), header);
+        HttpHeaders headers = servletRequest.getExchange().requestHeaders();
+        for(Map.Entry<String, String> header : headers) {
+            if(!IGNORE.contains(header.getKey())) {
+                this.headers.add(header.getKey(), headers.getAll(header.getKey()));
             }
         }
         if(servletRequest.getQueryString() == null) {
-            this.headers.add(Headers.REFERER, servletRequest.getRequestURL().toString());
+            this.headers.add(HttpHeaderNames.REFERER, servletRequest.getRequestURL().toString());
         } else {
-            this.headers.add(Headers.REFERER, servletRequest.getRequestURL()  + "?" + servletRequest.getQueryString());
+            this.headers.add(HttpHeaderNames.REFERER, servletRequest.getRequestURL()  + "?" + servletRequest.getQueryString());
         }
         this.path = null;
         for(Map.Entry<String, Cookie> cookie : servletRequest.getExchange().getResponseCookies().entrySet()) {
             if(cookie.getValue().getMaxAge() != null && cookie.getValue().getMaxAge() <= 0) {
                 //remove cookie
-                HeaderValues existing = headers.get(Headers.COOKIE);
+                List<String> existing = this.headers.getAll(HttpHeaderNames.COOKIE);
                 if(existing != null) {
                     Iterator<String> it = existing.iterator();
                     while (it.hasNext()) {
@@ -119,7 +123,7 @@ public class PushBuilderImpl implements PushBuilder {
                     }
                 }
             } else if(!cookie.getKey().equals(servletRequest.getServletContext().getSessionCookieConfig().getName())){
-                headers.add(Headers.COOKIE, cookie.getKey() + "=" + cookie.getValue().getValue());
+                this.headers.add(HttpHeaderNames.COOKIE, cookie.getKey() + "=" + cookie.getValue().getValue());
             }
         }
 
@@ -152,13 +156,13 @@ public class PushBuilderImpl implements PushBuilder {
 
     @Override
     public PushBuilder setHeader(String name, String value) {
-        headers.put(new HttpString(name), value);
+        headers.set(name, value);
         return this;
     }
 
     @Override
     public PushBuilder addHeader(String name, String value) {
-        headers.add(new HttpString(name), value);
+        headers.add(name, value);
         return this;
     }
 
@@ -181,12 +185,12 @@ public class PushBuilderImpl implements PushBuilder {
         }
         ServerConnection con = servletRequest.getExchange().getConnection();
         if (con.isPushSupported()) {
-            HeaderMap newHeaders = new HeaderMap();
-            for (HeaderValues entry : headers) {
-                newHeaders.addAll(entry.getHeaderName(), entry);
+            HttpHeaders newHeaders = new DefaultHttpHeaders();
+            for (Map.Entry<String, String> entry : headers) {
+                newHeaders.add(entry.getKey(), headers.getAll(entry.getKey()));
             }
             if (sessionId != null) {
-                newHeaders.put(Headers.COOKIE, "JSESSIONID=" + sessionId); //TODO: do this properly, may be a different tracking method or a different cookie name
+                newHeaders.set(HttpHeaderNames.COOKIE, "JSESSIONID=" + sessionId); //TODO: do this properly, may be a different tracking method or a different cookie name
             }
             String path = this.path;
             if(!path.startsWith("/")) {
@@ -202,7 +206,7 @@ public class PushBuilderImpl implements PushBuilder {
             con.pushResource(path, new HttpString(method), newHeaders);
         }
         path = null;
-        for(HttpString h : CONDITIONAL) {
+        for(String h : CONDITIONAL) {
             headers.remove(h);
         }
     }
@@ -225,15 +229,15 @@ public class PushBuilderImpl implements PushBuilder {
     @Override
     public Set<String> getHeaderNames() {
         Set<String> names = new HashSet<>();
-        for(HeaderValues name : headers) {
-            names.add(name.getHeaderName().toString());
+        for(Map.Entry<String, String> name : headers) {
+            names.add(name.getKey());
         }
         return names;
     }
 
     @Override
     public String getHeader(String name) {
-        return headers.getFirst(name);
+        return headers.get(name);
     }
 
     @Override

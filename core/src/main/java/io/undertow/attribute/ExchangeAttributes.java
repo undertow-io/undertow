@@ -83,6 +83,10 @@ public class ExchangeAttributes {
         return new RequestHeaderAttribute(header);
     }
 
+    public static ExchangeAttribute requestHeader(final String header) {
+        return new RequestHeaderAttribute(header);
+    }
+
     public static ExchangeAttribute requestList() {
         return RequestLineAttribute.INSTANCE;
     }

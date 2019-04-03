@@ -18,8 +18,8 @@
 
 package io.undertow.websockets.security;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
+import static io.undertow.util.HttpHeaderNames.AUTHORIZATION;
+import static io.undertow.util.HttpHeaderNames.BASIC;
 
 import java.io.IOException;
 import java.net.URI;

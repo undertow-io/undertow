@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -27,6 +29,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
@@ -76,10 +79,10 @@ public class ChunkedRequestTrailersTestCase {
                     String m = HttpClientUtils.readResponse(inputStream);
                     Assert.assertEquals("abcdefghi", m);
 
-                    HeaderMap headers = exchange.getAttachment(HttpAttachments.REQUEST_TRAILERS);
-                    for (HeaderValues header : headers) {
-                        for (String val : header) {
-                            outputStream.write(header.getHeaderName().toString().getBytes());
+                    HttpHeaders headers = exchange.getAttachment(HttpAttachments.REQUEST_TRAILERS);
+                    for (Map.Entry<String, String> header : headers) {
+                        for (String val : headers.getAll(header.getKey())) {
+                            outputStream.write(header.getKey().getBytes(StandardCharsets.UTF_8));
                             outputStream.write(": ".getBytes());
                             outputStream.write(val.getBytes());
                             outputStream.write("\r\n".getBytes());

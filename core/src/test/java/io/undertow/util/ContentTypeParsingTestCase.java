@@ -32,15 +32,15 @@ public class ContentTypeParsingTestCase {
 
     @Test
     public void testCharsetParsing() {
-        Assert.assertEquals(null, Headers.extractQuotedValueFromHeader("text/html; other-data=\"charset=UTF-8\"", "charset"));
-        Assert.assertEquals(null, Headers.extractQuotedValueFromHeader("text/html;", "charset"));
-        Assert.assertEquals("UTF-8", Headers.extractQuotedValueFromHeader("text/html; charset=\"UTF-8\"", "charset"));
-        Assert.assertEquals("UTF-8", Headers.extractQuotedValueFromHeader("text/html; charset=UTF-8", "charset"));
-        Assert.assertEquals("UTF-8", Headers.extractQuotedValueFromHeader("text/html; charset=\"UTF-8\"; foo=bar", "charset"));
-        Assert.assertEquals("UTF-8", Headers.extractQuotedValueFromHeader("text/html; charset=UTF-8 foo=bar", "charset"));
-        Assert.assertEquals("UTF-8", Headers.extractQuotedValueFromHeader("text/html; badcharset=bad charset=UTF-8 foo=bar", "charset"));
-        Assert.assertEquals("UTF-8", Headers.extractQuotedValueFromHeader("text/html;charset=UTF-8", "charset"));
-        Assert.assertEquals("UTF-8", Headers.extractQuotedValueFromHeader("text/html;\tcharset=UTF-8", "charset"));
+        Assert.assertEquals(null, HttpHeaderNames.extractQuotedValueFromHeader("text/html; other-data=\"charset=UTF-8\"", "charset"));
+        Assert.assertEquals(null, HttpHeaderNames.extractQuotedValueFromHeader("text/html;", "charset"));
+        Assert.assertEquals("UTF-8", HttpHeaderNames.extractQuotedValueFromHeader("text/html; charset=\"UTF-8\"", "charset"));
+        Assert.assertEquals("UTF-8", HttpHeaderNames.extractQuotedValueFromHeader("text/html; charset=UTF-8", "charset"));
+        Assert.assertEquals("UTF-8", HttpHeaderNames.extractQuotedValueFromHeader("text/html; charset=\"UTF-8\"; foo=bar", "charset"));
+        Assert.assertEquals("UTF-8", HttpHeaderNames.extractQuotedValueFromHeader("text/html; charset=UTF-8 foo=bar", "charset"));
+        Assert.assertEquals("UTF-8", HttpHeaderNames.extractQuotedValueFromHeader("text/html; badcharset=bad charset=UTF-8 foo=bar", "charset"));
+        Assert.assertEquals("UTF-8", HttpHeaderNames.extractQuotedValueFromHeader("text/html;charset=UTF-8", "charset"));
+        Assert.assertEquals("UTF-8", HttpHeaderNames.extractQuotedValueFromHeader("text/html;\tcharset=UTF-8", "charset"));
     }
 
 }

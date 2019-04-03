@@ -50,7 +50,7 @@ public class NewlineInHeadersTestCase {
                 exchange.getRequestReceiver().receiveFullString(new Receiver.FullStringCallback() {
                     @Override
                     public void handle(HttpServerExchange exchange, String message) {
-                        exchange.getResponseHeaders().put(HttpString.tryFromString(ECHO), message);
+                        exchange.responseHeaders().set(ECHO, message);
                         exchange.getResponseSender().send(RESPONSE);
                     }
                 });

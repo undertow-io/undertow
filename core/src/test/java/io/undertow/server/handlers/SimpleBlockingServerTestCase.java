@@ -38,7 +38,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
 
@@ -133,7 +133,7 @@ public class SimpleBlockingServerTestCase {
                 HttpResponse result = client.execute(head);
                 Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                 Assert.assertEquals("", HttpClientUtils.readResponse(result));
-                Assert.assertEquals(message.length() + "", result.getFirstHeader(Headers.CONTENT_LENGTH_STRING).getValue());
+                Assert.assertEquals(message.length() + "", result.getFirstHeader(HttpHeaderNames.CONTENT_LENGTH).getValue());
             }
         } finally {
             client.getConnectionManager().shutdown();

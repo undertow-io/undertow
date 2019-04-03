@@ -35,7 +35,7 @@ public class MethodPredicate implements Predicate {
     MethodPredicate(String[] methods) {
         HttpString[] values = new HttpString[methods.length];
         for(int i = 0; i < methods.length; ++i) {
-            values[i] = HttpString.tryFromString(methods[i]);
+            values[i] = new HttpString(methods[i]);
         }
         this.methods = values;
     }

@@ -30,7 +30,7 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -62,7 +62,7 @@ public class RedirectHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.setStatusCode(StatusCodes.FOUND);
-        exchange.getResponseHeaders().put(Headers.LOCATION, attribute.readAttribute(exchange));
+        exchange.responseHeaders().set(HttpHeaderNames.LOCATION, attribute.readAttribute(exchange));
         exchange.endExchange();
     }
 

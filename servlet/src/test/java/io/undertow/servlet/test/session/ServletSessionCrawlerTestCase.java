@@ -45,7 +45,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -100,7 +100,7 @@ public class ServletSessionCrawlerTestCase {
         });
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b");
-            get.addHeader(Headers.USER_AGENT_STRING, "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)");
+            get.addHeader(HttpHeaderNames.USER_AGENT, "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);

@@ -17,9 +17,9 @@
  */
 package io.undertow.server.security;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static io.undertow.util.HttpHeaderNames.AUTHORIZATION;
+import static io.undertow.util.HttpHeaderNames.BASIC;
+import static io.undertow.util.HttpHeaderNames.WWW_AUTHENTICATE;
 import static org.junit.Assert.assertEquals;
 
 import java.util.Collections;

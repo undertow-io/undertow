@@ -27,7 +27,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.Methods;
 
 /**
@@ -46,7 +46,7 @@ public class HttpTraceHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         if(exchange.getRequestMethod().equals(Methods.TRACE)) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "message/http");
+            exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, "message/http");
             StringBuilder body = new StringBuilder("TRACE ");
             body.append(exchange.getRequestURI());
             if(!exchange.getQueryString().isEmpty()) {
@@ -56,9 +56,9 @@ public class HttpTraceHandler implements HttpHandler {
             body.append(' ');
             body.append(exchange.getProtocol().toString());
             body.append("\r\n");
-            for(HeaderValues header : exchange.getRequestHeaders()) {
-                for(String value : header) {
-                    body.append(header.getHeaderName());
+            for(Map.Entry<String, String> header : exchange.requestHeaders()) {
+                for(String value : exchange.requestHeaders().getAll(header.getKey())) {
+                    body.append(header.getKey());
                     body.append(": ");
                     body.append(value);
                     body.append("\r\n");

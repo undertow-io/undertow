@@ -26,6 +26,7 @@ import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -177,7 +178,7 @@ public class DateUtils {
      * @return
      */
     public static boolean handleIfModifiedSince(final HttpServerExchange exchange, final Date lastModified) {
-        return handleIfModifiedSince(exchange.getRequestHeaders().getFirst(Headers.IF_MODIFIED_SINCE), lastModified);
+        return handleIfModifiedSince(exchange.requestHeaders().get(HttpHeaderNames.IF_MODIFIED_SINCE), lastModified);
     }
 
     /**
@@ -209,7 +210,7 @@ public class DateUtils {
      * @return
      */
     public static boolean handleIfUnmodifiedSince(final HttpServerExchange exchange, final Date lastModified) {
-        return handleIfUnmodifiedSince(exchange.getRequestHeaders().getFirst(Headers.IF_UNMODIFIED_SINCE), lastModified);
+        return handleIfUnmodifiedSince(exchange.requestHeaders().get(HttpHeaderNames.IF_UNMODIFIED_SINCE), lastModified);
     }
 
     /**
@@ -234,10 +235,10 @@ public class DateUtils {
     }
 
     public static void addDateHeaderIfRequired(HttpServerExchange exchange) {
-        HeaderMap responseHeaders = exchange.getResponseHeaders();
-        if (exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALWAYS_SET_DATE, true) && !responseHeaders.contains(Headers.DATE)) {
+        HttpHeaders responseHeaders = exchange.responseHeaders();
+        if (exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALWAYS_SET_DATE, true) && !responseHeaders.contains(HttpHeaderNames.DATE)) {
             String dateString = getCurrentDateTime(exchange);
-            responseHeaders.put(Headers.DATE, dateString);
+            responseHeaders.set(HttpHeaderNames.DATE, dateString);
         }
     }
 

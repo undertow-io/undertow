@@ -60,7 +60,7 @@ import io.undertow.servlet.handlers.ServletDebugPageHandler;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.CanonicalPathUtils;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.IoUtils;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
@@ -411,7 +411,7 @@ public class AsyncContextImpl implements AsyncContext {
         if (!dispatched) {
             if(!exchange.isResponseStarted()) {
                 exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                exchange.getResponseHeaders().clear();
+                exchange.responseHeaders().clear();
             }
             servletRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, error);
             if(!exchange.isResponseStarted()) {
@@ -516,7 +516,7 @@ public class AsyncContextImpl implements AsyncContext {
                                             if (!getResponse().isCommitted()) {
                                                 //close the connection on timeout
                                                 exchange.setPersistent(false);
-                                                exchange.getResponseHeaders().put(Headers.CONNECTION, Headers.CLOSE.toString());
+                                                exchange.responseHeaders().set(HttpHeaderNames.CONNECTION, HttpHeaderNames.CLOSE.toString());
                                                 Connectors.executeRootHandler(new HttpHandler() {
                                                     @Override
                                                     public void handleRequest(HttpServerExchange exchange) throws Exception {

@@ -47,7 +47,7 @@ import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.MimeMappings;
@@ -150,7 +150,7 @@ public class ResourceHandler implements HttpHandler {
         } else {
             if (KNOWN_METHODS.contains(exchange.getRequestMethod())) {
                 exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
-                exchange.getResponseHeaders().add(Headers.ALLOW,
+                exchange.responseHeaders().add(HttpHeaderNames.ALLOW,
                         String.join(", ", Methods.GET_STRING, Methods.HEAD_STRING, Methods.POST_STRING));
             } else {
                 exchange.setStatusCode(StatusCodes.NOT_IMPLEMENTED);
@@ -176,10 +176,10 @@ public class ResourceHandler implements HttpHandler {
 
         //we set caching headers before we try and serve from the cache
         if (cachable && cacheTime != null) {
-            exchange.getResponseHeaders().put(Headers.CACHE_CONTROL, "public, max-age=" + cacheTime);
+            exchange.responseHeaders().set(HttpHeaderNames.CACHE_CONTROL, "public, max-age=" + cacheTime);
             long date = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(cacheTime);
             String dateHeader = DateUtils.toDateString(new Date(date));
-            exchange.getResponseHeaders().put(Headers.EXPIRES, dateHeader);
+            exchange.responseHeaders().set(HttpHeaderNames.EXPIRES, dateHeader);
         }
 
         if (cache != null && cachable) {
@@ -235,7 +235,7 @@ public class ResourceHandler implements HttpHandler {
                         }
                     } else if (!exchange.getRequestPath().endsWith("/")) {
                         exchange.setStatusCode(StatusCodes.FOUND);
-                        exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
+                        exchange.responseHeaders().set(HttpHeaderNames.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
                         exchange.endExchange();
                         return;
                     }
@@ -263,23 +263,23 @@ public class ResourceHandler implements HttpHandler {
                 }
                 Long contentLength = resource.getContentLength();
 
-                if (contentLength != null && !exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
+                if (contentLength != null && !exchange.responseHeaders().contains(HttpHeaderNames.TRANSFER_ENCODING)) {
                     exchange.setResponseContentLength(contentLength);
                 }
                 ByteRange.RangeResponseResult rangeResponse = null;
                 long start = -1, end = -1;
                 if (resource instanceof RangeAwareResource && ((RangeAwareResource) resource).isRangeSupported() && contentLength != null) {
 
-                    exchange.getResponseHeaders().put(Headers.ACCEPT_RANGES, "bytes");
+                    exchange.responseHeaders().set(HttpHeaderNames.ACCEPT_RANGES, "bytes");
                     //TODO: figure out what to do with the content encoded resource manager
-                    ByteRange range = ByteRange.parse(exchange.getRequestHeaders().getFirst(Headers.RANGE));
+                    ByteRange range = ByteRange.parse(exchange.requestHeaders().get(HttpHeaderNames.RANGE));
                     if (range != null && range.getRanges() == 1 && resource.getContentLength() != null) {
-                        rangeResponse = range.getResponseResult(resource.getContentLength(), exchange.getRequestHeaders().getFirst(Headers.IF_RANGE), resource.getLastModified(), resource.getETag() == null ? null : resource.getETag().getTag());
+                        rangeResponse = range.getResponseResult(resource.getContentLength(), exchange.requestHeaders().get(HttpHeaderNames.IF_RANGE), resource.getLastModified(), resource.getETag() == null ? null : resource.getETag().getTag());
                         if (rangeResponse != null) {
                             start = rangeResponse.getStart();
                             end = rangeResponse.getEnd();
                             exchange.setStatusCode(rangeResponse.getStatusCode());
-                            exchange.getResponseHeaders().put(Headers.CONTENT_RANGE, rangeResponse.getContentRange());
+                            exchange.responseHeaders().set(HttpHeaderNames.CONTENT_RANGE, rangeResponse.getContentRange());
                             long length = rangeResponse.getContentLength();
                             exchange.setResponseContentLength(length);
                             if (rangeResponse.getStatusCode() == StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE) {
@@ -290,19 +290,19 @@ public class ResourceHandler implements HttpHandler {
                 }
                 //we are going to proceed. Set the appropriate headers
 
-                if (!exchange.getResponseHeaders().contains(Headers.CONTENT_TYPE)) {
+                if (!exchange.responseHeaders().contains(HttpHeaderNames.CONTENT_TYPE)) {
                     final String contentType = resource.getContentType(mimeMappings);
                     if (contentType != null) {
-                        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, contentType);
+                        exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, contentType);
                     } else {
-                        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/octet-stream");
+                        exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, "application/octet-stream");
                     }
                 }
                 if (lastModified != null) {
-                    exchange.getResponseHeaders().put(Headers.LAST_MODIFIED, resource.getLastModifiedString());
+                    exchange.responseHeaders().set(HttpHeaderNames.LAST_MODIFIED, resource.getLastModifiedString());
                 }
                 if (etag != null) {
-                    exchange.getResponseHeaders().put(Headers.ETAG, etag.toString());
+                    exchange.responseHeaders().set(HttpHeaderNames.ETAG, etag.toString());
                 }
 
                 if (!sendContent) {
@@ -322,8 +322,8 @@ public class ResourceHandler implements HttpHandler {
     }
 
     private void clearCacheHeaders(HttpServerExchange exchange) {
-        exchange.getResponseHeaders().remove(Headers.CACHE_CONTROL);
-        exchange.getResponseHeaders().remove(Headers.EXPIRES);
+        exchange.responseHeaders().remove(HttpHeaderNames.CACHE_CONTROL);
+        exchange.responseHeaders().remove(HttpHeaderNames.EXPIRES);
     }
 
     private Resource getIndexFiles(HttpServerExchange exchange, ResourceSupplier resourceManager, final String base, List<String> possible) throws IOException {

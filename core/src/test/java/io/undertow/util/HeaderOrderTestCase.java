@@ -46,7 +46,7 @@ public class HeaderOrderTestCase {
         final Field orderIntField = HttpString.class.getDeclaredField("orderInt");
         orderIntField.setAccessible(true);
 
-        Field[] fields = Headers.class.getDeclaredFields();
+        Field[] fields = HttpHeaderNames.class.getDeclaredFields();
         final List<HttpString> headers = new ArrayList<>();
         for(final Field field : fields) {
             // skip transient field for jacoco

@@ -18,7 +18,7 @@
 package io.undertow.server.handlers;
 
 import static io.undertow.attribute.ExchangeAttributes.requestHeader;
-import static io.undertow.util.Headers.USER_AGENT;
+import static io.undertow.util.HttpHeaderNames.USER_AGENT;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 

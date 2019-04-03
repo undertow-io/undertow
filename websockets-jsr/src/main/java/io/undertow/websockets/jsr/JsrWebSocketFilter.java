@@ -40,14 +40,13 @@ import javax.websocket.CloseReason;
 import javax.websocket.server.ServerContainer;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.undertow.UndertowLogger;
 import io.undertow.server.session.Session;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.PathTemplateMatcher;
 import io.undertow.util.StatusCodes;
 import io.undertow.websockets.jsr.handshake.Handshake;
@@ -91,7 +90,7 @@ public class JsrWebSocketFilter implements Filter {
     public void doFilter(final ServletRequest request, final ServletResponse response, final FilterChain chain) throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse resp = (HttpServletResponse) response;
-        if (req.getHeader(Headers.UPGRADE_STRING) != null) {
+        if (req.getHeader(HttpHeaderNames.UPGRADE) != null) {
             final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(req, resp);
 
             String path;
@@ -126,7 +125,7 @@ public class JsrWebSocketFilter implements Filter {
                     handshaker.handshake(facade, new Consumer<ChannelHandlerContext>() {
                         @Override
                         public void accept(ChannelHandlerContext context) {
-                            UndertowSession channel = callback.connected(context, selected.getConfig(), facade, src.getOriginalResponse().getHeader(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL.toString()));
+                            UndertowSession channel = callback.connected(context, selected.getConfig(), facade, src.getOriginalResponse().getHeader(io.netty.handler.codec.http.HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL.toString()));
                             if (session != null && channel != null) {
                                 final Session underlying;
                                 if (System.getSecurityManager() == null) {

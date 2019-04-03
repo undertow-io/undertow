@@ -28,7 +28,7 @@ import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.Methods;
 
 /**
@@ -121,7 +121,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
     }
 
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        final List<String> upgradeStrings = exchange.getRequestHeaders().get(Headers.UPGRADE);
+        final List<String> upgradeStrings = exchange.requestHeaders().getAll(HttpHeaderNames.UPGRADE);
         if (upgradeStrings != null && exchange.getRequestMethod().equals(Methods.GET)) {
             for (String string : upgradeStrings) {
                 final List<Holder> holders = handlers.get(string);

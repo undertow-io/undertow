@@ -22,9 +22,10 @@ import java.io.UnsupportedEncodingException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.util.FlexBase64;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 import io.undertow.util.MalformedMessageException;
 
@@ -68,7 +69,7 @@ public class MultipartParser {
     private static final byte[] BOUNDARY_PREFIX = {CR, LF, DASH, DASH};
 
     public interface PartHandler {
-        void beginPart(final HeaderMap headers);
+        void beginPart(final HttpHeaders headers);
 
         void data(final ByteBuf buffer) throws IOException;
 
@@ -99,7 +100,7 @@ public class MultipartParser {
         private int subState = Integer.MAX_VALUE; // used for preamble parsing
         private ByteArrayOutputStream currentString = null;
         private String currentHeaderName = null;
-        private HeaderMap headers;
+        private HttpHeaders headers;
         private Encoding encodingHandler;
 
 
@@ -173,7 +174,7 @@ public class MultipartParser {
                     if (b == LF) {
                         subState = 0;
                         state = 1;//preamble is done
-                        headers = new HeaderMap();
+                        headers = new DefaultHttpHeaders();
                         return;
                     } else {
                         subState = -1;
@@ -209,7 +210,7 @@ public class MultipartParser {
                     subState = 0;
                     partHandler.beginPart(headers);
                     //select the appropriate encoding
-                    String encoding = headers.getFirst(Headers.CONTENT_TRANSFER_ENCODING);
+                    String encoding = headers.get(HttpHeaderNames.CONTENT_TRANSFER_ENCODING);
                     if (encoding == null) {
                         encodingHandler = new IdentityEncoding();
                     } else if (encoding.equalsIgnoreCase("base64")) {
@@ -238,7 +239,7 @@ public class MultipartParser {
                 final byte b = buffer.readByte();
                 if (subState == 2) {
                     if (b == CR) { //end of headers section
-                        headers.put(new HttpString(currentHeaderName.trim()), new String(currentString.toByteArray(), requestCharset).trim());
+                        headers.set(currentHeaderName.trim(), new String(currentString.toByteArray(), requestCharset).trim());
                         //set state for headerName to verify end of headers section
                         state = 1;
                         subState = 1; //CR already encountered
@@ -248,7 +249,7 @@ public class MultipartParser {
                         currentString.write(b);
                         subState = 0;
                     } else { //next header name
-                        headers.put(new HttpString(currentHeaderName.trim()), new String(currentString.toByteArray(), requestCharset).trim());
+                        headers.set(currentHeaderName.trim(), new String(currentString.toByteArray(), requestCharset).trim());
                         //set state for headerName to collect next header's name
                         state = 1;
                         subState = 0;
@@ -318,7 +319,7 @@ public class MultipartParser {
                         //ok, we have our data
                         subState = 0;
                         state = 1;
-                        headers = new HeaderMap();
+                        headers = new DefaultHttpHeaders();
                         return;
                     } else if (b == DASH) {
                         subState = -3;

@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
@@ -38,7 +37,7 @@ import io.undertow.server.ServerConnection;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.UndertowOptionMap;
 import io.undertow.util.UndertowOptions;
@@ -79,7 +78,7 @@ public class FixedLengthRequestTestCase {
                     inputStream.close();
                     outputStream.close();
                 } catch (IOException e) {
-                    exchange.getResponseHeaders().put(Headers.CONNECTION, "close");
+                    exchange.responseHeaders().set(HttpHeaderNames.CONNECTION, "close");
                     exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     throw new RuntimeException(e);
                 }
@@ -117,7 +116,7 @@ public class FixedLengthRequestTestCase {
         connection = null;
         UndertowOptionMap existing = DefaultServer.getUndertowOptions();
         HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
-        post.setHeader(HttpHeaders.CONNECTION, "close");
+        post.setHeader(org.apache.http.HttpHeaders.CONNECTION, "close");
         TestHttpClient client = new TestHttpClient();
         try {
             generateMessage(1);

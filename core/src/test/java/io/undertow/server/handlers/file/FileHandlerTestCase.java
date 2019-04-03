@@ -44,7 +44,7 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -91,7 +91,7 @@ public class FileHandlerTestCase {
             HttpHead get = new HttpHead(DefaultServer.getDefaultServerURL() + "/path/page.html");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(Long.toString(Files.size(file)), result.getHeaders(Headers.CONTENT_LENGTH_STRING)[0].getValue());
+            Assert.assertEquals(Long.toString(Files.size(file)), result.getHeaders(HttpHeaderNames.CONTENT_LENGTH)[0].getValue());
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/html", headers[0].getValue());
 

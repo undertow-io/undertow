@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
@@ -35,7 +37,7 @@ import io.undertow.server.session.SessionConfig;
 import io.undertow.server.session.SessionManager;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.Methods;
 
 /**
@@ -76,9 +78,9 @@ public class LearningPushHandler implements HttpHandler {
         }
 
         doPush(exchange, fullPath);
-        String referrer = exchange.getRequestHeaders().getFirst(Headers.REFERER);
+        String referrer = exchange.requestHeaders().get(HttpHeaderNames.REFERER);
         if (referrer != null) {
-            String accept = exchange.getRequestHeaders().getFirst(Headers.ACCEPT);
+            String accept = exchange.requestHeaders().get(HttpHeaderNames.ACCEPT);
             if (accept == null || !accept.contains("text/html")) {
                 //if accept contains text/html it generally means the user has clicked
                 //a link to move to a new page, and is not a resource load for the current page
@@ -157,8 +159,8 @@ public class LearningPushHandler implements HttpHandler {
         public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
             if (exchange.getStatusCode() == 200 && referer != null) {
                 //for now only cache 200 response codes
-                String lmString = exchange.getResponseHeaders().getFirst(Headers.LAST_MODIFIED);
-                String etag = exchange.getResponseHeaders().getFirst(Headers.ETAG);
+                String lmString = exchange.responseHeaders().get(HttpHeaderNames.LAST_MODIFIED);
+                String etag = exchange.responseHeaders().get(HttpHeaderNames.ETAG);
                 long lastModified = -1;
                 if(lmString != null) {
                     Date dt = DateUtils.parseDate(lmString);
@@ -175,7 +177,7 @@ public class LearningPushHandler implements HttpHandler {
                         }
                     }
                 }
-                pushes.put(fullPath, new PushedRequest(new HeaderMap(), requestPath, etag, lastModified));
+                pushes.put(fullPath, new PushedRequest(new DefaultHttpHeaders(), requestPath, etag, lastModified));
             }
 
             nextListener.proceed();
@@ -183,19 +185,19 @@ public class LearningPushHandler implements HttpHandler {
     }
 
     private static class PushedRequest {
-        private final HeaderMap requestHeaders;
+        private final HttpHeaders requestHeaders;
         private final String path;
         private final String etag;
         private final long lastModified;
 
-        private PushedRequest(HeaderMap requestHeaders, String path, String etag, long lastModified) {
+        private PushedRequest(HttpHeaders requestHeaders, String path, String etag, long lastModified) {
             this.requestHeaders = requestHeaders;
             this.path = path;
             this.etag = etag;
             this.lastModified = lastModified;
         }
 
-        public HeaderMap getRequestHeaders() {
+        public HttpHeaders getRequestHeaders() {
             return requestHeaders;
         }
 

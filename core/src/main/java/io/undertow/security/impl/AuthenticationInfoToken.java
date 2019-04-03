@@ -23,7 +23,7 @@ import java.util.Map;
 
 import io.undertow.util.HeaderToken;
 import io.undertow.util.HeaderTokenParser;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 
 /**
@@ -32,11 +32,11 @@ import io.undertow.util.HttpString;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 public enum AuthenticationInfoToken implements HeaderToken {
-    NEXT_NONCE(Headers.NEXT_NONCE, true),
-    MESSAGE_QOP(Headers.QOP, true),
-    RESPONSE_AUTH(Headers.RESPONSE_AUTH, true),
-    CNONCE(Headers.CNONCE, true),
-    NONCE_COUNT(Headers.NONCE_COUNT, false);
+    NEXT_NONCE(HttpHeaderNames.NEXT_NONCE, true),
+    MESSAGE_QOP(HttpHeaderNames.QOP, true),
+    RESPONSE_AUTH(HttpHeaderNames.RESPONSE_AUTH, true),
+    CNONCE(HttpHeaderNames.CNONCE, true),
+    NONCE_COUNT(HttpHeaderNames.NONCE_COUNT, false);
 
     private static final HeaderTokenParser<AuthenticationInfoToken> TOKEN_PARSER;
 
@@ -53,8 +53,8 @@ public enum AuthenticationInfoToken implements HeaderToken {
     private final String name;
     private final boolean quoted;
 
-    AuthenticationInfoToken(final HttpString name, final boolean quoted) {
-        this.name = name.toString();
+    AuthenticationInfoToken(final String name, final boolean quoted) {
+        this.name = name;
         this.quoted = quoted;
     }
 

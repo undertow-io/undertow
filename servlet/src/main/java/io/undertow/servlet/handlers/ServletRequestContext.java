@@ -37,7 +37,7 @@ import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 
 /**
  * All the information that servlet needs to attach to the exchange.
@@ -242,7 +242,7 @@ public class ServletRequestContext {
             if(!address.isLoopbackAddress()) {
                 return false;
             }
-            return !getExchange().getRequestHeaders().contains(Headers.X_FORWARDED_FOR);
+            return !getExchange().requestHeaders().contains(HttpHeaderNames.X_FORWARDED_FOR);
         }
 
     }

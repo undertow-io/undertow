@@ -26,6 +26,8 @@ import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.MultipartConfigElement;
@@ -34,7 +36,7 @@ import javax.servlet.http.Part;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 
 /**
@@ -71,7 +73,7 @@ public class PartImpl implements Part {
 
     @Override
     public String getContentType() {
-        return formValue.getHeaders().getFirst(Headers.CONTENT_TYPE);
+        return formValue.getHeaders().get(HttpHeaderNames.CONTENT_TYPE);
     }
 
     @Override
@@ -125,20 +127,20 @@ public class PartImpl implements Part {
 
     @Override
     public String getHeader(final String name) {
-        return formValue.getHeaders().getFirst(new HttpString(name));
+        return formValue.getHeaders().get(name);
     }
 
     @Override
     public Collection<String> getHeaders(final String name) {
-        HeaderValues values = formValue.getHeaders().get(new HttpString(name));
+        List<String> values = formValue.getHeaders().getAll(name);
         return values == null ? Collections.<String>emptyList() : values;
     }
 
     @Override
     public Collection<String> getHeaderNames() {
         final Set<String> ret = new HashSet<>();
-        for (HttpString i : formValue.getHeaders().getHeaderNames()) {
-            ret.add(i.toString());
+        for (Map.Entry<String, String> i : formValue.getHeaders()) {
+            ret.add(i.getKey());
         }
         return ret;
     }

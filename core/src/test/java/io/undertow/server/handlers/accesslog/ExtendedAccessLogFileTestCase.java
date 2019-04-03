@@ -74,7 +74,7 @@ public class ExtendedAccessLogFileTestCase {
     private static final HttpHandler HELLO_HANDLER = new HttpHandler() {
         @Override
         public void handleRequest(final HttpServerExchange exchange) throws Exception {
-            exchange.getResponseHeaders().put(new HttpString("aa"), "bb");
+            exchange.responseHeaders().set("aa", "bb");
             exchange.getResponseSender().send("Hello");
         }
     };

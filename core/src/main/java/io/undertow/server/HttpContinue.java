@@ -20,9 +20,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
@@ -61,12 +62,12 @@ public class HttpContinue {
             return false;
         }
 
-        HeaderMap requestHeaders = exchange.getRequestHeaders();
+        HttpHeaders requestHeaders = exchange.requestHeaders();
         return requiresContinueResponse(requestHeaders);
     }
 
-    public static boolean requiresContinueResponse(HeaderMap requestHeaders) {
-        List<String> expect = requestHeaders.get(Headers.EXPECT);
+    public static boolean requiresContinueResponse(HttpHeaders requestHeaders) {
+        List<String> expect = requestHeaders.getAll(HttpHeaderNames.EXPECT);
         if (expect != null) {
             for (String header : expect) {
                 if (header.equalsIgnoreCase(CONTINUE)) {

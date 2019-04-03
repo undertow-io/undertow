@@ -31,6 +31,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.util.concurrent.EventExecutor;
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
@@ -226,7 +227,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      * @param requestHeaders The request headers
      * @return <code>true</code> if the server attempted the push, false otherwise
      */
-    public boolean pushResource(final String path, final HttpString method, final HeaderMap requestHeaders) {
+    public boolean pushResource(final String path, final HttpString method, final HttpHeaders requestHeaders) {
         return false;
     }
 

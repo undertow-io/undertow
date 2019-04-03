@@ -40,6 +40,7 @@ import org.jboss.logging.Logger;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.util.concurrent.EventExecutor;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -53,7 +54,7 @@ import io.undertow.util.AbstractAttachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Cookies;
 import io.undertow.util.HeaderMap;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 import io.undertow.util.IoUtils;
 import io.undertow.util.Methods;
@@ -111,8 +112,8 @@ public final class HttpServerExchange extends AbstractAttachable {
     };
 
     private final ServerConnection connection;
-    private final HeaderMap requestHeaders;
-    private final HeaderMap responseHeaders;
+    private final io.netty.handler.codec.http.HttpHeaders requestHeaders;
+    private final io.netty.handler.codec.http.HttpHeaders responseHeaders;
 
     private int exchangeCompletionListenersCount = 0;
     private ExchangeCompletionListener[] exchangeCompleteListeners;
@@ -289,15 +290,19 @@ public final class HttpServerExchange extends AbstractAttachable {
     private InetSocketAddress destinationAddress;
 
 
-    public HttpServerExchange(final ServerConnection connection, long maxEntitySize) {
-        this(connection, new HeaderMap(), new HeaderMap(), maxEntitySize);
+    public HttpServerExchange(final ServerConnection connection, long maxEntitySize, io.netty.handler.codec.http.HttpHeaders requestHeaders) {
+        this(connection, requestHeaders, new DefaultHttpHeaders(), maxEntitySize);
     }
 
     public HttpServerExchange(final ServerConnection connection) {
-        this(connection, 0);
+        this(connection, 0, new DefaultHttpHeaders());
     }
 
-    public HttpServerExchange(final ServerConnection connection, final HeaderMap requestHeaders, final HeaderMap responseHeaders, long maxEntitySize) {
+    public HttpServerExchange(final ServerConnection connection, io.netty.handler.codec.http.HttpHeaders requestHeaders) {
+        this(connection, 0, requestHeaders);
+    }
+
+    public HttpServerExchange(final ServerConnection connection, final io.netty.handler.codec.http.HttpHeaders requestHeaders, final io.netty.handler.codec.http.HttpHeaders responseHeaders, long maxEntitySize) {
         this.connection = connection;
         this.maxEntitySize = maxEntitySize;
         this.requestHeaders = requestHeaders;
@@ -534,14 +539,14 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return The character encoding
      */
     public String getResponseCharset() {
-        HeaderMap headers = responseHeaders;
+        io.netty.handler.codec.http.HttpHeaders headers = responseHeaders;
         return extractCharset(headers);
     }
 
-    private String extractCharset(HeaderMap headers) {
-        String contentType = headers.getFirst(Headers.CONTENT_TYPE);
+    private String extractCharset(io.netty.handler.codec.http.HttpHeaders headers) {
+        String contentType = headers.get(HttpHeaderNames.CONTENT_TYPE);
         if (contentType != null) {
-            String value = Headers.extractQuotedValueFromHeader(contentType, "charset");
+            String value = HttpHeaderNames.extractQuotedValueFromHeader(contentType, "charset");
             if (value != null) {
                 return value;
             }
@@ -560,7 +565,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return The host part of the destination address
      */
     public String getHostName() {
-        String host = requestHeaders.getFirst(Headers.HOST);
+        String host = requestHeaders.get(HttpHeaderNames.HOST);
         if (host == null) {
             host = getDestinationAddress().getHostString();
         } else {
@@ -583,7 +588,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return The host and port part of the destination address
      */
     public String getHostAndPort() {
-        String host = requestHeaders.getFirst(Headers.HOST);
+        String host = requestHeaders.get(HttpHeaderNames.HOST);
         if (host == null) {
             InetSocketAddress address = getDestinationAddress();
             host = NetworkUtils.formatPossibleIpv6Address(address.getHostString());
@@ -603,7 +608,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return The port part of the destination address
      */
     public int getHostPort() {
-        String host = requestHeaders.getFirst(Headers.HOST);
+        String host = requestHeaders.get(HttpHeaderNames.HOST);
         if (host != null) {
             //for ipv6 addresses we make sure we take out the first part, which can have multiple occurrences of :
             final int colonIndex;
@@ -883,12 +888,22 @@ public final class HttpServerExchange extends AbstractAttachable {
         return this;
     }
 
+
     /**
      * Get the request headers.
      *
      * @return the request headers
      */
+    @Deprecated
     public HeaderMap getRequestHeaders() {
+        return new HeaderMap(requestHeaders);
+    }
+    /**
+     * Get the request headers.
+     *
+     * @return the request headers
+     */
+    public io.netty.handler.codec.http.HttpHeaders requestHeaders() {
         return requestHeaders;
     }
 
@@ -896,7 +911,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return The content length of the request, or <code>-1</code> if it has not been set
      */
     public long getRequestContentLength() {
-        String contentLengthString = requestHeaders.getFirst(Headers.CONTENT_LENGTH);
+        String contentLengthString = requestHeaders.get(HttpHeaderNames.CONTENT_LENGTH);
         if (contentLengthString == null) {
             return -1;
         }
@@ -908,7 +923,16 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @return the response headers
      */
+    @Deprecated
     public HeaderMap getResponseHeaders() {
+        return new HeaderMap(responseHeaders);
+    }
+    /**
+     * Get the response headers.
+     *
+     * @return the response headers
+     */
+    public io.netty.handler.codec.http.HttpHeaders responseHeaders() {
         return responseHeaders;
     }
 
@@ -916,7 +940,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return The content length of the response, or <code>-1</code> if it has not been set
      */
     public long getResponseContentLength() {
-        String contentLengthString = responseHeaders.getFirst(Headers.CONTENT_LENGTH);
+        String contentLengthString = responseHeaders.get(HttpHeaderNames.CONTENT_LENGTH);
         if (contentLengthString == null) {
             return -1;
         }
@@ -930,9 +954,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public HttpServerExchange setResponseContentLength(long length) {
         if (length == -1) {
-            responseHeaders.remove(Headers.CONTENT_LENGTH);
+            responseHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
         } else {
-            responseHeaders.put(Headers.CONTENT_LENGTH, Long.toString(length));
+            responseHeaders.set(HttpHeaderNames.CONTENT_LENGTH, Long.toString(length));
         }
         return this;
     }
@@ -994,7 +1018,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             requestCookies = Cookies.parseRequestCookies(
                     getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, 200),
                     getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false),
-                    requestHeaders.get(Headers.COOKIE));
+                    requestHeaders.getAll(HttpHeaderNames.COOKIE));
         }
         return requestCookies;
     }
@@ -1538,13 +1562,13 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (!connection.isUpgradeSupported()) {
             throw UndertowMessages.MESSAGES.upgradeNotSupported();
         }
-        if(!getRequestHeaders().contains(Headers.UPGRADE)) {
+        if(!requestHeaders().contains(HttpHeaderNames.UPGRADE)) {
             throw UndertowMessages.MESSAGES.notAnUpgradeRequest();
         }
         UndertowLogger.REQUEST_LOGGER.debugf("Upgrading request %s", this);
         connection.setUpgradeListener(listener);
         setStatusCode(StatusCodes.SWITCHING_PROTOCOLS);
-        getResponseHeaders().put(Headers.CONNECTION, Headers.UPGRADE_STRING);
+        responseHeaders().get(HttpHeaderNames.CONNECTION, HttpHeaderNames.UPGRADE);
         return this;
     }
 
@@ -1564,9 +1588,9 @@ public final class HttpServerExchange extends AbstractAttachable {
         UndertowLogger.REQUEST_LOGGER.debugf("Upgrading request %s", this);
         connection.setUpgradeListener(listener);
         setStatusCode(StatusCodes.SWITCHING_PROTOCOLS);
-        final HeaderMap headers = getResponseHeaders();
-        headers.put(Headers.UPGRADE, productName);
-        headers.put(Headers.CONNECTION, Headers.UPGRADE_STRING);
+        final io.netty.handler.codec.http.HttpHeaders headers = responseHeaders();
+        headers.set(HttpHeaderNames.UPGRADE, productName);
+        headers.set(HttpHeaderNames.CONNECTION, HttpHeaderNames.UPGRADE);
         return this;
     }
 

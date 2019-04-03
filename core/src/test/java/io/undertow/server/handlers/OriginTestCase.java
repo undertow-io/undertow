@@ -29,7 +29,7 @@ import org.junit.runner.RunWith;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -63,29 +63,29 @@ public class OriginTestCase {
             HttpClientUtils.readResponse(result);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            get.setHeader(Headers.ORIGIN_STRING, "http://www.mysite.com:80");
+            get.setHeader(HttpHeaderNames.ORIGIN, "http://www.mysite.com:80");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            get.setHeader(Headers.ORIGIN_STRING, "http://www.mysite.com:80");
-            get.setHeader(Headers.ORIGIN_STRING, "http://mysite.com:80");
+            get.setHeader(HttpHeaderNames.ORIGIN, "http://www.mysite.com:80");
+            get.setHeader(HttpHeaderNames.ORIGIN, "http://mysite.com:80");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            get.setHeader(Headers.ORIGIN_STRING, "http://www.mysite.com:80");
-            get.setHeader(Headers.ORIGIN_STRING, "bogus");
+            get.setHeader(HttpHeaderNames.ORIGIN, "http://www.mysite.com:80");
+            get.setHeader(HttpHeaderNames.ORIGIN, "bogus");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            get.setHeader(Headers.ORIGIN_STRING, "http://www.mysite.com:80");
-            get.setHeader(Headers.ORIGIN_STRING, "bogus");
+            get.setHeader(HttpHeaderNames.ORIGIN, "http://www.mysite.com:80");
+            get.setHeader(HttpHeaderNames.ORIGIN, "bogus");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);

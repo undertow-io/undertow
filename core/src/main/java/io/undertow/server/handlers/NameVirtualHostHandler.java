@@ -25,7 +25,7 @@ import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 
 /**
  * A {@link HttpHandler} that implements virtual hosts based on the <code>Host:</code> http header
@@ -40,7 +40,7 @@ public class NameVirtualHostHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        final String hostHeader = exchange.getRequestHeaders().getFirst(Headers.HOST);
+        final String hostHeader = exchange.requestHeaders().get(HttpHeaderNames.HOST);
         if (hostHeader != null) {
             String host;
             if (hostHeader.contains(":")) { //header can be in host:port format

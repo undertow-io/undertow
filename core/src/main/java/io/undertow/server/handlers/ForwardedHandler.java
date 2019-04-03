@@ -5,6 +5,7 @@ import static io.undertow.UndertowMessages.MESSAGES;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -15,7 +16,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.NetworkUtils;
 
 /**
@@ -41,7 +42,7 @@ public class ForwardedHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        HeaderValues forwarded = exchange.getRequestHeaders().get(Headers.FORWARDED);
+        List<String> forwarded = exchange.requestHeaders().getAll(HttpHeaderNames.FORWARDED);
         if (forwarded != null) {
             Map<Token, String> values = new HashMap<>();
             for (String val : forwarded) {
@@ -53,7 +54,7 @@ public class ForwardedHandler implements HttpHandler {
             String forVal = values.get(Token.FOR);
 
             if (host != null) {
-                exchange.getRequestHeaders().put(Headers.HOST, host);
+                exchange.requestHeaders().set(HttpHeaderNames.HOST, host);
                 exchange.setDestinationAddress(InetSocketAddress.createUnresolved(exchange.getHostName(), exchange.getHostPort()));
             } else if (by != null) {
                 //we only use 'by' if the host is null

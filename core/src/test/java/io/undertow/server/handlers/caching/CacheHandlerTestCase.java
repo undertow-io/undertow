@@ -36,7 +36,7 @@ import io.undertow.server.handlers.cache.ResponseCache;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -61,7 +61,7 @@ public class CacheHandlerTestCase {
                 final ResponseCache cache = exchange.getAttachment(ResponseCache.ATTACHMENT_KEY);
                 if(!cache.tryServeResponse()) {
                     final String data = "Response " + responseCount.incrementAndGet();
-                    exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, data.length() + "");
+                    exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, data.length() + "");
                     exchange.getResponseSender().send(data);
                 }
             }

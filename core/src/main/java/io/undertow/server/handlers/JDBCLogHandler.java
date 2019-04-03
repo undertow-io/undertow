@@ -45,7 +45,7 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 
 public class JDBCLogHandler implements HttpHandler, Runnable {
 
@@ -146,10 +146,10 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
         jdbcLogAttribute.status = exchange.getStatusCode();
 
         if (jdbcLogAttribute.pattern.equals("combined")) {
-            jdbcLogAttribute.virtualHost = exchange.getRequestHeaders().getFirst(Headers.HOST);
+            jdbcLogAttribute.virtualHost = exchange.requestHeaders().get(HttpHeaderNames.HOST);
             jdbcLogAttribute.method = exchange.getRequestMethod().toString();
-            jdbcLogAttribute.referer = exchange.getRequestHeaders().getFirst(Headers.REFERER);
-            jdbcLogAttribute.userAgent = exchange.getRequestHeaders().getFirst(Headers.USER_AGENT);
+            jdbcLogAttribute.referer = exchange.requestHeaders().get(HttpHeaderNames.REFERER);
+            jdbcLogAttribute.userAgent = exchange.requestHeaders().get(HttpHeaderNames.USER_AGENT);
         }
 
         this.pendingMessages.add(jdbcLogAttribute);

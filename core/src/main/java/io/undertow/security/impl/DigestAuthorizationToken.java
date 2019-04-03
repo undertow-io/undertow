@@ -23,7 +23,7 @@ import java.util.Map;
 
 import io.undertow.util.HeaderToken;
 import io.undertow.util.HeaderTokenParser;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 
 /**
@@ -33,17 +33,17 @@ import io.undertow.util.HttpString;
  */
 public enum DigestAuthorizationToken implements HeaderToken {
 
-    USERNAME(Headers.USERNAME, true),
-    REALM(Headers.REALM, true),
-    NONCE(Headers.NONCE, true),
-    DIGEST_URI(Headers.URI, true),
-    RESPONSE(Headers.RESPONSE, true),
-    ALGORITHM(Headers.ALGORITHM, true),
-    CNONCE(Headers.CNONCE, true),
-    OPAQUE(Headers.OPAQUE, true),
-    MESSAGE_QOP(Headers.QOP, true),
-    NONCE_COUNT(Headers.NONCE_COUNT, false),
-    AUTH_PARAM(Headers.AUTH_PARAM, false);
+    USERNAME(HttpHeaderNames.USERNAME, true),
+    REALM(HttpHeaderNames.REALM, true),
+    NONCE(HttpHeaderNames.NONCE, true),
+    DIGEST_URI(HttpHeaderNames.URI, true),
+    RESPONSE(HttpHeaderNames.RESPONSE, true),
+    ALGORITHM(HttpHeaderNames.ALGORITHM, true),
+    CNONCE(HttpHeaderNames.CNONCE, true),
+    OPAQUE(HttpHeaderNames.OPAQUE, true),
+    MESSAGE_QOP(HttpHeaderNames.QOP, true),
+    NONCE_COUNT(HttpHeaderNames.NONCE_COUNT, false),
+    AUTH_PARAM(HttpHeaderNames.AUTH_PARAM, false);
 
     private static final HeaderTokenParser<DigestAuthorizationToken> TOKEN_PARSER;
 
@@ -60,8 +60,8 @@ public enum DigestAuthorizationToken implements HeaderToken {
     private final String name;
     private final boolean quoted;
 
-    DigestAuthorizationToken(final HttpString name, final boolean quoted) {
-        this.name = name.toString();
+    DigestAuthorizationToken(final String name, final boolean quoted) {
+        this.name = name;
         this.quoted = quoted;
     }
 

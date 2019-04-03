@@ -18,8 +18,9 @@
 
 package io.undertow.attribute;
 
+import java.util.List;
+
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpString;
 
 /**
@@ -30,19 +31,23 @@ import io.undertow.util.HttpString;
 public class RequestHeaderAttribute implements ExchangeAttribute {
 
 
-    private final HttpString requestHeader;
+    private final String requestHeader;
 
     public RequestHeaderAttribute(final HttpString requestHeader) {
+        this.requestHeader = requestHeader.toString();
+    }
+
+    public RequestHeaderAttribute(final String requestHeader) {
         this.requestHeader = requestHeader;
     }
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        HeaderValues header = exchange.getRequestHeaders().get(requestHeader);
-        if (header == null) {
+        List<String> header = exchange.requestHeaders().getAll(requestHeader);
+        if (header.isEmpty()) {
             return null;
-        } else if(header.size() == 1) {
-            return header.getFirst();
+        } else if (header.size() == 1) {
+            return header.get(0);
         }
         StringBuilder sb = new StringBuilder();
         sb.append("[");
@@ -58,7 +63,11 @@ public class RequestHeaderAttribute implements ExchangeAttribute {
 
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
-        exchange.getRequestHeaders().put(requestHeader, newValue);
+        if(newValue == null) {
+            exchange.requestHeaders().remove(requestHeader);
+        } else {
+            exchange.requestHeaders().set(requestHeader, newValue);
+        }
     }
 
     public static final class Builder implements ExchangeAttributeBuilder {
@@ -71,7 +80,7 @@ public class RequestHeaderAttribute implements ExchangeAttribute {
         @Override
         public ExchangeAttribute build(final String token) {
             if (token.startsWith("%{i,") && token.endsWith("}")) {
-                final HttpString headerName = HttpString.tryFromString(token.substring(4, token.length() - 1));
+                final String headerName = token.substring(4, token.length() - 1);
                 return new RequestHeaderAttribute(headerName);
             }
             return null;

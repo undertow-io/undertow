@@ -18,9 +18,9 @@
 
 package io.undertow.server.handlers;
 
-import static io.undertow.util.Headers.SSL_CIPHER;
-import static io.undertow.util.Headers.SSL_CLIENT_CERT;
-import static io.undertow.util.Headers.SSL_SESSION_ID;
+import static io.undertow.util.HttpHeaderNames.SSL_CIPHER;
+import static io.undertow.util.HttpHeaderNames.SSL_CLIENT_CERT;
+import static io.undertow.util.HttpHeaderNames.SSL_SESSION_ID;
 
 import java.util.Collections;
 import java.util.Map;
@@ -28,6 +28,7 @@ import java.util.Set;
 
 import javax.security.cert.CertificateException;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.UndertowLogger;
 import io.undertow.server.BasicSSLSessionInfo;
 import io.undertow.server.ExchangeCompletionListener;
@@ -78,10 +79,10 @@ public class SSLHeaderHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        HeaderMap requestHeaders = exchange.getRequestHeaders();
-        final String sessionId = requestHeaders.getFirst(SSL_SESSION_ID);
-        final String cipher = requestHeaders.getFirst(SSL_CIPHER);
-        String clientCert = requestHeaders.getFirst(SSL_CLIENT_CERT);
+        HttpHeaders requestHeaders = exchange.requestHeaders();
+        final String sessionId = requestHeaders.get(SSL_SESSION_ID);
+        final String cipher = requestHeaders.get(SSL_CIPHER);
+        String clientCert = requestHeaders.get(SSL_CLIENT_CERT);
         //the proxy client replaces \n with ' '
         if (clientCert != null && clientCert.length() > 28) {
             StringBuilder sb = new StringBuilder(clientCert.length() + 1);

@@ -29,8 +29,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.UndertowMessages;
-import io.undertow.util.HeaderMap;
 
 /**
  * Representation of form data.
@@ -67,7 +67,7 @@ public final class FormData implements Iterable<String> {
         return values.get(name);
     }
 
-    public void add(String name, byte[] value, String fileName, HeaderMap headers) {
+    public void add(String name, byte[] value, String fileName, HttpHeaders headers) {
         Deque<FormValue> values = this.values.get(name);
         if (values == null) {
             this.values.put(name, values = new ArrayDeque<>(1));
@@ -82,7 +82,7 @@ public final class FormData implements Iterable<String> {
         add(name, value, null);
     }
 
-    public void add(String name, String value, final HeaderMap headers) {
+    public void add(String name, String value, final HttpHeaders headers) {
         Deque<FormValue> values = this.values.get(name);
         if (values == null) {
             this.values.put(name, values = new ArrayDeque<>(1));
@@ -93,7 +93,7 @@ public final class FormData implements Iterable<String> {
         }
     }
 
-    public void add(String name, Path value, String fileName, final HeaderMap headers) {
+    public void add(String name, Path value, String fileName, final HttpHeaders headers) {
         Deque<FormValue> values = this.values.get(name);
         if (values == null) {
             this.values.put(name, values = new ArrayDeque<>(1));
@@ -107,7 +107,7 @@ public final class FormData implements Iterable<String> {
         }
     }
 
-    public void put(String name, String value, final HeaderMap headers) {
+    public void put(String name, String value, final HttpHeaders headers) {
         Deque<FormValue> values = new ArrayDeque<>(1);
         Deque<FormValue> old = this.values.put(name, values);
         if (old != null) {
@@ -197,7 +197,7 @@ public final class FormData implements Iterable<String> {
         /**
          * @return The headers that were present in the multipart request, or null if this was not a multipart request
          */
-        HeaderMap getHeaders();
+        HttpHeaders getHeaders();
 
 
     }
@@ -267,24 +267,24 @@ public final class FormData implements Iterable<String> {
 
         private final String value;
         private final String fileName;
-        private final HeaderMap headers;
+        private final HttpHeaders headers;
         private final FileItem fileItem;
 
-        FormValueImpl(String value, HeaderMap headers) {
+        FormValueImpl(String value, HttpHeaders headers) {
             this.value = value;
             this.headers = headers;
             this.fileName = null;
             this.fileItem = null;
         }
 
-        FormValueImpl(Path file, final String fileName, HeaderMap headers) {
+        FormValueImpl(Path file, final String fileName, HttpHeaders headers) {
             this.fileItem = new FileItem(file);
             this.headers = headers;
             this.fileName = fileName;
             this.value = null;
         }
 
-        FormValueImpl(byte[] data, String fileName, HeaderMap headers) {
+        FormValueImpl(byte[] data, String fileName, HttpHeaders headers) {
             this.fileItem = new FileItem(data);
             this.fileName = fileName;
             this.headers = headers;
@@ -335,7 +335,7 @@ public final class FormData implements Iterable<String> {
         }
 
         @Override
-        public HeaderMap getHeaders() {
+        public HttpHeaders getHeaders() {
             return headers;
         }
 

@@ -24,9 +24,11 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.category.UnitTest;
-import io.undertow.util.Headers;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 
 /**
@@ -39,7 +41,7 @@ public class PredicateParsingTestCase {
     public void testPredicateParser() {
         Predicate predicate = PredicateParser.parse("path[foo]", PredicateParsingTestCase.class.getClassLoader());
         Assert.assertTrue(predicate instanceof PathMatchPredicate);
-        HttpServerExchange e = new HttpServerExchange(null);
+        HttpServerExchange e = new HttpServerExchange(null, new DefaultHttpHeaders());
         e.setRelativePath("/foo");
         Assert.assertTrue(predicate.resolve(e));
         e.setRelativePath("/bob");
@@ -53,7 +55,7 @@ public class PredicateParsingTestCase {
                 "true and not path[foo] or not path[foo] and false"}) {
             try {
                 predicate = PredicateParser.parse(string, PredicateParsingTestCase.class.getClassLoader());
-                e = new HttpServerExchange(null);
+                e = new HttpServerExchange(null, new DefaultHttpHeaders());
                 e.setRelativePath("/foo");
                 Assert.assertFalse(predicate.resolve(e));
                 e.setRelativePath("/bob");
@@ -68,17 +70,17 @@ public class PredicateParsingTestCase {
     public void testPredicateContextVariable() {
         Predicate predicate = PredicateParser.parse("regex[pattern=\"/publicdb/(.*?)/.*\", value=\"%R\", full-match=false] and equals[%{i,username}, ${1}]", PredicateParsingTestCase.class.getClassLoader());
 
-        HttpServerExchange e = new HttpServerExchange(null);
+        HttpServerExchange e = new HttpServerExchange(null, new DefaultHttpHeaders());
         e.setRelativePath("/publicdb/foo/bar");
         Assert.assertFalse(predicate.resolve(e));
-        e.getRequestHeaders().add(new HttpString("username"), "foo");
+        e.requestHeaders().add("username", "foo");
         Assert.assertTrue(predicate.resolve(e));
     }
 
     @Test
     public void testRegularExpressionsWithPredicateContext() {
         Predicate predicate = PredicateParser.parse("regex[pattern=a* , value=%{RELATIVE_PATH}] and equals[{$0, aaa}]", PredicateParsingTestCase.class.getClassLoader());
-        HttpServerExchange e = new HttpServerExchange(null);
+        HttpServerExchange e = new HttpServerExchange(null, new DefaultHttpHeaders());
         e.putAttachment(Predicate.PREDICATE_CONTEXT, new HashMap<String, Object>());
         e.setRelativePath("aaab");
         Assert.assertTrue(predicate.resolve(e));
@@ -105,9 +107,9 @@ public class PredicateParsingTestCase {
         }) {
             try {
                 predicate = PredicateParser.parse(string, PredicateParsingTestCase.class.getClassLoader());
-                HttpServerExchange e = new HttpServerExchange(null);
+                HttpServerExchange e = new HttpServerExchange(null, new DefaultHttpHeaders());
                 Assert.assertFalse(predicate.resolve(e));
-                e.getRequestHeaders().add(Headers.CONTENT_TYPE, "text");
+                e.requestHeaders().add(HttpHeaderNames.CONTENT_TYPE, "text");
                 Assert.assertTrue(predicate.resolve(e));
             } catch (Throwable ex) {
                 throw new RuntimeException("String " + string, ex);
@@ -118,9 +120,9 @@ public class PredicateParsingTestCase {
     @Test
     public void testDefaultArrayValue() {
         Predicate predicate = PredicateParser.parse("equals[%{i,Content-Type},\"text/plain\"]", PredicateParsingTestCase.class.getClassLoader());
-        HttpServerExchange e = new HttpServerExchange(null);
+        HttpServerExchange e = new HttpServerExchange(null, new DefaultHttpHeaders());
         Assert.assertFalse(predicate.resolve(e));
-        e.getRequestHeaders().add(Headers.CONTENT_TYPE, "text/plain");
+        e.requestHeaders().add(HttpHeaderNames.CONTENT_TYPE, "text/plain");
         Assert.assertTrue(predicate.resolve(e));
     }
 
@@ -133,10 +135,10 @@ public class PredicateParsingTestCase {
     private void expect(String string, boolean result1, boolean result2) {
         try {
             Predicate predicate = PredicateParser.parse(string, PredicateParsingTestCase.class.getClassLoader());
-            HttpServerExchange e = new HttpServerExchange(null);
-            e.getRequestHeaders().add(Headers.TRAILER, "a");
+            HttpServerExchange e = new HttpServerExchange(null, new DefaultHttpHeaders());
+            e.requestHeaders().add(HttpHeaderNames.TRAILER, "a");
             Assert.assertEquals(result1, predicate.resolve(e));
-            e.getRequestHeaders().add(Headers.CONTENT_LENGTH, "a");
+            e.requestHeaders().add(HttpHeaderNames.CONTENT_LENGTH, "a");
             Assert.assertEquals(result2, predicate.resolve(e));
         } catch (Throwable ex) {
             throw new RuntimeException("String " + string, ex);
