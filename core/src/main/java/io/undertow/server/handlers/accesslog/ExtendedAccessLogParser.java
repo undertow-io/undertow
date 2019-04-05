@@ -54,7 +54,6 @@ import io.undertow.attribute.SecureExchangeAttribute;
 import io.undertow.attribute.SubstituteEmptyWrapper;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.HttpString;
 
 /**
  * Parser that transforms an extended access log format string into a
@@ -354,7 +353,7 @@ public class ExtendedAccessLogParser {
                 UndertowLogger.ROOT_LOGGER.extendedAccessLogMissingClosing();
                 return null;
             }
-            return new QuotingExchangeAttribute(new RequestHeaderAttribute(new HttpString(parameter)));
+            return new QuotingExchangeAttribute(new RequestHeaderAttribute(parameter));
         }
         UndertowLogger.ROOT_LOGGER.extendedAccessLogCannotDecode(tokenizer.getRemains());
         return null;
@@ -375,7 +374,7 @@ public class ExtendedAccessLogParser {
                 UndertowLogger.ROOT_LOGGER.extendedAccessLogMissingClosing();
                 return null;
             }
-            return new QuotingExchangeAttribute(new ResponseHeaderAttribute(new HttpString(parameter)));
+            return new QuotingExchangeAttribute(new ResponseHeaderAttribute(parameter));
         }
         UndertowLogger.ROOT_LOGGER.extendedAccessLogCannotDecode(tokenizer.getRemains());
         return null;

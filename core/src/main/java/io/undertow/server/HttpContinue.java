@@ -22,10 +22,8 @@ import java.util.Set;
 
 import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.HttpString;
-import io.undertow.util.Protocols;
+import io.undertow.util.HttpProtocolNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -38,12 +36,12 @@ import io.undertow.util.StatusCodes;
  */
 public class HttpContinue {
 
-    private static final Set<HttpString> COMPATIBLE_PROTOCOLS;
+    private static final Set<String> COMPATIBLE_PROTOCOLS;
 
     static {
-        Set<HttpString> compat = new HashSet<>();
-        compat.add(Protocols.HTTP_1_1);
-        compat.add(Protocols.HTTP_2_0);
+        Set<String> compat = new HashSet<>();
+        compat.add(HttpProtocolNames.HTTP_1_1);
+        compat.add(HttpProtocolNames.HTTP_2_0);
         COMPATIBLE_PROTOCOLS = Collections.unmodifiableSet(compat);
     }
 
@@ -58,7 +56,7 @@ public class HttpContinue {
      * @return <code>true</code> if the server needs to send a continue response
      */
     public static boolean requiresContinueResponse(final HttpServerExchange exchange) {
-        if (!COMPATIBLE_PROTOCOLS.contains(exchange.getProtocol()) || exchange.isResponseStarted() || !exchange.getConnection().isContinueResponseSupported() || exchange.getAttachment(ALREADY_SENT) != null) {
+        if (!COMPATIBLE_PROTOCOLS.contains(exchange.protocol()) || exchange.isResponseStarted() || !exchange.getConnection().isContinueResponseSupported() || exchange.getAttachment(ALREADY_SENT) != null) {
             return false;
         }
 

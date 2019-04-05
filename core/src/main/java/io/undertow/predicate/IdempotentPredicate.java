@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HttpString;
 import io.undertow.util.HttpMethodNames;
 
 /**

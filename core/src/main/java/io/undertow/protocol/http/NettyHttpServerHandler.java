@@ -32,8 +32,7 @@ import io.undertow.server.ConnectionSSLSessionInfo;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HttpString;
-import io.undertow.util.Protocols;
+import io.undertow.util.HttpProtocolNames;
 
 public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
 
@@ -76,7 +75,7 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
             } else {
                 exchange.setRequestScheme("https");
             }
-            exchange.setProtocol(Protocols.HTTP_1_1);
+            exchange.protocol(HttpProtocolNames.HTTP_1_1);
             if (msg instanceof HttpContent) {
                 connection.addData((HttpContent) msg);
             }

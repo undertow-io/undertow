@@ -55,11 +55,11 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.Cookies;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpHeaderNames;
+import io.undertow.util.HttpMethodNames;
+import io.undertow.util.HttpProtocolNames;
 import io.undertow.util.HttpString;
 import io.undertow.util.IoUtils;
-import io.undertow.util.HttpMethodNames;
 import io.undertow.util.NetworkUtils;
-import io.undertow.util.Protocols;
 import io.undertow.util.Rfc6265CookieSupport;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.UndertowOptions;
@@ -131,7 +131,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     private BlockingHttpExchange blockingHttpExchange;
 
-    private HttpString protocol;
+    private String protocol;
 
     /**
      * The security context
@@ -310,11 +310,21 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Get the request protocol string.  Normally this is one of the strings listed in {@link Protocols}.
+     * Get the request protocol string.  Normally this is one of the strings listed in {@link HttpProtocolNames}.
      *
      * @return the request protocol string
      */
+    @Deprecated
     public HttpString getProtocol() {
+        return new HttpString(protocol);
+    }
+
+    /**
+     * Get the request protocol string.  Normally this is one of the strings listed in {@link HttpProtocolNames}.
+     *
+     * @return the request protocol string
+     */
+    public String protocol() {
         return protocol;
     }
 
@@ -323,7 +333,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param protocol
      */
-    public HttpServerExchange setProtocol(final HttpString protocol) {
+    public HttpServerExchange protocol(final String protocol) {
         this.protocol = protocol;
         return this;
     }

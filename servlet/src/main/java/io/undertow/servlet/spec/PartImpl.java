@@ -35,9 +35,7 @@ import javax.servlet.http.Part;
 
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.HttpString;
 
 /**
  * @author Stuart Douglas

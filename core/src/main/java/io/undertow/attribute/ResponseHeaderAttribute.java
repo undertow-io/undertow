@@ -21,7 +21,6 @@ package io.undertow.attribute;
 import java.util.List;
 
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpString;
 
 /**

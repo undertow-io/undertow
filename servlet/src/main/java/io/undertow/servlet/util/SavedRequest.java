@@ -37,7 +37,6 @@ import io.undertow.server.session.Session;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.HttpString;
 import io.undertow.util.UndertowOptions;
 
 /**

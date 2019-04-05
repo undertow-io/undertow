@@ -43,7 +43,6 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 
 /**

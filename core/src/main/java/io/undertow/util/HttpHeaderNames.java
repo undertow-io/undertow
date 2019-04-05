@@ -19,14 +19,7 @@
 package io.undertow.util;
 
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.net.URLDecoder;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  *

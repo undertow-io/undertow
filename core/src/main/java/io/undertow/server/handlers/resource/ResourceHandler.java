@@ -48,7 +48,6 @@ import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.HttpString;
 import io.undertow.util.HttpMethodNames;
 import io.undertow.util.MimeMappings;
 import io.undertow.util.RedirectBuilder;

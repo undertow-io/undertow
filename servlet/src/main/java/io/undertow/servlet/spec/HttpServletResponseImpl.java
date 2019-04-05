@@ -51,12 +51,9 @@ import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpAttachments;
-import io.undertow.util.HttpString;
-import io.undertow.util.Protocols;
+import io.undertow.util.HttpHeaderNames;
+import io.undertow.util.HttpProtocolNames;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
 
@@ -768,9 +765,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if(exchange.isResponseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
-        if(exchange.getProtocol() == Protocols.HTTP_1_0) {
+        if(exchange.protocol().equals(HttpProtocolNames.HTTP_1_0)) {
             throw UndertowServletMessages.MESSAGES.trailersNotSupported("HTTP/1.0 request");
-        } else if(exchange.getProtocol() == Protocols.HTTP_1_1) {
+        } else if(exchange.protocol().equals(HttpProtocolNames.HTTP_1_1)) {
             if(exchange.responseHeaders().contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 throw UndertowServletMessages.MESSAGES.trailersNotSupported("not chunked");
             }

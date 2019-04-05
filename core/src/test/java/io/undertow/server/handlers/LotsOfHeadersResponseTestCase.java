@@ -33,7 +33,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 
 /**

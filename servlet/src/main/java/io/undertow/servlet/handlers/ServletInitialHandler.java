@@ -209,7 +209,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 //        HttpServerExchange exchange = new HttpServerExchange(connection);
 //        exchange.setRequestScheme(request.getScheme());
 //        exchange.requestMethod(new HttpString(request.getMethod()));
-//        exchange.setProtocol(Protocols.HTTP_1_0);
+//        exchange.protocol(Protocols.HTTP_1_0);
 //        exchange.setResolvedPath(request.getContextPath());
 //        String relative;
 //        if (request.getPathInfo() == null) {

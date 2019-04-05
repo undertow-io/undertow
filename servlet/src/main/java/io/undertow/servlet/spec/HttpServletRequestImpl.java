@@ -84,10 +84,10 @@ import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
-import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpAttachments;
-import io.undertow.util.LocaleUtils;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpMethodNames;
+import io.undertow.util.LocaleUtils;
 import io.undertow.util.RequestTooBigException;
 
 /**
@@ -833,7 +833,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getProtocol() {
-        return exchange.getProtocol().toString();
+        return exchange.protocol();
     }
 
     @Override

@@ -39,7 +39,6 @@ import io.undertow.server.handlers.builder.PredicatedHandlersParser.Node;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser.PredicateOperatorNode;
 import io.undertow.testutils.category.UnitTest;
 import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
 
 /**
  * @author Stuart Douglas

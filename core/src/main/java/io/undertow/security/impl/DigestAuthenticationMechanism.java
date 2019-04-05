@@ -50,8 +50,8 @@ import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HexConverter;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.StatusCodes;
 
 /**

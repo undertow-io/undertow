@@ -38,7 +38,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.Certificates;
-import io.undertow.util.HeaderMap;
 
 /**
  * Handler that sets SSL information on the connection based on the following headers:

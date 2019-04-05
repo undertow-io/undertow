@@ -38,7 +38,7 @@ public class RequestProtocolAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        return exchange.getProtocol().toString();
+        return exchange.protocol();
     }
 
     @Override

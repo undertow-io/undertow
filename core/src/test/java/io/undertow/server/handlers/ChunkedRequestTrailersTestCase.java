@@ -36,8 +36,6 @@ import io.undertow.server.ServerConnection;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpAttachments;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.UndertowOptionMap;

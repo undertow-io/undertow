@@ -26,7 +26,6 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.HttpString;
 import io.undertow.util.MalformedMessageException;
 
 /**

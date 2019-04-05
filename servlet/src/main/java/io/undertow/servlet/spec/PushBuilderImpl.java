@@ -34,7 +34,6 @@ import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.HttpString;
 import io.undertow.util.HttpMethodNames;
 
 /**

@@ -39,7 +39,6 @@ import io.undertow.io.IoCallback;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.IoUtils;
 import io.undertow.util.MalformedMessageException;

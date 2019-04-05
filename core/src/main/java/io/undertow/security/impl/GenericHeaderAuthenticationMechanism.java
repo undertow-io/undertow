@@ -36,7 +36,6 @@ import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.form.FormParserFactory;
-import io.undertow.util.HttpString;
 
 /**
  * A authentication mechanism that requires the presence of two headers in the request. One of these will be used as a

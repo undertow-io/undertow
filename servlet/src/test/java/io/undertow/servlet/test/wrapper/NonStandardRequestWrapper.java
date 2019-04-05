@@ -191,7 +191,7 @@ public class NonStandardRequestWrapper implements HttpServletRequest {
 
 
     /**
-     * The default behavior of this method is to return getProtocol()
+     * The default behavior of this method is to return protocol()
      * on the wrapped request object.
      */
     public String getProtocol() {

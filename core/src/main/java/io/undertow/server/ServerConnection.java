@@ -36,8 +36,6 @@ import io.netty.util.concurrent.EventExecutor;
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.util.AbstractAttachable;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
 import io.undertow.util.UndertowOptionMap;
 
 /**

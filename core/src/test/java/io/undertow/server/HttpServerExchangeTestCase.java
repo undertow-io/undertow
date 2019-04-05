@@ -30,7 +30,7 @@ import org.junit.runner.RunWith;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Protocols;
+import io.undertow.util.HttpProtocolNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -45,7 +45,7 @@ public class HttpServerExchangeTestCase {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
                 exchange.getResponseSender().send(exchange.getHostName()
-                        + ":" + exchange.getProtocol()
+                        + ":" + exchange.protocol()
                         + ":" + exchange.requestMethod()
                         + ":" + exchange.getHostPort()
                         + ":" + exchange.getRequestURI()
@@ -60,7 +60,7 @@ public class HttpServerExchangeTestCase {
     public void testHttpServerExchange() throws IOException {
 
         String port = DefaultServer.isAjp() && !DefaultServer.isProxy() ? "9080" : "7777";
-        String protocol = DefaultServer.isH2() ? Protocols.HTTP_2_0_STRING : Protocols.HTTP_1_1_STRING;
+        String protocol = DefaultServer.isH2() ? HttpProtocolNames.HTTP_2_0 : HttpProtocolNames.HTTP_1_1;
         final TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somepath");

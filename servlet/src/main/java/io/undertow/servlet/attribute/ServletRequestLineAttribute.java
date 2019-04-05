@@ -50,7 +50,7 @@ public class ServletRequestLineAttribute implements ExchangeAttribute {
             sb.append(exchange.getQueryString());
         }
         sb.append(' ')
-                .append(exchange.getProtocol().toString()).toString();
+                .append(exchange.protocol());
         return sb.toString();
     }
 

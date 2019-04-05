@@ -98,7 +98,7 @@ public class RequestDumpingHandler implements HttpHandler {
             sb.append("\n");
         }
         //sb.append("          pathInfo=" + exchange.getPathInfo());
-        sb.append("          protocol=" + exchange.getProtocol() + "\n");
+        sb.append("          protocol=" + exchange.protocol() + "\n");
         sb.append("       queryString=" + exchange.getQueryString() + "\n");
         sb.append("        remoteAddr=" + exchange.getSourceAddress() + "\n");
         sb.append("        remoteHost=" + exchange.getSourceAddress().getHostName() + "\n");

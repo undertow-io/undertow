@@ -53,7 +53,7 @@ public class HttpTraceHandler implements HttpHandler {
                 body.append(exchange.getQueryString());
             }
             body.append(' ');
-            body.append(exchange.getProtocol().toString());
+            body.append(exchange.protocol());
             body.append("\r\n");
             for(Map.Entry<String, String> header : exchange.requestHeaders()) {
                 for(String value : exchange.requestHeaders().getAll(header.getKey())) {
