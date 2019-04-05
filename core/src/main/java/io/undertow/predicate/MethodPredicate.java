@@ -30,12 +30,12 @@ import io.undertow.util.HttpString;
  */
 public class MethodPredicate implements Predicate {
 
-    private final HttpString[] methods;
+    private final String[] methods;
 
     MethodPredicate(String[] methods) {
-        HttpString[] values = new HttpString[methods.length];
+        String[] values = new String[methods.length];
         for(int i = 0; i < methods.length; ++i) {
-            values[i] = new HttpString(methods[i]);
+            values[i] = methods[i];
         }
         this.methods = values;
     }
@@ -44,7 +44,7 @@ public class MethodPredicate implements Predicate {
     @Override
     public boolean resolve(final HttpServerExchange value) {
         for(int i =0; i < methods.length; ++i) {
-            if(value.getRequestMethod().equals(methods[i])) {
+            if(value.requestMethod().equals(methods[i])) {
                 return true;
             }
         }

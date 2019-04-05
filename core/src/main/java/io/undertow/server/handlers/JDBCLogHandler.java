@@ -147,7 +147,7 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
 
         if (jdbcLogAttribute.pattern.equals("combined")) {
             jdbcLogAttribute.virtualHost = exchange.requestHeaders().get(HttpHeaderNames.HOST);
-            jdbcLogAttribute.method = exchange.getRequestMethod().toString();
+            jdbcLogAttribute.method = exchange.requestMethod();
             jdbcLogAttribute.referer = exchange.requestHeaders().get(HttpHeaderNames.REFERER);
             jdbcLogAttribute.userAgent = exchange.requestHeaders().get(HttpHeaderNames.USER_AGENT);
         }

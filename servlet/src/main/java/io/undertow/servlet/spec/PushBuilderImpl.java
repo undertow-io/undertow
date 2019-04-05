@@ -33,11 +33,9 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 
 /**
  * @author Stuart Douglas
@@ -68,12 +66,12 @@ public class PushBuilderImpl implements PushBuilder {
         conditional.add(HttpHeaderNames.IF_RANGE);
         CONDITIONAL = Collections.unmodifiableSet(conditional);
         final Set<String> invalid = new HashSet<>();
-        invalid.add(Methods.OPTIONS_STRING);
-        invalid.add(Methods.PUT_STRING);
-        invalid.add(Methods.POST_STRING);
-        invalid.add(Methods.DELETE_STRING);
-        invalid.add(Methods.CONNECT_STRING);
-        invalid.add(Methods.TRACE_STRING);
+        invalid.add(HttpMethodNames.OPTIONS);
+        invalid.add(HttpMethodNames.PUT);
+        invalid.add(HttpMethodNames.POST);
+        invalid.add(HttpMethodNames.DELETE);
+        invalid.add(HttpMethodNames.CONNECT);
+        invalid.add(HttpMethodNames.TRACE);
         invalid.add("");
         INVALID_METHOD = Collections.unmodifiableSet(invalid);
     }
@@ -203,7 +201,7 @@ public class PushBuilderImpl implements PushBuilder {
                     path += "?" + queryString;
                 }
             }
-            con.pushResource(path, new HttpString(method), newHeaders);
+            con.pushResource(path, method, newHeaders);
         }
         path = null;
         for(String h : CONDITIONAL) {

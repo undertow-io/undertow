@@ -42,7 +42,7 @@ public class ServletRequestLineAttribute implements ExchangeAttribute {
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
         StringBuilder sb = new StringBuilder()
-                .append(exchange.getRequestMethod().toString())
+                .append(exchange.requestMethod())
                 .append(' ')
                 .append(ServletRequestURLAttribute.INSTANCE.readAttribute(exchange));
         if (!exchange.getQueryString().isEmpty()) {

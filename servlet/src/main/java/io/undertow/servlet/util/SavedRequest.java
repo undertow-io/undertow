@@ -22,10 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.security.AccessController;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import javax.servlet.http.HttpSession;
@@ -39,8 +36,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 import io.undertow.util.UndertowOptions;
@@ -56,11 +51,11 @@ public class SavedRequest implements Serializable {
 
     private final byte[] data;
     private final int dataLength;
-    private final HttpString method;
+    private final String method;
     private final String requestPath;
     private final HttpHeaders headerMap;
 
-    public SavedRequest(byte[] data, int dataLength, HttpString method, String requestPath, HttpHeaders headerMap) {
+    public SavedRequest(byte[] data, int dataLength, String method, String requestPath, HttpHeaders headerMap) {
         this.data = data;
         this.dataLength = dataLength;
         this.method = method;
@@ -130,7 +125,7 @@ public class SavedRequest implements Serializable {
                 }
                 headers.set(entry.getKey(), exchange.requestHeaders().getAll(entry.getKey()));
             }
-            SavedRequest request = new SavedRequest(buffer, length, exchange.getRequestMethod(), exchange.getRelativePath(), exchange.requestHeaders());
+            SavedRequest request = new SavedRequest(buffer, length, exchange.requestMethod(), exchange.getRelativePath(), exchange.requestHeaders());
             final ServletRequestContext sc = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
             HttpSessionImpl session = sc.getCurrentServletContext().getSession(exchange, true);
             Session underlyingSession;
@@ -156,7 +151,7 @@ public class SavedRequest implements Serializable {
             if(request != null) {
                 if(request.requestPath.equals(exchange.getRelativePath()) && exchange.isRequestComplete()) {
                     UndertowLogger.REQUEST_LOGGER.debugf("restoring request body for request to %s", request.requestPath);
-                    exchange.setRequestMethod(request.method);
+                    exchange.requestMethod(request.method);
                     Connectors.ungetRequestBytes(exchange, Unpooled.wrappedBuffer(request.data, 0, request.dataLength));
                     underlyingSession.removeAttribute(SESSION_KEY);
                     //clear the existing header map of everything except the connection header

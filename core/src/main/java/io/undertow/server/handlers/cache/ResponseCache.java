@@ -18,8 +18,8 @@
 
 package io.undertow.server.handlers.cache;
 
-import static io.undertow.util.Methods.GET;
-import static io.undertow.util.Methods.HEAD;
+import static io.undertow.util.HttpMethodNames.GET;
+import static io.undertow.util.HttpMethodNames.HEAD;
 
 import java.io.IOException;
 
@@ -32,7 +32,6 @@ import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -103,8 +102,8 @@ public class ResponseCache {
         DirectBufferCache.CacheEntry entry = cache.get(key);
 
         //we only cache get and head requests
-        if (!exchange.getRequestMethod().equals(GET) &&
-                !exchange.getRequestMethod().equals(HEAD)) {
+        if (!exchange.requestMethod().equals(GET) &&
+                !exchange.requestMethod().equals(HEAD)) {
             return false;
         }
 
@@ -165,7 +164,7 @@ public class ResponseCache {
 
         //TODO: support if-range
         exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, Long.toString(entry.size()));
-        if (exchange.getRequestMethod().equals(HEAD)) {
+        if (exchange.requestMethod().equals(HEAD)) {
             exchange.endExchange();
             return true;
         }

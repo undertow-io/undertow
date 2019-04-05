@@ -227,7 +227,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      * @param requestHeaders The request headers
      * @return <code>true</code> if the server attempted the push, false otherwise
      */
-    public boolean pushResource(final String path, final HttpString method, final HttpHeaders requestHeaders) {
+    public boolean pushResource(final String path, final String method, final HttpHeaders requestHeaders) {
         return false;
     }
 
@@ -245,7 +245,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      * @param requestHeaders The request headers
      * @return <code>true</code> if the server attempted the push, false otherwise
      */
-    public boolean pushResource(final String path, final HttpString method, final HeaderMap requestHeaders, HttpHandler handler) {
+    public boolean pushResource(final String path, final String method, final HttpHeaders requestHeaders, HttpHandler handler) {
         return false;
     }
 

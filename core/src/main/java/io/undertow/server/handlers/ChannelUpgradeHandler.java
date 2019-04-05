@@ -29,7 +29,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 
 /**
  * An HTTP request handler which upgrades the HTTP request and hands it off as a socket to any XNIO consumer.
@@ -122,7 +122,7 @@ public final class ChannelUpgradeHandler implements HttpHandler {
 
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final List<String> upgradeStrings = exchange.requestHeaders().getAll(HttpHeaderNames.UPGRADE);
-        if (upgradeStrings != null && exchange.getRequestMethod().equals(Methods.GET)) {
+        if (upgradeStrings != null && exchange.requestMethod().equals(HttpMethodNames.GET)) {
             for (String string : upgradeStrings) {
                 final List<Holder> holders = handlers.get(string);
                 if (holders != null) {

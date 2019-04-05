@@ -57,7 +57,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
 import io.undertow.util.IoUtils;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.Protocols;
 import io.undertow.util.Rfc6265CookieSupport;
@@ -141,7 +141,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     // mutable state
 
     private int state = 200;
-    private HttpString requestMethod;
+    private String requestMethod;
     private String requestScheme;
 
     /**
@@ -341,11 +341,20 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Get the HTTP request method.  Normally this is one of the strings listed in {@link io.undertow.util.Methods}.
+     * Get the HTTP request method.  Normally this is one of the strings listed in {@link HttpMethodNames}.
      *
      * @return the HTTP request method
      */
+    @Deprecated
     public HttpString getRequestMethod() {
+        return new HttpString(requestMethod);
+    }
+    /**
+     * Get the HTTP request method.  Normally this is one of the strings listed in {@link HttpMethodNames}.
+     *
+     * @return the HTTP request method
+     */
+    public String requestMethod() {
         return requestMethod;
     }
 
@@ -354,7 +363,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @param requestMethod the HTTP request method
      */
-    public HttpServerExchange setRequestMethod(final HttpString requestMethod) {
+    public HttpServerExchange requestMethod(final String requestMethod) {
         this.requestMethod = requestMethod;
         return this;
     }
@@ -664,7 +673,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return The number of bytes sent in the entity body
      */
     public long getResponseBytesSent() {
-        if (Connectors.isEntityBodyAllowed(this) && !getRequestMethod().equals(Methods.HEAD)) {
+        if (Connectors.isEntityBodyAllowed(this) && !requestMethod().equals(HttpMethodNames.HEAD)) {
             return responseBytesSent;
         } else {
             return 0; //body is not allowed, even if we attempt to write it will be ignored
@@ -677,7 +686,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param bytes The number of bytes to increase the response size by. May be negative
      */
     void updateBytesSent(long bytes) {
-        if (Connectors.isEntityBodyAllowed(this) && !getRequestMethod().equals(Methods.HEAD)) {
+        if (Connectors.isEntityBodyAllowed(this) && !requestMethod().equals(HttpMethodNames.HEAD)) {
             responseBytesSent += bytes;
         }
     }
@@ -1670,6 +1679,6 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     @Override
     public String toString() {
-        return "HttpServerExchange{ " + getRequestMethod().toString() + " " + getRequestURI() + " request " + requestHeaders + " response " + responseHeaders + '}';
+        return "HttpServerExchange{ " + requestMethod() + " " + getRequestURI() + " request " + requestHeaders + " response " + responseHeaders + '}';
     }
 }

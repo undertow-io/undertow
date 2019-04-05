@@ -34,7 +34,7 @@ import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
 
@@ -76,7 +76,7 @@ public class DirectoryUtils {
             exchange.responseHeaders().set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(buffer.readableBytes()));
             exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, type);
             exchange.responseHeaders().set(HttpHeaderNames.ETAG, quotedEtag);
-            if (Methods.HEAD.equals(exchange.getRequestMethod())) {
+            if (HttpMethodNames.HEAD.equals(exchange.requestMethod())) {
                 exchange.endExchange();
                 return true;
             }

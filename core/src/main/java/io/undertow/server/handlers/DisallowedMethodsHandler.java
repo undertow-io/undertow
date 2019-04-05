@@ -38,23 +38,23 @@ import io.undertow.util.StatusCodes;
  */
 public class DisallowedMethodsHandler implements HttpHandler {
 
-    private final Set<HttpString> disallowedMethods;
+    private final Set<String> disallowedMethods;
     private final HttpHandler next;
 
-    public DisallowedMethodsHandler(final HttpHandler next, final Set<HttpString> disallowedMethods) {
+    public DisallowedMethodsHandler(final HttpHandler next, final Set<String> disallowedMethods) {
         this.disallowedMethods = new HashSet<>(disallowedMethods);
         this.next = next;
     }
 
 
-    public DisallowedMethodsHandler(final HttpHandler next, final HttpString... disallowedMethods) {
+    public DisallowedMethodsHandler(final HttpHandler next, final String... disallowedMethods) {
         this.disallowedMethods = new HashSet<>(Arrays.asList(disallowedMethods));
         this.next = next;
     }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        if (disallowedMethods.contains(exchange.getRequestMethod())) {
+        if (disallowedMethods.contains(exchange.requestMethod())) {
             exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
             exchange.endExchange();
         } else {
@@ -102,12 +102,8 @@ public class DisallowedMethodsHandler implements HttpHandler {
 
         @Override
         public HttpHandler wrap(HttpHandler handler) {
-            HttpString[] strings = new HttpString[methods.length];
-            for(int i = 0; i < methods.length; ++i) {
-                strings[i] = new HttpString(methods[i]);
-            }
 
-            return new DisallowedMethodsHandler(handler, strings);
+            return new DisallowedMethodsHandler(handler, methods);
         }
     }
 }

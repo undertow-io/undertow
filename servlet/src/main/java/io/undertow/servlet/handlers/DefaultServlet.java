@@ -53,7 +53,7 @@ import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -282,7 +282,7 @@ public class DefaultServlet extends HttpServlet {
             }
             if (!ETagUtils.handleIfNoneMatch(req.getHeader(HttpHeaderNames.IF_NONE_MATCH), etag, true) ||
                     !DateUtils.handleIfModifiedSince(req.getHeader(HttpHeaderNames.IF_MODIFIED_SINCE), lastModified)) {
-                if (req.getMethod().equals(Methods.GET_STRING) || req.getMethod().equals(Methods.HEAD_STRING)) {
+                if (req.getMethod().equals(HttpMethodNames.GET) || req.getMethod().equals(HttpMethodNames.HEAD)) {
                     resp.setStatus(StatusCodes.NOT_MODIFIED);
                 } else {
                     resp.setStatus(StatusCodes.PRECONDITION_FAILED);
@@ -352,7 +352,7 @@ public class DefaultServlet extends HttpServlet {
 
         }
         final boolean include = req.getDispatcherType() == DispatcherType.INCLUDE;
-        if (!req.getMethod().equals(Methods.HEAD_STRING)) {
+        if (!req.getMethod().equals(HttpMethodNames.HEAD)) {
             IoCallback callback = include ? new IoCallback() {
                 @Override
                 public void onComplete(HttpServerExchange exchange, Object context) {

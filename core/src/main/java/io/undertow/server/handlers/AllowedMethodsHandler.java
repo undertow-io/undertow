@@ -39,22 +39,22 @@ import io.undertow.util.StatusCodes;
  */
 public class AllowedMethodsHandler implements HttpHandler {
 
-    private final Set<HttpString> allowedMethods;
+    private final Set<String> allowedMethods;
     private final HttpHandler next;
 
-    public AllowedMethodsHandler(final HttpHandler next, final Set<HttpString> allowedMethods) {
+    public AllowedMethodsHandler(final HttpHandler next, final Set<String> allowedMethods) {
         this.allowedMethods = new HashSet<>(allowedMethods);
         this.next = next;
     }
 
-    public AllowedMethodsHandler(final HttpHandler next, final HttpString... allowedMethods) {
+    public AllowedMethodsHandler(final HttpHandler next, final String... allowedMethods) {
         this.allowedMethods = new HashSet<>(Arrays.asList(allowedMethods));
         this.next = next;
     }
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        if (allowedMethods.contains(exchange.getRequestMethod())) {
+        if (allowedMethods.contains(exchange.requestMethod())) {
             next.handleRequest(exchange);
         } else {
             exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
@@ -62,7 +62,7 @@ public class AllowedMethodsHandler implements HttpHandler {
         }
     }
 
-    public Set<HttpString> getAllowedMethods() {
+    public Set<String> getAllowedMethods() {
         return Collections.unmodifiableSet(allowedMethods);
     }
 
@@ -105,12 +105,7 @@ public class AllowedMethodsHandler implements HttpHandler {
 
         @Override
         public HttpHandler wrap(HttpHandler handler) {
-            HttpString[] strings = new HttpString[methods.length];
-                for(int i = 0; i < methods.length; ++i) {
-                    strings[i] = new HttpString(methods[i]);
-                }
-
-            return new AllowedMethodsHandler(handler, strings);
+            return new AllowedMethodsHandler(handler, methods);
         }
     }
 }

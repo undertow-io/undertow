@@ -43,7 +43,7 @@ public class ServletSecurityConstraintHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
-        SecurityPathMatch securityMatch = securityPathMatches.getSecurityInfo(path, exchange.getRequestMethod().toString());
+        SecurityPathMatch securityMatch = securityPathMatches.getSecurityInfo(path, exchange.requestMethod());
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         List<SingleConstraintMatch> list = servletRequestContext.getRequiredConstrains();
         if (list == null) {

@@ -36,9 +36,8 @@ import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionConfig;
 import io.undertow.server.session.SessionManager;
 import io.undertow.util.DateUtils;
-import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 
 /**
  * Handler that builds up a cache of resources that a browsers requests, and uses
@@ -116,7 +115,7 @@ public class LearningPushHandler implements HttpHandler {
                         }
                     }
                     if (doPush) {
-                        exchange.getConnection().pushResource(request.getPath(), Methods.GET, request.getRequestHeaders());
+                        exchange.getConnection().pushResource(request.getPath(), HttpMethodNames.GET, request.getRequestHeaders());
                         if(request.getEtag() != null) {
                             pushed.put(request.getPath(), request.getEtag());
                         } else {

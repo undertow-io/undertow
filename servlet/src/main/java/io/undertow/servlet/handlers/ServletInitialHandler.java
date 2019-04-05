@@ -46,7 +46,7 @@ import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
 
@@ -137,7 +137,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         if (info.getType() == ServletPathMatch.Type.REDIRECT && !isUpgradeRequest) {
             //UNDERTOW-89
             //we redirect on GET requests to the root context to add an / to the end
-            if (exchange.getRequestMethod().equals(Methods.GET) || exchange.getRequestMethod().equals(Methods.HEAD)) {
+            if (exchange.requestMethod().equals(HttpMethodNames.GET) || exchange.requestMethod().equals(HttpMethodNames.HEAD)) {
                 exchange.setStatusCode(StatusCodes.FOUND);
             } else {
                 exchange.setStatusCode(StatusCodes.TEMPORARY_REDIRECT);
@@ -208,7 +208,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 //        MockServerConnection connection = new MockServerConnection(bufferPool);
 //        HttpServerExchange exchange = new HttpServerExchange(connection);
 //        exchange.setRequestScheme(request.getScheme());
-//        exchange.setRequestMethod(new HttpString(request.getMethod()));
+//        exchange.requestMethod(new HttpString(request.getMethod()));
 //        exchange.setProtocol(Protocols.HTTP_1_0);
 //        exchange.setResolvedPath(request.getContextPath());
 //        String relative;

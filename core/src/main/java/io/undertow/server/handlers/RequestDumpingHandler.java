@@ -31,7 +31,6 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.LocaleUtils;
 
@@ -82,7 +81,7 @@ public class RequestDumpingHandler implements HttpHandler {
             }
         }
         sb.append("            locale=" + LocaleUtils.getLocalesFromHeader(exchange.requestHeaders().get(HttpHeaderNames.ACCEPT_LANGUAGE)) + "\n");
-        sb.append("            method=" + exchange.getRequestMethod() + "\n");
+        sb.append("            method=" + exchange.requestMethod() + "\n");
         Map<String, Deque<String>> pnames = exchange.getQueryParameters();
         for (Map.Entry<String, Deque<String>> entry : pnames.entrySet()) {
             String pname = entry.getKey();

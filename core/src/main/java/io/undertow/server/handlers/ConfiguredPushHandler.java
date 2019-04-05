@@ -22,9 +22,7 @@ import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 import io.undertow.util.PathMatcher;
 
 /**
@@ -49,7 +47,7 @@ public class ConfiguredPushHandler implements HttpHandler {
             if(result != null) {
                 String[] value = result.getValue();
                 for(int i = 0; i < value.length; ++i) {
-                    exchange.getConnection().pushResource(value[i], Methods.GET, requestHeaders);
+                    exchange.getConnection().pushResource(value[i], HttpMethodNames.GET, requestHeaders);
                 }
             }
         }

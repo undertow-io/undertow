@@ -26,8 +26,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import io.undertow.predicate.Predicate;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.CopyOnWriteMap;
-import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 import io.undertow.util.PathTemplate;
 import io.undertow.util.PathTemplateMatch;
 import io.undertow.util.PathTemplateMatcher;
@@ -40,7 +39,7 @@ import io.undertow.util.PathTemplateMatcher;
 public class RoutingHandler implements HttpHandler {
 
     // Matcher objects grouped by http methods.
-    private final Map<HttpString, PathTemplateMatcher<RoutingMatch>> matches = new CopyOnWriteMap<>();
+    private final Map<String, PathTemplateMatcher<RoutingMatch>> matches = new CopyOnWriteMap<>();
     // Matcher used to find if this instance contains matches for any http method for a path.
     // This matcher is used to report if this instance can match a path for one of the http methods.
     private final PathTemplateMatcher<RoutingMatch> allMethodsMatcher = new PathTemplateMatcher<>();
@@ -67,7 +66,7 @@ public class RoutingHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
 
-        PathTemplateMatcher<RoutingMatch> matcher = matches.get(exchange.getRequestMethod());
+        PathTemplateMatcher<RoutingMatch> matcher = matches.get(exchange.requestMethod());
         if (matcher == null) {
             handleNoMatch(exchange);
             return;
@@ -112,11 +111,7 @@ public class RoutingHandler implements HttpHandler {
         fallbackHandler.handleRequest(exchange);
     }
 
-    public synchronized RoutingHandler add(final String method, final String template, HttpHandler handler) {
-        return add(new HttpString(method), template, handler);
-    }
-
-    public synchronized RoutingHandler add(HttpString method, String template, HttpHandler handler) {
+    public synchronized RoutingHandler add(String method, String template, HttpHandler handler) {
         PathTemplateMatcher<RoutingMatch> matcher = matches.get(method);
         if (matcher == null) {
             matches.put(method, matcher = new PathTemplateMatcher<>());
@@ -133,26 +128,22 @@ public class RoutingHandler implements HttpHandler {
     }
 
     public synchronized RoutingHandler get(final String template, HttpHandler handler) {
-        return add(Methods.GET, template, handler);
+        return add(HttpMethodNames.GET, template, handler);
     }
 
     public synchronized RoutingHandler post(final String template, HttpHandler handler) {
-        return add(Methods.POST, template, handler);
+        return add(HttpMethodNames.POST, template, handler);
     }
 
     public synchronized RoutingHandler put(final String template, HttpHandler handler) {
-        return add(Methods.PUT, template, handler);
+        return add(HttpMethodNames.PUT, template, handler);
     }
 
     public synchronized RoutingHandler delete(final String template, HttpHandler handler) {
-        return add(Methods.DELETE, template, handler);
+        return add(HttpMethodNames.DELETE, template, handler);
     }
 
-    public synchronized RoutingHandler add(final String method, final String template, Predicate predicate, HttpHandler handler) {
-        return add(new HttpString(method), template, predicate, handler);
-    }
-
-    public synchronized RoutingHandler add(HttpString method, String template, Predicate predicate, HttpHandler handler) {
+    public synchronized RoutingHandler add(String method, String template, Predicate predicate, HttpHandler handler) {
         PathTemplateMatcher<RoutingMatch> matcher = matches.get(method);
         if (matcher == null) {
             matches.put(method, matcher = new PathTemplateMatcher<>());
@@ -169,24 +160,24 @@ public class RoutingHandler implements HttpHandler {
     }
 
     public synchronized RoutingHandler get(final String template, Predicate predicate, HttpHandler handler) {
-        return add(Methods.GET, template, predicate, handler);
+        return add(HttpMethodNames.GET, template, predicate, handler);
     }
 
     public synchronized RoutingHandler post(final String template, Predicate predicate, HttpHandler handler) {
-        return add(Methods.POST, template, predicate, handler);
+        return add(HttpMethodNames.POST, template, predicate, handler);
     }
 
     public synchronized RoutingHandler put(final String template, Predicate predicate, HttpHandler handler) {
-        return add(Methods.PUT, template, predicate, handler);
+        return add(HttpMethodNames.PUT, template, predicate, handler);
     }
 
     public synchronized RoutingHandler delete(final String template, Predicate predicate, HttpHandler handler) {
-        return add(Methods.DELETE, template, predicate, handler);
+        return add(HttpMethodNames.DELETE, template, predicate, handler);
     }
 
     public synchronized RoutingHandler addAll(RoutingHandler routingHandler) {
-        for (Entry<HttpString, PathTemplateMatcher<RoutingMatch>> entry : routingHandler.getMatches().entrySet()) {
-            HttpString method = entry.getKey();
+        for (Entry<String, PathTemplateMatcher<RoutingMatch>> entry : routingHandler.getMatches().entrySet()) {
+            String method = entry.getKey();
             PathTemplateMatcher<RoutingMatch> matcher = matches.get(method);
             if (matcher == null) {
                 matches.put(method, matcher = new PathTemplateMatcher<>());
@@ -211,7 +202,7 @@ public class RoutingHandler implements HttpHandler {
      * @param path the path tempate to remove
      * @return this handler
      */
-    public RoutingHandler remove(HttpString method, String path) {
+    public RoutingHandler remove(String method, String path) {
         PathTemplateMatcher<RoutingMatch> handler = matches.get(method);
         if(handler != null) {
             handler.remove(path);
@@ -232,7 +223,7 @@ public class RoutingHandler implements HttpHandler {
         return this;
     }
 
-    Map<HttpString, PathTemplateMatcher<RoutingMatch>> getMatches() {
+    Map<String, PathTemplateMatcher<RoutingMatch>> getMatches() {
         return matches;
     }
 

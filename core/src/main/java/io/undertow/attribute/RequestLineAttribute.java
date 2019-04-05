@@ -39,7 +39,7 @@ public class RequestLineAttribute implements ExchangeAttribute {
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
         StringBuilder sb = new StringBuilder()
-                .append(exchange.getRequestMethod().toString())
+                .append(exchange.requestMethod())
                 .append(' ')
                 .append(exchange.getRequestURI());
         if (!exchange.getQueryString().isEmpty()) {

@@ -26,9 +26,8 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
-import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpHeaderNames;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 
 /**
  * A handler that handles HTTP trace requests
@@ -45,7 +44,7 @@ public class HttpTraceHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        if(exchange.getRequestMethod().equals(Methods.TRACE)) {
+        if(exchange.requestMethod().equals(HttpMethodNames.TRACE)) {
             exchange.responseHeaders().set(HttpHeaderNames.CONTENT_TYPE, "message/http");
             StringBuilder body = new StringBuilder("TRACE ");
             body.append(exchange.getRequestURI());

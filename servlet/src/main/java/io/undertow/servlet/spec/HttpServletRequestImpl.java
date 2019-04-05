@@ -61,7 +61,6 @@ import javax.servlet.http.HttpUpgradeHandler;
 import javax.servlet.http.Part;
 import javax.servlet.http.PushBuilder;
 
-import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
@@ -85,13 +84,10 @@ import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpAttachments;
-import io.undertow.util.HttpString;
 import io.undertow.util.LocaleUtils;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 import io.undertow.util.RequestTooBigException;
 
 /**
@@ -266,7 +262,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getMethod() {
-        return exchange.getRequestMethod().toString();
+        return exchange.requestMethod();
     }
 
     @Override
@@ -715,7 +711,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             queryParameters = exchange.getQueryParameters();
         }
         final Set<String> parameterNames = new HashSet<>(queryParameters.keySet());
-        if (exchange.getRequestMethod().equals(Methods.POST)) {
+        if (exchange.requestMethod().equals(HttpMethodNames.POST)) {
             final FormData parsedFormData = parseFormData();
             if (parsedFormData != null) {
                 Iterator<String> it = parsedFormData.iterator();
@@ -745,7 +741,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 ret.add(param);
             }
         }
-        if (exchange.getRequestMethod().equals(Methods.POST)) {
+        if (exchange.requestMethod().equals(HttpMethodNames.POST)) {
             final FormData parsedFormData = parseFormData();
             if (parsedFormData != null) {
                 Deque<FormData.FormValue> res = parsedFormData.get(name);
@@ -773,7 +769,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
             arrayMap.put(entry.getKey(), new ArrayList<>(entry.getValue()));
         }
-        if (exchange.getRequestMethod().equals(Methods.POST)) {
+        if (exchange.requestMethod().equals(HttpMethodNames.POST)) {
 
             final FormData parsedFormData = parseFormData();
             if (parsedFormData != null) {

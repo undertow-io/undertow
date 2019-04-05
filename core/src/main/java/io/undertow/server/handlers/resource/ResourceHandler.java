@@ -49,7 +49,7 @@ import io.undertow.util.ETag;
 import io.undertow.util.ETagUtils;
 import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 import io.undertow.util.MimeMappings;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
@@ -63,17 +63,17 @@ public class ResourceHandler implements HttpHandler {
      * Set of methods prescribed by HTTP 1.1. If request method is not one of those, handler will
      * return NOT_IMPLEMENTED.
      */
-    private static final Set<HttpString> KNOWN_METHODS = new HashSet<>();
+    private static final Set<String> KNOWN_METHODS = new HashSet<>();
 
     static {
-        KNOWN_METHODS.add(Methods.OPTIONS);
-        KNOWN_METHODS.add(Methods.GET);
-        KNOWN_METHODS.add(Methods.HEAD);
-        KNOWN_METHODS.add(Methods.POST);
-        KNOWN_METHODS.add(Methods.PUT);
-        KNOWN_METHODS.add(Methods.DELETE);
-        KNOWN_METHODS.add(Methods.TRACE);
-        KNOWN_METHODS.add(Methods.CONNECT);
+        KNOWN_METHODS.add(HttpMethodNames.OPTIONS);
+        KNOWN_METHODS.add(HttpMethodNames.GET);
+        KNOWN_METHODS.add(HttpMethodNames.HEAD);
+        KNOWN_METHODS.add(HttpMethodNames.POST);
+        KNOWN_METHODS.add(HttpMethodNames.PUT);
+        KNOWN_METHODS.add(HttpMethodNames.DELETE);
+        KNOWN_METHODS.add(HttpMethodNames.TRACE);
+        KNOWN_METHODS.add(HttpMethodNames.CONNECT);
     }
 
     private final List<String> welcomeFiles = new CopyOnWriteArrayList<>(new String[]{"index.html", "index.htm", "default.html", "default.htm"});
@@ -142,16 +142,16 @@ public class ResourceHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        if (exchange.getRequestMethod().equals(Methods.GET) ||
-                exchange.getRequestMethod().equals(Methods.POST)) {
+        if (exchange.requestMethod().equals(HttpMethodNames.GET) ||
+                exchange.requestMethod().equals(HttpMethodNames.POST)) {
             serveResource(exchange, true);
-        } else if (exchange.getRequestMethod().equals(Methods.HEAD)) {
+        } else if (exchange.requestMethod().equals(HttpMethodNames.HEAD)) {
             serveResource(exchange, false);
         } else {
-            if (KNOWN_METHODS.contains(exchange.getRequestMethod())) {
+            if (KNOWN_METHODS.contains(exchange.requestMethod())) {
                 exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
                 exchange.responseHeaders().add(HttpHeaderNames.ALLOW,
-                        String.join(", ", Methods.GET_STRING, Methods.HEAD_STRING, Methods.POST_STRING));
+                        String.join(", ", HttpMethodNames.GET, HttpMethodNames.HEAD, HttpMethodNames.POST));
             } else {
                 exchange.setStatusCode(StatusCodes.NOT_IMPLEMENTED);
             }

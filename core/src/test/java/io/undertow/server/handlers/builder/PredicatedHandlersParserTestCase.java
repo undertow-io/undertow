@@ -114,44 +114,44 @@ public class PredicatedHandlersParserTestCase {
         List<PredicatedHandler> ret = PredicatedHandlersParser.parse(value, getClass().getClassLoader());
         Assert.assertEquals(1, ret.size());
         AllowedMethodsHandler handler = (AllowedMethodsHandler) ret.get(0).getHandler().wrap(ResponseCodeHandler.HANDLE_200);
-        Assert.assertEquals(new HashSet<>(Arrays.asList(HttpString.tryFromString("GET"))), handler.getAllowedMethods());
+        Assert.assertEquals(new HashSet<>(Arrays.asList("GET")), handler.getAllowedMethods());
 
         value = "allowed-methods(methods=GET)";
         ret = PredicatedHandlersParser.parse(value, getClass().getClassLoader());
         Assert.assertEquals(1, ret.size());
         handler = (AllowedMethodsHandler) ret.get(0).getHandler().wrap(ResponseCodeHandler.HANDLE_200);
-        Assert.assertEquals(new HashSet<>(Arrays.asList(HttpString.tryFromString("GET"))), handler.getAllowedMethods());
+        Assert.assertEquals(new HashSet<>(Arrays.asList("GET")), handler.getAllowedMethods());
 
         value = "allowed-methods(methods={GET})";
         ret = PredicatedHandlersParser.parse(value, getClass().getClassLoader());
         Assert.assertEquals(1, ret.size());
         handler = (AllowedMethodsHandler) ret.get(0).getHandler().wrap(ResponseCodeHandler.HANDLE_200);
-        Assert.assertEquals(new HashSet<>(Arrays.asList(HttpString.tryFromString("GET"))), handler.getAllowedMethods());
+        Assert.assertEquals(new HashSet<>(Arrays.asList("GET")), handler.getAllowedMethods());
 
         value = "allowed-methods({GET})";
         ret = PredicatedHandlersParser.parse(value, getClass().getClassLoader());
         Assert.assertEquals(1, ret.size());
         handler = (AllowedMethodsHandler) ret.get(0).getHandler().wrap(ResponseCodeHandler.HANDLE_200);
-        Assert.assertEquals(new HashSet<>(Arrays.asList(HttpString.tryFromString("GET"))), handler.getAllowedMethods());
+        Assert.assertEquals(new HashSet<>(Arrays.asList("GET")), handler.getAllowedMethods());
 
 
         value = "allowed-methods({GET, POST})";
         ret = PredicatedHandlersParser.parse(value, getClass().getClassLoader());
         Assert.assertEquals(1, ret.size());
         handler = (AllowedMethodsHandler) ret.get(0).getHandler().wrap(ResponseCodeHandler.HANDLE_200);
-        Assert.assertEquals(new HashSet<>(Arrays.asList(HttpString.tryFromString("GET"), HttpString.tryFromString("POST"))), handler.getAllowedMethods());
+        Assert.assertEquals(new HashSet<>(Arrays.asList("GET", "POST")), handler.getAllowedMethods());
 
         value = "allowed-methods(methods={GET, POST})";
         ret = PredicatedHandlersParser.parse(value, getClass().getClassLoader());
         Assert.assertEquals(1, ret.size());
         handler = (AllowedMethodsHandler) ret.get(0).getHandler().wrap(ResponseCodeHandler.HANDLE_200);
-        Assert.assertEquals(new HashSet<>(Arrays.asList(HttpString.tryFromString("GET"), HttpString.tryFromString("POST"))), handler.getAllowedMethods());
+        Assert.assertEquals(new HashSet<>(Arrays.asList("GET", "POST")), handler.getAllowedMethods());
 
         value = "allowed-methods(GET, POST)";
         ret = PredicatedHandlersParser.parse(value, getClass().getClassLoader());
         Assert.assertEquals(1, ret.size());
         handler = (AllowedMethodsHandler) ret.get(0).getHandler().wrap(ResponseCodeHandler.HANDLE_200);
-        Assert.assertEquals(new HashSet<>(Arrays.asList(HttpString.tryFromString("GET"), HttpString.tryFromString("POST"))), handler.getAllowedMethods());
+        Assert.assertEquals(new HashSet<>(Arrays.asList("GET", "POST")), handler.getAllowedMethods());
     }
 
 

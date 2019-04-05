@@ -50,7 +50,6 @@ import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HexConverter;
 import io.undertow.util.StatusCodes;
@@ -160,7 +159,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                     try {
                         DigestContext context = new DigestContext();
                         Map<DigestAuthorizationToken, String> parsedHeader = parseHeader(digestChallenge);
-                        context.setMethod(exchange.getRequestMethod().toString());
+                        context.setMethod(exchange.requestMethod());
                         context.setParsedHeader(parsedHeader);
                         // Some form of Digest authentication is going to occur so get the DigestContext set on the exchange.
                         exchange.putAttachment(DigestContext.ATTACHMENT_KEY, context);

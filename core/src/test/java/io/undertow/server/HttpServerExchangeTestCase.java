@@ -46,7 +46,7 @@ public class HttpServerExchangeTestCase {
             public void handleRequest(HttpServerExchange exchange) throws Exception {
                 exchange.getResponseSender().send(exchange.getHostName()
                         + ":" + exchange.getProtocol()
-                        + ":" + exchange.getRequestMethod()
+                        + ":" + exchange.requestMethod()
                         + ":" + exchange.getHostPort()
                         + ":" + exchange.getRequestURI()
                         + ":" + exchange.getRelativePath()

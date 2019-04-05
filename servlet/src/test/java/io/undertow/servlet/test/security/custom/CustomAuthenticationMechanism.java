@@ -26,7 +26,7 @@ import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 
 /**
  * <p>
@@ -52,7 +52,7 @@ public class CustomAuthenticationMechanism extends ServletFormAuthenticationMech
 
     @Override
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange, final SecurityContext securityContext) {
-        if (exchange.getRequestURI().endsWith(POST_LOCATION) && exchange.getRequestMethod().equals(Methods.POST)) {
+        if (exchange.getRequestURI().endsWith(POST_LOCATION) && exchange.requestMethod().equals(HttpMethodNames.POST)) {
             return runFormAuth(exchange, securityContext);
         } else {
             return AuthenticationMechanismOutcome.NOT_ATTEMPTED;

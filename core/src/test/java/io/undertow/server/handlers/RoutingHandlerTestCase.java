@@ -38,7 +38,7 @@ import io.undertow.server.RoutingHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -50,13 +50,13 @@ public class RoutingHandlerTestCase {
     @BeforeClass
     public static void setup() {
         RoutingHandler commonHandler = Handlers.routing()
-                    .add(Methods.GET, "/baz", new HttpHandler() {
+                    .add(HttpMethodNames.GET, "/baz", new HttpHandler() {
                         @Override
                         public void handleRequest(HttpServerExchange exchange) throws Exception {
                             exchange.getResponseSender().send("baz");
                         }
                     })
-                    .add(Methods.GET, "/baz/{foo}", new HttpHandler() {
+                    .add(HttpMethodNames.GET, "/baz/{foo}", new HttpHandler() {
                         @Override
                         public void handleRequest(HttpServerExchange exchange) throws Exception {
                             exchange.getResponseSender().send("baz-path" + exchange.getQueryParameters().get("foo"));
@@ -90,43 +90,43 @@ public class RoutingHandlerTestCase {
                 });
 
         DefaultServer.setRootHandler(Handlers.routing()
-                .add(Methods.GET, "/wild/{test}/*", new HttpHandler() {
+                .add(HttpMethodNames.GET, "/wild/{test}/*", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send("wild:" + exchange.getQueryParameters().get("test") + ":" + exchange.getQueryParameters().get("*"));
                     }
                 })
-                .add(Methods.GET, "/wilder/*", new HttpHandler() {
+                .add(HttpMethodNames.GET, "/wilder/*", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send("wilder:" + exchange.getQueryParameters().get("*"));
                     }
                 })
-                .add(Methods.GET, "/wildest*", new HttpHandler() {
+                .add(HttpMethodNames.GET, "/wildest*", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send("wildest:" + exchange.getQueryParameters().get("*"));
                     }
                 })
-                .add(Methods.GET, "/foo", new HttpHandler() {
+                .add(HttpMethodNames.GET, "/foo", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send("foo");
                     }
                 })
-                .add(Methods.GET, "/foo", Predicates.parse("contains[value=%{i,SomeHeader},search='special'] "), new HttpHandler() {
+                .add(HttpMethodNames.GET, "/foo", Predicates.parse("contains[value=%{i,SomeHeader},search='special'] "), new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send("special foo");
                     }
                 })
-                .add(Methods.POST, "/foo", new HttpHandler() {
+                .add(HttpMethodNames.POST, "/foo", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send("posted foo");
                     }
                 })
-                .add(Methods.GET, "/foo/{bar}", new HttpHandler() {
+                .add(HttpMethodNames.GET, "/foo/{bar}", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send("foo-path" + exchange.getQueryParameters().get("bar"));

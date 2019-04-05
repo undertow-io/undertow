@@ -34,7 +34,7 @@ import io.undertow.servlet.api.SecurityInfo;
 import io.undertow.servlet.api.SingleConstraintMatch;
 import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.api.WebResourceCollection;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 
 /**
  * @author Stuart Douglas
@@ -45,14 +45,14 @@ public class SecurityPathMatches {
 
     static {
         Set<String> methods = new HashSet<>();
-        methods.add(Methods.GET_STRING);
-        methods.add(Methods.POST_STRING);
-        methods.add(Methods.PUT_STRING);
-        methods.add(Methods.DELETE_STRING);
-        methods.add(Methods.OPTIONS_STRING);
-        methods.add(Methods.HEAD_STRING);
-        methods.add(Methods.TRACE_STRING);
-        methods.add(Methods.CONNECT_STRING);
+        methods.add(HttpMethodNames.GET);
+        methods.add(HttpMethodNames.POST);
+        methods.add(HttpMethodNames.PUT);
+        methods.add(HttpMethodNames.DELETE);
+        methods.add(HttpMethodNames.OPTIONS);
+        methods.add(HttpMethodNames.HEAD);
+        methods.add(HttpMethodNames.TRACE);
+        methods.add(HttpMethodNames.CONNECT);
         KNOWN_METHODS = Collections.unmodifiableSet(methods);
     }
 

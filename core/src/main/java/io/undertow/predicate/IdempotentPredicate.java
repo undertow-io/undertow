@@ -25,7 +25,7 @@ import java.util.Set;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 
 /**
  * A predicate that returns true if the request is idempotent
@@ -37,22 +37,22 @@ public class IdempotentPredicate implements Predicate {
 
     public static final IdempotentPredicate INSTANCE = new IdempotentPredicate();
 
-    private static final Set<HttpString> METHODS;
+    private static final Set<String> METHODS;
 
     static {
-        Set<HttpString> methods = new HashSet<>();
-        methods.add(Methods.GET);
-        methods.add(Methods.DELETE);
-        methods.add(Methods.PUT);
-        methods.add(Methods.HEAD);
-        methods.add(Methods.OPTIONS);
+        Set<String> methods = new HashSet<>();
+        methods.add(HttpMethodNames.GET);
+        methods.add(HttpMethodNames.DELETE);
+        methods.add(HttpMethodNames.PUT);
+        methods.add(HttpMethodNames.HEAD);
+        methods.add(HttpMethodNames.OPTIONS);
         METHODS = Collections.unmodifiableSet(methods);
     }
 
 
     @Override
     public boolean resolve(HttpServerExchange value) {
-        return METHODS.contains(value.getRequestMethod());
+        return METHODS.contains(value.requestMethod());
     }
 
     public static class Builder implements PredicateBuilder {

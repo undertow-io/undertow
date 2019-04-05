@@ -70,7 +70,7 @@ public class ByteRangeHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
 //        //range requests are only support for GET requests as per the RFC
-//        if(!Methods.GET.equals(exchange.getRequestMethod()) && !Methods.HEAD.equals(exchange.getRequestMethod())) {
+//        if(!Methods.GET.equals(exchange.requestMethod()) && !Methods.HEAD.equals(exchange.requestMethod())) {
 //            next.handleRequest(exchange);
 //            return;
 //        }

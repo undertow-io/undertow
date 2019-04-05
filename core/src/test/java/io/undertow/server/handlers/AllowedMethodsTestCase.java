@@ -31,7 +31,7 @@ import org.junit.runner.RunWith;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Methods;
+import io.undertow.util.HttpMethodNames;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -46,7 +46,7 @@ public class AllowedMethodsTestCase {
     public void testAllowedMethods() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            final AllowedMethodsHandler handler = new AllowedMethodsHandler(ResponseCodeHandler.HANDLE_200, Methods.POST);
+            final AllowedMethodsHandler handler = new AllowedMethodsHandler(ResponseCodeHandler.HANDLE_200, HttpMethodNames.POST);
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
@@ -68,7 +68,7 @@ public class AllowedMethodsTestCase {
     public void testDisallowedMethods() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            final DisallowedMethodsHandler handler = new DisallowedMethodsHandler(ResponseCodeHandler.HANDLE_200, Methods.GET);
+            final DisallowedMethodsHandler handler = new DisallowedMethodsHandler(ResponseCodeHandler.HANDLE_200, HttpMethodNames.GET);
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
