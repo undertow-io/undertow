@@ -32,6 +32,7 @@ import io.undertow.server.ConnectionSSLSessionInfo;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.HttpProtocolNames;
 
 public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObject> {
@@ -42,6 +43,7 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
 
 
     private HttpServerConnection connection;
+    private boolean expectingEmpty;
 
     public NettyHttpServerHandler(ExecutorService blockingExecutor, HttpHandler rootHandler, SSLEngine engine) {
         this.blockingExecutor = blockingExecutor;
@@ -79,13 +81,21 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
             if (msg instanceof HttpContent) {
                 connection.addData((HttpContent) msg);
             }
-            if (msg instanceof LastHttpContent) {
+            if (!request.headers().contains(HttpHeaderNames.CONTENT_LENGTH) &&
+                    !request.headers().contains(HttpHeaderNames.TRANSFER_ENCODING)) {
+                expectingEmpty = true;
+                Connectors.terminateRequest(exchange);
+            } else if (msg instanceof LastHttpContent) {
                 Connectors.terminateRequest(exchange);
             }
 
             connection.newExchange(exchange, rootHandler);
         } else if (msg instanceof HttpContent) {
-            connection.addData((HttpContent) msg);
+            if (expectingEmpty) {
+                expectingEmpty = false;
+            } else {
+                connection.addData((HttpContent) msg);
+            }
         }
     }
 
