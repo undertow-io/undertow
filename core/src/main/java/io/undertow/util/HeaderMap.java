@@ -196,7 +196,8 @@ public final class HeaderMap implements Iterable<HeaderValues> {
     }
 
     public HeaderMap addLast(final HttpString headerName, final String headerValue) {
-        return add(headerName, headerValue);
+        headers.add(headerName.toString(), headerValue);
+        return this;
     }
 
     public HeaderMap add(HttpString headerName, long headerValue) {
