@@ -343,7 +343,7 @@ public class UndertowOptions {
     public static final UndertowOption<Integer> RECEIVE_BUFFER = UndertowOption.create("RECEIVE_BUFFER", Integer.class);
 
     /**
-     * Configure an IP socket to reuse addresses.  The value type for this option is {@code boolean}.
+     * Configure an IP socket to reuse addresses.  The value type for this option is {@code boolean}. Default value is true.
      */
     public static final UndertowOption<Boolean> REUSE_ADDRESSES = UndertowOption.create("REUSE_ADDRESSES", Boolean.class);
 
@@ -358,6 +358,7 @@ public class UndertowOptions {
 
     /**
      * Configure a TCP socket to disable Nagle's algorithm.  The value type for this option is {@code boolean}.
+     * Default true.
      */
     public static final UndertowOption<Boolean> TCP_NODELAY = UndertowOption.create("TCP_NODELAY", Boolean.class);
 
@@ -379,12 +380,12 @@ public class UndertowOptions {
 
     /**
      * Configure a channel to send TCP keep-alive messages in an implementation-dependent manner. The value type for
-     * this option is {@code boolean}.
+     * this option is {@code boolean}. Default value is false.
      */
     public static final UndertowOption<Boolean> KEEP_ALIVE = UndertowOption.create("KEEP_ALIVE", Boolean.class);
 
     /**
-     * Configure a server with the specified backlog.  The value type for this option is {@code int}.
+     * Configure a server with the specified backlog. The value type for this option is {@code int}. Defaults to 1024.
      */
     public static final UndertowOption<Integer> BACKLOG = UndertowOption.create("BACKLOG", Integer.class);
 

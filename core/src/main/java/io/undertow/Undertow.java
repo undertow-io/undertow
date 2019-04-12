@@ -32,6 +32,8 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -137,13 +139,9 @@ public final class Undertow {
 //                    channels.add(server);
 //                    listenerInfo.add(new ListenerInfo("ajp", server.getLocalAddress(), openListener, null, server));
                 } else if (listener.type == ListenerType.HTTP) {
-
-                    ServerBootstrap b = new ServerBootstrap();
-                    b.option(ChannelOption.SO_BACKLOG, 1024);
-                    b.group(bossGroup, workerGroup)
-                            .channel(NioServerSocketChannel.class)
-                            .childHandler(new NettyHttpServerInitializer(worker, rootHandler, null));
-                    Channel ch = b.bind(listener.host, listener.port).sync().channel();
+                    Channel ch = bootstrap()
+                            .childHandler(new NettyHttpServerInitializer(worker, rootHandler, null))
+                            .bind(listener.host, listener.port).sync().channel();
 
                     channels.add(ch);
                     listenerInfo.add(new ListenerInfo("http", ch.localAddress(), null));
@@ -156,17 +154,12 @@ public final class Undertow {
                         sslCtx = SSLContext.getInstance("TLS");
                         sslCtx.init(listener.keyManagers, listener.trustManagers, new SecureRandom());
                     }
-                    ServerBootstrap b = new ServerBootstrap();
-                    b.option(ChannelOption.SO_BACKLOG, 1024);
-                    b.group(bossGroup, workerGroup)
-                            .channel(NioServerSocketChannel.class)
-                            .childHandler(new NettyHttpServerInitializer(worker, rootHandler, sslCtx));
-                    Channel ch = b.bind(listener.host, listener.port).sync().channel();
+                    Channel ch = bootstrap()
+                            .childHandler(new NettyHttpServerInitializer(worker, rootHandler, sslCtx))
+                            .bind(listener.host, listener.port).sync().channel();
 
                     channels.add(ch);
                     listenerInfo.add(new ListenerInfo("https", ch.localAddress(), null));
-
-
                 }
             }
 
@@ -177,6 +170,22 @@ public final class Undertow {
             throw new RuntimeException(e);
         }
     }
+
+    private ServerBootstrap bootstrap() {
+        ByteBufAllocator allocator = PooledByteBufAllocator.DEFAULT;
+        return new ServerBootstrap()
+                .option(ChannelOption.ALLOCATOR, allocator)
+                .option(ChannelOption.SO_BACKLOG, socketOptions.get(UndertowOptions.BACKLOG, 1024))
+                .option(ChannelOption.SO_REUSEADDR, socketOptions.get(UndertowOptions.REUSE_ADDRESSES, true))
+                .childOption(ChannelOption.ALLOCATOR, allocator)
+                .childOption(ChannelOption.SO_KEEPALIVE, socketOptions.get(UndertowOptions.KEEP_ALIVE, false))
+                .childOption(ChannelOption.TCP_NODELAY, socketOptions.get(UndertowOptions.TCP_NODELAY, true))
+                // Requires EpollServerSocketChannel
+//                .childOption(EpollChannelOption.TCP_CORK, socketOptions.get(UndertowOptions.CORK, true))
+                .group(bossGroup, workerGroup)
+                .channel(NioServerSocketChannel.class);
+    }
+
 
     public synchronized void stop() {
         if(bossGroup == null) {
