@@ -100,6 +100,8 @@
         <version.org.wildfly.openssl>1.0.4.Final</version.org.wildfly.openssl>
         <version.checkstyle>7.1</version.checkstyle>
 
+        <version.jmh>1.21</version.jmh>
+
     </properties>
 
     <modules>
@@ -109,6 +111,7 @@
         <module>examples</module>
         <module>websockets-jsr</module>
         <module>karaf</module>
+        <module>benchmarks</module>
     </modules>
 
     <build>
@@ -322,6 +325,12 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <dependency>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-benchmarks</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
             <!-- External Dependencies -->
 
             <dependency>
@@ -461,6 +470,18 @@
                 <scope>test</scope>
             </dependency>
 
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-core</artifactId>
+                <version>${version.jmh}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.openjdk.jmh</groupId>
+                <artifactId>jmh-generator-annprocess</artifactId>
+                <version>${version.jmh}</version>
+                <scope>provided</scope>
+            </dependency>
 
         </dependencies>
     </dependencyManagement>
