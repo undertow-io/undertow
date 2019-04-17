@@ -85,7 +85,7 @@ class ModClusterContainer implements ModClusterController {
         this.healthChecker = modCluster.getHealthChecker();
         this.proxyClient = new ModClusterProxyClient(null, this);
         this.removeBrokenNodesThreshold = removeThreshold(modCluster.getHealthCheckInterval(), modCluster.getRemoveBrokenNodes());
-        this.routeIteratorFactory = new RouteIteratorFactory(RouteIteratorFactory.ParsingCompatibility.MOD_CLUSTER, modCluster.rankedAffinityDelimiter());
+        this.routeIteratorFactory = new RouteIteratorFactory(modCluster.routeParsingStrategy(), RouteIteratorFactory.ParsingCompatibility.MOD_CLUSTER, modCluster.rankedAffinityDelimiter());
     }
 
     String getServerID() {
@@ -208,7 +208,7 @@ class ModClusterContainer implements ModClusterController {
      * Management command enabling all contexts on the given node.
      *
      * @param jvmRoute the jvmRoute
-     * @return
+     * @return whether the given node was enabled
      */
     public synchronized boolean enableNode(final String jvmRoute) {
         final Node node = nodes.get(jvmRoute);
@@ -225,7 +225,7 @@ class ModClusterContainer implements ModClusterController {
      * Management command disabling all contexts on the given node.
      *
      * @param jvmRoute the jvmRoute
-     * @return
+     * @return whether the given node was disabled
      */
     public synchronized boolean disableNode(final String jvmRoute) {
         final Node node = nodes.get(jvmRoute);
@@ -242,7 +242,7 @@ class ModClusterContainer implements ModClusterController {
      * Management command stopping all contexts on the given node.
      *
      * @param jvmRoute the jvmRoute
-     * @return
+     * @return whether the given node was stopped
      */
     public synchronized boolean stopNode(final String jvmRoute) {
         final Node node = nodes.get(jvmRoute);
