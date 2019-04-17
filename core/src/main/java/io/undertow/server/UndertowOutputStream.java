@@ -54,6 +54,23 @@ public class UndertowOutputStream extends OutputStream {
         this.contentLength = exchange.getResponseContentLength();
     }
 
+    /**
+     * If the response has not yet been written to the client this method will clear the streams buffer,
+     * invalidating any content that has already been written. If any content has already been sent to the client then
+     * this method will throw and IllegalStateException
+     *
+     * @throws java.lang.IllegalStateException If the response has been committed
+     */
+    public void resetBuffer() {
+        if(anyAreSet(state, FLAG_WRITE_STARTED)) {
+            throw UndertowMessages.MESSAGES.cannotResetBuffer();
+        }
+        if (pooledBuffer != null) {
+            pooledBuffer.release();
+            pooledBuffer = null;
+            written = 0;
+        }
+    }
 
     public long getBytesWritten() {
         return written;

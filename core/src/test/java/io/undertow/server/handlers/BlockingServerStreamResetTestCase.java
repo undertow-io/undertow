@@ -16,12 +16,11 @@
  *  limitations under the License.
  */
 
-package io.undertow.server.handlers.blocking;
+package io.undertow.server.handlers;
 
-import io.undertow.io.UndertowOutputStream;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.server.UndertowOutputStream;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -47,8 +46,11 @@ public class BlockingServerStreamResetTestCase {
         blockingHandler.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                exchange.getOutputStream().write(1);
-                ((UndertowOutputStream) exchange.getOutputStream()).resetBuffer();
+                UndertowOutputStream stream = (UndertowOutputStream) exchange.getOutputStream();
+                stream.write(1);
+                Assert.assertEquals(1, stream.getBytesWritten());
+                stream.resetBuffer();
+                Assert.assertEquals(0, stream.getBytesWritten());
                 exchange.getOutputStream().write("Hello, World".getBytes());
             }
         });
