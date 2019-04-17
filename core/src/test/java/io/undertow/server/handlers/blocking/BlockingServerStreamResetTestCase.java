@@ -47,8 +47,11 @@ public class BlockingServerStreamResetTestCase {
         blockingHandler.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                exchange.getOutputStream().write(1);
-                ((UndertowOutputStream) exchange.getOutputStream()).resetBuffer();
+                UndertowOutputStream stream = (UndertowOutputStream) exchange.getOutputStream();
+                stream.write(1);
+                Assert.assertEquals(1, stream.getBytesWritten());
+                stream.resetBuffer();
+                Assert.assertEquals(0, stream.getBytesWritten());
                 exchange.getOutputStream().write("Hello, World".getBytes());
             }
         });

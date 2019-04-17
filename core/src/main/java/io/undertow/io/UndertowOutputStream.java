@@ -75,7 +75,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
      * invalidating any content that has already been written. If any content has already been sent to the client then
      * this method will throw and IllegalStateException
      *
-     * @throws java.lang.IllegalStateException If the response has been commited
+     * @throws java.lang.IllegalStateException If the response has been committed
      */
     public void resetBuffer() {
         if(anyAreSet(state, FLAG_WRITE_STARTED)) {
@@ -84,6 +84,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         buffer = null;
         IoUtils.safeClose(pooledBuffer);
         pooledBuffer = null;
+        written = 0;
     }
 
     public long getBytesWritten() {
