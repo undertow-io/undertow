@@ -493,10 +493,12 @@ public class ExtendedAccessLogParser {
             StringBuilder sb = new StringBuilder();
             sb.append("#Fields: ");
             sb.append(pattern);
-            sb.append("\n#Version: 2.0\n");
+            sb.append(System.lineSeparator());
+            sb.append("#Version: 2.0");
+            sb.append(System.lineSeparator());
             sb.append("#Software: ");
             sb.append(Version.getFullVersionString());
-            sb.append("\n");
+            sb.append(System.lineSeparator());
             return sb.toString();
         }
     }
