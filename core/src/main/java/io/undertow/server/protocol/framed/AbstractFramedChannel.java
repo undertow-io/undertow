@@ -822,7 +822,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     }
 
     @Override
-    public Setter<? extends AbstractFramedChannel> getCloseSetter() {
+    public Setter<C> getCloseSetter() {
         return closeSetter;
     }
 
