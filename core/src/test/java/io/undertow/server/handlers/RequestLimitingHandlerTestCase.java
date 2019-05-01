@@ -129,8 +129,8 @@ public class RequestLimitingHandlerTestCase {
                         try {
                             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
                             HttpResponse result = client.execute(get);
-                            if(result.getStatusLine().getStatusCode() == 513) {
-                                return "513";
+                            if(result.getStatusLine().getStatusCode() == 503) {
+                                return "503";
                             }
                             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
                             return HttpClientUtils.readResponse(result);
@@ -146,7 +146,7 @@ public class RequestLimitingHandlerTestCase {
             latch.countDown();
             for (Future<?> future : futures) {
                 String res = (String) future.get();
-                Assert.assertTrue(res, res.equals("1") || res.equals("2") || res.equals("513"));
+                Assert.assertTrue(res, res.equals("1") || res.equals("2") || res.equals("503"));
             }
             futures.clear();
             for (int i = 0; i < 2; ++i) {

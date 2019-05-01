@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * <p>
  * When the number of active requests goes over the configured max requests then requests will be suspended and queued.
  * <p>
- * If the queue is full requests will be rejected with a 513.
+ * If the queue is full requests will be rejected with a 503 Service Unavailable according to RFC7231 Section 6.6.4.
  * <p>
  * The reason why this is abstracted out into a separate class is so that multiple handlers can share the same state. This
  * allows for fine grained control of resources.
@@ -55,7 +55,7 @@ public class RequestLimit {
     /**
      * The handler that will be invoked if the queue is full.
      */
-    private volatile HttpHandler failureHandler = new ResponseCodeHandler(513);
+    private volatile HttpHandler failureHandler = new ResponseCodeHandler(503);
 
     private final Queue<SuspendedRequest> queue;
 
