@@ -217,7 +217,11 @@ public class StatusCodes {
     }
 
     public static final String getReason(final int code) {
-        final Entry result = TABLE[code & SIZE];
+        final int hash = code & SIZE;
+        if (hash == SIZE) {
+            return "Unknown";
+        }
+        final Entry result = TABLE[hash];
         if (result == null || result.code != code) {
             return "Unknown";
         } else {
