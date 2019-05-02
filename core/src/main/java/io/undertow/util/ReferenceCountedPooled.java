@@ -109,7 +109,19 @@ public class ReferenceCountedPooled implements PooledByteBuffer {
         return underlying.getBuffer();
     }
 
-    public PooledByteBuffer createView(final ByteBuffer newValue) {
+    public PooledByteBuffer createView(int viewSize) {
+        ByteBuffer newView = getBuffer().duplicate();
+        newView.limit(newView.position() + viewSize);
+        final ByteBuffer newValue = newView.slice();
+        ByteBuffer newUnderlying = getBuffer().duplicate();
+        newUnderlying.position(newUnderlying.position() + viewSize);
+
+        int oldRemaining = newUnderlying.remaining();
+        newUnderlying.limit(newUnderlying.capacity());
+        newUnderlying = newUnderlying.slice();
+        newUnderlying.limit(newUnderlying.position() + oldRemaining);
+        slice = newUnderlying;
+
         increaseReferenceCount();
         return new PooledByteBuffer() {
 
@@ -149,6 +161,10 @@ public class ReferenceCountedPooled implements PooledByteBuffer {
                         '}';
             }
         };
+    }
+
+    public PooledByteBuffer createView() {
+        return createView(getBuffer().remaining());
     }
 
     public void increaseReferenceCount() {
