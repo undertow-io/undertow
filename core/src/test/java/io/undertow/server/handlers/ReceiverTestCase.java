@@ -174,8 +174,6 @@ public class ReceiverTestCase {
 
     @Test
     public void testAsyncReceiveWholeBytesFailed() throws Exception {
-        // TODO un-@Ignore - https://issues.jboss.org/browse/UNDERTOW-1531 - ReceiverTestCase#testAsyncReceiveWholeBytesFailed[proxy][http2] fails intermittently on Windows
-        org.junit.Assume.assumeFalse(DefaultServer.isH2() && org.apache.commons.lang.SystemUtils.IS_OS_WINDOWS);
 
         EXCEPTIONS.clear();
         Socket socket = new Socket();
