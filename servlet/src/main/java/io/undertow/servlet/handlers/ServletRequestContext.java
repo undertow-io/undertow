@@ -74,18 +74,26 @@ public class ServletRequestContext {
         CURRENT.remove();
     }
 
+    /**
+     * Gets the {@link ServletRequestContext} assigned to the current thread.
+     *
+     * @return The current {@link ServletRequestContext} based on the calling thread
+     * @throws IllegalStateException if the calling thread does not have a {@link ServletRequestContext} set
+     * @see ServletRequestContext#current()
+     */
     public static ServletRequestContext requireCurrent() {
-        SecurityManager sm = System.getSecurityManager();
-        if(sm != null) {
-            sm.checkPermission(GET_CURRENT_REQUEST);
-        }
-        ServletRequestContext attachments = CURRENT.get();
+        ServletRequestContext attachments = current();
         if (attachments == null) {
             throw UndertowMessages.MESSAGES.noRequestActive();
         }
         return attachments;
     }
 
+    /**
+     * Gets the current threads {@link ServletRequestContext} if set, otherwise null.
+     *
+     * @return The current {@link ServletRequestContext} based on the calling thread, or null if unavailable
+     */
     public static ServletRequestContext current() {
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
