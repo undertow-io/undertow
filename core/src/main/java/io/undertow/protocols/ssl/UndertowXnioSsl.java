@@ -21,6 +21,8 @@ package io.undertow.protocols.ssl;
 import static org.xnio.IoUtils.safeClose;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.KeyManagementException;
@@ -39,6 +41,8 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.FutureResult;
@@ -48,6 +52,7 @@ import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Sequence;
+import org.xnio.SslClientAuthMode;
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioExecutor;
@@ -75,6 +80,18 @@ public class UndertowXnioSsl extends XnioSsl {
 
     private final ByteBufferPool bufferPool;
     private volatile SSLContext sslContext;
+
+    private static final Method USE_CIPHER_SUITES_METHOD;
+
+    static {
+        Method method = null;
+        try {
+            method = SSLParameters.class.getDeclaredMethod("setUseCipherSuitesOrder", boolean.class);
+            method.setAccessible(true);
+        } catch (NoSuchMethodException e) {
+        }
+        USE_CIPHER_SUITES_METHOD = method;
+    }
 
     /**
      * Construct a new instance.
@@ -209,6 +226,7 @@ public class UndertowXnioSsl extends XnioSsl {
      * @param sslContext the SSL context
      * @param optionMap the SSL options
      * @param peerAddress the peer address of the connection
+     * @param client whether this SSL connection is run in client mode
      * @return the configured SSL engine
      */
     private static SSLEngine createSSLEngine(SSLContext sslContext, OptionMap optionMap, InetSocketAddress peerAddress, boolean client) {
@@ -239,6 +257,35 @@ public class UndertowXnioSsl extends XnioSsl {
                 }
             }
             engine.setEnabledProtocols(finalList.toArray(new String[finalList.size()]));
+        }
+        if (!client) {
+            final SslClientAuthMode clientAuthMode = optionMap.get(Options.SSL_CLIENT_AUTH_MODE);
+            if (clientAuthMode != null) {
+                switch (clientAuthMode) {
+                    case NOT_REQUESTED:
+                        engine.setNeedClientAuth(false);
+                        engine.setWantClientAuth(false);
+                        break;
+                    case REQUESTED:
+                        engine.setWantClientAuth(true);
+                        break;
+                    case REQUIRED:
+                        engine.setNeedClientAuth(true);
+                        break;
+                    default:
+                        throw new IllegalStateException();
+                }
+            }
+        }
+        boolean useCipherSuitesOrder = optionMap.get(UndertowOptions.SSL_USER_CIPHER_SUITES_ORDER, false);
+        if (USE_CIPHER_SUITES_METHOD != null && useCipherSuitesOrder) {
+            SSLParameters sslParameters = engine.getSSLParameters();
+            try {
+                USE_CIPHER_SUITES_METHOD.invoke(sslParameters, true);
+                engine.setSSLParameters(sslParameters);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                UndertowLogger.ROOT_LOGGER.failedToUseServerOrder(e);
+            }
         }
         return engine;
     }
