@@ -33,4 +33,13 @@ public class NodeStatusCodesTestCase {
     public void testCodeLookup() {
         Assert.assertEquals("OK", StatusCodes.getReason(StatusCodes.OK));
     }
+
+    @Test
+    public void testUnknownCode() {
+        Assert.assertEquals("Unexpected reason phrase", "Unknown", StatusCodes.getReason(-1));
+        Assert.assertEquals("Unexpected reason phrase", "Unknown", StatusCodes.getReason(999));
+        Assert.assertEquals("Unexpected reason phrase", "Unknown", StatusCodes.getReason(735));
+        Assert.assertEquals("Unexpected reason phrase", "Unknown", StatusCodes.getReason(Integer.MAX_VALUE));
+        Assert.assertEquals("Unexpected reason phrase", "Unknown", StatusCodes.getReason(Integer.MIN_VALUE));
+    }
 }
