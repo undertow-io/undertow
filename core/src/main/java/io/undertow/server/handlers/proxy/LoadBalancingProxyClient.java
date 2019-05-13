@@ -84,7 +84,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
     private final UndertowClient client;
 
     private final Map<String, Host> routes = new CopyOnWriteMap<>();
-    private RouteIteratorFactory routeIteratorFactory = new RouteIteratorFactory(ParsingCompatibility.MOD_JK, null);
+    private RouteIteratorFactory routeIteratorFactory = new RouteIteratorFactory(RouteParsingStrategy.SINGLE, ParsingCompatibility.MOD_JK);
 
     private final ExclusivityChecker exclusivityChecker;
 
@@ -165,8 +165,16 @@ public class LoadBalancingProxyClient implements ProxyClient {
         return this;
     }
 
+    public LoadBalancingProxyClient setRouteParsingStrategy(RouteParsingStrategy routeParsingStrategy) {
+        this.routeIteratorFactory = new RouteIteratorFactory(routeParsingStrategy, ParsingCompatibility.MOD_JK, null);
+        return this;
+    }
+
+    /**
+     * Configures ranked route delimiter, enabling ranked routing parsing strategy.
+     */
     public LoadBalancingProxyClient setRankedRoutingDelimiter(String rankedRoutingDelimiter) {
-        this.routeIteratorFactory = new RouteIteratorFactory(ParsingCompatibility.MOD_JK, rankedRoutingDelimiter);
+        this.routeIteratorFactory = new RouteIteratorFactory(RouteParsingStrategy.RANKED, ParsingCompatibility.MOD_JK, rankedRoutingDelimiter);
         return this;
     }
 

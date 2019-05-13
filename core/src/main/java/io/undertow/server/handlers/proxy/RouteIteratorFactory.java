@@ -23,8 +23,9 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Factory for route/affinity iterator parser. This implementation lazily parses routes while supporting ranked routing. The
- * iterator never creates new String instances but returns a CharSequence wrapper from the existing session ID.
+ * Factory for route/affinity iterator parser. This implementation lazily parses routes while supporting strategies in
+ * {@link RouteParsingStrategy} including ranked routing. The iterator never creates new String instances but returns
+ * a CharSequence wrapper from the existing session ID.
  *
  * @author Radoslav Husar
  */
@@ -35,16 +36,30 @@ public class RouteIteratorFactory {
         MOD_CLUSTER,
     }
 
-    private final ParsingCompatibility parsing;
-    private final String delimiter;
+    private final RouteParsingStrategy routeParsingStrategy;
+    private final ParsingCompatibility parsingCompatibility;
+    private final String rankedRouteDelimiter;
 
     /**
-     * @param parsingCompatibility parsing compatibility behavior
-     * @param rankedRouteDelimiter String sequence to split routes at to support ranked affinity parsing; {@code null} disables the support
+     * @param routeParsingStrategy route parsing strategy
+     * @param parsingCompatibility route parsing compatibility behavior
      */
-    public RouteIteratorFactory(ParsingCompatibility parsingCompatibility, String rankedRouteDelimiter) {
-        this.parsing = parsingCompatibility;
-        this.delimiter = rankedRouteDelimiter;
+    public RouteIteratorFactory(RouteParsingStrategy routeParsingStrategy, ParsingCompatibility parsingCompatibility) {
+        this(routeParsingStrategy, parsingCompatibility, null);
+    }
+
+    /**
+     * @param routeParsingStrategy route parsing strategy
+     * @param parsingCompatibility route parsing compatibility behavior
+     * @param rankedRouteDelimiter String sequence to split routes at if ranked routing is enabled
+     */
+    public RouteIteratorFactory(RouteParsingStrategy routeParsingStrategy, ParsingCompatibility parsingCompatibility, String rankedRouteDelimiter) {
+        if (routeParsingStrategy == RouteParsingStrategy.RANKED && rankedRouteDelimiter == null) {
+            throw new IllegalArgumentException();
+        }
+        this.routeParsingStrategy = routeParsingStrategy;
+        this.parsingCompatibility = parsingCompatibility;
+        this.rankedRouteDelimiter = rankedRouteDelimiter;
     }
 
     /**
@@ -68,14 +83,18 @@ public class RouteIteratorFactory {
         RouteIterator(String sessionId) {
             this.sessionId = sessionId;
 
-            int index = (sessionId == null) ? -1 : sessionId.indexOf('.');
-            if (index == -1) {
-                // Case where there is no routing information at all.
+            if (routeParsingStrategy == RouteParsingStrategy.NONE) {
                 this.nextResolved = true;
                 this.next = null;
             } else {
-                // Case where ranked route support is not enabled
-                nextPos = index + 1;
+                int index = (sessionId == null) ? -1 : sessionId.indexOf('.');
+                if (index == -1) {
+                    // Case where there is no routing information at all.
+                    this.nextResolved = true;
+                    this.next = null;
+                } else {
+                    nextPos = index + 1;
+                }
             }
         }
 
@@ -92,7 +111,7 @@ public class RouteIteratorFactory {
 
             if (next != null) {
                 CharSequence result = next;
-                nextResolved = (delimiter == null);
+                nextResolved = (routeParsingStrategy != RouteParsingStrategy.RANKED);
                 next = null;
 
                 return result;
@@ -102,8 +121,8 @@ public class RouteIteratorFactory {
 
         private void resolveNext() {
             if (!nextResolved) {
-                if (delimiter == null) {
-                    if (parsing == ParsingCompatibility.MOD_JK) {
+                if (routeParsingStrategy != RouteParsingStrategy.RANKED) {
+                    if (parsingCompatibility == ParsingCompatibility.MOD_JK) {
                         // mod_jk aka LoadBalancingProxyClient uses mod_jk parsing mechanism though never supports domain
                         // it treats route only as the sequence after the first "." but before the second ".";
                         // i.e. does not allow "." in route
@@ -119,9 +138,9 @@ public class RouteIteratorFactory {
                 } else if (nextPos >= sessionId.length()) {
                     next = null;
                 } else {
-                    int currentPos = sessionId.indexOf(delimiter, nextPos);
+                    int currentPos = sessionId.indexOf(rankedRouteDelimiter, nextPos);
                     next = CharBuffer.wrap(sessionId, nextPos, (currentPos != -1) ? currentPos : sessionId.length());
-                    nextPos += next.length() + delimiter.length();
+                    nextPos += next.length() + rankedRouteDelimiter.length();
                 }
                 nextResolved = true;
             }

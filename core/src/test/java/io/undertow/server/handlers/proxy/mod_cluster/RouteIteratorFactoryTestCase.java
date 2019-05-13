@@ -19,6 +19,9 @@ package io.undertow.server.handlers.proxy.mod_cluster;
 
 import static io.undertow.server.handlers.proxy.RouteIteratorFactory.ParsingCompatibility.MOD_CLUSTER;
 import static io.undertow.server.handlers.proxy.RouteIteratorFactory.ParsingCompatibility.MOD_JK;
+import static io.undertow.server.handlers.proxy.RouteParsingStrategy.NONE;
+import static io.undertow.server.handlers.proxy.RouteParsingStrategy.SINGLE;
+import static io.undertow.server.handlers.proxy.RouteParsingStrategy.RANKED;
 
 import java.util.Iterator;
 
@@ -31,25 +34,30 @@ import org.junit.Test;
  *
  * @author Radoslav Husar
  */
-public class RouteParserTestCase {
+public class RouteIteratorFactoryTestCase {
 
     @Test
-    public void testModJkLikeRankedAffinityParsing() {
-        Iterator<CharSequence> ri = new RouteIteratorFactory(MOD_JK, null).iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h");
+    public void testModJkLikeRouteParsing() {
+        // Disabled sticky sessions on the load balancer
+        Iterator<CharSequence> ri = new RouteIteratorFactory(NONE, MOD_JK).iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1.domain");
         Assert.assertFalse(ri.hasNext());
 
-        // Ranked routing support but no route given
-        ri = new RouteIteratorFactory(MOD_JK, ".").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h");
+        // Default behavior
+        ri = new RouteIteratorFactory(SINGLE, MOD_JK).iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h");
         Assert.assertFalse(ri.hasNext());
 
         // No ranked routing support taking as route only between first "." and second "."
-        ri = new RouteIteratorFactory(MOD_JK, null).iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1.node2.node3");
+        ri = new RouteIteratorFactory(SINGLE, MOD_JK).iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1.domain1.something");
         Assert.assertTrue(ri.hasNext());
         Assert.assertEquals("node1", ri.next().toString());
         Assert.assertFalse(ri.hasNext());
 
+        // Ranked routing support but no route given
+        ri = new RouteIteratorFactory(RANKED, MOD_JK, ".").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h");
+        Assert.assertFalse(ri.hasNext());
+
         // Multi-route support with the same character delimiter as sessionID delimiter '.' -- overriding domain support parsing
-        ri = new RouteIteratorFactory(MOD_JK, ".").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1.node2.node3");
+        ri = new RouteIteratorFactory(RANKED, MOD_JK, ".").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1.node2.node3");
         Assert.assertTrue(ri.hasNext());
         Assert.assertEquals("node1", ri.next().toString());
         Assert.assertTrue(ri.hasNext());
@@ -60,26 +68,33 @@ public class RouteParserTestCase {
     }
 
     @Test
-    public void testModClusterRankedAffinityParsing() {
+    public void testModClusterRouteParsing() {
+        // Disabled sticky sessions
+        Iterator<CharSequence> ri = new RouteIteratorFactory(NONE, MOD_CLUSTER).iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h");
+        Assert.assertFalse(ri.hasNext());
+
+        ri = new RouteIteratorFactory(NONE, MOD_CLUSTER).iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1.node2");
+        Assert.assertFalse(ri.hasNext());
+
         // No ranked routing support and no route given or null sessionId
-        Iterator<CharSequence> ri = new RouteIteratorFactory(MOD_CLUSTER, null).iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h");
+        ri = new RouteIteratorFactory(SINGLE, MOD_CLUSTER).iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h");
         Assert.assertFalse(ri.hasNext());
 
-        ri = new RouteIteratorFactory(MOD_CLUSTER, "|").iterator(null);
-        Assert.assertFalse(ri.hasNext());
-
-        // Ranked routing support but no route given
-        ri = new RouteIteratorFactory(MOD_CLUSTER, ".").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h");
+        ri = new RouteIteratorFactory(SINGLE, MOD_CLUSTER).iterator(null);
         Assert.assertFalse(ri.hasNext());
 
         // No ranked routing support treating everything after '.' as route
-        ri = new RouteIteratorFactory(MOD_CLUSTER, null).iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1.node2.node3");
+        ri = new RouteIteratorFactory(SINGLE, MOD_CLUSTER).iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1.node2.node3");
         Assert.assertTrue(ri.hasNext());
         Assert.assertEquals("node1.node2.node3", ri.next().toString());
         Assert.assertFalse(ri.hasNext());
 
+        // Ranked routing support but no route given
+        ri = new RouteIteratorFactory(RANKED, MOD_CLUSTER, ".").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h");
+        Assert.assertFalse(ri.hasNext());
+
         // Multi-route support with the same character delimiter as sessionID delimiter '.'
-        ri = new RouteIteratorFactory(MOD_CLUSTER, ".").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1.node2.node3");
+        ri = new RouteIteratorFactory(RANKED, MOD_CLUSTER, ".").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1.node2.node3");
         Assert.assertTrue(ri.hasNext());
         Assert.assertEquals("node1", ri.next().toString());
         Assert.assertTrue(ri.hasNext());
@@ -89,7 +104,7 @@ public class RouteParserTestCase {
         Assert.assertFalse(ri.hasNext());
 
         // Multi-route support with a different character delimiter ':'
-        ri = new RouteIteratorFactory(MOD_CLUSTER, ":").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1:node2.1:node3.1");
+        ri = new RouteIteratorFactory(RANKED, MOD_CLUSTER, ":").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1:node2.1:node3.1");
         Assert.assertTrue(ri.hasNext());
         Assert.assertEquals("node1", ri.next().toString());
         Assert.assertTrue(ri.hasNext());
@@ -99,7 +114,7 @@ public class RouteParserTestCase {
         Assert.assertFalse(ri.hasNext());
 
         // Multi-route support with messy inputs
-        ri = new RouteIteratorFactory(MOD_CLUSTER, ":").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1::node2::");
+        ri = new RouteIteratorFactory(RANKED, MOD_CLUSTER, ":").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1::node2::");
         Assert.assertTrue(ri.hasNext());
         Assert.assertEquals("node1", ri.next().toString());
         Assert.assertTrue(ri.hasNext());
@@ -111,7 +126,7 @@ public class RouteParserTestCase {
         Assert.assertFalse(ri.hasNext());
 
         // Multi-route multi-character delimiter support
-        ri = new RouteIteratorFactory(MOD_CLUSTER, "|||").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1|||node2|||node3");
+        ri = new RouteIteratorFactory(RANKED, MOD_CLUSTER, "|||").iterator("mKaJwtWjqgxFbSSlaKZeGly_RMPKCg13JXe-6R_h.node1|||node2|||node3");
         Assert.assertTrue(ri.hasNext());
         Assert.assertEquals("node1", ri.next().toString());
         Assert.assertTrue(ri.hasNext());

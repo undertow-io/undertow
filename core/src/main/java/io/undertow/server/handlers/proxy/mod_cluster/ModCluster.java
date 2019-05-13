@@ -26,6 +26,7 @@ import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.ProxyHandler;
+import io.undertow.server.handlers.proxy.RouteParsingStrategy;
 import org.xnio.OptionMap;
 import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
@@ -55,6 +56,7 @@ public class ModCluster {
     private final ModClusterContainer container;
     private final int maxRetries;
     private final boolean deterministicFailover;
+    private final RouteParsingStrategy routeParsingStrategy;
     private final String rankedAffinityDelimiter;
 
     private final boolean reuseXForwarded;
@@ -70,6 +72,7 @@ public class ModCluster {
         this.healthCheckInterval = builder.healthCheckInterval;
         this.removeBrokenNodes = builder.removeBrokenNodes;
         this.deterministicFailover = builder.deterministicFailover;
+        this.routeParsingStrategy = builder.routeParsingStrategy;
         this.rankedAffinityDelimiter = builder.rankedAffinityDelimiter;
         this.healthChecker = builder.healthChecker;
         this.maxRequestTime = builder.maxRequestTime;
@@ -130,6 +133,10 @@ public class ModCluster {
 
     public boolean isDeterministicFailover() {
         return deterministicFailover;
+    }
+
+    public RouteParsingStrategy routeParsingStrategy() {
+        return this.routeParsingStrategy;
     }
 
     public String rankedAffinityDelimiter() {
@@ -235,7 +242,8 @@ public class ModCluster {
         private OptionMap clientOptions = OptionMap.EMPTY;
         private int maxRetries;
         private boolean deterministicFailover = false;
-        private String rankedAffinityDelimiter = null;
+        private RouteParsingStrategy routeParsingStrategy = RouteParsingStrategy.SINGLE;
+        private String rankedAffinityDelimiter = ".";
 
         private boolean reuseXForwarded;
 
@@ -305,8 +313,20 @@ public class ModCluster {
         }
 
         /**
-         * Setting any value, enables ranked affinity feature and uses specified delimiter for splitting multiple routes.
-         * Web requests will have an affinity for the first available node in a list.
+         * Configures route parsing strategy to support none, single or ranked affinity.
+         *
+         * @param routeParsingStrategy strategy to use for parsing routes
+         * @return this builder
+         */
+        public Builder setRouteParsingStrategy(RouteParsingStrategy routeParsingStrategy) {
+            this.routeParsingStrategy = routeParsingStrategy;
+            return this;
+        }
+
+        /**
+         * Configures ranked affinity delimiter used for splitting multiple encoded routes when
+         * {@link RouteParsingStrategy#RANKED} is specified. Web requests will have an affinity for the first available node in
+         * the list.
          *
          * @param rankedAffinityDelimiter delimiter splitting multiple routes; typically a "."
          * @return this builder
