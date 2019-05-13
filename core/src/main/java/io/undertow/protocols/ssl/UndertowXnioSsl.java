@@ -23,6 +23,7 @@ import static org.xnio.IoUtils.safeClose;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -201,6 +202,16 @@ public class UndertowXnioSsl extends XnioSsl {
 
     public SslConnection wrapExistingConnection(StreamConnection connection, OptionMap optionMap, boolean clientMode) {
         return new UndertowSslConnection(connection, createSSLEngine(sslContext, optionMap, (InetSocketAddress) connection.getPeerAddress(), clientMode), bufferPool);
+    }
+
+    public SslConnection wrapExistingConnection(StreamConnection connection, OptionMap optionMap, URI destinationURI) {
+        SSLEngine sslEngine = createSSLEngine(sslContext, optionMap, (InetSocketAddress) connection.getPeerAddress(), true);
+        SSLParameters sslParameters = sslEngine.getSSLParameters();
+        if (sslParameters.getServerNames() == null || sslParameters.getServerNames().isEmpty()) {
+            sslParameters.setServerNames(Collections.singletonList(new SNIHostName(destinationURI.getHost())));
+            sslEngine.setSSLParameters(sslParameters);
+        }
+        return new UndertowSslConnection(connection, sslEngine, bufferPool);
     }
 
     /**

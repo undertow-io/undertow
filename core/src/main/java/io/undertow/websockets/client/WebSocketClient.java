@@ -258,7 +258,7 @@ public class WebSocketClient {
                                                     StreamConnection targetConnection = connection.performUpgrade();
                                                     WebSocketLogger.REQUEST_LOGGER.debugf("Established websocket connection to %s", uri);
                                                     if (uri.getScheme().equals("wss") || uri.getScheme().equals("https")) {
-                                                        handleConnectionWithExistingConnection(((UndertowXnioSsl) ssl).wrapExistingConnection(targetConnection, optionMap));
+                                                        handleConnectionWithExistingConnection(((UndertowXnioSsl) ssl).wrapExistingConnection(targetConnection, optionMap, uri));
                                                     } else {
                                                         handleConnectionWithExistingConnection(targetConnection);
                                                     }
