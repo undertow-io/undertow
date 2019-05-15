@@ -298,6 +298,12 @@ public class UndertowXnioSsl extends XnioSsl {
                 UndertowLogger.ROOT_LOGGER.failedToUseServerOrder(e);
             }
         }
+        final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, null);
+        if (endpointIdentificationAlgorithm != null) {
+            SSLParameters sslParameters = engine.getSSLParameters();
+            sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
+            engine.setSSLParameters(sslParameters);
+        }
         return engine;
     }
 
@@ -436,6 +442,12 @@ public class UndertowXnioSsl extends XnioSsl {
                 SSLEngine sslEngine = JsseSslUtils.createSSLEngine(sslContext, optionMap, destination);
                 SSLParameters params = sslEngine.getSSLParameters();
                 params.setServerNames(Collections.singletonList(new SNIHostName(destination.getHostString())));
+
+                final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, null);
+                if (endpointIdentificationAlgorithm != null) {
+                    params.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
+                }
+
                 sslEngine.setSSLParameters(params);
 
                 final SslConnection wrappedConnection = new UndertowSslConnection(connection, sslEngine, bufferPool);
