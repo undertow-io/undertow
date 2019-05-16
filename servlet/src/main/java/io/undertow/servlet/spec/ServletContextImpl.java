@@ -807,7 +807,7 @@ public class ServletContextImpl implements ServletContext {
     public void setRequestCharacterEncoding(String encoding) {
         ensureNotInitialized();
         ensureNotProgramaticListener();
-        deploymentInfo.setDefaultRequestEncoding(getContextPath());
+        deploymentInfo.setDefaultRequestEncoding(encoding);
     }
 
     @Override
