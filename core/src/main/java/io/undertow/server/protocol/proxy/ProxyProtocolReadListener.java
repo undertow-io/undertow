@@ -25,7 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Implementation of version 1 of the proxy protocol (https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt)
+ * Implementation of version 1 and 2 of the proxy protocol (https://www.haproxy.org/download/1.8/doc/proxy-protocol.txt)
  * <p>
  * Even though it is not required by the spec this implementation provides a stateful parser, that can handle
  * fragmentation of
