@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import org.xnio.XnioExecutor;
@@ -89,12 +90,6 @@ public class SimpleNonceManager implements SessionNonceManager {
      * expect to be garbage collected at some point in the future.
      */
     private final Map<NonceHolder, String> forwardMapping = Collections.synchronizedMap(new WeakHashMap<NonceHolder, String>());
-
-    /**
-     * A pseudo-random generator for creating the nonces, a secure random is not required here as this is used purely to
-     * minimise the chance of collisions should two nonces be generated at exactly the same time.
-     */
-    private final Random random = new Random();
 
     private final String secret;
     private final String hashAlg;
@@ -220,7 +215,9 @@ public class SimpleNonceManager implements SessionNonceManager {
 
     private Nonce createNewNonce(NonceHolder previousNonce) {
         byte[] prefix = new byte[8];
-        random.nextBytes(prefix);
+        // A pseudo-random generator for creating the nonces, a secure random is not required here as this is used purely to
+        // minimise the chance of collisions should two nonces be generated at exactly the same time.
+        ThreadLocalRandom.current().nextBytes(prefix);
         long timeStamp = System.currentTimeMillis();
         byte[] now = Long.toString(timeStamp).getBytes(StandardCharsets.UTF_8);
 
