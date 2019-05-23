@@ -29,7 +29,7 @@ import io.undertow.connector.PooledByteBuffer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * {@link StreamSinkFrameChannel} implementation for writing WebSocket Frames on {@link io.undertow.websockets.core.WebSocketVersion#V08} connections
@@ -41,7 +41,6 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
     private final Masker masker;
     private volatile boolean dataWritten = false;
     protected final ExtensionFunction extensionFunction;
-    private final Random random = new Random();
 
     protected WebSocket07FrameSinkChannel(WebSocket07Channel wsChannel, WebSocketFrameType type) {
         super(wsChannel, type);
@@ -141,7 +140,7 @@ public abstract class WebSocket07FrameSinkChannel extends StreamSinkFrameChannel
         }
 
         if(masker != null) {
-            int maskingKey = random.nextInt(); //generate a new key for this frame
+            int maskingKey = ThreadLocalRandom.current().nextInt(); //generate a new key for this frame
             header.put((byte)((maskingKey >> 24) & 0xFF));
             header.put((byte)((maskingKey >> 16) & 0xFF));
             header.put((byte)((maskingKey >> 8) & 0xFF));
