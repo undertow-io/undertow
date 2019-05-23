@@ -100,11 +100,7 @@ public class BlockingWriterSenderImpl implements Sender {
         }
         writer.write(data);
 
-        if (writer.checkError()) {
-            callback.onException(exchange, this, new IOException());
-        } else {
-            invokeOnComplete(callback);
-        }
+        invokeOnComplete(callback);
     }
 
     @Override
@@ -124,11 +120,7 @@ public class BlockingWriterSenderImpl implements Sender {
             return;
         }
         writer.write(data);
-        if (writer.checkError()) {
-            callback.onException(exchange, this, new IOException());
-        } else {
-            invokeOnComplete(callback);
-        }
+        invokeOnComplete(callback);
     }
 
     @Override
@@ -183,7 +175,11 @@ public class BlockingWriterSenderImpl implements Sender {
     @Override
     public void close(final IoCallback callback) {
         writer.close();
-        invokeOnComplete(callback);
+        if (writer.checkError()) {
+            callback.onException(exchange, this, new IOException());
+        } else {
+            invokeOnComplete(callback);
+        }
     }
 
     @Override
@@ -191,6 +187,7 @@ public class BlockingWriterSenderImpl implements Sender {
         if(exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getDispatcherType() != DispatcherType.INCLUDE) {
             IoUtils.safeClose(writer);
         }
+        writer.checkError();
     }
 
 
@@ -204,10 +201,6 @@ public class BlockingWriterSenderImpl implements Sender {
         }
         String data = builder.toString();
         writer.write(data);
-        if (writer.checkError()) {
-            callback.onException(exchange, this, new IOException());
-            return false;
-        }
         return true;
     }
 
