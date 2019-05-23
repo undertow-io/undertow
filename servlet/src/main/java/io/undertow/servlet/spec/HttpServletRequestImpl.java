@@ -48,7 +48,6 @@ import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.LocaleUtils;
-import io.undertow.util.Methods;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -722,17 +721,15 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             queryParameters = exchange.getQueryParameters();
         }
         final Set<String> parameterNames = new HashSet<>(queryParameters.keySet());
-        if (exchange.getRequestMethod().equals(Methods.POST)) {
-            final FormData parsedFormData = parseFormData();
-            if (parsedFormData != null) {
-                Iterator<String> it = parsedFormData.iterator();
-                while (it.hasNext()) {
-                    String name = it.next();
-                    for(FormData.FormValue param : parsedFormData.get(name)) {
-                        if(!param.isFileItem()) {
-                            parameterNames.add(name);
-                            break;
-                        }
+        final FormData parsedFormData = parseFormData();
+        if (parsedFormData != null) {
+            Iterator<String> it = parsedFormData.iterator();
+            while (it.hasNext()) {
+                String name = it.next();
+                for(FormData.FormValue param : parsedFormData.get(name)) {
+                    if(!param.isFileItem()) {
+                        parameterNames.add(name);
+                        break;
                     }
                 }
             }
@@ -752,15 +749,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 ret.add(param);
             }
         }
-        if (exchange.getRequestMethod().equals(Methods.POST)) {
-            final FormData parsedFormData = parseFormData();
-            if (parsedFormData != null) {
-                Deque<FormData.FormValue> res = parsedFormData.get(name);
-                if (res != null) {
-                    for (FormData.FormValue value : res) {
-                        if(!value.isFileItem()) {
-                            ret.add(value.getValue());
-                        }
+        final FormData parsedFormData = parseFormData();
+        if (parsedFormData != null) {
+            Deque<FormData.FormValue> res = parsedFormData.get(name);
+            if (res != null) {
+                for (FormData.FormValue value : res) {
+                    if(!value.isFileItem()) {
+                        ret.add(value.getValue());
                     }
                 }
             }
@@ -780,30 +775,28 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
             arrayMap.put(entry.getKey(), new ArrayList<>(entry.getValue()));
         }
-        if (exchange.getRequestMethod().equals(Methods.POST)) {
 
-            final FormData parsedFormData = parseFormData();
-            if (parsedFormData != null) {
-                Iterator<String> it = parsedFormData.iterator();
-                while (it.hasNext()) {
-                    final String name = it.next();
-                    Deque<FormData.FormValue> val = parsedFormData.get(name);
-                    if (arrayMap.containsKey(name)) {
-                        ArrayList<String> existing = arrayMap.get(name);
-                        for (final FormData.FormValue v : val) {
-                            if(!v.isFileItem()) {
-                                existing.add(v.getValue());
-                            }
+        final FormData parsedFormData = parseFormData();
+        if (parsedFormData != null) {
+            Iterator<String> it = parsedFormData.iterator();
+            while (it.hasNext()) {
+                final String name = it.next();
+                Deque<FormData.FormValue> val = parsedFormData.get(name);
+                if (arrayMap.containsKey(name)) {
+                    ArrayList<String> existing = arrayMap.get(name);
+                    for (final FormData.FormValue v : val) {
+                        if(!v.isFileItem()) {
+                            existing.add(v.getValue());
                         }
-                    } else {
-                        final ArrayList<String> values = new ArrayList<>();
-                        for (final FormData.FormValue v : val) {
-                            if(!v.isFileItem()) {
-                                values.add(v.getValue());
-                            }
-                        }
-                        arrayMap.put(name, values);
                     }
+                } else {
+                    final ArrayList<String> values = new ArrayList<>();
+                    for (final FormData.FormValue v : val) {
+                        if(!v.isFileItem()) {
+                            values.add(v.getValue());
+                        }
+                    }
+                    arrayMap.put(name, values);
                 }
             }
         }
