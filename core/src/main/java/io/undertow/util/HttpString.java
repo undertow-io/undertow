@@ -24,7 +24,6 @@ import java.io.OutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
-import java.util.Random;
 
 import static java.lang.Integer.signum;
 import static java.lang.System.arraycopy;
@@ -50,7 +49,6 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     private transient String string;
 
     private static final Field hashCodeField;
-    private static final int hashCodeBase;
 
     static {
         try {
@@ -59,7 +57,6 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
         } catch (NoSuchFieldException e) {
             throw new NoSuchFieldError(e.getMessage());
         }
-        hashCodeBase = new Random().nextInt();
     }
 
     /**
