@@ -35,6 +35,7 @@ import org.junit.runner.RunWith;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -76,6 +77,35 @@ public class DefaultCharacterEncodingTestCase {
         }
     }
 
+    private void testServletContextCharacterEncoding(final String requestCharacterEncoding, final String responseCharacterEncoding)
+            throws IOException, ServletException {
+        DeploymentUtils.setupServlet(new ServletExtension() {
+                                         @Override
+                                         public void handleDeployment(final DeploymentInfo deploymentInfo, final ServletContext servletContext) {
+                                             servletContext.setRequestCharacterEncoding(requestCharacterEncoding);
+                                             servletContext.setResponseCharacterEncoding(responseCharacterEncoding);
+                                         }
+                                     },
+                Servlets.servlet("servlet", DefaultCharacterEncodingServlet.class).addMapping("/"));
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            final String expectedRequestCharEncoding = requestCharacterEncoding == null ? "null" : requestCharacterEncoding;
+            Assert.assertEquals("Unexpected request character encoding",
+                    expectedRequestCharEncoding, readParameter(response, "requestCharacterEncoding"));
+            // spec mandates "ISO-8859-1" as the default (see javadoc of ServletResponse#getCharacterEncoding())
+            final String expectedResponseCharEncoding = responseCharacterEncoding == null ? "ISO-8859-1" : responseCharacterEncoding;
+            Assert.assertEquals("Unexpected response character encoding",
+                    expectedResponseCharEncoding, readParameter(response, "responseCharacterEncoding"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+
+    }
+
     private String readParameter(String response, String parameter) {
         Pattern pattern = Pattern.compile(parameter + "=(.*?);");
         Matcher matcher = pattern.matcher(response);
@@ -99,5 +129,20 @@ public class DefaultCharacterEncodingTestCase {
     @Test
     public void testDefaultEncodingSetNotEqualDefault() throws IOException, ServletException {
         testDefaultEncoding("UTF-8", "UTF-8", "UTF-8");
+    }
+
+    /**
+     * Tests that the character encoding set on the servlet context using {@link ServletContext#setRequestCharacterEncoding(String)}
+     * and {@link ServletContext#setResponseCharacterEncoding(String)} is honoured at runtime during request/response processing
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testServletContextCharEncoding() throws Exception {
+        testServletContextCharacterEncoding(null, null);
+        testServletContextCharacterEncoding("UTF-8", null);
+        testServletContextCharacterEncoding("UTF-8", "UTF-8");
+        testServletContextCharacterEncoding(null, "UTF-8");
+        testServletContextCharacterEncoding(StandardCharsets.UTF_16BE.name(), "UTF-8");
     }
 }
