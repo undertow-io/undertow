@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -343,14 +344,15 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             channel.getSourceChannel().shutdownReads();
             return null;
         }
+        boolean requiresReinvoke = false;
+        int reinvokeDataRemaining = 0;
         ReferenceCountedPooled pooled = this.readData;
-        boolean hasData;
+        boolean hasData = false;
         if (pooled == null) {
             pooled = allocateReferenceCountedBuffer();
             if (pooled == null) {
                 return null;
             }
-            hasData = false;
         } else if(pooled.isFreed()) {
             //we attempt to re-used an existing buffer
             if(!pooled.tryUnfree()) {
@@ -358,34 +360,34 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 if (pooled == null) {
                     return null;
                 }
-            } else {
-                pooled.getBuffer().limit(pooled.getBuffer().capacity());
             }
-            hasData = false;
+            pooled.getBuffer().clear();
         } else {
             hasData = pooled.getBuffer().hasRemaining();
+            pooled.getBuffer().compact();
         }
         boolean forceFree = false;
         int read = 0;
         try {
-            if (!hasData) {
-                pooled.getBuffer().clear();
-                read = channel.getSourceChannel().read(pooled.getBuffer());
-                if (read == 0) {
-                    //no data, we just free the buffer
-                    forceFree = true;
-                    return null;
-                } else if (read == -1) {
-                    forceFree = true;
-                    readChannelDone = true;
-                    lastDataRead();
-                    return null;
-                } else if(isLastFrameReceived() && frameDataRemaining == 0) {
-                    //we got data, although we should have received the last frame
-                    forceFree = true;
-                    markReadsBroken(new ClosedChannelException());
-                }
-                pooled.getBuffer().flip();
+            read = channel.getSourceChannel().read(pooled.getBuffer());
+            if (read == 0 && !hasData) {
+                //no data, we just free the buffer
+                forceFree = true;
+                return null;
+            } else if (read == -1 && !hasData) {
+                forceFree = true;
+                readChannelDone = true;
+                lastDataRead();
+                return null;
+            } else if(isLastFrameReceived() && frameDataRemaining == 0) {
+                //we got data, although we should have received the last frame
+                forceFree = true;
+                markReadsBroken(new ClosedChannelException());
+            }
+            pooled.getBuffer().flip();
+            if(read == -1) {
+                requiresReinvoke = true;
+                reinvokeDataRemaining = pooled.getBuffer().remaining();
             }
             if (frameDataRemaining > 0) {
                 if (frameDataRemaining >= pooled.getBuffer().remaining()) {
@@ -393,9 +395,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     if(receiver != null) {
                         //we still create a pooled view, this means that if the buffer is still active we can re-used it
                         //which prevents attacks based on sending lots of small fragments
-                        ByteBuffer buf = pooled.getBuffer().duplicate();
-                        pooled.getBuffer().position(pooled.getBuffer().limit());
-                        PooledByteBuffer frameData = pooled.createView(buf);
+                        PooledByteBuffer frameData = pooled.createView();
                         receiver.dataReady(null, frameData);
                     } else {
                         //we are dropping a frame
@@ -407,11 +407,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     }
                     return null;
                 } else {
-                    ByteBuffer buf = pooled.getBuffer().duplicate();
-                    buf.limit((int) (buf.position() + frameDataRemaining));
-                    pooled.getBuffer().position((int) (pooled.getBuffer().position() + frameDataRemaining));
+                    PooledByteBuffer frameData = pooled.createView((int) frameDataRemaining);
                     frameDataRemaining = 0;
-                    PooledByteBuffer frameData = pooled.createView(buf);
                     if(receiver != null) {
                         receiver.dataReady(null, frameData);
                     } else{
@@ -434,13 +431,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 PooledByteBuffer frameData;
                 if (data.getFrameLength() >= pooled.getBuffer().remaining()) {
                     frameDataRemaining = data.getFrameLength() - pooled.getBuffer().remaining();
-                    frameData = pooled.createView(pooled.getBuffer().duplicate());
+                    frameData = pooled.createView();
                     pooled.getBuffer().position(pooled.getBuffer().limit());
                 } else {
-                    ByteBuffer buf = pooled.getBuffer().duplicate();
-                    buf.limit((int) (buf.position() + data.getFrameLength()));
-                    pooled.getBuffer().position((int) (pooled.getBuffer().position() + data.getFrameLength()));
-                    frameData = pooled.createView(buf);
+                    frameData = pooled.createView((int) data.getFrameLength());
                 }
                 AbstractFramedStreamSourceChannel<?, ?, ?> existing = data.getExistingChannel();
                 if (existing != null) {
@@ -481,8 +475,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             //which will make readData null
             if (readData != null) {
                 if (!pooled.getBuffer().hasRemaining() || forceFree) {
-                    if(pooled.getBuffer().limit() * 2 > pooled.getBuffer().capacity() || forceFree) {
-                        //if we have used more than half the buffer we don't allow it to be re-aquired
+                    if(pooled.getBuffer().capacity() < 1024 || forceFree) {
+                        //if there is less than 1k left we don't allow it to be re-aquired
                         readData = null;
                     }
                     //even though this is freed we may un-free it if we get a new packet
@@ -490,6 +484,16 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     pooled.close();
 
                 }
+            }
+            if(requiresReinvoke) {
+                if(readData != null && !readData.isFreed()) {
+                    if(readData.getBuffer().remaining() == reinvokeDataRemaining) {
+                        readData.close();
+                        readData = null;
+                        UndertowLogger.REQUEST_IO_LOGGER.debugf("Partial message read before connection close %s", this);
+                    }
+                }
+                channel.getSourceChannel().wakeupReads();
             }
         }
     }
@@ -979,7 +983,6 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
         @Override
         public void handleEvent(final CloseableChannel c) {
-
             if (Thread.currentThread() != c.getIoThread() && !c.getWorker().isShutdown()) {
                 runInIoThread(new Runnable() {
                     @Override
