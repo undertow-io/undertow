@@ -14,11 +14,13 @@
 
 <FindBugsFilter>
 
-    <!-- Ignore checking for generated parser classes -->
     <Match>
         <Or>
+            <!-- Ignore checking for generated parser classes -->
             <Class name="io.undertow.client.http.HttpResponseParser$$generated"/>
             <Class name="io.undertow.server.protocol.http.HttpRequestParser$$generated"/>
+            <!-- Ignore checking for generated JMH benchmarking classes -->
+            <Package name="io.undertow.benchmarks.generated"/>
         </Or>
     </Match>
 
