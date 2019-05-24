@@ -332,6 +332,13 @@ public class UndertowOptions {
      */
     public static final Option<Integer> SHUTDOWN_TIMEOUT = Option.simple(UndertowOptions.class, "SHUTDOWN_TIMEOUT", Integer.class);
 
+    /**
+     * The endpoint identification algorithm.
+     *
+     * @see javax.net.ssl.SSLParameters#setEndpointIdentificationAlgorithm(String)
+     */
+    public static final Option<String> ENDPOINT_IDENTIFICATION_ALGORITHM = Option.simple(UndertowOptions.class, "ENDPOINT_IDENTIFICATION_ALGORITHM", String.class);
+
     private UndertowOptions() {
 
     }
