@@ -203,18 +203,22 @@ public class Cookies {
     }
 
     static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator) {
+        return parseRequestCookies(maxCookies, allowEqualInValue, cookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0);
+    }
+
+    static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
         if (cookies == null) {
             return new TreeMap<>();
         }
         final Map<String, Cookie> parsedCookies = new TreeMap<>();
 
         for (String cookie : cookies) {
-            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator);
+            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0);
         }
         return parsedCookies;
     }
 
-    private static void parseCookie(final String cookie, final Map<String, Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator) {
+    private static void parseCookie(final String cookie, final Map<String, Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
         int state = 0;
         String name = null;
         int start = 0;
@@ -261,7 +265,13 @@ public class Cookies {
                         containsEscapedQuotes = false;
                         state = 3;
                         start = i + 1;
-                    } else if (!allowEqualInValue && c == '=') {
+                    } else if (c == '=') {
+                        if (!allowEqualInValue && !allowHttpSepartorsV0) {
+                            cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                            state = 4;
+                            start = i + 1;
+                        }
+                    } else if (!allowHttpSepartorsV0 && LegacyCookieSupport.isHttpSeparator(c)) {
                         cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         state = 4;
                         start = i + 1;

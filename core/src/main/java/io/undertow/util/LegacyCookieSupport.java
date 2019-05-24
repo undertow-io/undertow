@@ -42,7 +42,7 @@ public final class LegacyCookieSupport {
      *
      * Defaults to false.
      */
-    private static final boolean ALLOW_HTTP_SEPARATORS_IN_V0 = Boolean.getBoolean("io.undertow.legacy.cookie.ALLOW_HTTP_SEPARATORS_IN_V0");
+    static final boolean ALLOW_HTTP_SEPARATORS_IN_V0 = Boolean.getBoolean("io.undertow.legacy.cookie.ALLOW_HTTP_SEPARATORS_IN_V0");
 
 
     /**
@@ -143,7 +143,7 @@ public final class LegacyCookieSupport {
      * @throws IllegalArgumentException if a control character was supplied as
      *         input
      */
-    private static boolean isHttpSeparator(final char c) {
+    static boolean isHttpSeparator(final char c) {
         if (c < 0x20 || c >= 0x7f) {
             if (c != 0x09) {
                 throw UndertowMessages.MESSAGES.invalidControlCharacter(Integer.toString(c));
