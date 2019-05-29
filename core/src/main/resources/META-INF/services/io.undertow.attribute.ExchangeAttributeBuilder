@@ -16,6 +16,8 @@ io.undertow.attribute.LocalServerNameAttribute$Builder
 io.undertow.attribute.RequestHeaderAttribute$Builder
 io.undertow.attribute.ResponseHeaderAttribute$Builder
 io.undertow.attribute.CookieAttribute$Builder
+io.undertow.attribute.RequestCookieAttribute$Builder
+io.undertow.attribute.ResponseCookieAttribute$Builder
 io.undertow.attribute.ResponseCodeAttribute$Builder
 io.undertow.attribute.PredicateContextAttribute$Builder
 io.undertow.attribute.QueryParameterAttribute$Builder
