@@ -24,6 +24,7 @@ import org.apache.http.HttpResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -36,11 +37,15 @@ public class HttpClientUtils {
     }
 
     public static String readResponse(final HttpResponse response) throws IOException {
+        return readResponse(response, StandardCharsets.UTF_8);
+    }
+
+    public static String readResponse(final HttpResponse response, final Charset charset) throws IOException {
         HttpEntity entity = response.getEntity();
         if(entity == null) {
             return "";
         }
-        return readResponse(entity.getContent());
+        return readResponse(entity.getContent(), charset);
     }
 
     public static String readResponse(InputStream stream) throws IOException {
@@ -52,6 +57,17 @@ public class HttpClientUtils {
             out.write(data, 0, read);
         }
         return new String(out.toByteArray(), StandardCharsets.UTF_8);
+    }
+
+    public static String readResponse(final InputStream stream, final Charset charset) throws IOException {
+
+        byte[] data = new byte[100];
+        int read;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        while ((read = stream.read(data)) != -1) {
+            out.write(data, 0, read);
+        }
+        return new String(out.toByteArray(), charset);
     }
 
     public static byte[] readRawResponse(final HttpResponse response) throws IOException {
