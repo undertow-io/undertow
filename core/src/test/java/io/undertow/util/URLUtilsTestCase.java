@@ -23,7 +23,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -93,5 +95,21 @@ public class URLUtilsTestCase {
     @Test
     public void testIsAbsoluteUrlIgnoresSyntaxErrorsAreNotAbsolute() {
         assertFalse(URLUtils.isAbsoluteUrl(":"));
+    }
+
+    /**
+     * @see <a href="https://issues.jboss.org/browse/UNDERTOW-1552">UNDERTOW-1552</a>
+     */
+    @Test
+    public void testDecodingWithTrailingPercentChar() throws Exception {
+        final String[] urls = new String[] {"https://example.com/?a=%", "https://example.com/?a=%2"};
+        for (final String url : urls) {
+            try {
+                URLUtils.decode(url, StandardCharsets.UTF_8.name(), false, new StringBuilder());
+                Assert.fail("Decode was expected to fail for " + url);
+            }  catch (IllegalArgumentException iae) {
+                // expected
+            }
+        }
     }
 }
