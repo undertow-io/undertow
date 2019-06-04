@@ -107,7 +107,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void onException(HttpServerExchange exchange, ByteBuf context, IOException exception) {
-            IoUtils.safeClose(exchange.getConnection());
+            exchange.getConnection().close(exchange);
         }
     };
 
@@ -1481,10 +1481,10 @@ public final class HttpServerExchange extends AbstractAttachable {
                 blockingHttpExchange.close();
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                IoUtils.safeClose(connection);
+                connection.close(this);
             } catch (Throwable t) {
                 UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
-                IoUtils.safeClose(connection);
+                connection.close(this);
             }
         }
         if (!isRequestComplete()) {

@@ -19,6 +19,7 @@
 package io.undertow.servlet.test.streams;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 
 import javax.servlet.ServletException;
 import javax.servlet.WriteListener;
@@ -26,6 +27,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
 
 /**
@@ -49,6 +51,13 @@ public class ConnectionTerminationServlet extends HttpServlet{
 
             }
         });
-        ServletRequestContext.current().getExchange().getConnection().close();
+        HttpServerExchange exchange = ServletRequestContext.current().getExchange();
+        try {
+            Method method = exchange.getConnection().getClass().getDeclaredMethod("close", HttpServerExchange.class);
+            method.setAccessible(true);
+            method.invoke(exchange.getConnection(), exchange);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -18,7 +18,6 @@
 
 package io.undertow.server;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.SocketAddress;
@@ -43,7 +42,7 @@ import io.undertow.util.UndertowOptionMap;
  *
  * @author Stuart Douglas
  */
-public abstract class ServerConnection extends AbstractAttachable implements Closeable {
+public abstract class ServerConnection extends AbstractAttachable {
 
     /**
      *
@@ -89,7 +88,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      */
     public abstract boolean isOpen();
 
-    public abstract void close() throws IOException;
+    protected abstract void close(HttpServerExchange exchange);
 
     /**
      *

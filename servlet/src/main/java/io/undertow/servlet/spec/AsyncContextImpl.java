@@ -536,7 +536,7 @@ public class AsyncContextImpl implements AsyncContext {
                                                 }, exchange);
                                             } else {
                                                 //not much we can do, just break the connection
-                                                IoUtils.safeClose(exchange.getConnection());
+                                                exchange.endExchange();
                                             }
                                             if (!dispatched) {
                                                 complete();

@@ -131,7 +131,7 @@ public class ServletWebSocketHttpExchange implements WebSocketHttpExchange {
 
     @Override
     public void close() {
-        IoUtils.safeClose(exchange.getConnection());
+        exchange.endExchange();
     }
 
     @Override

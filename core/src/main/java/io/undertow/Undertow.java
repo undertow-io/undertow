@@ -360,17 +360,17 @@ public final class Undertow {
 
     public static final class Builder {
 
-        private int bufferSize;
-        private int ioThreads;
-        private int workerThreads;
-        private boolean directBuffers;
-        private final List<ListenerConfig> listeners = new ArrayList<>();
-        private HttpHandler handler;
-        private ExecutorService worker;
+        int bufferSize;
+        int ioThreads;
+        int workerThreads;
+        boolean directBuffers;
+        final List<ListenerConfig> listeners = new ArrayList<>();
+        HttpHandler handler;
+        ExecutorService worker;
 
-        private final UndertowOptionMap.Builder workerOptions = UndertowOptionMap.builder();
-        private final UndertowOptionMap.Builder socketOptions = UndertowOptionMap.builder();
-        private final UndertowOptionMap.Builder serverOptions = UndertowOptionMap.builder();
+        final UndertowOptionMap.Builder workerOptions = UndertowOptionMap.builder();
+        final UndertowOptionMap.Builder socketOptions = UndertowOptionMap.builder();
+        final UndertowOptionMap.Builder serverOptions = UndertowOptionMap.builder();
 
         private Builder() {
             ioThreads = Math.max(Runtime.getRuntime().availableProcessors(), 2);

@@ -68,7 +68,7 @@ import io.undertow.util.UndertowOptionMap;
  *
  * @author Stuart Douglas
  */
-public class HttpServerConnection extends ServerConnection implements Closeable {
+public class HttpServerConnection extends ServerConnection {
 
     private final List<CloseListener> closeListeners = new CopyOnWriteArrayList<>();
 
@@ -280,8 +280,10 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
         return ctx.channel().isOpen();
     }
 
-    public void close() throws IOException {
-        ctx.channel().close().syncUninterruptibly();
+    protected void close(HttpServerExchange currentExchange) {
+        if(this.currentExchange == currentExchange) {
+            ctx.channel().close().syncUninterruptibly();
+        }
     }
 
     /**

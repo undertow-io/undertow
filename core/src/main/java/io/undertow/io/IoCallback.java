@@ -33,11 +33,7 @@ public interface IoCallback<T> {
 
     default void onException(final HttpServerExchange exchange, final T context, final IOException exception) {
         UndertowLogger.REQUEST_IO_LOGGER.ioException(exception);
-        try {
-            exchange.endExchange();
-        } finally {
-            IoUtils.safeClose(exchange.getConnection());
-        }
+        exchange.endExchange();
     }
 
     /**
