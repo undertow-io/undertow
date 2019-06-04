@@ -111,8 +111,6 @@ public abstract class ServerConnection extends AbstractAttachable implements Clo
      */
     public abstract SocketAddress getPeerAddress();
 
-
-
     protected abstract boolean isExecutingHandlerChain();
 
     protected abstract void beginExecutingHandlerChain(HttpServerExchange exchange);

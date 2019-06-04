@@ -509,6 +509,11 @@ public class HttpServerConnection extends ServerConnection implements Closeable 
 
     public ChannelFuture write(ByteBuf data, boolean last, HttpServerExchange exchange, boolean flush) {
         if (exchange != this.currentExchange || responseComplete) {
+            if(data == null && last) {
+                DefaultChannelPromise defaultChannelPromise = new DefaultChannelPromise(ctx.channel());
+                defaultChannelPromise.setSuccess();
+                return defaultChannelPromise;
+            }
             DefaultChannelPromise defaultChannelPromise = new DefaultChannelPromise(ctx.channel());
             defaultChannelPromise.setFailure(UndertowMessages.MESSAGES.exchangeAlreadyComplete());
             return defaultChannelPromise;

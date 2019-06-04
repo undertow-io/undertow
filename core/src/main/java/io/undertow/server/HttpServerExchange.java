@@ -1116,6 +1116,10 @@ public final class HttpServerExchange extends AbstractAttachable {
             throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
         }
         if (anyAreSet(state, FLAG_RESPONSE_TERMINATED | FLAG_LAST_DATA_QUEUED)) {
+            if(last && data == null) {
+                callback.onComplete(this, context);
+                return;
+            }
             callback.onException(this, context, new IOException(UndertowMessages.MESSAGES.responseComplete()));
             return;
         }
@@ -1132,6 +1136,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             throw new IllegalArgumentException("cannot call write with a null buffer and last being false");
         }
         if (anyAreSet(state, FLAG_RESPONSE_TERMINATED | FLAG_LAST_DATA_QUEUED)) {
+            if(last && data == null) {
+                return;
+            }
             throw UndertowMessages.MESSAGES.responseComplete();
         }
         if(last) {
