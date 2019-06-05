@@ -135,6 +135,7 @@ public class MimeMappings {
 
         /* Add XML related MIMEs */
 
+        defaultMappings.put("ico", "image/x-icon");
         defaultMappings.put("xml", "application/xml");
         defaultMappings.put("xhtml", "application/xhtml+xml");
         defaultMappings.put("xsl", "application/xml");
