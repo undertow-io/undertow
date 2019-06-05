@@ -95,6 +95,7 @@ public class MimeMappings {
         defaultMappings.put("z", "application/x-compress");
         defaultMappings.put("hqx", "application/mac-binhex40");
         defaultMappings.put("mif", "application/x-mif");
+        defaultMappings.put("ico", "image/x-icon");
         defaultMappings.put("ief", "image/ief");
         defaultMappings.put("tiff", "image/tiff");
         defaultMappings.put("tif", "image/tiff");
@@ -135,7 +136,6 @@ public class MimeMappings {
 
         /* Add XML related MIMEs */
 
-        defaultMappings.put("ico", "image/x-icon");
         defaultMappings.put("xml", "application/xml");
         defaultMappings.put("xhtml", "application/xhtml+xml");
         defaultMappings.put("xsl", "application/xml");
