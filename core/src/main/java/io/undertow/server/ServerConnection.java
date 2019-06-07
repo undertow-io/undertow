@@ -44,11 +44,13 @@ import io.undertow.util.UndertowOptionMap;
  */
 public abstract class ServerConnection extends AbstractAttachable {
 
-    /**
-     *
-     * @return The connections buffer pool
-     */
-    public abstract ByteBufAllocator getByteBufferPool();
+
+    protected abstract ByteBuf allocateBuffer();
+    protected abstract ByteBuf allocateBuffer(boolean direct);
+
+    protected abstract ByteBuf allocateBuffer(boolean direct, int bufferSize);
+
+    protected abstract ByteBuf allocateBuffer(int bufferSize);
 
     /**
      *

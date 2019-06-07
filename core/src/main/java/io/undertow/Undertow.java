@@ -63,6 +63,8 @@ public final class Undertow {
     private final UndertowOptionMap workerOptions;
     private final UndertowOptionMap socketOptions;
     private final UndertowOptionMap serverOptions;
+    private final int bufferSize;
+    private final boolean directBuffers;
 
     /**
      * Will be true when a {@link XnioWorker} instance was NOT provided to the {@link Builder}.
@@ -86,6 +88,8 @@ public final class Undertow {
         this.listeners.addAll(builder.listeners);
         this.rootHandler = builder.handler;
         this.worker = builder.worker;
+        this.bufferSize = builder.bufferSize;
+        this.directBuffers = builder.directBuffers;
         this.internalWorker = builder.worker == null;
         this.workerOptions = builder.workerOptions.getMap();
         this.socketOptions = builder.socketOptions.getMap();
@@ -140,7 +144,7 @@ public final class Undertow {
 //                    listenerInfo.add(new ListenerInfo("ajp", server.getLocalAddress(), openListener, null, server));
                 } else if (listener.type == ListenerType.HTTP) {
                     Channel ch = bootstrap()
-                            .childHandler(new NettyHttpServerInitializer(worker, rootHandler, null))
+                            .childHandler(new NettyHttpServerInitializer(worker, rootHandler, null, bufferSize, directBuffers))
                             .bind(listener.host, listener.port).sync().channel();
 
                     channels.add(ch);
@@ -155,7 +159,7 @@ public final class Undertow {
                         sslCtx.init(listener.keyManagers, listener.trustManagers, new SecureRandom());
                     }
                     Channel ch = bootstrap()
-                            .childHandler(new NettyHttpServerInitializer(worker, rootHandler, sslCtx))
+                            .childHandler(new NettyHttpServerInitializer(worker, rootHandler, sslCtx, bufferSize, directBuffers))
                             .bind(listener.host, listener.port).sync().channel();
 
                     channels.add(ch);

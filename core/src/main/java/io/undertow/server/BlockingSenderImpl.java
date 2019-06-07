@@ -137,7 +137,7 @@ public class BlockingSenderImpl implements Sender {
     }
 
     private void performTransfer(RandomAccessFile file, IoCallback callback, long start, long length) {
-        ByteBuf buffer = exchange.getConnection().getByteBufferPool().heapBuffer();
+        ByteBuf buffer = exchange.getConnection().allocateBuffer(false);
         FileChannel source = file.getChannel();
         try {
             source.position(start);
@@ -191,7 +191,7 @@ public class BlockingSenderImpl implements Sender {
                 return false;
             }
         } else {
-            ByteBuf pooled = exchange.getConnection().getByteBufferPool().heapBuffer();
+            ByteBuf pooled = exchange.getConnection().allocateBuffer(false);
             try {
                 while (buffer.isReadable()) {
                     int toRead = Math.min(buffer.readableBytes(), pooled.writableBytes());

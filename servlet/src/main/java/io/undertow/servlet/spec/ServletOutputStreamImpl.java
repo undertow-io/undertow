@@ -137,9 +137,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                 if (buffer == null) {
                     // TODO too ugly ... is there any other way? for now I'm not replicating this throughout the class
                     if (bufferSize > 0) {
-                        pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer(bufferSize);
+                        pooledBuffer = buffer = exchange.allocateBuffer(bufferSize);
                     } else {
-                        pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
+                        pooledBuffer = buffer = exchange.allocateBuffer();
                     }
                 }
                 while (rem > 0) {
@@ -150,7 +150,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
                     if (!buffer.isWritable()) {
                         setFlags(FLAG_WRITE_STARTED);
                         exchange.writeBlocking(buffer, false);
-                        this.pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
+                        this.pooledBuffer = buffer = exchange.allocateBuffer();
                     }
                 }
             } catch (Exception e) {
@@ -170,7 +170,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
         ByteBuf buffer = pooledBuffer;
         try {
             if (buffer == null) {
-                pooledBuffer = buffer = exchange.getConnection().getByteBufferPool().buffer();
+                pooledBuffer = buffer = exchange.allocateBuffer();
             }
             int toWrite = Math.min(len, buffer.writableBytes());
             buffer.writeBytes(b, off, toWrite);
@@ -274,7 +274,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream {
 
     public ByteBuf underlyingBuffer() {
         if (pooledBuffer == null) {
-            pooledBuffer = exchange.getConnection().getByteBufferPool().buffer();
+            pooledBuffer = exchange.allocateBuffer();
         }
         return pooledBuffer;
     }

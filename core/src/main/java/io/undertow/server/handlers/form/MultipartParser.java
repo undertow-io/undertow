@@ -20,10 +20,10 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaders;
+import io.undertow.server.BufferAllocator;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.HttpHeaderNames;
 import io.undertow.util.MalformedMessageException;
@@ -75,7 +75,7 @@ public class MultipartParser {
         void endPart();
     }
 
-    public static ParseState beginParse(final ByteBufAllocator bufferPool, final PartHandler handler, final byte[] boundary, final String requestCharset) {
+    public static ParseState beginParse(final BufferAllocator bufferPool, final PartHandler handler, final byte[] boundary, final String requestCharset) {
 
         // We prepend CR/LF to the boundary to chop trailing CR/LF from
         // body-data tokens.
@@ -86,7 +86,7 @@ public class MultipartParser {
     }
 
     public static class ParseState {
-        private final ByteBufAllocator bufferPool;
+        private final BufferAllocator bufferPool;
         private final PartHandler partHandler;
         private String requestCharset;
         /**
@@ -103,7 +103,7 @@ public class MultipartParser {
         private Encoding encodingHandler;
 
 
-        public ParseState(final ByteBufAllocator bufferPool, final PartHandler partHandler, String requestCharset, final byte[] boundary) {
+        public ParseState(final BufferAllocator bufferPool, final PartHandler partHandler, String requestCharset, final byte[] boundary) {
             this.bufferPool = bufferPool;
             this.partHandler = partHandler;
             this.requestCharset = requestCharset;
@@ -369,15 +369,15 @@ public class MultipartParser {
 
         private final FlexBase64.Decoder decoder = FlexBase64.createDecoder();
 
-        private final ByteBufAllocator bufferPool;
+        private final BufferAllocator bufferPool;
 
-        private Base64Encoding(final ByteBufAllocator bufferPool) {
+        private Base64Encoding(final BufferAllocator bufferPool) {
             this.bufferPool = bufferPool;
         }
 
         @Override
         public void handle(final PartHandler handler, final ByteBuf rawData) throws IOException {
-            ByteBuf buf = bufferPool.buffer();
+            ByteBuf buf = bufferPool.allocateBuffer();
             try {
                 do {
                     buf.clear();
@@ -396,11 +396,11 @@ public class MultipartParser {
 
     private static class QuotedPrintableEncoding implements Encoding {
 
-        private final ByteBufAllocator bufferPool;
+        private final BufferAllocator bufferPool;
         boolean equalsSeen;
         byte firstCharacter;
 
-        private QuotedPrintableEncoding(final ByteBufAllocator bufferPool) {
+        private QuotedPrintableEncoding(final BufferAllocator bufferPool) {
             this.bufferPool = bufferPool;
         }
 
@@ -409,7 +409,7 @@ public class MultipartParser {
         public void handle(final PartHandler handler, final ByteBuf rawData) throws IOException {
             boolean equalsSeen = this.equalsSeen;
             byte firstCharacter = this.firstCharacter;
-            ByteBuf buf = bufferPool.buffer();
+            ByteBuf buf = bufferPool.allocateBuffer();
             try {
                 while (rawData.isReadable()) {
                     byte b = rawData.readByte();

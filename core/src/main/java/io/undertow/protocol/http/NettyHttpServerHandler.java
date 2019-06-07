@@ -40,15 +40,19 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
     private final ExecutorService blockingExecutor;
     private final HttpHandler rootHandler;
     private final SSLEngine engine;
+    private final int bufferSize;
+    private final boolean directBuffers;
 
 
     private HttpServerConnection connection;
     private boolean expectingEmpty;
 
-    public NettyHttpServerHandler(ExecutorService blockingExecutor, HttpHandler rootHandler, SSLEngine engine) {
+    public NettyHttpServerHandler(ExecutorService blockingExecutor, HttpHandler rootHandler, SSLEngine engine, int bufferSize, boolean directBuffers) {
         this.blockingExecutor = blockingExecutor;
         this.rootHandler = rootHandler;
         this.engine = engine;
+        this.bufferSize = bufferSize;
+        this.directBuffers = directBuffers;
     }
 
     @Override
@@ -56,12 +60,14 @@ public class NettyHttpServerHandler extends SimpleChannelInboundHandler<HttpObje
         ctx.flush();
     }
 
+
+
     @Override
     public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) {
         if (msg instanceof HttpRequest) {
             HttpRequest request = (HttpRequest) msg;
             if (connection == null) {
-                connection = new HttpServerConnection(ctx, blockingExecutor, engine == null ? null : new ConnectionSSLSessionInfo(engine.getSession()));
+                connection = new HttpServerConnection(ctx, blockingExecutor, engine == null ? null : new ConnectionSSLSessionInfo(engine.getSession()), bufferSize, directBuffers);
                 ctx.channel().closeFuture().addListener(new GenericFutureListener<Future<? super Void>>() {
                     @Override
                     public void operationComplete(Future<? super Void> future) throws Exception {

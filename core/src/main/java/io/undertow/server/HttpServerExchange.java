@@ -70,7 +70,7 @@ import io.undertow.util.UndertowOptions;
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
-public final class HttpServerExchange extends AbstractAttachable {
+public final class HttpServerExchange extends AbstractAttachable implements BufferAllocator {
 
     // immutable state
 
@@ -1563,6 +1563,23 @@ public final class HttpServerExchange extends AbstractAttachable {
         return connection.readBytesAvailable(this);
     }
 
+    @Override
+    public ByteBuf allocateBuffer() {
+        return connection.allocateBuffer();
+    }
+    @Override
+    public ByteBuf allocateBuffer(boolean direct) {
+        return connection.allocateBuffer(direct);
+    }
+
+    @Override
+    public ByteBuf allocateBuffer(int bufferSize) {
+        return connection.allocateBuffer(bufferSize);
+    }
+    @Override
+    public ByteBuf allocateBuffer(boolean direct, int bufferSize) {
+        return connection.allocateBuffer(direct, bufferSize);
+    }
     /**
      * Used to terminate the request in an async manner, the actual mechanism will depend on the underlying protocol,
      * for example HTTP/2 may send a RST_STREAM stream if there is more data coming.

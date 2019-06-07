@@ -31,11 +31,15 @@ public class NettyHttpServerInitializer extends ChannelInitializer<SocketChannel
     private final ExecutorService blockingExecutor;
     private final HttpHandler rootHandler;
     private final SSLContext sslCtx;
+    private final int bufferSize;
+    private final boolean directBuffers;
 
-    public NettyHttpServerInitializer(ExecutorService blockingExecutor, HttpHandler rootHandler, SSLContext sslCtx) {
+    public NettyHttpServerInitializer(ExecutorService blockingExecutor, HttpHandler rootHandler, SSLContext sslCtx, int bufferSize, boolean directBuffers) {
         this.blockingExecutor = blockingExecutor;
         this.rootHandler = rootHandler;
         this.sslCtx = sslCtx;
+        this.bufferSize = bufferSize;
+        this.directBuffers = directBuffers;
     }
 
     @Override
@@ -50,6 +54,6 @@ public class NettyHttpServerInitializer extends ChannelInitializer<SocketChannel
             p.addLast(sslHandler);
         }
         p.addLast(new HttpServerCodec());
-        p.addLast(new NettyHttpServerHandler(blockingExecutor, rootHandler, engine));
+        p.addLast(new NettyHttpServerHandler(blockingExecutor, rootHandler, engine, bufferSize, directBuffers));
     }
 }

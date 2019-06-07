@@ -15,7 +15,6 @@
 
 package io.undertow.protocol.http;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.SocketAddress;
@@ -29,7 +28,6 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.function.Consumer;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -103,6 +101,8 @@ public class HttpServerConnection extends ServerConnection {
 
     private Future<? super Void> writeListenerFuture; //used to prevent recursion when invoking the write listener
 
+    private final int bufferSize;
+    private final boolean direct;
 
     /**
      * If this flag is set then the request is current running through a
@@ -110,7 +110,7 @@ public class HttpServerConnection extends ServerConnection {
      * <p>
      * This will be true most of the time, this only time this will return
      * false is when performing async operations outside the scope of a call to
-     * {@link Connectors#executeRootHandler(HttpHandler, HttpServerExchange)}
+     * {@link Connectors#executeRootHandler(HttpHandler, BufferAllocator)}
      * <p>
      * If this is true then when the call stack returns the exchange will either be dispatched,
      * or the exchange will be ended.
@@ -135,15 +135,12 @@ public class HttpServerConnection extends ServerConnection {
 
     private volatile IoCallback<ByteBuf> readCallback;
 
-    public HttpServerConnection(ChannelHandlerContext ctx, Executor executor, SSLSessionInfo sslSessionInfo) {
+    public HttpServerConnection(ChannelHandlerContext ctx, Executor executor, SSLSessionInfo sslSessionInfo, int bufferSize, boolean direct) {
         this.ctx = ctx;
         this.executor = executor;
         this.sslSessionInfo = sslSessionInfo;
-    }
-
-    @Override
-    public ByteBufAllocator getByteBufferPool() {
-        return ctx.alloc();
+        this.bufferSize = bufferSize;
+        this.direct = direct;
     }
 
 
@@ -241,6 +238,36 @@ public class HttpServerConnection extends ServerConnection {
         }
     }
 
+    @Override
+    protected ByteBuf allocateBuffer() {
+        return allocateBuffer(direct);
+    }
+    @Override
+    protected ByteBuf allocateBuffer(boolean direct) {
+        if(direct) {
+            return ctx.channel().alloc().directBuffer(bufferSize);
+        } else {
+            return ctx.channel().alloc().heapBuffer(bufferSize);
+        }
+    }
+
+    @Override
+    protected ByteBuf allocateBuffer(boolean direct, int bufferSize) {
+        if(direct) {
+            return ctx.channel().alloc().directBuffer(bufferSize);
+        } else {
+            return ctx.channel().alloc().heapBuffer(bufferSize);
+        }
+    }
+
+    @Override
+    protected ByteBuf allocateBuffer(int bufferSize) {
+        if(direct) {
+            return ctx.channel().alloc().directBuffer(bufferSize);
+        } else {
+            return ctx.channel().alloc().heapBuffer(bufferSize);
+        }
+    }
     /**
      * @return The connections worker
      */
@@ -357,7 +384,7 @@ public class HttpServerConnection extends ServerConnection {
 
     @Override
     public int getBufferSize() {
-        throw new RuntimeException("NYI");
+        return bufferSize;
     }
 
     @Override
