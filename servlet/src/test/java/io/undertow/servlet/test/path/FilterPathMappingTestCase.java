@@ -84,6 +84,9 @@ public class FilterPathMappingTestCase {
         builder.addServlet(new ServletInfo("/test/*", PathMappingServlet.class)
                 .addMapping("/test/*"));
 
+        builder.addServlet(new ServletInfo("/test2", PathMappingServlet.class)
+                .addMapping("/test2"));
+
         builder.addFilter(new FilterInfo("/*", PathFilter.class));
         builder.addFilterUrlMapping("/*", "/*", DispatcherType.REQUEST);
 
@@ -118,6 +121,9 @@ public class FilterPathMappingTestCase {
         builder.addFilter(new FilterInfo("/test", PathFilter.class));
         builder.addFilterUrlMapping("/test", "/test", DispatcherType.REQUEST);
 
+        builder.addFilter(new FilterInfo("/test2/*", PathFilter.class));
+        builder.addFilterUrlMapping("/test2/*", "/test2/*", DispatcherType.REQUEST);
+
         builder.addFilter(new FilterInfo("allByName", PathFilter.class));
         builder.addFilterServletNameMapping("allByName", "*", DispatcherType.REQUEST);
 
@@ -136,6 +142,7 @@ public class FilterPathMappingTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             runTest(client, "test", "/test/* - /test - null", "/*", "*", "/test", "allByName");
+            runTest(client, "test2", "/test2 - /test2 - null", "/*", "*", "/test2/*", "allByName");
             runTest(client, "aa", "/aa - /aa - null", "/*", "*", "/aa", "allByName");
             runTest(client, "a/c", "/a/* - /a - /c", "/*", "*", "/a/*", "allByName");
             runTest(client, "a", "/a/* - /a - null", "/*", "*", "/a/*", "allByName");
