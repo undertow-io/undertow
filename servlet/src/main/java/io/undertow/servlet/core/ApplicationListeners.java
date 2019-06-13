@@ -241,9 +241,22 @@ public class ApplicationListeners implements Lifecycle {
             return;
         }
         if(servletRequestListeners.length > 0) {
+            int i = 0;
             final ServletRequestEvent sre = new ServletRequestEvent(servletContext, request);
-            for (int i = 0; i < servletRequestListeners.length; ++i) {
-                this.<ServletRequestListener>get(servletRequestListeners[i]).requestInitialized(sre);
+            try {
+                for (; i < servletRequestListeners.length; ++i) {
+                    this.<ServletRequestListener>get(servletRequestListeners[i]).requestInitialized(sre);
+                }
+            } catch (RuntimeException e) {
+                UndertowServletLogger.REQUEST_LOGGER.errorInvokingListener("requestInitialized", servletRequestListeners[i].getListenerInfo().getListenerClass(), e);
+                for (; i >= 0; i--) {
+                    try {
+                        this.<ServletRequestListener>get(servletRequestListeners[i]).requestDestroyed(sre);
+                    } catch (Throwable t) {
+                        UndertowServletLogger.REQUEST_LOGGER.errorInvokingListener("requestDestroyed", servletRequestListeners[i].getListenerInfo().getListenerClass(), e);
+                    }
+                }
+                throw e;
             }
         }
     }
