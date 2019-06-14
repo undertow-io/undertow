@@ -129,6 +129,10 @@ public class URLUtils {
 
                     while ((i < numChars)) {
                         if (c == '%') {
+                            // we need 2 more characters to decode the % construct
+                            if ((i + 2) >= s.length()) {
+                                throw UndertowMessages.MESSAGES.failedToDecodeURL(s, enc, null);
+                            }
                             char p1 = Character.toLowerCase(s.charAt(i + 1));
                             char p2 = Character.toLowerCase(s.charAt(i + 2));
                             if (!decodeSlash && ((p1 == '2' && p2 == 'f') || (p1 == '5' && p2 == 'c'))) {
