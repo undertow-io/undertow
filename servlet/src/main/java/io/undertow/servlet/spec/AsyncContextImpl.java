@@ -297,33 +297,13 @@ public class AsyncContextImpl implements AsyncContext {
                 //basically if we are doing async IO we can't do a dispatch here, as then the IO thread can be racing
                 //with the dispatch thread.
                 //at all other times the dispatch is desirable
-                onAsyncComplete();
-                HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
-                response.responseDone();
-                try {
-                    servletRequestContext.getOriginalRequest().closeAndDrainRequest();
-                    servletRequestContext.getOriginalRequest().clearAttributes();
-                } catch (IOException e) {
-                    UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                } catch (Throwable t) {
-                    UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
-                }
+                onAsyncCompleteAndRespond();
             } else {
                 servletRequestContext.getOriginalRequest().asyncRequestDispatched();
                 doDispatch(new Runnable() {
                     @Override
                     public void run() {
-                        onAsyncComplete();
-
-                        HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
-                        response.responseDone();
-                        try {
-                            servletRequestContext.getOriginalRequest().closeAndDrainRequest();
-                        } catch (IOException e) {
-                            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                        } catch (Throwable t) {
-                            UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
-                        }
+                        onAsyncCompleteAndRespond();
                     }
                 });
             }
@@ -608,6 +588,33 @@ public class AsyncContextImpl implements AsyncContext {
         }
     }
 
+    private void onAsyncCompleteAndRespond() {
+        final HttpServletResponseImpl response = servletRequestContext.getOriginalResponse();
+        try {
+            onAsyncComplete();
+        } catch (RuntimeException e) {
+            //handleError(e);
+            /*try {
+                response.sendError(StatusCodes.INTERNAL_SERVER_ERROR,
+                        e.getMessage());
+            } catch (IOException ioException) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(ioException);
+                response.responseDone();
+            }
+            throw e;*/
+            UndertowServletLogger.REQUEST_LOGGER.failureDispatchingAsyncEvent(e);
+        } finally {
+            response.responseDone();
+            try {
+                servletRequestContext.getOriginalRequest().closeAndDrainRequest();
+                servletRequestContext.getOriginalRequest().clearAttributes();
+            } catch (IOException e) {
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+            } catch (Throwable t) {
+                UndertowLogger.REQUEST_IO_LOGGER.handleUnexpectedFailure(t);
+            }
+        }
+    }
 
     private void onAsyncComplete() {
         final boolean setupRequired = SecurityActions.currentServletRequestContext() == null;
