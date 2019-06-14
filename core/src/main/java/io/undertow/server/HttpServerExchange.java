@@ -1121,33 +1121,6 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Sets a request cookie
-     *
-     * @param cookie The cookie
-     */
-    public HttpServerExchange setRequestCookie(final Cookie cookie) {
-        if (requestCookies == null) {
-            requestCookies = Cookies.parseRequestCookies(
-                    getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, 200),
-                    getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false),
-                    requestHeaders.get(Headers.COOKIE));
-        }
-        if (getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION)) {
-            if (cookie.getValue() != null && !cookie.getValue().isEmpty()) {
-                Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
-            }
-            if (cookie.getPath() != null && !cookie.getPath().isEmpty()) {
-                Rfc6265CookieSupport.validatePath(cookie.getPath());
-            }
-            if (cookie.getDomain() != null && !cookie.getDomain().isEmpty()) {
-                Rfc6265CookieSupport.validateDomain(cookie.getDomain());
-            }
-        }
-        requestCookies.put(cookie.getName(), cookie);
-        return this;
-    }
-
-    /**
      * @return A mutable map of request cookies
      */
     public Map<String, Cookie> getRequestCookies() {
@@ -1166,7 +1139,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param cookie The cookie
      */
     public HttpServerExchange setResponseCookie(final Cookie cookie) {
-        if (getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION)) {
+        if(getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION)) {
             if (cookie.getValue() != null && !cookie.getValue().isEmpty()) {
                 Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
             }
