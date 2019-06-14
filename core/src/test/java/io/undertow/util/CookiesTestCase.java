@@ -223,6 +223,45 @@ public class CookiesTestCase {
     }
 
     @Test
+    public void testHttpSeparaterInV0CookieValue() {
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, false, Arrays.asList("CUSTOMER=WILE_E COYOTE; SHIPPING=FEDEX" ), true, false);
+        Assert.assertEquals(2, cookies.size());
+        Cookie cookie = cookies.get("CUSTOMER");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WILE_E", cookie.getValue());
+        cookie = cookies.get("SHIPPING");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("FEDEX", cookie.getValue());
+
+        cookies = Cookies.parseRequestCookies(2, false, Arrays.asList("CUSTOMER=WILE_E COYOTE; SHIPPING=FEDEX" ), true, true);
+        Assert.assertEquals(2, cookies.size());
+        cookie = cookies.get("CUSTOMER");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WILE_E COYOTE", cookie.getValue());
+        cookie = cookies.get("SHIPPING");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("FEDEX", cookie.getValue());
+
+        cookies = Cookies.parseRequestCookies(2, false, Arrays.asList("CUSTOMER=WILE_E_COYOTE\"; SHIPPING=FEDEX" ), true, false);
+        Assert.assertEquals(2, cookies.size());
+        cookie = cookies.get("CUSTOMER");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+        cookie = cookies.get("SHIPPING");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("FEDEX", cookie.getValue());
+
+        cookies = Cookies.parseRequestCookies(2, false, Arrays.asList("CUSTOMER=WILE_E_COYOTE\"; SHIPPING=FEDEX" ), true, true);
+        Assert.assertEquals(2, cookies.size());
+        cookie = cookies.get("CUSTOMER");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WILE_E_COYOTE\"", cookie.getValue());
+        cookie = cookies.get("SHIPPING");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("FEDEX", cookie.getValue());
+    }
+
+    @Test
     public void testQuotedEscapedStringInRequestCookie() {
         Map<String, Cookie> cookies = Cookies.parseRequestCookies(3, false, Arrays.asList(
                     "Customer=\"WILE_\\\"E_\\\"COYOTE\"; $Version=\"1\"; $Path=\"/acme\";"
@@ -245,9 +284,11 @@ public class CookiesTestCase {
 
     @Test
     public void testSimpleJSONObjectInRequestCookies() {
+        // allowEqualInValue and allowHttpSepartorsV0 needs to be enabled to handle this cookie
+        // Also, commaIsSeperator needs to be set to false
         Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, true, Arrays.asList(
                 "CUSTOMER={\"v1\":1, \"id\":\"some_unique_id\", \"c\":\"http://www.google.com?q=love me\"};"
-                + " $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"));
+                + " $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"), false, true);
 
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertEquals("CUSTOMER", cookie.getName());
@@ -267,9 +308,11 @@ public class CookiesTestCase {
 
     @Test
     public void testQuotedJSONObjectInRequestCookies() {
+        // allowEqualInValue and allowHttpSepartorsV0 needs to be enabled to handle this cookie
+        // Also, commaIsSeperator needs to be set to false
         Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, true, Arrays.asList(
                 "CUSTOMER=\"{\\\"v1\\\":1, \\\"id\\\":\\\"some_unique_id\\\", \\\"c\\\":\\\"http://www.google.com?q=love me\\\"}\";"
-                + " $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"));
+                + " $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"), false, true);
 
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertEquals("CUSTOMER", cookie.getName());
@@ -289,12 +332,14 @@ public class CookiesTestCase {
 
     @Test
     public void testComplexJSONObjectInRequestCookies() {
+        // allowHttpSepartorsV0 needs to be enabled to handle this cookie
+        // Also, commaIsSeperator needs to be set to false
         Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, false, Arrays.asList(
                 "CUSTOMER={ \"accounting\" : [ { \"firstName\" : \"John\", \"lastName\" : \"Doe\", \"age\" : 23 },"
                 + " { \"firstName\" : \"Mary\",  \"lastName\" : \"Smith\", \"age\" : 32 }], "
                 + "\"sales\" : [ { \"firstName\" : \"Sally\", \"lastName\" : \"Green\", \"age\" : 27 }, "
                 + "{ \"firstName\" : \"Jim\", \"lastName\" : \"Galley\", \"age\" : 41 } ] };"
-                + " $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"));
+                + " $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"), false, true);
 
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertEquals("CUSTOMER", cookie.getName());
