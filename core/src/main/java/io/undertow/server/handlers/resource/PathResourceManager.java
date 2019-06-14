@@ -262,6 +262,9 @@ public class PathResourceManager implements ResourceManager  {
                         for (FileChangeEvent change : changes) {
                             if (change.getFile().getAbsolutePath().startsWith(base)) {
                                 String path = change.getFile().getAbsolutePath().substring(base.length());
+                                if (File.separatorChar == '\\' && path.contains(File.separator)) {
+                                    path = path.replace(File.separatorChar, '/');
+                                }
                                 events.add(new ResourceChangeEvent(path, ResourceChangeEvent.Type.valueOf(change.getType().name())));
                             }
                         }
