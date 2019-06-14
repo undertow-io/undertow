@@ -33,10 +33,8 @@ public final class DirectByteBufferDeallocator {
         Unsafe tmpUnsafe = null;
         if (version < 9) {
             try {
-                tmpCleaner = Class.forName("java.nio.DirectByteBuffer").getMethod("cleaner");
-                tmpCleaner.setAccessible(true);
-                tmpCleanerClean = Class.forName("sun.misc.Cleaner").getMethod("clean");
-                tmpCleanerClean.setAccessible(true);
+                tmpCleaner = getAccesibleMethod("java.nio.DirectByteBuffer", "cleaner");
+                tmpCleanerClean = getAccesibleMethod("sun.misc.Cleaner", "clean");
                 supported = true;
             } catch (Throwable t) {
                 UndertowLogger.ROOT_LOGGER.directBufferDeallocatorInitializationFailed(t);
@@ -106,4 +104,27 @@ public final class DirectByteBufferDeallocator {
             throw new RuntimeException("JDK did not allow accessing unsafe", t);
         }
     }
+
+    private static Method getAccesibleMethod(String className, String methodName) {
+        if (System.getSecurityManager() != null) {
+            return AccessController.doPrivileged(new PrivilegedAction<Method>() {
+                @Override
+                public Method run() {
+                    return getAccesibleMethod0(className, methodName);
+                }
+            });
+        }
+        return getAccesibleMethod0(className, methodName);
+    }
+
+    private static Method getAccesibleMethod0(String className, String methodName) {
+        try {
+            Method method = Class.forName(className).getMethod(methodName);
+            method.setAccessible(true);
+            return method;
+        } catch (Throwable t) {
+            throw new RuntimeException("JDK did not allow accessing method", t);
+        }
+    }
+
 }
