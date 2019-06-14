@@ -23,6 +23,7 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -324,10 +325,20 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public String getCharacterEncoding() {
-        if (charset == null) {
-            return servletContext.getDeployment().getDefaultResponseCharset().name();
+        if (charset != null) {
+            return charset;
         }
-        return charset;
+        // first check, web-app context level default response encoding
+        if (servletContext.getDeployment().getDeploymentInfo().getDefaultResponseEncoding() != null) {
+            return servletContext.getDeployment().getDeploymentInfo().getDefaultResponseEncoding();
+        }
+        // now check the container level default encoding
+        if (servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding() != null) {
+            return servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding();
+        }
+        // if no explicit encoding is specified, this method is supposed to return ISO-8859-1 as per the
+        // expectation of this API
+        return StandardCharsets.ISO_8859_1.name();
     }
 
     @Override

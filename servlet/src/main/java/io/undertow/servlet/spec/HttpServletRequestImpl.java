@@ -56,6 +56,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.security.AccessController;
 import java.security.Principal;
@@ -600,12 +601,14 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (characterEncodingFromHeader != null) {
             return characterEncodingFromHeader;
         }
-
-        if (servletContext.getDeployment().getDeploymentInfo().getDefaultRequestEncoding() != null ||
-                servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding() != null) {
-            return servletContext.getDeployment().getDefaultRequestCharset().name();
+        // first check, web-app context level default request encoding
+        if (servletContext.getDeployment().getDeploymentInfo().getDefaultRequestEncoding() != null) {
+            return servletContext.getDeployment().getDeploymentInfo().getDefaultRequestEncoding();
         }
-
+        // now check the container level default encoding
+        if (servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding() != null) {
+            return servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding();
+        }
         return null;
     }
 
@@ -860,21 +863,22 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             if (servletInputStream != null) {
                 throw UndertowServletMessages.MESSAGES.getInputStreamAlreadyCalled();
             }
-            Charset charSet = servletContext.getDeployment().getDefaultRequestCharset();
-            if (characterEncoding != null) {
-                charSet = characterEncoding;
+            Charset charSet = null;
+            if (this.characterEncoding != null) {
+                charSet = this.characterEncoding;
             } else {
-                String c = getCharacterEncodingFromHeader();
+                final String c = getCharacterEncoding();
                 if (c != null) {
                     try {
                         charSet = Charset.forName(c);
                     } catch (UnsupportedCharsetException e) {
-                        throw new UnsupportedEncodingException();
+                        throw new UnsupportedEncodingException(e.getMessage());
                     }
                 }
             }
 
-            reader = new BufferedReader(new InputStreamReader(exchange.getInputStream(), charSet));
+            reader = new BufferedReader(charSet == null ? new InputStreamReader(exchange.getInputStream(), StandardCharsets.ISO_8859_1)
+                    : new InputStreamReader(exchange.getInputStream(), charSet));
         }
         readStarted = true;
         return reader;

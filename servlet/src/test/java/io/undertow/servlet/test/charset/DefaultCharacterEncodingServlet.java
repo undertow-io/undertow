@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Reader;
 
 /**
  * @author Artemy Osipov
@@ -31,13 +32,31 @@ import java.io.PrintWriter;
 public class DefaultCharacterEncodingServlet extends HttpServlet {
 
     @Override
-    protected void service(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+    protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         String requestCharacterEncoding = req.getCharacterEncoding();
         String responseCharacterEncoding = resp.getCharacterEncoding();
 
         PrintWriter writer = resp.getWriter();
         writer.write(String.format("requestCharacterEncoding=%s;responseCharacterEncoding=%s;",
                 requestCharacterEncoding, responseCharacterEncoding));
+        writer.close();
+    }
+
+    @Override
+    protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
+        final Reader reader = req.getReader();
+        final char[] buf = new char[1024];
+        final StringBuilder contentBuilder = new StringBuilder();
+        int numRead = -1;
+        while ((numRead = reader.read(buf)) != -1) {
+            contentBuilder.append(buf, 0, numRead);
+        }
+        final String requestCharacterEncoding = req.getCharacterEncoding();
+        final String responseCharacterEncoding = resp.getCharacterEncoding();
+
+        final PrintWriter writer = resp.getWriter();
+        writer.write(String.format("requestCharacterEncoding=%s;responseCharacterEncoding=%s;content=%s;",
+                requestCharacterEncoding, responseCharacterEncoding, contentBuilder.toString()));
         writer.close();
     }
 }
