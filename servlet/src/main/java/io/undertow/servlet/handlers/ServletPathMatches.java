@@ -457,7 +457,8 @@ public class ServletPathMatches {
         }
         if (modifiedPath.endsWith("/*")) {
             String baseFilterPath = modifiedPath.substring(0, modifiedPath.length() - 1);
-            return path.startsWith(baseFilterPath);
+            String exactFilterPath = modifiedPath.substring(0, modifiedPath.length() - 2);
+            return path.startsWith(baseFilterPath) || path.equals(exactFilterPath);
         } else {
             return modifiedPath.equals(path);
         }
