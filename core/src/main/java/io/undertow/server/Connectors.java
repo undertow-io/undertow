@@ -102,6 +102,18 @@ public class Connectors {
     }
 
     /**
+     * Adds the cookie into the response header map. This should be called
+     * before the response is started.
+     *
+     * @param exchange The server exchange
+     * @param cookie   The cookie
+     */
+    public static void addCookie(final HttpServerExchange exchange, Cookie cookie) {
+        boolean enableRfc6265Validation = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION);
+        exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(cookie, enableRfc6265Validation));
+    }
+
+    /**
      * Attached buffered data to the exchange. The will generally be used to allow data to be re-read.
      *
      * @param exchange The HTTP server exchange
