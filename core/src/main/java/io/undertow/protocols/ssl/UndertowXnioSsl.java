@@ -222,13 +222,22 @@ public class UndertowXnioSsl extends XnioSsl {
     }
 
     public SslConnection wrapExistingConnection(StreamConnection connection, OptionMap optionMap, URI destinationURI) {
-        SSLEngine sslEngine = createSSLEngine(sslContext, optionMap, (InetSocketAddress) connection.getPeerAddress(), true);
+        SSLEngine sslEngine = createSSLEngine(sslContext, optionMap, getPeerAddress(destinationURI), true);
         SSLParameters sslParameters = sslEngine.getSSLParameters();
         if (sslParameters.getServerNames() == null || sslParameters.getServerNames().isEmpty()) {
             sslParameters.setServerNames(Collections.singletonList(new SNIHostName(destinationURI.getHost())));
             sslEngine.setSSLParameters(sslParameters);
         }
         return new UndertowSslConnection(connection, sslEngine, bufferPool);
+    }
+
+    private InetSocketAddress getPeerAddress(URI destinationURI) {
+        String hostname = destinationURI.getHost();
+        int port = destinationURI.getPort();
+        if (port == -1) {
+            port = destinationURI.getScheme().equals("wss") ? 443 : 80;
+        }
+        return new InetSocketAddress(hostname, port);
     }
 
     /**
