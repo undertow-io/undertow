@@ -43,10 +43,12 @@ public class SinglePortConfidentialityHandler extends AbstractConfidentialityHan
         return getRedirectURI(exchange, redirectPort);
     }
 
-    protected URI getRedirectURI(HttpServerExchange exchange, int port) throws URISyntaxException {
-        String host = exchange.getHostName();
-
-        String queryString = exchange.getQueryString();
+    protected URI getRedirectURI(final HttpServerExchange exchange, final int port) throws URISyntaxException {
+        final StringBuilder uriBuilder = new StringBuilder();
+        uriBuilder.append("https://").append(exchange.getHostName());
+        if (port > 0) {
+            uriBuilder.append(":").append(port);
+        }
         String uri = exchange.getRequestURI();
         if(exchange.isHostIncludedInRequestURI()) {
             int slashCount = 0;
@@ -60,8 +62,12 @@ public class SinglePortConfidentialityHandler extends AbstractConfidentialityHan
                 }
             }
         }
-        return new URI("https", null, host, port, uri,
-                queryString == null || queryString.length() == 0 ? null : queryString, null);
+        uriBuilder.append(uri);
+        final String queryString = exchange.getQueryString();
+        if (queryString != null && !queryString.isEmpty()) {
+            uriBuilder.append("?").append(queryString);
+        }
+        return new URI(uriBuilder.toString());
     }
 
 }
