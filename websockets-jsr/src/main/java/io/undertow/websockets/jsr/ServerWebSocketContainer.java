@@ -356,14 +356,19 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
             synchronized (clientEndpoints) {
                 configured = clientEndpoints.get(endpointInstance.getClass());
                 if(configured == null) {
-                    clientEndpoints.put(endpointInstance.getClass(), configured = new ConfiguredClientEndpoint());
+                    // make sure to create an instance of AnnotatedEndpoint
+                    clientEndpoints.put(endpointInstance.getClass(),
+                            getClientEndpoint(endpointInstance.getClass(), false));
                 }
             }
         }
+        // make sure to create an instance of AnnotatedEndpoint
+
+        Endpoint instance = configured.getFactory().createInstance(new ImmediateInstanceHandle<>(endpointInstance));
 
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
         UndertowSession undertowSession = new UndertowSession(channel, connectionBuilder.getUri(), Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, connectionBuilder.getUri().getQuery(), encodingFactory.createEncoding(cec), configured, clientNegotiation.getSelectedSubProtocol(), extensions, connectionBuilder);
-        endpointInstance.onOpen(undertowSession, cec);
+        instance.onOpen(undertowSession, cec);
         channel.resumeReceives();
 
         return undertowSession;
