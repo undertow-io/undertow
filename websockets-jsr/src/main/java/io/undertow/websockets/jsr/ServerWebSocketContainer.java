@@ -358,7 +358,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                 if(configured == null) {
                     // make sure to create an instance of AnnotatedEndpoint
                     clientEndpoints.put(endpointInstance.getClass(),
-                            getClientEndpoint(endpointInstance.getClass(), false));
+                            configured = getClientEndpoint(endpointInstance.getClass(), false));
                 }
             }
         }
