@@ -435,7 +435,12 @@ public class ProxyProtocolTestCase {
 
         // simple valid request
         request = createProxyHeaderV2(LOCAL, (byte) 0, 0, null, null,null,null);
-        String expectedResponse = "result: /127.0.0.1";
+        String expectedResponse;
+        if (isIpV6()) {
+            expectedResponse = "result: /0:0:0:0:0:0:0:1";
+        } else {
+            expectedResponse = "result: /127.0.0.1";
+        }
         proxyProtocolRequestResponseCheck(request, requestHttp, expectedResponse);
     }
 
@@ -575,5 +580,10 @@ public class ProxyProtocolTestCase {
         } finally {
             undertow.stop();
         }
+    }
+
+    private static boolean isIpV6() {
+        String preferIpV6Property = System.getProperty("java.net.preferIPv6Addresses");
+        return preferIpV6Property != null && preferIpV6Property.toLowerCase().equals("true");
     }
 }
