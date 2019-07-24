@@ -71,6 +71,7 @@ import io.undertow.servlet.api.SessionPersistenceManager;
 import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.api.WebResourceCollection;
 import io.undertow.servlet.handlers.CrawlerSessionManagerHandler;
+import io.undertow.servlet.handlers.RedirectDirHandler;
 import io.undertow.servlet.handlers.ServletDispatchingHandler;
 import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletInitialHandler;
@@ -218,6 +219,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
                     HttpHandler wrappedHandlers = ServletDispatchingHandler.INSTANCE;
                     wrappedHandlers = wrapHandlers(wrappedHandlers, deploymentInfo.getInnerHandlerChainWrappers());
+                    wrappedHandlers = new RedirectDirHandler(wrappedHandlers, deployment.getServletPaths());
                     if(!deploymentInfo.isSecurityDisabled()) {
                         HttpHandler securityHandler = setupSecurityHandlers(wrappedHandlers);
                         wrappedHandlers = new PredicateHandler(DispatcherTypePredicate.REQUEST, securityHandler, wrappedHandlers);

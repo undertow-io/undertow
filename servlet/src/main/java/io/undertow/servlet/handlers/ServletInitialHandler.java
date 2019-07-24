@@ -39,11 +39,8 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
-import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
-import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
@@ -79,8 +76,6 @@ import java.util.concurrent.Executor;
  * @author Stuart Douglas
  */
 public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
-
-    private static final String HTTP2_UPGRADE_PREFIX = "h2";
 
     private static final RuntimePermission PERMISSION = new RuntimePermission("io.undertow.servlet.CREATE_INITIAL_HANDLER");
 
@@ -149,30 +144,12 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
             return;
         }
         final ServletPathMatch info = paths.getServletHandlerByPath(path);
-        //https://issues.jboss.org/browse/WFLY-3439
-        //if the request is an upgrade request then we don't want to redirect
-        //as there is a good chance the web socket client won't understand the redirect
-        //we make an exception for HTTP2 upgrade requests, as this would have already be handled at
-        //the connector level if it was going to be handled.
-        String upgradeString = exchange.getRequestHeaders().getFirst(Headers.UPGRADE);
-        boolean isUpgradeRequest = upgradeString != null && !upgradeString.startsWith(HTTP2_UPGRADE_PREFIX);
-        if (info.getType() == ServletPathMatch.Type.REDIRECT && !isUpgradeRequest) {
-            //UNDERTOW-89
-            //we redirect on GET requests to the root context to add an / to the end
-            if(exchange.getRequestMethod().equals(Methods.GET) || exchange.getRequestMethod().equals(Methods.HEAD)) {
-                exchange.setStatusCode(StatusCodes.FOUND);
-            } else {
-                exchange.setStatusCode(StatusCodes.TEMPORARY_REDIRECT);
-            }
-            exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
-            return;
-        } else if (info.getType() == ServletPathMatch.Type.REWRITE) {
-            //this can only happen if the path ends with a /
-            //otherwise there would be a redirect instead
+        if (info.getType() == ServletPathMatch.Type.REWRITE) {
+            // this can only happen if the path ends with a /
+            // otherwise there would be a redirect instead
             exchange.setRelativePath(info.getRewriteLocation());
             exchange.setRequestPath(exchange.getResolvedPath() + info.getRewriteLocation());
         }
-
         final HttpServletResponseImpl response = new HttpServletResponseImpl(exchange, servletContext);
         final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
         final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), request, response, info);
