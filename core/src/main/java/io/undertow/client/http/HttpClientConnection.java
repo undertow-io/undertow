@@ -556,8 +556,10 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                             UndertowLogger.CLIENT_LOGGER.debugf(e, "Connection closed with IOException");
                         }
                         try {
-                            currentRequest.setFailed(e);
-                            currentRequest = null;
+                            if (currentRequest != null) {
+                                currentRequest.setFailed(e);
+                                currentRequest = null;
+                            }
                             pendingResponse = null;
                         } finally {
                             safeClose(channel, HttpClientConnection.this);
@@ -575,8 +577,10 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                         channel.suspendReads();
                         try {
                             // Cancel the current active request
-                            currentRequest.setFailed(new IOException(MESSAGES.connectionClosed()));
-                            currentRequest = null;
+                            if (currentRequest != null) {
+                                currentRequest.setFailed(new IOException(MESSAGES.connectionClosed()));
+                                currentRequest = null;
+                            }
                             pendingResponse = null;
                         } finally {
                             safeClose(HttpClientConnection.this);
