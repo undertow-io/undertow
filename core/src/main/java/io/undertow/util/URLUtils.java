@@ -19,8 +19,7 @@
 package io.undertow.util;
 
 import java.io.UnsupportedEncodingException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.regex.Pattern;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
@@ -47,6 +46,12 @@ public class URLUtils {
             exchange.addPathParam(key, value);
         }
     };
+
+    // RFC-3986 (URI Generic Syntax) states:
+    // URI         = scheme ":" hier-part [ "?" query ] [ "#" fragment ]
+    // scheme      = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
+    // "The scheme and path components are required, though the path may be empty (no characters)."
+    private static final Pattern SCHEME_PATTERN = Pattern.compile("^[a-zA-Z][a-zA-Z0-9+-.]*:.*");
 
     private URLUtils() {
 
@@ -327,12 +332,8 @@ public class URLUtils {
      */
     public static boolean isAbsoluteUrl(String location) {
         if (location != null && location.length() > 0 && location.contains(":")) {
-            try {
-                URI uri = new URI(location);
-                return uri.getScheme() != null;
-            } catch (URISyntaxException e) {
-                // ignore invalid locations and consider not absolute
-            }
+            // consider it absolute URL if location contains valid scheme part
+            return SCHEME_PATTERN.matcher(location).matches();
         }
         return false;
     }

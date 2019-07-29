@@ -83,6 +83,7 @@ public class URLUtilsTestCase {
         assertFalse(URLUtils.isAbsoluteUrl("relative"));
         assertFalse(URLUtils.isAbsoluteUrl("relative/path"));
         assertFalse(URLUtils.isAbsoluteUrl("relative/path?query=val"));
+        assertFalse(URLUtils.isAbsoluteUrl("relative/path:path"));
         assertFalse(URLUtils.isAbsoluteUrl("/root/relative/path"));
     }
 
@@ -112,4 +113,10 @@ public class URLUtilsTestCase {
             }
         }
     }
+
+    @Test
+    public void testIsAbsoluteUrlInvalidChars() {
+        assertTrue(URLUtils.isAbsoluteUrl("http://test.com/foobar?test={abc}"));
+    }
+
 }
