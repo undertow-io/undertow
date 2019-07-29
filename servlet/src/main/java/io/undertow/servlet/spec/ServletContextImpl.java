@@ -907,7 +907,7 @@ public class ServletContextImpl implements ServletContext {
                                 }
                             }
                         }
-                        if (!found) {
+                        if (!found && !c.sessionCookieSource(exchange).equals(SessionConfig.SessionCookieSource.URL)) {
                             c.clearSession(exchange, existing);
                         }
                     } else {
