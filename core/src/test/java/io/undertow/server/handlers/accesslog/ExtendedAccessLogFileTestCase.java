@@ -102,7 +102,7 @@ public class ExtendedAccessLogFileTestCase {
             latchHandler.await();
             logReceiver.awaitWrittenForTest();
             String data = new String(Files.readAllBytes(logFileName));
-            String[] lines = data.split("\n");
+            String[] lines = data.split(System.lineSeparator());
             Assert.assertEquals("#Fields: " + PATTERN, lines[0]);
             Assert.assertEquals("#Version: 2.0", lines[1]);
             Assert.assertEquals("#Software: " + Version.getFullVersionString(), lines[2]);
