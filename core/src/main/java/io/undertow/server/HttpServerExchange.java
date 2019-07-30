@@ -622,7 +622,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public String getHostName() {
         String host = requestHeaders.getFirst(Headers.HOST);
-        if (host == null) {
+        if (host == null || "".equals(host.trim())) {
             host = getDestinationAddress().getHostString();
         } else {
             if (host.startsWith("[")) {
