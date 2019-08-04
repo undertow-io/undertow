@@ -66,6 +66,14 @@ public class SimpleBenchmarks {
     }
 
     @Benchmark
+    public long benchmarkBlockingLargeGetGzip(SimpleBenchmarkState state) throws IOException {
+        try (CloseableHttpResponse response = state.client()
+                .execute(new HttpGet(state.getBaseUri() + "/blocking/compressed"))) {
+            return BenchmarkUtils.length(validate(response).getEntity().getContent());
+        }
+    }
+
+    @Benchmark
     public void benchmarkBlockingEmptyPost(SimpleBenchmarkState state) throws IOException {
         try (CloseableHttpResponse response = state.client()
                 .execute(new HttpPost(state.getBaseUri() + "/blocking"))) {

@@ -79,8 +79,8 @@ public class GzipStreamSinkConduit extends DeflatingStreamSinkConduit {
     }
 
     @Override
-    protected void preDeflate(byte[] data) {
-        crc.update(data);
+    protected void preDeflate(byte[] data, int offset, int length) {
+        crc.update(data, offset, length);
     }
 
     @Override

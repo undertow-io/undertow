@@ -21,9 +21,11 @@ package io.undertow.benchmarks;
 import io.undertow.Handlers;
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
+import io.undertow.conduits.DeflatingStreamSinkConduit;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.server.handlers.encoding.GzipEncodingProvider;
 import io.undertow.util.Headers;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -38,6 +40,7 @@ import org.xnio.SslClientAuthMode;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.zip.Deflater;
 
 /**
  * @author Carter Kozak
@@ -75,6 +78,26 @@ public class SimpleBenchmarkState {
                                 OutputStream out = exchange.getOutputStream();
                                 for (int i = 0; i < bytes; i++) {
                                     out.write(1);
+                                }
+                            }
+                        }))
+                        .get("/blocking/compressed", new BlockingHandler(new HttpHandler() {
+                            // 4mb of random data
+                            private final byte[] randomData = BenchmarkUtils.randomBytes(4 * 1024 * 1024);
+                            private final GzipEncodingProvider gzipProvider = new GzipEncodingProvider(
+                                    DeflatingStreamSinkConduit.simpleDeflaterPool(50, Deflater.BEST_SPEED));
+                            private final int chunkSize = 8 * 1024;
+
+                            @Override
+                            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                exchange.addResponseWrapper(gzipProvider.getResponseWrapper());
+                                // Note: this does not set Content-Encoding because we don't want to measure
+                                // client side inflation overhead.
+                                exchange.getResponseHeaders()
+                                        .put(Headers.CONTENT_TYPE, "application/octet-stream");
+                                OutputStream out = exchange.getOutputStream();
+                                for (int i = 0; i < randomData.length; i+= chunkSize) {
+                                    out.write(randomData, i, Math.min(chunkSize, randomData.length - i));
                                 }
                             }
                         }))

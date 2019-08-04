@@ -29,9 +29,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
-import io.undertow.server.Connectors;
 import org.xnio.IoUtils;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSourceChannel;
@@ -41,11 +39,14 @@ import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.WriteReadyHandler;
 
 import io.undertow.UndertowLogger;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
+import io.undertow.util.Headers;
 import io.undertow.util.NewInstanceObjectPool;
 import io.undertow.util.ObjectPool;
-import io.undertow.util.Headers;
 import io.undertow.util.PooledObject;
 import io.undertow.util.SimpleObjectPool;
 
@@ -70,6 +71,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
      * The streams buffer. This is freed when the next is shutdown
      */
     protected PooledByteBuffer currentBuffer;
+    protected PooledByteBuffer inputBuffer;
     /**
      * there may have been some additional data that did not fit into the first buffer
      */
@@ -119,7 +121,8 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             if (!performFlushIfRequired()) {
                 return 0;
             }
-            if (src.remaining() == 0) {
+            int inputBytes = src.remaining();
+            if (inputBytes == 0) {
                 return 0;
             }
             //we may already have some input, if so compress it
@@ -129,21 +132,42 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                     return 0;
                 }
             }
-            byte[] data = new byte[src.remaining()];
-            src.get(data);
-            preDeflate(data);
-            deflater.setInput(data);
-            Connectors.updateResponseBytesSent(exchange, 0 - data.length);
+            ByteBuffer arrayBuffer;
+            ByteBufferPool pool = exchange.getConnection().getByteBufferPool().getArrayBackedPool();
+            if (inputBytes <= pool.getBufferSize()) {
+                if (inputBuffer == null) {
+                    inputBuffer = pool.allocate();
+                } else {
+                    inputBuffer.getBuffer().clear();
+                }
+                arrayBuffer = inputBuffer.getBuffer();
+                arrayBuffer.put(src);
+                arrayBuffer.flip();
+            } else {
+                freeInputBuffer();
+                byte[] data = new byte[inputBytes];
+                src.get(data);
+                arrayBuffer = ByteBuffer.wrap(data);
+            }
+
+            preDeflate(
+                    arrayBuffer.array(),
+                    arrayBuffer.arrayOffset() + arrayBuffer.position(),
+                    arrayBuffer.arrayOffset() + arrayBuffer.limit() - arrayBuffer.position());
+            deflater.setInput(
+                    arrayBuffer.array(),
+                    arrayBuffer.arrayOffset() + arrayBuffer.position(),
+                    arrayBuffer.arrayOffset() + arrayBuffer.limit() - arrayBuffer.position());
+            Connectors.updateResponseBytesSent(exchange, 0 - inputBytes);
             deflateData(false);
-            return data.length;
+            return inputBytes;
         } catch (IOException | RuntimeException | Error e) {
             freeBuffer();
             throw e;
         }
     }
 
-    protected void preDeflate(byte[] data) {
-
+    protected void preDeflate(byte[] data, int offset, int length) {
     }
 
     @Override
@@ -534,14 +558,23 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     }
 
     private void freeBuffer() {
+        if (deflater != null) {
+            deflater = null;
+            pooledObject.close();
+        }
         if (currentBuffer != null) {
             currentBuffer.close();
             currentBuffer = null;
             state = state & ~FLUSHING_BUFFER;
         }
-        if (deflater != null) {
-            deflater = null;
-            pooledObject.close();
+        freeInputBuffer();
+    }
+
+    private void freeInputBuffer() {
+        PooledByteBuffer local = inputBuffer;
+        inputBuffer = null;
+        if (local != null) {
+            local.close();
         }
     }
 }

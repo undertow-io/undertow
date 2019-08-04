@@ -20,6 +20,7 @@ package io.undertow.benchmarks;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Utility functionality used by benchmarks.
@@ -40,6 +41,15 @@ final class BenchmarkUtils {
             }
             total += read;
         }
+    }
+
+    static byte[] randomBytes(int length) {
+        if (length < 0) {
+            throw new IllegalArgumentException("Expected positive length");
+        }
+        byte[] data = new byte[length];
+        ThreadLocalRandom.current().nextBytes(data);
+        return data;
     }
 
     private BenchmarkUtils() {}
