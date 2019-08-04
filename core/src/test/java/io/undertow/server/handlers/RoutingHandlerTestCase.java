@@ -126,6 +126,12 @@ public class RoutingHandlerTestCase {
                         exchange.getResponseSender().send("posted foo");
                     }
                 })
+                .add(Methods.POST, "/foo/{baz}", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send("foo-path" + exchange.getQueryParameters().get("bar"));
+                    }
+                })
                 .add(Methods.GET, "/foo/{bar}", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
