@@ -18,11 +18,6 @@
 
 package io.undertow.server;
 
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.util.AbstractAttachable;
-
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
 import org.xnio.Option;
 import org.xnio.OptionMap;
 import org.xnio.Pool;
@@ -37,7 +32,13 @@ import org.xnio.conduits.StreamSinkConduit;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+
 import javax.net.ssl.SSLSession;
+
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.util.AbstractAttachable;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
 
 /**
  * A server connection.
@@ -45,6 +46,11 @@ import javax.net.ssl.SSLSession;
  * @author Stuart Douglas
  */
 public abstract class ServerConnection extends AbstractAttachable implements ConnectedChannel  {
+
+    /**
+     * @return the timestamp when the connection is created
+     */
+    public abstract long getCreatedTimestamp();
 
     /**
      *

@@ -18,14 +18,10 @@
 
 package io.undertow.server;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.Option;
 import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
@@ -40,6 +36,11 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.List;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
 
 public abstract class AbstractServerConnection  extends ServerConnection {
     protected final StreamConnection channel;
@@ -56,6 +57,8 @@ public abstract class AbstractServerConnection  extends ServerConnection {
     private final int bufferSize;
 
     private XnioBufferPoolAdaptor poolAdaptor;
+
+    private final long createdTimestamp;
 
     /**
      * Any extra bytes that were read from the channel. This could be data for this requests, or the next response.
@@ -77,6 +80,12 @@ public abstract class AbstractServerConnection  extends ServerConnection {
             this.originalSinkConduit = null;
             this.originalSourceConduit = null;
         }
+        this.createdTimestamp = System.currentTimeMillis();
+    }
+
+    @Override
+    public long getCreatedTimestamp() {
+        return createdTimestamp;
     }
 
     @Override
