@@ -362,9 +362,16 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                 }
             }
         }
-        // make sure to create an instance of AnnotatedEndpoint
+        
+        Endpoint instance;
+        if(configured == null) {
+            instance = endpointInstance;
+        }
 
-        Endpoint instance = configured.getFactory().createInstance(new ImmediateInstanceHandle<>(endpointInstance));
+        else {
+            instance= configured.getFactory().createInstance(new ImmediateInstanceHandle<>(endpointInstance));
+        }
+
 
         EncodingFactory encodingFactory = EncodingFactory.createFactory(classIntrospecter, cec.getDecoders(), cec.getEncoders());
         UndertowSession undertowSession = new UndertowSession(channel, connectionBuilder.getUri(), Collections.<String, String>emptyMap(), Collections.<String, List<String>>emptyMap(), sessionHandler, null, new ImmediateInstanceHandle<>(endpointInstance), cec, connectionBuilder.getUri().getQuery(), encodingFactory.createEncoding(cec), configured, clientNegotiation.getSelectedSubProtocol(), extensions, connectionBuilder);
