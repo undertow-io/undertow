@@ -102,6 +102,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Deprecated
     public static final AttachmentKey<Boolean> SECURE_REQUEST = HttpServerExchange.SECURE_REQUEST;
 
+    static final AttachmentKey<Boolean> REQUESTED_SESSION_ID_SET = AttachmentKey.create(Boolean.class);
+    static final AttachmentKey<String> REQUESTED_SESSION_ID = AttachmentKey.create(String.class);
+
     private final HttpServerExchange exchange;
     private final ServletContextImpl originalServletContext;
     private ServletContextImpl servletContext;
@@ -347,6 +350,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getRequestedSessionId() {
+        Boolean isRequestedSessionIdSaved = exchange.getAttachment(REQUESTED_SESSION_ID_SET);
+        if (isRequestedSessionIdSaved != null && isRequestedSessionIdSaved) {
+            return exchange.getAttachment(REQUESTED_SESSION_ID);
+        }
         SessionConfig config = originalServletContext.getSessionConfig();
         if(config instanceof ServletContextImpl.ServletContextSessionConfig) {
             return ((ServletContextImpl.ServletContextSessionConfig)config).getDelegate().findSessionId(exchange);

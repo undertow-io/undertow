@@ -202,11 +202,33 @@ public class ServletURLRewritingSessionTestCase {
         }
     }
 
+    @Test
+    public void testGetRequestedSessionId() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo;jsessionid=test");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+        } finally {
+            client.close();
+        }
+    }
+
     public static class URLRewritingServlet extends HttpServlet {
 
         @Override
         protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            String sessionIdBefore = req.getRequestedSessionId();
             HttpSession session = req.getSession(true);
+            String sessionIdAfter = req.getRequestedSessionId();
+            Assert.assertEquals(String.format("sessionIdBefore %s, sessionIdAfter %s", sessionIdBefore, sessionIdAfter), sessionIdBefore, sessionIdAfter);
+
             Object existing = session.getAttribute(COUNT);
             if (existing == null) {
                 session.setAttribute(COUNT, 0);

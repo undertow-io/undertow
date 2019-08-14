@@ -862,6 +862,11 @@ public class ServletContextImpl implements ServletContext {
             } else if (create) {
 
                 String existing = c.findSessionId(exchange);
+                Boolean isRequestedSessionIdSaved = exchange.getAttachment(HttpServletRequestImpl.REQUESTED_SESSION_ID_SET);
+                if (isRequestedSessionIdSaved == null || !isRequestedSessionIdSaved) {
+                    exchange.putAttachment(HttpServletRequestImpl.REQUESTED_SESSION_ID_SET, Boolean.TRUE);
+                    exchange.putAttachment(HttpServletRequestImpl.REQUESTED_SESSION_ID, existing);
+                }
 
                 if (originalServletContext != this) {
                     //this is a cross context request
@@ -1203,6 +1208,11 @@ public class ServletContextImpl implements ServletContext {
         @Override
         public void clearSession(HttpServerExchange exchange, String sessionId) {
             exchange.putAttachment(INVALIDATED, sessionId);
+            Boolean isRequestedSessionIdSaved = exchange.getAttachment(HttpServletRequestImpl.REQUESTED_SESSION_ID_SET);
+            if (isRequestedSessionIdSaved == null || !isRequestedSessionIdSaved) {
+                exchange.putAttachment(HttpServletRequestImpl.REQUESTED_SESSION_ID_SET, Boolean.TRUE);
+                exchange.putAttachment(HttpServletRequestImpl.REQUESTED_SESSION_ID, sessionId);
+            }
             delegate.clearSession(exchange, sessionId);
         }
 
