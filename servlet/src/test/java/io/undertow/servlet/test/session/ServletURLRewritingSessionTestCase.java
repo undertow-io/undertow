@@ -35,7 +35,6 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import io.undertow.servlet.ServletExtension;
@@ -171,7 +170,6 @@ public class ServletURLRewritingSessionTestCase {
     }
 
     @Test
-    @Ignore("Failing after fix for UNDERTOW-1575")
     public void testURLRewritingWithExistingOldSessionIdAndOtherPathParams() throws IOException {
         TestHttpClient client = new TestHttpClient();
         client.setCookieStore(new BasicCookieStore());
@@ -182,6 +180,7 @@ public class ServletURLRewritingSessionTestCase {
             String url = HttpClientUtils.readResponse(result);
             Header[] header = result.getHeaders(COUNT);
             Assert.assertEquals("0", header[0].getValue());
+
 
             get = new HttpGet(url);
             result = client.execute(get);
@@ -203,11 +202,33 @@ public class ServletURLRewritingSessionTestCase {
         }
     }
 
+    @Test
+    public void testGetRequestedSessionId() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo;jsessionid=test");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+        } finally {
+            client.close();
+        }
+    }
+
     public static class URLRewritingServlet extends HttpServlet {
 
         @Override
         protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+            String sessionIdBefore = req.getRequestedSessionId();
             HttpSession session = req.getSession(true);
+            String sessionIdAfter = req.getRequestedSessionId();
+            Assert.assertEquals(String.format("sessionIdBefore %s, sessionIdAfter %s", sessionIdBefore, sessionIdAfter), sessionIdBefore, sessionIdAfter);
+
             Object existing = session.getAttribute(COUNT);
             if (existing == null) {
                 session.setAttribute(COUNT, 0);
