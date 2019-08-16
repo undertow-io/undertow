@@ -42,7 +42,11 @@ import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.protocol.HTTP;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -118,29 +122,52 @@ public class FormDataParserTestCase {
 
     @Test
     public void testFormDataParsing() throws Exception {
-        runTest(new BasicNameValuePair("name", "A Value"));
-        runTest(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("Single-value", null));
-        runTest(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
-        runTest(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("Single-value", null) , new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
-
+        runTestUrlEncoded(new BasicNameValuePair("name", "A Value"));
+        runTestUrlEncoded(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("Single-value", null));
+        runTestUrlEncoded(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
+        runTestUrlEncoded(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("Single-value", null) , new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
     }
 
-    private void runTest(final NameValuePair... pairs) throws Exception {
+    @Test
+    public void testRawFormDataParsingIncorrectValue() throws Exception {
+        testRawFormDataParsing(new BasicNameValuePair("name", "%"));
+        testRawFormDataParsing(new BasicNameValuePair("Name%", "value"));
+    }
+
+    private void testRawFormDataParsing(NameValuePair wrongPair) throws Exception {
+        NameValuePair correctPair = new BasicNameValuePair("correctName", "A Value");
+        NameValuePair correctPair2 = new BasicNameValuePair("correctName2", "A Value2");
+
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder
+                .append(URLEncodedUtils.format(java.util.Collections.singleton(correctPair), HTTP.DEF_CONTENT_CHARSET))
+                .append("&")
+                .append(wrongPair.getName()).append("=").append(wrongPair.getValue())
+                .append("&")
+                .append(URLEncodedUtils.format(java.util.Collections.singleton(correctPair2), HTTP.DEF_CONTENT_CHARSET));
+
+        final List<NameValuePair> expectedData = new ArrayList<>();
+        expectedData.add(correctPair);
+        expectedData.add(correctPair2);
+        runTest(expectedData, new StringEntity(stringBuilder.toString(), ContentType.APPLICATION_FORM_URLENCODED));
+    }
+
+    private void runTestUrlEncoded(final NameValuePair... pairs) throws Exception {
+        final List<NameValuePair> data = new ArrayList<>(Arrays.asList(pairs));
+        runTest(data, new UrlEncodedFormEntity(data));
+    }
+
+    private void runTest(List<NameValuePair> data, StringEntity entity) throws  Exception {
         DefaultServer.setRootHandler(rootHandler);
         TestHttpClient client = new TestHttpClient();
         try {
-
-            final List<NameValuePair> data = new ArrayList<>();
-            data.addAll(Arrays.asList(pairs));
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             post.setHeader(Headers.CONTENT_TYPE_STRING, FormEncodedDataDefinition.APPLICATION_X_WWW_FORM_URLENCODED);
-            post.setEntity(new UrlEncodedFormEntity(data));
+            post.setEntity(entity);
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             checkResult(data, result);
             HttpClientUtils.readResponse(result);
-
-
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -153,6 +180,7 @@ public class FormDataParserTestCase {
             res.put(split[0], split.length == 1 ? "" : split[1]);
         }
 
+        Assert.assertEquals(data.size(), res.size());
 
         for (NameValuePair vp : data) {
             Assert.assertEquals(vp.getValue() == null ? "" : vp.getValue(), res.get(vp.getName()));

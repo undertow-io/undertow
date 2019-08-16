@@ -24,6 +24,7 @@ import io.undertow.UndertowOptions;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.UrlDecodeException;
 import io.undertow.util.Headers;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.URLUtils;
@@ -44,6 +45,7 @@ import java.nio.ByteBuffer;
 public class FormEncodedDataDefinition implements FormParserFactory.ParserDefinition<FormEncodedDataDefinition> {
 
     public static final String APPLICATION_X_WWW_FORM_URLENCODED = "application/x-www-form-urlencoded";
+    private static boolean parseExceptionLogAsDebug = false;
     private String defaultEncoding = "ISO-8859-1";
     private boolean forceCreation = false; //if the parser should be created even if the correct headers are missing
 
@@ -143,7 +145,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                                         builder.setLength(0);
                                         state = 2;
                                     } else if (n == '&') {
-                                        data.add(builder.toString(), "");
+                                        addPair(builder.toString(), "");
                                         builder.setLength(0);
                                         state = 0;
                                     } else if (n == '%' || n == '+') {
@@ -156,11 +158,11 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                                 }
                                 case 1: {
                                     if (n == '=') {
-                                        name = URLUtils.decode(builder.toString(), charset, true, new StringBuilder());
+                                        name = decodeParameterName(builder.toString(), charset, true, new StringBuilder());
                                         builder.setLength(0);
                                         state = 2;
                                     } else if (n == '&') {
-                                        data.add(URLUtils.decode(builder.toString(), charset, true, new StringBuilder()), "");
+                                        addPair(decodeParameterName(builder.toString(), charset, true, new StringBuilder()), "");
                                         builder.setLength(0);
                                         state = 0;
                                     } else {
@@ -170,7 +172,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                                 }
                                 case 2: {
                                     if (n == '&') {
-                                        data.add(name, builder.toString());
+                                        addPair(name, builder.toString());
                                         builder.setLength(0);
                                         state = 0;
                                     } else if (n == '%' || n == '+') {
@@ -183,7 +185,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                                 }
                                 case 3: {
                                     if (n == '&') {
-                                        data.add(name, URLUtils.decode(builder.toString(), charset, true, new StringBuilder()));
+                                        addPair(name, decodeParameterValue(name, builder.toString(), charset, true, new StringBuilder()));
                                         builder.setLength(0);
                                         state = 0;
                                     } else {
@@ -197,14 +199,14 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                 } while (c > 0);
                 if (c == -1) {
                     if (state == 2) {
-                        data.add(name, builder.toString());
+                        addPair(name, builder.toString());
                     } else if (state == 3) {
-                        data.add(name, URLUtils.decode(builder.toString(), charset, true, new StringBuilder()));
+                        addPair(name, decodeParameterValue(name, builder.toString(), charset, true, new StringBuilder()));
                     } else if(builder.length() > 0) {
                         if(state == 1) {
-                            data.add(URLUtils.decode(builder.toString(), charset, true, new StringBuilder()), "");
+                            addPair(decodeParameterName(builder.toString(), charset, true, new StringBuilder()), "");
                         } else {
-                            data.add(builder.toString(), "");
+                            addPair(builder.toString(), "");
                         }
                     }
                     state = 4;
@@ -215,6 +217,46 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
             }
         }
 
+        private void addPair(String name, String value) {
+            //if there was exception during decoding ignore the parameter [UNDERTOW-1554]
+            if(name != null && value != null) {
+                data.add(name, value);
+            }
+        }
+
+        private String decodeParameterValue(String name, String value, String charset, boolean decodeSlash, StringBuilder stringBuilder) {
+            String decodedValue = null;
+
+            try {
+                decodedValue = URLUtils.decode(value, charset, decodeSlash, stringBuilder);
+            } catch (UrlDecodeException e) {
+                if (!parseExceptionLogAsDebug) {
+                    UndertowLogger.REQUEST_LOGGER.errorf(UndertowMessages.MESSAGES.failedToDecodeParameterValue(name, value, e));
+                    parseExceptionLogAsDebug = true;
+                } else {
+                    UndertowLogger.REQUEST_LOGGER.debugf(UndertowMessages.MESSAGES.failedToDecodeParameterValue(name, value, e));
+                }
+            }
+
+            return decodedValue;
+        }
+
+        private String decodeParameterName(String name, String charset, boolean decodeSlash, StringBuilder stringBuilder) {
+            String decodedName = null;
+
+            try {
+                decodedName = URLUtils.decode(name, charset, decodeSlash, stringBuilder);
+            } catch (UrlDecodeException e) {
+                if (!parseExceptionLogAsDebug) {
+                    UndertowLogger.REQUEST_LOGGER.errorf(UndertowMessages.MESSAGES.failedToDecodeParameterName(name, e));
+                    parseExceptionLogAsDebug = true;
+                } else {
+                    UndertowLogger.REQUEST_LOGGER.debugf(UndertowMessages.MESSAGES.failedToDecodeParameterName(name, e));
+                }
+            }
+
+            return decodedName;
+        }
 
         @Override
         public void parse(HttpHandler handler) throws Exception {
