@@ -267,7 +267,7 @@ public class HpackDecoder {
         if (index <= Hpack.STATIC_TABLE_LENGTH) {
             return Hpack.STATIC_TABLE[index].name;
         } else {
-            if (index >= Hpack.STATIC_TABLE_LENGTH + filledTableSlots) {
+            if (index > Hpack.STATIC_TABLE_LENGTH + filledTableSlots) {
                 throw new HpackException();
             }
             int adjustedIndex = getRealIndex(index - Hpack.STATIC_TABLE_LENGTH);
