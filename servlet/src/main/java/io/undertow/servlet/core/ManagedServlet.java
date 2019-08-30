@@ -37,6 +37,7 @@ import io.undertow.server.handlers.resource.ResourceChangeListener;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
@@ -104,7 +105,8 @@ public class ManagedServlet implements Lifecycle {
                 if(locFile.isAbsolute()) {
                     tempDir = locFile;
                 } else {
-                    tempDir = servletContext.getDeployment().getDeploymentInfo().getTempPath().resolve(location);
+                    final DeploymentInfo deploymentInfo = servletContext.getDeployment().getDeploymentInfo();
+                    tempDir = deploymentInfo.requireTempPath().resolve(location);
                 }
             }
 

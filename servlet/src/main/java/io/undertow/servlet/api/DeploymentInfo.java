@@ -20,6 +20,7 @@ package io.undertow.servlet.api;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -653,6 +654,18 @@ public class DeploymentInfo implements Cloneable {
 
     public Path getTempPath() {
         return tempDir;
+    }
+
+    /**
+     * @return Returns the {@link #getTempDir() temp directory path} if it's
+     * not null, else returns the system level temporary directory path
+     * pointed to by the Java system property {@code java.io.tmpdir}
+     */
+    public Path requireTempPath() {
+        if (tempDir != null) {
+            return tempDir;
+        }
+        return Paths.get(SecurityActions.getSystemProperty("java.io.tmpdir"));
     }
 
     public DeploymentInfo setTempDir(final File tempDir) {
