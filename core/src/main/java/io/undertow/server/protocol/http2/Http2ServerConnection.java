@@ -18,31 +18,9 @@
 
 package io.undertow.server.protocol.http2;
 
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-
-import javax.net.ssl.SSLSession;
-
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowOptions;
-import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
-import io.undertow.server.ConduitWrapper;
-import io.undertow.server.ExchangeCompletionListener;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.XnioBufferPoolAdaptor;
-import io.undertow.server.protocol.http.HttpContinue;
-import io.undertow.util.ConduitFactory;
-import io.undertow.util.DateUtils;
-import io.undertow.util.Headers;
-import io.undertow.util.ParameterLimitException;
-import io.undertow.util.Protocols;
 import org.xnio.ChannelListener;
 import org.xnio.Option;
 import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
@@ -58,19 +36,41 @@ import org.xnio.conduits.StreamSourceChannelWrappingConduit;
 import org.xnio.conduits.StreamSourceConduit;
 import org.xnio.conduits.WriteReadyHandler;
 
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+import javax.net.ssl.SSLSession;
+
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.protocols.http2.Http2DataStreamSinkChannel;
+import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
 import io.undertow.protocols.http2.Http2StreamSourceChannel;
+import io.undertow.server.ConduitWrapper;
 import io.undertow.server.Connectors;
+import io.undertow.server.ExchangeCompletionListener;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
+import io.undertow.server.XnioBufferPoolAdaptor;
+import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
+import io.undertow.util.ConduitFactory;
+import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import io.undertow.util.ParameterLimitException;
+import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
 
 /**
@@ -98,6 +98,7 @@ public class Http2ServerConnection extends ServerConnection {
     private HttpServerExchange exchange;
     private boolean continueSent = false;
     private XnioBufferPoolAdaptor poolAdaptor;
+    private final long createdTimestamp;
 
     public Http2ServerConnection(Http2Channel channel, Http2StreamSourceChannel requestChannel, OptionMap undertowOptions, int bufferSize, HttpHandler rootHandler) {
         this.channel = channel;
@@ -110,6 +111,7 @@ public class Http2ServerConnection extends ServerConnection {
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
         this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(channel, originalSourceConduit);
+        this.createdTimestamp = System.currentTimeMillis();
     }
 
     void setExchange(HttpServerExchange exchange) {
@@ -134,7 +136,14 @@ public class Http2ServerConnection extends ServerConnection {
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
         this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(Configurable.EMPTY, new EmptyStreamSourceConduit(getIoThread()));
+        this.createdTimestamp = System.currentTimeMillis();
     }
+
+    @Override
+    public long getCreatedTimestamp() {
+        return createdTimestamp;
+    }
+
     @Override
     public Pool<ByteBuffer> getBufferPool() {
         if(poolAdaptor == null) {
