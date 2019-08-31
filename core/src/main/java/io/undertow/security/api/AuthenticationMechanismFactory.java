@@ -37,6 +37,8 @@ public interface AuthenticationMechanismFactory {
     String LOGIN_PAGE = "login_page";
     String ERROR_PAGE = "error_page";
     String CONTEXT_PATH = "context_path";
+    String DEFAULT_PAGE = "default_page";
+    String OVERRIDE_INITIAL = "override_initial";
 
     /**
      * Creates an authentication mechanism using the specified properties

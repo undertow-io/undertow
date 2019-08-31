@@ -67,6 +67,9 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
     // Use weak references to prevent memory leaks following undeployment
     private final Set<SessionManager> seenSessionManagers = Collections.synchronizedSet(Collections.newSetFromMap(new WeakHashMap<SessionManager, Boolean>()));
 
+    private final String defaultPage;
+
+    private final boolean overrideInitial;
 
     private static final SessionListener LISTENER = new SessionListener() {
         @Override
@@ -102,31 +105,51 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
     public ServletFormAuthenticationMechanism(final String name, final String loginPage, final String errorPage) {
         super(name, loginPage, errorPage);
         this.saveOriginalRequest = true;
+        this.defaultPage = null;
+        this.overrideInitial = false;
     }
 
     @Deprecated
     public ServletFormAuthenticationMechanism(final String name, final String loginPage, final String errorPage, final String postLocation) {
         super(name, loginPage, errorPage, postLocation);
         this.saveOriginalRequest = true;
+        this.defaultPage = null;
+        this.overrideInitial = false;
     }
 
     public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage, String postLocation) {
         super(formParserFactory, name, loginPage, errorPage, postLocation);
         this.saveOriginalRequest = true;
+        this.defaultPage = null;
+        this.overrideInitial = false;
     }
 
     public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage) {
         super(formParserFactory, name, loginPage, errorPage);
         this.saveOriginalRequest = true;
+        this.defaultPage = null;
+        this.overrideInitial = false;
     }
 
     public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage, IdentityManager identityManager) {
         super(formParserFactory, name, loginPage, errorPage, identityManager);
         this.saveOriginalRequest = true;
+        this.defaultPage = null;
+        this.overrideInitial = false;
     }
+
     public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage, IdentityManager identityManager, boolean saveOriginalRequest) {
         super(formParserFactory, name, loginPage, errorPage, identityManager);
+        this.saveOriginalRequest = true;
+        this.defaultPage = null;
+        this.overrideInitial = false;
+    }
+
+    public ServletFormAuthenticationMechanism(FormParserFactory formParserFactory, String name, String loginPage, String errorPage, String defaultPage, boolean overrideInitial, IdentityManager identityManager, boolean saveOriginalRequest) {
+        super(formParserFactory, name, loginPage, errorPage, identityManager);
         this.saveOriginalRequest = saveOriginalRequest;
+        this.defaultPage = defaultPage;
+        this.overrideInitial = overrideInitial;
     }
 
     @Override
@@ -204,6 +227,9 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
                 session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
             }
             String path = (String) session.getAttribute(SESSION_KEY);
+            if ((path == null || overrideInitial) && defaultPage != null) {
+                path = defaultPage;
+            }
             if (path != null) {
                 try {
                     resp.sendRedirect(path);
@@ -249,11 +275,16 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
         @Override
         public AuthenticationMechanism create(String mechanismName, IdentityManager identityManager, FormParserFactory formParserFactory, Map<String, String> properties) {
+            final String loginPage = properties.get(LOGIN_PAGE);
+            final String errorPage = properties.get(ERROR_PAGE);
+            final String defaultPage = properties.get(DEFAULT_PAGE);
+            final boolean overrideInitial = properties.containsKey(OVERRIDE_INITIAL) ?
+                    Boolean.parseBoolean(properties.get(OVERRIDE_INITIAL)): false;
             boolean saveOriginal = true;
-            if(properties.containsKey(SAVE_ORIGINAL_REQUEST)) {
+            if (properties.containsKey(SAVE_ORIGINAL_REQUEST)) {
                 saveOriginal = Boolean.parseBoolean(properties.get(SAVE_ORIGINAL_REQUEST));
             }
-            return new ServletFormAuthenticationMechanism(formParserFactory, mechanismName, properties.get(LOGIN_PAGE), properties.get(ERROR_PAGE), identityManager, saveOriginal);
+            return new ServletFormAuthenticationMechanism(formParserFactory, mechanismName, loginPage, errorPage, defaultPage, overrideInitial, identityManager, saveOriginal);
         }
     }
 
