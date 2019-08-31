@@ -326,7 +326,6 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         //if it is not dispatched and is not a mock request
         if (!exchange.isDispatched() && !(exchange.getConnection() instanceof MockServerConnection)) {
             servletRequestContext.getOriginalResponse().responseDone();
-            servletRequestContext.getOriginalRequest().clearAttributes();
         }
         if(!exchange.isDispatched()) {
             AsyncContextImpl ctx = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
