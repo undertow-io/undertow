@@ -27,6 +27,7 @@ import javax.net.ssl.SSLPeerUnverifiedException;
 
 import io.undertow.server.RequestTooBigException;
 import io.undertow.server.handlers.form.MultiPartParserDefinition;
+import io.undertow.util.UrlDecodeException;
 import org.jboss.logging.Messages;
 import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
@@ -249,7 +250,7 @@ public interface UndertowMessages {
     IllegalStateException matcherAlreadyContainsTemplate(String templateString, String templateString1);
 
     @Message(id = 72, value = "Failed to decode url %s to charset %s")
-    IllegalArgumentException failedToDecodeURL(String s, String enc, @Cause Exception e);
+    UrlDecodeException failedToDecodeURL(String s, String enc, @Cause Exception e);
 
 
     @Message(id = 73, value = "Resource change listeners are not supported")
@@ -597,4 +598,10 @@ public interface UndertowMessages {
 
     @Message(id = 192, value = "Form value is a in-memory file, use getFileItem() instead")
     IllegalStateException formValueIsInMemoryFile();
+
+    @Message(id = 193, value = "Character decoding failed. Parameter [%s] with value [%s] has been ignored. Note: further occurrences of Parameter errors will be logged at DEBUG level.")
+    String failedToDecodeParameterValue(String parameter, String value, @Cause Exception e);
+
+    @Message(id = 194, value = "Character decoding failed. Parameter with name [%s] has been ignored. Note: further occurrences of Parameter errors will be logged at DEBUG level.")
+    String failedToDecodeParameterName(String parameter, @Cause Exception e);
 }
