@@ -518,8 +518,8 @@ public interface UndertowMessages {
     @Message(id = 161, value = "HTTP/2 header block is too large")
     String headerBlockTooLarge();
 
-    @Message(id = 162, value = "Same-site attribute %s is invalid. It must be Strict or Lax")
-    IllegalArgumentException invalidSameSiteMode(String mode);
+    @Message(id = 162, value = "An invalid SameSite attribute [%s] is specified. It must be one of %s")
+    IllegalArgumentException invalidSameSiteMode(String mode, String validAttributes);
 
     @Message(id = 163, value = "Invalid token %s")
     IllegalArgumentException invalidToken(byte c);
