@@ -263,8 +263,6 @@ public class Connectors {
             if (cookie.getSameSiteMode() != null && !cookie.getSameSiteMode().isEmpty()) {
                 header.append("; SameSite=");
                 header.append(cookie.getSameSiteMode());
-            } else {
-                header.append("; SameSite");
             }
         }
         return header.toString();
@@ -315,8 +313,6 @@ public class Connectors {
             if (cookie.getSameSiteMode() != null && !cookie.getSameSiteMode().isEmpty()) {
                 header.append("; SameSite=");
                 header.append(cookie.getSameSiteMode());
-            } else {
-                header.append("; SameSite");
             }
         }
         return header.toString();
@@ -383,8 +379,6 @@ public class Connectors {
             if (cookie.getSameSiteMode() != null && !cookie.getSameSiteMode().isEmpty()) {
                 header.append("; SameSite=");
                 header.append(cookie.getSameSiteMode());
-            } else {
-                header.append("; SameSite");
             }
         }
         return header.toString();

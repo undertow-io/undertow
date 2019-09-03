@@ -18,9 +18,10 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Arrays;
 import java.util.Date;
-import java.util.Locale;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 
 /**
@@ -41,7 +42,6 @@ public class CookieImpl implements Cookie {
     private String comment;
     private boolean sameSite;
     private String sameSiteMode;
-
 
     public CookieImpl(final String name, final String value) {
         this.name = name;
@@ -163,20 +163,14 @@ public class CookieImpl implements Cookie {
     }
 
     @Override
-    public Cookie setSameSiteMode(final String sameSiteMode) {
-        if (sameSiteMode != null) {
-            switch (sameSiteMode.toLowerCase(Locale.ENGLISH)) {
-                case "strict":
-                    this.setSameSite(true);
-                    this.sameSiteMode = "Strict";
-                    break;
-                case "lax":
-                    this.setSameSite(true);
-                    this.sameSiteMode = "Lax";
-                    break;
-                default:
-                    throw UndertowMessages.MESSAGES.invalidSameSiteMode(sameSiteMode);
-            }
+    public Cookie setSameSiteMode(final String mode) {
+        final String m = CookieSameSiteMode.lookupModeString(mode);
+        if (m != null) {
+            UndertowLogger.REQUEST_LOGGER.tracef("Setting SameSite mode to [%s] for cookie [%s]", m, this.name);
+            this.sameSiteMode = m;
+            this.setSameSite(true);
+        } else {
+            UndertowLogger.REQUEST_LOGGER.warnf(UndertowMessages.MESSAGES.invalidSameSiteMode(mode, Arrays.toString(CookieSameSiteMode.values())), "Ignoring specified SameSite mode [%s] for cookie [%s]", mode, this.name);
         }
         return this;
     }

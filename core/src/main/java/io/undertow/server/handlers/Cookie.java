@@ -82,7 +82,7 @@ public interface Cookie {
         return null;
     }
 
-    default Cookie setSameSiteMode(final String sameSiteMode) {
+    default Cookie setSameSiteMode(final String mode) {
         throw new UnsupportedOperationException("Not implemented");
     }
 }
