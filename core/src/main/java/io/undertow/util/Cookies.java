@@ -41,7 +41,6 @@ public class Cookies {
     public static final String PATH = "$Path";
 
 
-
     /**
      * Parses a "Set-Cookie:" response header value into its cookie representation. The header value is parsed according to the
      * syntax that's defined in RFC2109:
