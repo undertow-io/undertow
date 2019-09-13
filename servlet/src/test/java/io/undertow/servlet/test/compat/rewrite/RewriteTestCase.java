@@ -50,7 +50,6 @@ import java.nio.charset.StandardCharsets;
 @RunWith(DefaultServer.class)
 public class RewriteTestCase {
 
-
     @BeforeClass
     public static void setup() throws ServletException {
         DeploymentUtils.setupServlet(new ServletExtension() {
@@ -68,12 +67,12 @@ public class RewriteTestCase {
                                              });
                                          }
                                      },
-                new ServletInfo("servlet", PathTestServlet.class)
-                        .addMapping("/"));
+                new ServletInfo("fooServlet", PathTestServlet.class).addMapping("/bar1")
+        );
     }
 
     @Test
-    public void testRewrite() throws Exception{
+    public void testRewrite() throws Exception {
 
         TestHttpClient client = new TestHttpClient();
         try {
@@ -81,7 +80,7 @@ public class RewriteTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:null queryString:null servletPath:/bar1 requestUri:/servletContext/foo1", response);
+            Assert.assertEquals("pathInfo:null queryString:null servletPath:/bar1 requestUri:/servletContext/bar1", response);
 
         } finally {
             client.getConnectionManager().shutdown();
