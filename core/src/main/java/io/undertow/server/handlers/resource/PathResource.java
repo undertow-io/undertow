@@ -153,8 +153,10 @@ public class PathResource implements RangeAwareResource {
             public void run() {
                 if(range && remaining == 0) {
                     //we are done
-                    pooled.close();
-                    pooled = null;
+                    if (pooled != null) {
+                        pooled.close();
+                        pooled = null;
+                    }
                     IoUtils.safeClose(fileChannel);
                     callback.onComplete(exchange, sender);
                     return;
