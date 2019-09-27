@@ -382,6 +382,13 @@ public class CookiesTestCase {
         Assert.assertEquals("/acme", cookie.getPath());
         Assert.assertTrue(cookie.isSameSite());
         Assert.assertEquals("Lax", cookie.getSameSiteMode());
+
+        cookie = Cookies.parseSetCookieHeader("SHIPPING=FEDEX; path=/pepe; SameSite=None");
+        Assert.assertEquals("SHIPPING", cookie.getName());
+        Assert.assertEquals("FEDEX", cookie.getValue());
+        Assert.assertEquals("/pepe", cookie.getPath());
+        Assert.assertTrue(cookie.isSameSite());
+        Assert.assertEquals("None", cookie.getSameSiteMode());
     }
 
     @Test(expected = IllegalArgumentException.class)

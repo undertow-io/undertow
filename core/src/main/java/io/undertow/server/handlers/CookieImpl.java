@@ -174,6 +174,10 @@ public class CookieImpl implements Cookie {
                     this.setSameSite(true);
                     this.sameSiteMode = "Lax";
                     break;
+                case "none":
+                    this.setSameSite(true);
+                    this.sameSiteMode = "None";
+                    break;
                 default:
                     throw UndertowMessages.MESSAGES.invalidSameSiteMode(sameSiteMode);
             }
