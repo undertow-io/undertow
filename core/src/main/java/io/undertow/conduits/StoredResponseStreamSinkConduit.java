@@ -93,7 +93,7 @@ public final class StoredResponseStreamSinkConduit extends AbstractStreamSinkCon
         for (int i = 0; i < len; ++i) {
             ByteBuffer buf = srcs[i + offs];
             int pos = starts[i];
-            while (rem > 0 && pos <= buf.position()) {
+            while (rem > 0 && pos < buf.position()) {
                 outputStream.write(buf.get(pos));
                 pos++;
                 rem--;
@@ -130,7 +130,7 @@ public final class StoredResponseStreamSinkConduit extends AbstractStreamSinkCon
         for (int i = 0; i < len; ++i) {
             ByteBuffer buf = srcs[i + offs];
             int pos = starts[i];
-            while (rem > 0 && pos <= buf.position()) {
+            while (rem > 0 && pos < buf.position()) {
                 outputStream.write(buf.get(pos));
                 pos++;
                 rem--;
