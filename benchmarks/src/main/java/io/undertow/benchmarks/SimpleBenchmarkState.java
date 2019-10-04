@@ -25,6 +25,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.util.Headers;
+import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.openjdk.jmh.annotations.Param;
@@ -44,11 +45,14 @@ import java.io.OutputStream;
  */
 @State(Scope.Benchmark)
 public class SimpleBenchmarkState {
+    static {
+        System.setProperty("xnio.nio.alt-queued-server", "true");
+    }
 
     private static final int PORT = 4433;
 
     @SuppressWarnings("unused") // Set by JMH
-    @Param({"HTTP", "HTTPS"})
+    @Param("HTTPS")
     private ListenerType listenerType;
 
     private Undertow undertow;
@@ -111,6 +115,9 @@ public class SimpleBenchmarkState {
                 .setSSLContext(TLSUtils.newClientContext())
                 .setMaxConnPerRoute(100)
                 .setMaxConnTotal(100)
+                // Disable persistent HTTP connections
+                .addInterceptorFirst((HttpRequestInterceptor) (request, context) ->
+                        request.addHeader("Connection", "close"))
                 .build();
         baseUri = (listenerType == ListenerType.HTTP ? "http" : "https") + "://localhost:" + PORT;
     }
