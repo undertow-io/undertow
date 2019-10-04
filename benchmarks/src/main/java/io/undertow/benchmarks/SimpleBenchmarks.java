@@ -32,6 +32,10 @@ import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.runner.Runner;
+import org.openjdk.jmh.runner.options.Options;
+import org.openjdk.jmh.runner.options.OptionsBuilder;
+import org.openjdk.jmh.runner.options.TimeValue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -130,5 +134,18 @@ public class SimpleBenchmarks {
         public int available() {
             return bytes;
         }
+    }
+
+    public static void main(String[] args) throws Exception {
+        Options opt = new OptionsBuilder()
+                .include(SimpleBenchmarks.class.getSimpleName())
+                .forks(1)
+                .threads(32)
+                .warmupIterations(10)
+                .warmupTime(TimeValue.seconds(3))
+                .measurementIterations(3)
+                .measurementTime(TimeValue.seconds(3))
+                .build();
+        new Runner(opt).run();
     }
 }
