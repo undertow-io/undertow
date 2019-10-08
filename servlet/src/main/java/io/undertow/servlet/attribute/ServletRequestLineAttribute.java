@@ -21,7 +21,11 @@ package io.undertow.servlet.attribute;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributeBuilder;
 import io.undertow.attribute.ReadOnlyAttributeException;
+import io.undertow.attribute.RequestLineAttribute;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.handlers.ServletRequestContext;
+
+import javax.servlet.RequestDispatcher;
 
 /**
  * The request line
@@ -41,11 +45,19 @@ public class ServletRequestLineAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
+        ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        if (src == null) {
+            return RequestLineAttribute.INSTANCE.readAttribute(exchange);
+        }
         StringBuilder sb = new StringBuilder()
                 .append(exchange.getRequestMethod().toString())
                 .append(' ')
                 .append(ServletRequestURLAttribute.INSTANCE.readAttribute(exchange));
-        if (!exchange.getQueryString().isEmpty()) {
+        String query = (String) src.getServletRequest().getAttribute(RequestDispatcher.FORWARD_QUERY_STRING);
+        if (query != null && !query.isEmpty()) {
+            sb.append('?');
+            sb.append(query);
+        } else if (!exchange.getQueryString().isEmpty()) {
             sb.append('?');
             sb.append(exchange.getQueryString());
         }
