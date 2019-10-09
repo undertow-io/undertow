@@ -271,29 +271,29 @@ public class CachedResource implements Resource, RangeAwareResource {
                     existing.dereference();
                 }
             }
-            if(start > 0) {
-                long startDec = start;
-                long endCount = 0;
-                //handle the start of the range
-                for(ByteBuffer b : buffers) {
-                    if(endCount == end) {
-                        b.limit(b.position());
-                        continue;
-                    } else if(endCount + b.remaining() < end) {
-                        endCount += b.remaining();
-                    } else {
-                        b.limit((int) (b.position() + (end - endCount)));
-                        endCount = end;
-                    }
-                    if(b.remaining() >= startDec) {
-                        startDec = 0;
-                        b.position((int) (b.position() + startDec));
-                    } else {
-                        startDec -= b.remaining();
-                        b.position(b.limit());
-                    }
+            long endTarget = end + 1; //as it is inclusive
+            long startDec = start;
+            long endCount = 0;
+            //handle the start of the range
+            for (ByteBuffer b : buffers) {
+                if (endCount == endTarget) {
+                    b.limit(b.position());
+                    continue;
+                } else if (endCount + b.remaining() < endTarget) {
+                    endCount += b.remaining();
+                } else {
+                    b.limit((int) (b.position() + (endTarget - endCount)));
+                    endCount = endTarget;
+                }
+                if (b.remaining() >= startDec) {
+                    b.position((int) (b.position() + startDec));
+                    startDec = 0;
+                } else {
+                    b.position(b.limit());
+                    startDec -= b.remaining();
                 }
             }
+
             sender.send(buffers, new DereferenceCallback(existing, completionCallback));
         }
     }

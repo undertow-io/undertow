@@ -80,7 +80,9 @@ public class RangeRequestTestCase {
     }
     @Test
     public void testCachedResourceHandler() throws IOException, InterruptedException {
-        runTest("/cachedresource/range.txt", false);
+        for(int i = 0; i < 10; ++i) {
+            runTest("/cachedresource/range.txt", false);
+        }
     }
 
     public void runTest(String path, boolean etag) throws IOException, InterruptedException {
