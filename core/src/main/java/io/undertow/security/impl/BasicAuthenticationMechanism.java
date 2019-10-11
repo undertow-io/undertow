@@ -151,9 +151,9 @@ public class BasicAuthenticationMechanism implements AuthenticationMechanism {
                         }
 
                         plainChallenge = new String(decode.array(), decode.arrayOffset(), decode.limit(), charset);
-                        UndertowLogger.SECURITY_LOGGER.debugf("Found basic auth header %s (decoded using charset %s) in %s", plainChallenge, charset, exchange);
+                        UndertowLogger.SECURITY_LOGGER.debugf("Found basic auth header (decoded using charset %s) in %s", charset, exchange);
                     } catch (IOException e) {
-                        UndertowLogger.SECURITY_LOGGER.debugf(e, "Failed to decode basic auth header %s in %s", base64Challenge, exchange);
+                        UndertowLogger.SECURITY_LOGGER.debugf(e, "Failed to decode basic auth header in %s", exchange);
                     }
                     int colonPos;
                     if (plainChallenge != null && (colonPos = plainChallenge.indexOf(COLON)) > -1) {
