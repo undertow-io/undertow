@@ -289,8 +289,8 @@ public class CachedResource implements Resource, RangeAwareResource {
                     b.position((int) (b.position() + startDec));
                     startDec = 0;
                 } else {
-                    b.position(b.limit());
                     startDec -= b.remaining();
+                    b.position(b.limit());
                 }
             }
 
