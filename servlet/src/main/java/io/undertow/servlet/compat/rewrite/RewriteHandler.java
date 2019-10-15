@@ -218,6 +218,7 @@ public class RewriteHandler implements HttpHandler {
                 chunk.append(request.getContextPath());
                 chunk.append(urlString);
                 String requestPath = chunk.toString();
+                exchange.setRequestURI(requestPath);
                 exchange.setRequestPath(requestPath);
                 exchange.setRelativePath(urlString);
 
