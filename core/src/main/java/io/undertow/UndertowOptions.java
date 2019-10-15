@@ -339,6 +339,23 @@ public class UndertowOptions {
      */
     public static final Option<String> ENDPOINT_IDENTIFICATION_ALGORITHM = Option.simple(UndertowOptions.class, "ENDPOINT_IDENTIFICATION_ALGORITHM", String.class);
 
+    /**
+     * The maximum numbers of frames that can be queued before reads are suspended. Once this number is hit then reads will not be resumed until {@link #QUEUED_FRAMES_LOW_WATER_MARK}
+     * is hit.
+     *
+     * Defaults to 50
+     */
+    public static final Option<Integer> QUEUED_FRAMES_HIGH_WATER_MARK = Option.simple(UndertowOptions.class, "QUEUED_FRAMES_HIGH_WATER_MARK", Integer.class);
+
+    /**
+     * The point at which reads will resume again after hitting the high water mark
+     *
+     * Defaults to 10
+     */
+    public static final Option<Integer> QUEUED_FRAMES_LOW_WATER_MARK = Option.simple(UndertowOptions.class, "QUEUED_FRAMES_LOW_WATER_MARK", Integer.class);
+
+
+
     private UndertowOptions() {
 
     }
