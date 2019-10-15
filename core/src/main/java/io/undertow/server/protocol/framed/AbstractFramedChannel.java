@@ -949,6 +949,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 UndertowLogger.REQUEST_IO_LOGGER.tracef("Invoking receive listener", receiver);
                 ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, listener);
             }
+            final boolean partialRead;
+            synchronized (AbstractFramedChannel.this) {
+                partialRead = AbstractFramedChannel.this.partialRead;
+            }
             if (readData != null && !readData.isFreed() && channel.isOpen() && !partialRead) {
                 try {
                     runInIoThread(new Runnable() {
@@ -961,7 +965,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     IoUtils.safeClose(AbstractFramedChannel.this);
                 }
             }
-            partialRead = false;
+            synchronized (AbstractFramedChannel.this) {
+                AbstractFramedChannel.this.partialRead = false;
+            }
         }
     }
 
