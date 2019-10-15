@@ -191,22 +191,31 @@ public class DispatcherForwardTestCase {
 
 
     @Test
-    public void testIncludeAggregatesQueryString() throws IOException {
+    public void testIncludeAggregatesQueryString() throws IOException, InterruptedException {
         TestHttpClient client = new TestHttpClient();
+        String protocol = DefaultServer.isH2() ? Protocols.HTTP_2_0_STRING : Protocols.HTTP_1_1_STRING;
         try {
+            resetLatch();
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?a=b");
             get.setHeader("forward", "/path");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("pathInfo:null queryString:a=b servletPath:/path requestUri:/servletContext/path", response);
+            latch.await(30, TimeUnit.SECONDS);
+            //UNDERTOW-327 and UNDERTOW-1599 - make sure that the access log includes the original path and query string
+            Assert.assertEquals("GET /servletContext/dispatch?a=b " + protocol + " /servletContext/dispatch /dispatch", message);
 
+            resetLatch();
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?a=b");
             get.setHeader("forward", "/path?foo=bar");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("pathInfo:null queryString:foo=bar servletPath:/path requestUri:/servletContext/path", response);
+            latch.await(30, TimeUnit.SECONDS);
+            //UNDERTOW-327 and UNDERTOW-1599 - make sure that the access log includes the original path and query string
+            Assert.assertEquals("GET /servletContext/dispatch?a=b " + protocol + " /servletContext/dispatch /dispatch", message);
         } finally {
             client.getConnectionManager().shutdown();
         }
