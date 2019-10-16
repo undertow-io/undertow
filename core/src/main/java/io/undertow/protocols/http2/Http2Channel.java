@@ -486,7 +486,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 boolean ack = Bits.anyAreSet(frameParser.flags, PING_FLAG_ACK);
                 channel = new Http2PingStreamSourceChannel(this, pingParser.getData(), ack);
                 if(!ack) { //not an ack from one of our pings, so send it back
-                    sendPing(pingParser.getData(), null, true);
+                    sendPing(pingParser.getData(),  new Http2ControlMessageExceptionHandler(), true);
                 }
                 break;
             }

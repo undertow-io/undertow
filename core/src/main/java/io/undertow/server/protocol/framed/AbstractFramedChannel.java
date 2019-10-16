@@ -129,6 +129,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private final List<ChannelListener<C>> closeTasks = new CopyOnWriteArrayList<>();
     private volatile boolean flushingSenders = false;
 
+    private boolean partialRead = false;
+
     @SuppressWarnings("unused")
     private volatile int outstandingBuffers;
     private static final AtomicIntegerFieldUpdater<AbstractFramedChannel> outstandingBuffersUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedChannel.class, "outstandingBuffers");
@@ -352,6 +354,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             channel.getSourceChannel().shutdownReads();
             return null;
         }
+        partialRead = false;
         boolean requiresReinvoke = false;
         int reinvokeDataRemaining = 0;
         ReferenceCountedPooled pooled = this.readData;
@@ -470,6 +473,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     }
                     return newChannel;
                 }
+            } else {
+                //we set partial read to true so the read listener knows not to immediately call receive again
+                partialRead = true;
             }
             return null;
         } catch (IOException|RuntimeException|Error e) {
@@ -943,7 +949,11 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 UndertowLogger.REQUEST_IO_LOGGER.tracef("Invoking receive listener", receiver);
                 ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, listener);
             }
-            if (readData != null && !readData.isFreed() && channel.isOpen()) {
+            final boolean partialRead;
+            synchronized (AbstractFramedChannel.this) {
+                partialRead = AbstractFramedChannel.this.partialRead;
+            }
+            if (readData != null && !readData.isFreed() && channel.isOpen() && !partialRead) {
                 try {
                     runInIoThread(new Runnable() {
                         @Override
@@ -954,6 +964,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 } catch (RejectedExecutionException e) {
                     IoUtils.safeClose(AbstractFramedChannel.this);
                 }
+            }
+            synchronized (AbstractFramedChannel.this) {
+                AbstractFramedChannel.this.partialRead = false;
             }
         }
     }
