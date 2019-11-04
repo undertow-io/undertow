@@ -293,4 +293,11 @@
         <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
         <Class name="io.undertow.client.http.HttpClientConnection$ClientReadListener" />
     </Match>
+    <!-- Comparison of cookies path and domain with == before invoking equals is necessary because
+         both could be null; only if the == fails we check for one of them != null && equals the other -->
+    <Match>
+        <Bug pattern="ES_COMPARING_STRINGS_WITH_EQ"/>
+        <Class name="io.undertow.servlet.spec.HttpServletResponseImpl"/>
+        <Method name="addCookie"/>
+    </Match>
 </FindBugsFilter>

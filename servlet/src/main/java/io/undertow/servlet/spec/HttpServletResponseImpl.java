@@ -88,6 +88,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private String contentType;
     private String charset;
     private Supplier<Map<String, String>> trailerSupplier;
+    // a map of cookie name -> a map of (cookie path + cookie domain) -> cookie
     private Map<String, Map<String, Cookie>> duplicateCookies;
 
     public HttpServletResponseImpl(final HttpServerExchange exchange, final ServletContextImpl servletContext) {
@@ -113,27 +114,32 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (exchange.getResponseCookies().containsKey(servletCookieAdaptor.getName())) {
             final String cookieName = servletCookieAdaptor.getName();
             final String path = servletCookieAdaptor.getPath();
+            final String domain = servletCookieAdaptor.getDomain();
             final Cookie otherCookie = exchange.getResponseCookies().get(cookieName);
             final String otherCookiePath = otherCookie.getPath();
-            // if both cookies have same path and name, overwrite previous cookie
-            if ((path == otherCookiePath) || (path != null && path.equals(otherCookiePath))) {
+            final String otherCookieDomain = otherCookie.getDomain();
+            // if both cookies have same path, name, and domain, overwrite previous cookie
+            if ((path == otherCookiePath || (path != null && path.equals(otherCookiePath))) &&
+                    (domain == otherCookieDomain || (domain != null && domain.equals(otherCookieDomain)))) {
                 exchange.setResponseCookie(servletCookieAdaptor);
             }
             // else, create a duplicate cookie entry
             else {
-                final Map<String, Cookie> cookiesByPath;
+                final Map<String, Cookie> cookiesByPathPlusDomain;
                 if (duplicateCookies == null) {
                     duplicateCookies = new TreeMap<>();
                     exchange.addResponseCommitListener(
                             new DuplicateCookieCommitListener());
                 }
                 if (duplicateCookies.containsKey(cookieName)) {
-                    cookiesByPath = duplicateCookies.get(cookieName);
+                    cookiesByPathPlusDomain = duplicateCookies.get(cookieName);
                 } else {
-                    cookiesByPath = new TreeMap<>();
-                    duplicateCookies.put(cookieName, cookiesByPath);
+                    cookiesByPathPlusDomain = new TreeMap<>();
+                    duplicateCookies.put(cookieName, cookiesByPathPlusDomain);
                 }
-                cookiesByPath.put(otherCookiePath == null ? "null" : otherCookiePath, otherCookie);
+                String pathPlusDomain = (otherCookiePath == null ? "null" : otherCookiePath) +
+                        (otherCookieDomain == null? "null" : otherCookieDomain);
+                cookiesByPathPlusDomain.put(pathPlusDomain, otherCookie);
             }
         }
         exchange.setResponseCookie(servletCookieAdaptor);
