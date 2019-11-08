@@ -645,7 +645,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public String getHostAndPort() {
         String host = requestHeaders.getFirst(Headers.HOST);
-        if (host == null) {
+        if (host == null || "".equals(host.trim())) {
             InetSocketAddress address = getDestinationAddress();
             host = NetworkUtils.formatPossibleIpv6Address(address.getHostString());
             int port = address.getPort();
