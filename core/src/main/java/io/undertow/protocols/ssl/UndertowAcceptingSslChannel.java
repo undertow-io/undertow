@@ -38,8 +38,6 @@ import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.SslConnection;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -58,18 +56,6 @@ import javax.net.ssl.SSLParameters;
  * @author Stuart Douglas
  */
 class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
-
-    static final Method USE_CIPHER_SUITES_METHOD;
-
-    static {
-        Method method = null;
-        try {
-            method = SSLParameters.class.getDeclaredMethod("setUseCipherSuitesOrder", boolean.class);
-            method.setAccessible(true);
-        } catch (NoSuchMethodException e) {
-        }
-        USE_CIPHER_SUITES_METHOD = method;
-    }
 
     private final UndertowXnioSsl ssl;
     private final AcceptingChannel<? extends StreamConnection> tcpServer;
@@ -158,14 +144,10 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
             final InetSocketAddress peerAddress = tcpConnection.getPeerAddress(InetSocketAddress.class);
             final SSLEngine engine = ssl.getSslContext().createSSLEngine(getHostNameNoResolve(peerAddress), peerAddress.getPort());
 
-            if(USE_CIPHER_SUITES_METHOD != null && useCipherSuitesOrder) {
+            if(useCipherSuitesOrder) {
                 SSLParameters sslParameters = engine.getSSLParameters();
-                try {
-                    USE_CIPHER_SUITES_METHOD.invoke(sslParameters, true);
-                    engine.setSSLParameters(sslParameters);
-                } catch (IllegalAccessException | InvocationTargetException e) {
-                    UndertowLogger.ROOT_LOGGER.failedToUseServerOrder(e);
-                }
+                sslParameters.setUseCipherSuitesOrder(true);
+                engine.setSSLParameters(sslParameters);
             }
             final boolean clientMode = useClientMode != 0;
             engine.setUseClientMode(clientMode);
