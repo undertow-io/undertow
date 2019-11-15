@@ -35,14 +35,35 @@ public class DuplicateCookiesServlet extends HttpServlet {
 
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
-        Cookie cookie1 = new Cookie("test", "test");
-        cookie1.setPath("/test");
+        Cookie cookie1 = new Cookie("test1", "test1");
+        cookie1.setPath("/test1_1");
 
-        Cookie cookie2 = new Cookie("test", "test");
-        cookie2.setPath("/test2");
+        Cookie cookie2 = new Cookie("test1", "test1");
+        cookie2.setPath("/test1_2");
+
+        Cookie cookie3 = new Cookie("test2", "test2");
+        cookie3.setPath("/test2");
+
+        Cookie cookie4 = new Cookie("test2", "test2");
+        cookie4.setPath("/test2");
+        cookie4.setDomain("www.domain2.com");
+
+        Cookie cookie5 = new Cookie("test3", "test3");
+        cookie5.setDomain("www.domain3-1.com");
+
+        Cookie cookie6 = new Cookie("test3", "test3");
+        cookie6.setDomain("www.domain3-2.com");
+
+        Cookie cookie7 = new Cookie("test3", "test3");
+
 
         resp.addCookie(cookie1);
         resp.addCookie(cookie2);
+        resp.addCookie(cookie3);
+        resp.addCookie(cookie4);
+        resp.addCookie(cookie5);
+        resp.addCookie(cookie6);
+        resp.addCookie(cookie7);
 
         resp.getWriter().append("Served at: ").append(req.getContextPath());
     }

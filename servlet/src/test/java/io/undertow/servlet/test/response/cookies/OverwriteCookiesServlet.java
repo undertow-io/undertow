@@ -47,11 +47,34 @@ public class OverwriteCookiesServlet extends HttpServlet {
         Cookie cookie4 = new javax.servlet.http.Cookie("test", "test4");
         Cookie cookie5 = new javax.servlet.http.Cookie("test", "test5");
 
+        Cookie cookie6 = new javax.servlet.http.Cookie("test", "test6");
+        cookie6.setPath("/test");
+        cookie6.setDomain("www.domain.com");
+
+        Cookie cookie7 = new javax.servlet.http.Cookie("test", "test7");
+        cookie7.setPath("/test");
+        cookie7.setDomain("www.domain.com");
+
+        Cookie cookie8 = new javax.servlet.http.Cookie("test", "test8");
+        cookie8.setPath("/test");
+        cookie8.setDomain("www.domain.com");
+
+        Cookie cookie9 = new javax.servlet.http.Cookie("test", "test9");
+        cookie9.setDomain("www.domain.com");
+
+        Cookie cookie10 = new javax.servlet.http.Cookie("test", "test10");
+        cookie10.setDomain("www.domain.com");
+
         resp.addCookie(cookie1);
         resp.addCookie(cookie2);
         resp.addCookie(cookie3);
         resp.addCookie(cookie4);
         resp.addCookie(cookie5);
+        resp.addCookie(cookie6);
+        resp.addCookie(cookie7);
+        resp.addCookie(cookie8);
+        resp.addCookie(cookie9);
+        resp.addCookie(cookie10);
 
         // creating session -> additional jsessionid set-cookie
         req.getSession().setAttribute("CleanSessions", true);

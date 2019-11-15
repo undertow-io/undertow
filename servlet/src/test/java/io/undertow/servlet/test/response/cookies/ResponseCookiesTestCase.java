@@ -18,6 +18,9 @@
 
 package io.undertow.servlet.test.response.cookies;
 
+import java.util.Arrays;
+import java.util.Comparator;
+
 import javax.servlet.ServletException;
 
 import io.undertow.servlet.api.ServletInfo;
@@ -89,9 +92,16 @@ public class ResponseCookiesTestCase {
             assertEquals("Served at: /servletContext", response);
 
             final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
-            assertEquals(2, setCookieHeaders.length);
-            assertEquals("test=test; path=/test", setCookieHeaders[0].getValue());
-            assertEquals("test=test; path=/test2", setCookieHeaders[1].getValue());
+            assertEquals(7, setCookieHeaders.length);
+            Arrays.sort(setCookieHeaders, Comparator.comparing(Object::toString));
+            assertEquals("test1=test1; path=/test1_1", setCookieHeaders[0].getValue());
+            assertEquals("test1=test1; path=/test1_2", setCookieHeaders[1].getValue());
+            assertEquals("test2=test2; path=/test2", setCookieHeaders[2].getValue());
+            assertEquals("test2=test2; path=/test2; domain=www.domain2.com", setCookieHeaders[3].getValue());
+            assertEquals("test3=test3", setCookieHeaders[4].getValue());
+            assertEquals("test3=test3; domain=www.domain3-1.com", setCookieHeaders[5].getValue());
+            assertEquals("test3=test3; domain=www.domain3-2.com", setCookieHeaders[6].getValue());
+
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -109,11 +119,15 @@ public class ResponseCookiesTestCase {
             assertEquals("Served at: /servletContext", response);
 
             final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
-            assertEquals(3, setCookieHeaders.length);
-            assertEquals("test=test2; path=/test", setCookieHeaders[0].getValue());
-            assertTrue("Header " + setCookieHeaders[1] + "didn't match expected regex",
-                    setCookieHeaders[1].getValue().matches("JSESSIONID=.*; path=/servletContext"));
-            assertEquals("test=test5", setCookieHeaders[2].getValue());
+            assertEquals(5, setCookieHeaders.length);
+            Arrays.sort(setCookieHeaders, Comparator.comparing(Object::toString));
+            assertTrue("Header " + setCookieHeaders[0] + "didn't match expected regex",
+                    setCookieHeaders[0].getValue().matches("JSESSIONID=.*; path=/servletContext"));
+            assertEquals("test=test10; domain=www.domain.com", setCookieHeaders[1].getValue());
+            assertEquals("test=test2; path=/test", setCookieHeaders[2].getValue());
+            assertEquals("test=test5", setCookieHeaders[3].getValue());
+            assertEquals("test=test8; path=/test; domain=www.domain.com", setCookieHeaders[4].getValue());
+
         } finally {
             client.getConnectionManager().shutdown();
         }
