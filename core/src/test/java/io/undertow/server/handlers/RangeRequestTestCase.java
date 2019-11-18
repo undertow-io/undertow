@@ -104,7 +104,7 @@ public class RangeRequestTestCase {
                 HttpResponse result = client.execute(get);
                 Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
                 String response = EntityUtils.toString(result.getEntity());
-                Assert.assertEquals("89\n2:012345", response);
+                Assert.assertEquals("89#2:012345", response);
                 Assert.assertEquals( "bytes 10-20/1034", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
 
                 get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
@@ -112,7 +112,7 @@ public class RangeRequestTestCase {
                 result = client.execute(get);
                 Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
                 response = EntityUtils.toString(result.getEntity());
-                Assert.assertEquals("3:0123456789\n74:012345678", response);
+                Assert.assertEquals("3:0123456789#74:012345678", response);
                 Assert.assertEquals( "bytes 1000-1024/1034", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
 
                 get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
@@ -120,7 +120,7 @@ public class RangeRequestTestCase {
                 result = client.execute(get);
                 Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
                 response = EntityUtils.toString(result.getEntity());
-                Assert.assertEquals(":0123456789\n74:012345678", response);
+                Assert.assertEquals(":0123456789#74:012345678", response);
                 Assert.assertEquals( "bytes 1001-1024/1034", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
 
                 get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
