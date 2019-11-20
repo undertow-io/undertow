@@ -21,8 +21,6 @@ package io.undertow.protocols.ssl;
 import static org.xnio.IoUtils.safeClose;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
@@ -42,7 +40,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 
-import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -81,18 +78,6 @@ public class UndertowXnioSsl extends XnioSsl {
 
     private final ByteBufferPool bufferPool;
     private volatile SSLContext sslContext;
-
-    private static final Method USE_CIPHER_SUITES_METHOD;
-
-    static {
-        Method method = null;
-        try {
-            method = SSLParameters.class.getDeclaredMethod("setUseCipherSuitesOrder", boolean.class);
-            method.setAccessible(true);
-        } catch (NoSuchMethodException e) {
-        }
-        USE_CIPHER_SUITES_METHOD = method;
-    }
 
     /**
      * Construct a new instance.
@@ -298,14 +283,10 @@ public class UndertowXnioSsl extends XnioSsl {
             }
         }
         boolean useCipherSuitesOrder = optionMap.get(UndertowOptions.SSL_USER_CIPHER_SUITES_ORDER, false);
-        if (USE_CIPHER_SUITES_METHOD != null && useCipherSuitesOrder) {
+        if (useCipherSuitesOrder) {
             SSLParameters sslParameters = engine.getSSLParameters();
-            try {
-                USE_CIPHER_SUITES_METHOD.invoke(sslParameters, true);
-                engine.setSSLParameters(sslParameters);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                UndertowLogger.ROOT_LOGGER.failedToUseServerOrder(e);
-            }
+            sslParameters.setUseCipherSuitesOrder(true);
+            engine.setSSLParameters(sslParameters);
         }
         final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, null);
         if (endpointIdentificationAlgorithm != null) {

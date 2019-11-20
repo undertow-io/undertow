@@ -401,9 +401,9 @@ public interface UndertowLogger extends BasicLogger {
     @Message(id = 5086, value = "Failed to accept SSL request")
     void failedToAcceptSSLRequest(@Cause Exception e);
 
-    @LogMessage(level = ERROR)
-    @Message(id = 5087, value = "Failed to use the server order")
-    void failedToUseServerOrder(@Cause ReflectiveOperationException e);
+//    @LogMessage(level = ERROR)
+//    @Message(id = 5087, value = "Failed to use the server order")
+//    void failedToUseServerOrder(@Cause ReflectiveOperationException e);
 
     @LogMessage(level = ERROR)
     @Message(id = 5088, value = "Failed to execute ServletOutputStream.closeAsync() on IO thread")
