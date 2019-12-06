@@ -108,6 +108,8 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private volatile boolean writesResumed;
     @SuppressWarnings("unused")
     private volatile int inListenerLoop;
+    /* keep track of successful writes to properly prevent a loop UNDERTOW-1624 */
+    private volatile boolean writeSucceeded;
 
     private static final AtomicIntegerFieldUpdater<AbstractFramedStreamSinkChannel> inListenerLoopUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedStreamSinkChannel.class, "inListenerLoop");
 
@@ -196,6 +198,8 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if (inListenerLoopUpdater.compareAndSet(this, 0, 1)) {
             getChannel().runInIoThread(new Runnable() {
 
+                // loopCount keeps track of runnable being invoked in a
+                // loop without any successful write operation
                 int loopCount = 0;
 
                 @Override
@@ -205,7 +209,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                         if (listener == null || !isWriteResumed()) {
                             return;
                         }
-                        if (loopCount++ == 100) {
+                        if (writeSucceeded) {
+                            // reset write succeeded and loopCount
+                            writeSucceeded = false;
+                            loopCount = 0;
+                        } else if (loopCount++ == 100) {
                             //should never happen
                             UndertowLogger.ROOT_LOGGER.listenerNotProgressing();
                             IoUtils.safeClose(AbstractFramedStreamSinkChannel.this);
@@ -387,6 +395,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if(!buffer.hasRemaining()) {
             handleBufferFull();
         }
+        writeSucceeded = writeSucceeded || copied > 0;
         return copied;
     }
 
@@ -408,6 +417,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if(!buffer.hasRemaining()) {
             handleBufferFull();
         }
+        writeSucceeded = writeSucceeded || copied > 0;
         return copied;
     }
 
@@ -433,6 +443,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     protected boolean sendInternal(PooledByteBuffer pooled) throws IOException {
         if (safeToSend()) {
             this.body = pooled;
+            writeSucceeded = true;
             return true;
         }
         return false;
