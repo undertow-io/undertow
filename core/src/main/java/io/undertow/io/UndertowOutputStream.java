@@ -22,8 +22,11 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.server.BlockingChannels;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import org.xnio.Buffers;
@@ -53,6 +56,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
     private int state;
     private long written;
     private final long contentLength;
+    private final int writeTimeoutMillis;
 
     private static final int FLAG_CLOSED = 1;
     private static final int FLAG_WRITE_STARTED = 1 << 1;
@@ -67,6 +71,8 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
     public UndertowOutputStream(HttpServerExchange exchange) {
         this.exchange = exchange;
         this.contentLength = exchange.getResponseContentLength();
+        this.writeTimeoutMillis = exchange.getConnection().getUndertowOptions()
+                .get(UndertowOptions.BLOCKING_WRITE_TIMEOUT, -1);
     }
 
 
@@ -161,7 +167,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
                             break;
                         }
                     }
-                    Channels.writeBlocking(channel, buffers, 0, bufferCount);
+                    writeBlocking(channel, buffers, 0, bufferCount);
                     while (bytesWritten < len) {
                         //ok, it did not fit, loop and loop and loop until it is done
                         bufferCount = 0;
@@ -182,7 +188,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
                                 break;
                             }
                         }
-                        Channels.writeBlocking(channel, buffers, 0, bufferCount);
+                        writeBlocking(channel, buffers, 0, bufferCount);
                     }
                     buffer.clear();
                 } finally {
@@ -228,7 +234,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
             if (channel == null) {
                 channel = exchange.getResponseChannel();
             }
-            Channels.writeBlocking(channel, buffers, 0, buffers.length);
+            writeBlocking(channel, buffers, 0, buffers.length);
             state |= FLAG_WRITE_STARTED;
         } else {
             ByteBuffer buffer = buffer();
@@ -239,13 +245,13 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
                     channel = exchange.getResponseChannel();
                 }
                 if (buffer.position() == 0) {
-                    Channels.writeBlocking(channel, buffers, 0, buffers.length);
+                    writeBlocking(channel, buffers, 0, buffers.length);
                 } else {
                     final ByteBuffer[] newBuffers = new ByteBuffer[buffers.length + 1];
                     buffer.flip();
                     newBuffers[0] = buffer;
                     System.arraycopy(buffers, 0, newBuffers, 1, buffers.length);
-                    Channels.writeBlocking(channel, newBuffers, 0, newBuffers.length);
+                    writeBlocking(channel, newBuffers, 0, newBuffers.length);
                     buffer.clear();
                 }
                 state |= FLAG_WRITE_STARTED;
@@ -280,7 +286,11 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         if (channel == null) {
             channel = exchange.getResponseChannel();
         }
-        Channels.flushBlocking(channel);
+        flushBlocking();
+    }
+
+    private void flushBlocking() throws IOException {
+        BlockingChannels.flushBlockingOrThrow(channel, writeTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     private void writeBufferBlocking(final boolean writeFinal) throws IOException {
@@ -345,7 +355,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
             }
             StreamSinkChannel channel = this.channel;
             channel.shutdownWrites();
-            Channels.flushBlocking(channel);
+            flushBlocking();
         } finally {
             if (pooledBuffer != null) {
                 pooledBuffer.close();
@@ -366,4 +376,8 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         return this.buffer;
     }
 
+    private long writeBlocking(StreamSinkChannel channel, ByteBuffer[] buffers, int offs, int len) throws IOException {
+        return BlockingChannels.writeBlockingOrThrow(
+                channel, buffers, offs, len, writeTimeoutMillis, TimeUnit.MILLISECONDS);
+    }
 }

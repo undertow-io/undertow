@@ -51,7 +51,11 @@ public class ServletUpgradeListener<T extends HttpUpgradeHandler> implements Htt
                 DelayedExecutor executor = new DelayedExecutor(exchange.getIoThread());
                 try {
                     //run the upgrade in the worker thread
-                    instance.getInstance().init(new WebConnectionImpl(context, ServletUpgradeListener.this.exchange.getConnection().getByteBufferPool(), executor));
+                    instance.getInstance().init(new WebConnectionImpl(
+                            context,
+                            ServletUpgradeListener.this.exchange.getConnection().getByteBufferPool(),
+                            executor,
+                            ServletUpgradeListener.this.exchange.getConnection().getUndertowOptions()));
                 } finally {
                     executor.openGate();
                 }

@@ -25,6 +25,7 @@ import static org.xnio.Bits.anyAreSet;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import javax.servlet.DispatcherType;
 import javax.servlet.ServletOutputStream;
@@ -32,6 +33,8 @@ import javax.servlet.ServletRequest;
 import javax.servlet.WriteListener;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
+import io.undertow.server.BlockingChannels;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -67,6 +70,7 @@ import io.undertow.util.Headers;
 public class ServletOutputStreamImpl extends ServletOutputStream implements BufferWritableOutputStream {
 
     private final ServletRequestContext servletRequestContext;
+    private final int writeTimeoutMillis;
     private PooledByteBuffer pooledBuffer;
     private ByteBuffer buffer;
     private Integer bufferSize;
@@ -105,6 +109,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
      */
     public ServletOutputStreamImpl(final ServletRequestContext servletRequestContext) {
         this.servletRequestContext = servletRequestContext;
+        this.writeTimeoutMillis = servletRequestContext.getExchange().getConnection().getUndertowOptions()
+                .get(UndertowOptions.BLOCKING_WRITE_TIMEOUT, -1);
     }
 
     /**
@@ -113,6 +119,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     public ServletOutputStreamImpl(final ServletRequestContext servletRequestContext, int bufferSize) {
         this.bufferSize = bufferSize;
         this.servletRequestContext = servletRequestContext;
+        this.writeTimeoutMillis = servletRequestContext.getExchange().getConnection().getUndertowOptions()
+                .get(UndertowOptions.BLOCKING_WRITE_TIMEOUT, -1);
     }
 
     /**
@@ -195,7 +203,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     break;
                 }
             }
-            Channels.writeBlocking(channel, buffers, 0, bufferCount);
+            writeBlocking(channel, buffers, 0, bufferCount);
             while (bytesWritten < len) {
                 //ok, it did not fit, loop and loop and loop until it is done
                 bufferCount = 0;
@@ -216,7 +224,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                         break;
                     }
                 }
-                Channels.writeBlocking(channel, buffers, 0, bufferCount);
+                writeBlocking(channel, buffers, 0, bufferCount);
             }
             buffer.clear();
         } finally {
@@ -291,7 +299,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 if (channel == null) {
                     channel = servletRequestContext.getExchange().getResponseChannel();
                 }
-                Channels.writeBlocking(channel, buffers, 0, buffers.length);
+                writeBlocking(channel, buffers, 0, buffers.length);
                 setFlags(FLAG_WRITE_STARTED);
             } else {
                 ByteBuffer buffer = buffer();
@@ -302,13 +310,13 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                         channel = servletRequestContext.getExchange().getResponseChannel();
                     }
                     if (buffer.position() == 0) {
-                        Channels.writeBlocking(channel, buffers, 0, buffers.length);
+                        writeBlocking(channel, buffers, 0, buffers.length);
                     } else {
                         final ByteBuffer[] newBuffers = new ByteBuffer[buffers.length + 1];
                         buffer.flip();
                         newBuffers[0] = buffer;
                         System.arraycopy(buffers, 0, newBuffers, 1, buffers.length);
-                        Channels.writeBlocking(channel, newBuffers, 0, newBuffers.length);
+                        writeBlocking(channel, newBuffers, 0, newBuffers.length);
                         buffer.clear();
                     }
                     setFlags(FLAG_WRITE_STARTED);
@@ -491,7 +499,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             if (channel == null) {
                 channel = servletRequestContext.getExchange().getResponseChannel();
             }
-            Channels.flushBlocking(channel);
+            flushChannelBlocking();
         } else {
             if (anyAreClear(state, FLAG_READY)) {
                 return;
@@ -516,6 +524,10 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             }
             buffer.compact();
         }
+    }
+
+    private void flushChannelBlocking() throws IOException {
+        BlockingChannels.flushBlockingOrThrow(channel, writeTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -615,7 +627,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 StreamSinkChannel channel = this.channel;
                 if (channel != null) { //mock requests
                     channel.shutdownWrites();
-                    Channels.flushBlocking(channel);
+                    flushChannelBlocking();
                 }
             } catch (IOException | RuntimeException | Error e) {
                 IoUtils.safeClose(this.channel);
@@ -946,4 +958,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         } while (!stateUpdater.compareAndSet(this, old, old & ~flags));
     }
 
+    private long writeBlocking(StreamSinkChannel channel, ByteBuffer[] buffers, int offs, int len) throws IOException {
+        return BlockingChannels.writeBlockingOrThrow(
+                channel, buffers, offs, len, writeTimeoutMillis, TimeUnit.MILLISECONDS);
+    }
 }

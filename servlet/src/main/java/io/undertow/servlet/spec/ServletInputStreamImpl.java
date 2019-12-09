@@ -24,14 +24,16 @@ import static org.xnio.Bits.anyAreSet;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import javax.servlet.ReadListener;
 import javax.servlet.ServletInputStream;
 
+import io.undertow.UndertowOptions;
+import io.undertow.server.BlockingChannels;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.channels.Channels;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 import io.undertow.connector.ByteBufferPool;
@@ -49,6 +51,8 @@ public class ServletInputStreamImpl extends ServletInputStream {
     private final HttpServletRequestImpl request;
     private final StreamSourceChannel channel;
     private final ByteBufferPool bufferPool;
+    /** {@link UndertowOptions#BLOCKING_READ_TIMEOUT}. */
+    private final int readTimeoutMillis;
 
     private volatile ReadListener listener;
     private volatile ServletInputStreamChannelListener internalListener;
@@ -78,6 +82,8 @@ public class ServletInputStreamImpl extends ServletInputStream {
             this.channel = new EmptyStreamSourceChannel(request.getExchange().getIoThread());
         }
         this.bufferPool = request.getExchange().getConnection().getByteBufferPool();
+        this.readTimeoutMillis = request.getExchange().getConnection().getUndertowOptions()
+                .get(UndertowOptions.BLOCKING_READ_TIMEOUT, -1);
     }
 
 
@@ -189,7 +195,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
             pooled = bufferPool.allocate();
 
-            int res = Channels.readBlocking(channel, pooled.getBuffer());
+            int res = readBlocking(channel, pooled, readTimeoutMillis);
             pooled.getBuffer().flip();
             if (res == -1) {
                 setFlags(FLAG_FINISHED);
@@ -197,6 +203,14 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 pooled = null;
             }
         }
+    }
+
+    private static int readBlocking(
+            StreamSourceChannel channel,
+            PooledByteBuffer pooled,
+            int readTimeoutMillis) throws IOException {
+        return BlockingChannels.readBlockingOrThrow(
+                channel, pooled.getBuffer(), readTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     private void readIntoBufferNonBlocking() throws IOException {

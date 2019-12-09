@@ -18,10 +18,12 @@
 
 package io.undertow.servlet.spec;
 
+import io.undertow.UndertowOptions;
+import io.undertow.server.BlockingChannels;
 import io.undertow.servlet.UndertowServletMessages;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import org.xnio.channels.Channels;
+import org.xnio.OptionMap;
 import org.xnio.channels.StreamSinkChannel;
 
 import javax.servlet.ServletOutputStream;
@@ -29,6 +31,7 @@ import javax.servlet.WriteListener;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
@@ -45,6 +48,7 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
 
     private WriteListener listener;
     private final Executor ioExecutor;
+    private final int writeTimeoutMillis;
 
     /**
      * If this stream is ready for a write
@@ -60,9 +64,20 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
      */
     private ByteBuffer buffer;
 
-    protected UpgradeServletOutputStream(final StreamSinkChannel channel, Executor ioExecutor) {
+    protected UpgradeServletOutputStream(
+            StreamSinkChannel channel, Executor ioExecutor, OptionMap undertowOptions) {
         this.channel = channel;
         this.ioExecutor = ioExecutor;
+        this.writeTimeoutMillis = undertowOptions.get(UndertowOptions.BLOCKING_WRITE_TIMEOUT, -1);
+    }
+
+    /**
+     * Prefer using the constructor which accepts an {@link OptionMap} in order to support blocking operation timeouts.
+     * @deprecated Prefer {@link #UpgradeServletOutputStream(StreamSinkChannel, Executor, OptionMap)}.
+     */
+    @Deprecated
+    protected UpgradeServletOutputStream(final StreamSinkChannel channel, Executor ioExecutor) {
+        this(channel, ioExecutor, OptionMap.EMPTY);
     }
 
     @Override
@@ -76,7 +91,7 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
         if (listener == null) {
-            Channels.writeBlocking(channel, ByteBuffer.wrap(b, off, len));
+            BlockingChannels.writeBlockingOrThrow(channel, ByteBuffer.wrap(b, off, len), writeTimeoutMillis, TimeUnit.MILLISECONDS);
         } else {
             if (anyAreClear(state, FLAG_READY)) {
                 throw UndertowServletMessages.MESSAGES.streamNotReady();
@@ -119,7 +134,7 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
         if (listener == null) {
-            Channels.flushBlocking(channel);
+            BlockingChannels.flushBlockingOrThrow(channel, writeTimeoutMillis, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -130,7 +145,7 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
         if (listener == null) {
             channel.shutdownWrites();
             state |= FLAG_DELEGATE_SHUTDOWN;
-            Channels.flushBlocking(channel);
+            BlockingChannels.flushBlockingOrThrow(channel, writeTimeoutMillis, TimeUnit.MILLISECONDS);
         } else {
             if (buffer == null) {
                 channel.shutdownWrites();
@@ -155,10 +170,10 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
         state |= FLAG_CLOSED;
         try {
             if (buffer != null) {
-                Channels.writeBlocking(channel, buffer);
+                BlockingChannels.writeBlockingOrThrow(channel, buffer, writeTimeoutMillis, TimeUnit.MILLISECONDS);
             }
             channel.shutdownWrites();
-            Channels.flushBlocking(channel);
+            BlockingChannels.flushBlockingOrThrow(channel, writeTimeoutMillis, TimeUnit.MILLISECONDS);
         } catch (IOException e){
             channel.close();
             throw e;

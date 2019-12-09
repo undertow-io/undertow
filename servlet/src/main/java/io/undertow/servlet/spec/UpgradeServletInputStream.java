@@ -18,13 +18,15 @@
 
 package io.undertow.servlet.spec;
 
+import io.undertow.UndertowOptions;
+import io.undertow.server.BlockingChannels;
 import io.undertow.servlet.UndertowServletMessages;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import org.xnio.channels.Channels;
+import org.xnio.OptionMap;
 import org.xnio.channels.StreamSourceChannel;
 
 import javax.servlet.ReadListener;
@@ -32,6 +34,7 @@ import javax.servlet.ServletInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
@@ -47,6 +50,7 @@ public class UpgradeServletInputStream extends ServletInputStream {
     private final StreamSourceChannel channel;
     private final ByteBufferPool bufferPool;
     private final Executor ioExecutor;
+    private final int readTimeoutMillis;
 
     private volatile ReadListener listener;
 
@@ -61,10 +65,24 @@ public class UpgradeServletInputStream extends ServletInputStream {
     private int state;
     private PooledByteBuffer pooled;
 
-    public UpgradeServletInputStream(final StreamSourceChannel channel, final ByteBufferPool bufferPool, Executor ioExecutor) {
+    public UpgradeServletInputStream(
+            final StreamSourceChannel channel,
+            final ByteBufferPool bufferPool,
+            final Executor ioExecutor,
+            final OptionMap undertowOptions) {
         this.channel = channel;
         this.bufferPool = bufferPool;
         this.ioExecutor = ioExecutor;
+        this.readTimeoutMillis = undertowOptions.get(UndertowOptions.BLOCKING_READ_TIMEOUT, -1);
+    }
+
+    /**
+     * Prefer the constructor with an {@link org.xnio.OptionMap}.
+     * @deprecated Prefer {@link #UpgradeServletInputStream(StreamSourceChannel, ByteBufferPool, Executor)}.
+     */
+    @Deprecated
+    public UpgradeServletInputStream(final StreamSourceChannel channel, final ByteBufferPool bufferPool, Executor ioExecutor) {
+        this(channel, bufferPool, ioExecutor, OptionMap.EMPTY);
     }
 
     @Override
@@ -147,7 +165,8 @@ public class UpgradeServletInputStream extends ServletInputStream {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
             pooled = bufferPool.allocate();
 
-            int res = Channels.readBlocking(channel, pooled.getBuffer());
+            int res = BlockingChannels.readBlockingOrThrow(
+                    channel, pooled.getBuffer(), readTimeoutMillis, TimeUnit.MILLISECONDS);
             pooled.getBuffer().flip();
             if (res == -1) {
                 state |= FLAG_FINISHED;

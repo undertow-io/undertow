@@ -28,6 +28,7 @@ import javax.servlet.http.WebConnection;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import io.undertow.connector.ByteBufferPool;
+import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
 
 /**
@@ -38,13 +39,15 @@ public class WebConnectionImpl implements WebConnection {
     private final StreamConnection channel;
     private final UpgradeServletOutputStream outputStream;
     private final UpgradeServletInputStream inputStream;
-    private final Executor ioExecutor;
 
-    public WebConnectionImpl(final StreamConnection channel, ByteBufferPool bufferPool, Executor ioExecutor) {
+    public WebConnectionImpl(
+            final StreamConnection channel,
+            ByteBufferPool bufferPool,
+            Executor ioExecutor,
+            OptionMap undertowOptions) {
         this.channel = channel;
-        this.ioExecutor = ioExecutor;
-        this.outputStream = new UpgradeServletOutputStream(channel.getSinkChannel(), ioExecutor);
-        this.inputStream = new UpgradeServletInputStream(channel.getSourceChannel(), bufferPool, ioExecutor);
+        this.outputStream = new UpgradeServletOutputStream(channel.getSinkChannel(), ioExecutor, undertowOptions);
+        this.inputStream = new UpgradeServletInputStream(channel.getSourceChannel(), bufferPool, ioExecutor, undertowOptions);
         channel.getCloseSetter().set(new ChannelListener<StreamConnection>() {
             @Override
             public void handleEvent(StreamConnection channel) {
@@ -55,6 +58,15 @@ public class WebConnectionImpl implements WebConnection {
                 }
             }
         });
+    }
+
+    /**
+     * Prefer using the constructor which takes an {@link OptionMap} to support blocking operation timeout.
+     * @deprecated in favor of {@link #WebConnectionImpl(StreamConnection, ByteBufferPool, Executor, OptionMap)}.
+     */
+    @Deprecated
+    public WebConnectionImpl(final StreamConnection channel, ByteBufferPool bufferPool, Executor ioExecutor) {
+        this(channel, bufferPool, ioExecutor, OptionMap.EMPTY);
     }
 
     @Override

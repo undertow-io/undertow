@@ -73,9 +73,25 @@ public class UndertowOptions {
     public static final Option<Integer> REQUEST_PARSE_TIMEOUT = Option.simple(UndertowOptions.class, "REQUEST_PARSE_TIMEOUT", Integer.class);
 
     /**
-     * The amount of time the connection can be idle with no current requests before it is closed;
+     * The amount of time the connection can be idle with no current requests before it is closed.
      */
     public static final Option<Integer> NO_REQUEST_TIMEOUT = Option.simple(UndertowOptions.class, "NO_REQUEST_TIMEOUT", Integer.class);
+
+    /**
+     * The amount of time in milliseconds a single blocking read operation may take before a timeout IOException is thrown.
+     * Unlike Options.READ_TIMEOUT this only applies to blocking operations which can be helpful to prevent the worker
+     * pool from becoming saturated when clients stop responding.
+     * <code>-1</code> or missing value disables this functionality. There is no timeout by default.
+     */
+    public static final Option<Integer> BLOCKING_READ_TIMEOUT = Option.simple(UndertowOptions.class, "BLOCKING_READ_TIMEOUT", Integer.class);
+
+    /**
+     * The amount of time in milliseconds a single blocking write operation may take before a timeout IOException is thrown.
+     * Unlike Options.WRITE_TIMEOUT this only applies to blocking operations which can be helpful to prevent the worker
+     * pool from becoming saturated when clients stop responding.
+     * <code>-1</code> or missing value disables this functionality. There is no timeout by default.
+     */
+    public static final Option<Integer> BLOCKING_WRITE_TIMEOUT = Option.simple(UndertowOptions.class, "BLOCKING_WRITE_TIMEOUT", Integer.class);
 
     public static final int DEFAULT_MAX_PARAMETERS = 1000;
 

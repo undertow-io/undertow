@@ -28,6 +28,7 @@ import org.xnio.Options;
 import io.undertow.connector.PooledByteBuffer;
 import org.xnio.SslClientAuthMode;
 import org.xnio.channels.Channels;
+import org.xnio.channels.ReadTimeoutException;
 import org.xnio.channels.SslChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -166,7 +167,7 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
             int res;
             for(;;) {
                 final ByteBuffer buf = pooled.getBuffer();
-                res = Channels.readBlocking(requestChannel, buf);
+                res = readBlocking(exchange, requestChannel, buf);
                 if (!buf.hasRemaining()) {
                     buf.flip();
                     if(allowedBuffers == usedBuffers) {
@@ -198,6 +199,20 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
             if(requestResetRequired) {
                 exchange.requestChannel = null;
             }
+        }
+    }
+
+    private int readBlocking(HttpServerExchange exchange, StreamSourceChannel channel, ByteBuffer buffer) throws IOException {
+        int readTimeoutMillis = exchange.getConnection().getUndertowOptions()
+                .get(UndertowOptions.BLOCKING_READ_TIMEOUT, -1);
+        if (readTimeoutMillis > 0) {
+            int result = Channels.readBlocking(channel, buffer, readTimeoutMillis, TimeUnit.MILLISECONDS);
+            if (result == 0 && buffer.hasRemaining()) {
+                throw new ReadTimeoutException();
+            }
+            return result;
+        } else {
+            return Channels.readBlocking(channel, buffer);
         }
     }
 

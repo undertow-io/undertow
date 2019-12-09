@@ -19,17 +19,19 @@
 package io.undertow.io;
 
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.server.BlockingChannels;
 import io.undertow.server.HttpServerExchange;
 import org.xnio.Buffers;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
-import org.xnio.channels.Channels;
 import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
@@ -44,6 +46,8 @@ public class UndertowInputStream extends InputStream {
 
     private final StreamSourceChannel channel;
     private final ByteBufferPool bufferPool;
+    /** {@link UndertowOptions#BLOCKING_READ_TIMEOUT}. */
+    private final int readTimeoutMillis;
 
     /**
      * If this stream is ready for a read
@@ -61,6 +65,8 @@ public class UndertowInputStream extends InputStream {
             this.channel = new EmptyStreamSourceChannel(exchange.getIoThread());
         }
         this.bufferPool = exchange.getConnection().getByteBufferPool();
+        this.readTimeoutMillis = exchange.getConnection().getUndertowOptions()
+                .get(UndertowOptions.BLOCKING_READ_TIMEOUT, -1);
     }
 
     @Override
@@ -106,7 +112,8 @@ public class UndertowInputStream extends InputStream {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
             pooled = bufferPool.allocate();
 
-            int res = Channels.readBlocking(channel, pooled.getBuffer());
+            int res = BlockingChannels.readBlockingOrThrow(
+                    channel, pooled.getBuffer(), readTimeoutMillis, TimeUnit.MILLISECONDS);
             pooled.getBuffer().flip();
             if (res == -1) {
                 state |= FLAG_FINISHED;
