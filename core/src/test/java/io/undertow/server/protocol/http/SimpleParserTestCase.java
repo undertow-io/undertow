@@ -97,27 +97,63 @@ public class SimpleParserTestCase {
 
 
     @Test
-    public void testPathParameters() throws BadRequestException {
+    public void testMatrixParamFlag() throws BadRequestException {
         byte[] in = "GET /somepath;p1 HTTP/1.1\r\n\r\n".getBytes();
         ParseState context = new ParseState(10);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
-        Assert.assertEquals("/somepath", result.getRequestPath());
         Assert.assertEquals("/somepath;p1", result.getRequestURI());
-        Assert.assertTrue(result.getPathParameters().containsKey("p1"));
+        Assert.assertEquals("/somepath", result.getRequestPath());
+        Assert.assertEquals(1, result.getPathParameters().size());
+        Assert.assertEquals("p1", result.getPathParameters().keySet().toArray()[0]);
+        Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+    }
 
-        in = "GET /somepath;p1=v1&p2=v2?q1=v3 HTTP/1.1\r\n\r\n".getBytes();
-        context = new ParseState(10);
-        result = new HttpServerExchange(null);
+    @Test
+    public void testRootMatrixParam() throws BadRequestException {
+        // TODO decide what should happen for a single semicolon as the path URI and other edge cases
+        byte[] in = "GET ; HTTP/1.1\r\n\r\n".getBytes();
+        ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals(";", result.getRequestURI());
+        Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+    }
+
+    @Test
+    public void testMatrixParametersWithQueryString() throws BadRequestException {
+        byte[] in = "GET /somepath;p1=v1;p2=v2?q1=v3 HTTP/1.1\r\n\r\n".getBytes();
+        ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("/somepath;p1=v1;p2=v2", result.getRequestURI());
         Assert.assertEquals("/somepath", result.getRequestPath());
-        Assert.assertEquals("/somepath;p1=v1&p2=v2", result.getRequestURI());
+        //Assert.assertEquals("q1=v3", result.getQueryString());
+        Assert.assertEquals("v1", result.getPathParameters().get("p1").getFirst());
+        Assert.assertEquals("v2", result.getPathParameters().get("p2").getFirst());
+
+        Assert.assertEquals("q1=v3", result.getQueryString());
+        Assert.assertEquals("v3", result.getQueryParameters().get("q1").getFirst());
+        Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+    }
+
+    @Test
+    public void testMultiLevelMatrixParameters() throws BadRequestException {
+        byte[] in = "GET /some;p1=v1/canonicalPath;p2=v2?q1=v3 HTTP/1.1\r\n\r\n".getBytes();
+        ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("/some;p1=v1/canonicalPath;p2=v2", result.getRequestURI());
+        Assert.assertEquals("/some/canonicalPath", result.getRequestPath());
         Assert.assertEquals("q1=v3", result.getQueryString());
         Assert.assertEquals("v1", result.getPathParameters().get("p1").getFirst());
         Assert.assertEquals("v2", result.getPathParameters().get("p2").getFirst());
         Assert.assertEquals("v3", result.getQueryParameters().get("q1").getFirst());
+        Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
     }
 
     @Test
