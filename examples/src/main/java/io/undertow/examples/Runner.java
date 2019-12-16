@@ -18,6 +18,7 @@
 
 package io.undertow.examples;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -46,7 +47,7 @@ import org.xnio.IoUtils;
  * @author Stuart Douglas
  */
 public class Runner {
-
+    private static final String TARGET_CLASS = "target" + File.separatorChar + "classes" + File.separatorChar;
 
     public static void main(final String[] args) {
         System.setProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager");
@@ -90,7 +91,7 @@ public class Runner {
                                 .filter(Files::isRegularFile)
                                 .filter(path -> path.toFile().getName().endsWith(".class"))
                                 .map(Runner::toFileName)
-                                .map(fileName -> fileName.replace("/", "."))
+                                .map(fileName -> fileName.replace(File.separator, "."))
                                 .map(Runner::instance)
                                 .filter(Optional::isPresent)
                                 .filter(clazz -> clazz.get().getAnnotation(UndertowExample.class) != null)
@@ -134,9 +135,9 @@ public class Runner {
 
     private static String toFileName(Path path) {
         String pathName = path.toFile().getAbsolutePath();
-        int index = pathName.indexOf("target/classes/") + "target/classes/".length();
+        int index = pathName.indexOf(TARGET_CLASS) + TARGET_CLASS.length();
         int classIndex = pathName.lastIndexOf(".class");
-        return pathName.substring(index,classIndex);
+        return pathName.substring(index, classIndex);
     }
 
     private static Optional<Class<?>> instance(String clazz) {
