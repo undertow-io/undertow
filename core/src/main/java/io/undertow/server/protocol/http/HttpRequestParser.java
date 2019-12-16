@@ -638,6 +638,17 @@ public abstract class HttpRequestParser {
                         handleParsedParam(param, stringBuilder.substring(pos), exchange, urlDecodeRequired, state);
                         pos = stringBuilder.length() + 1;
                     }
+                    state.segmentStart = stringBuilder.length();
+                    state.parseState = ParseState.PATH;
+                    return;
+                } else if (next == ',') {
+                    if(param == null) {
+                        throw UndertowMessages.MESSAGES.failedToParsePath();
+                    } else {
+                        // parse value and add param
+                        exchange.addPathParam(param, decode(stringBuilder.substring(pos), urlDecodeRequired, state, true, true));
+                        pos = stringBuilder.length() + 1;
+                    }
                 }
                 stringBuilder.append(next);
             }
