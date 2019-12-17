@@ -341,13 +341,13 @@ public class SimpleParserTestCase {
 
     @Test
     public void testMultiLevelMatrixParameter() throws BadRequestException {
-        byte[] in = "GET /some;p1=v1/canonicalPath;p1=v2?q1=v3 HTTP/1.1\r\n\r\n".getBytes();
+        byte[] in = "GET /some;p1=v1/path;p1=v2?q1=v3 HTTP/1.1\r\n\r\n".getBytes();
         ParseState context = new ParseState(10);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
-        Assert.assertEquals("/some;p1=v1/canonicalPath;p1=v2", result.getRequestURI());
-        Assert.assertEquals("/some/canonicalPath", result.getRequestPath());
+        Assert.assertEquals("/some;p1=v1/path;p1=v2", result.getRequestURI());
+        Assert.assertEquals("/some/path", result.getRequestPath());
         Assert.assertEquals("q1=v3", result.getQueryString());
         Assert.assertEquals("v1", result.getPathParameters().get("p1").getFirst());
         Assert.assertEquals("v2", result.getPathParameters().get("p1").getLast());
