@@ -29,6 +29,8 @@ import io.undertow.util.Headers;
 import io.undertow.util.QueryParameterUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
@@ -157,8 +159,16 @@ public class RewriteHandler implements HttpHandler {
             }
             // - env (note: this sets a request attribute)
             if (rules[i].isEnv() && newtest != null) {
+                Map<String, String> attrs = exchange.getAttachment(HttpServerExchange.REQUEST_ATTRIBUTES);
+                if (attrs == null) {
+                    attrs = new HashMap<>();
+                    exchange.putAttachment(HttpServerExchange.REQUEST_ATTRIBUTES, attrs);
+                }
                 for (int j = 0; j < rules[i].getEnvSize(); j++) {
-                    request.setAttribute(rules[i].getEnvName(j), rules[i].getEnvResult(j));
+                    final String envName = rules[i].getEnvName(j);
+                    final String envResult = rules[i].getEnvResult(j);
+                    attrs.put(envName, envResult);
+                    request.setAttribute(envName, envResult);
                 }
             }
             // - content type (note: this will not force the content type, use a filter
