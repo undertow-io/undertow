@@ -50,6 +50,7 @@ public class UpgradeServletInputStream extends ServletInputStream {
     private final StreamSourceChannel channel;
     private final ByteBufferPool bufferPool;
     private final Executor ioExecutor;
+    /** {@link UndertowOptions#BLOCKING_READ_TIMEOUT}. */
     private final int readTimeoutMillis;
 
     private volatile ReadListener listener;

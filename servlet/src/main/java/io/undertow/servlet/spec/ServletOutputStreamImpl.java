@@ -70,6 +70,7 @@ import io.undertow.util.Headers;
 public class ServletOutputStreamImpl extends ServletOutputStream implements BufferWritableOutputStream {
 
     private final ServletRequestContext servletRequestContext;
+    /** {@link UndertowOptions#BLOCKING_WRITE_TIMEOUT}. */
     private final int writeTimeoutMillis;
     private PooledByteBuffer pooledBuffer;
     private ByteBuffer buffer;
@@ -499,7 +500,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             if (channel == null) {
                 channel = servletRequestContext.getExchange().getResponseChannel();
             }
-            flushChannelBlocking();
+            BlockingChannels.flushBlockingOrThrow(channel, writeTimeoutMillis, TimeUnit.MILLISECONDS);
         } else {
             if (anyAreClear(state, FLAG_READY)) {
                 return;
@@ -524,10 +525,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             }
             buffer.compact();
         }
-    }
-
-    private void flushChannelBlocking() throws IOException {
-        BlockingChannels.flushBlockingOrThrow(channel, writeTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -627,7 +624,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 StreamSinkChannel channel = this.channel;
                 if (channel != null) { //mock requests
                     channel.shutdownWrites();
-                    flushChannelBlocking();
+                    BlockingChannels.flushBlockingOrThrow(channel, writeTimeoutMillis, TimeUnit.MILLISECONDS);
                 }
             } catch (IOException | RuntimeException | Error e) {
                 IoUtils.safeClose(this.channel);

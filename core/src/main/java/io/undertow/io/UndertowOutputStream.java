@@ -56,6 +56,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
     private int state;
     private long written;
     private final long contentLength;
+    /** {@link UndertowOptions#BLOCKING_WRITE_TIMEOUT}. */
     private final int writeTimeoutMillis;
 
     private static final int FLAG_CLOSED = 1;
@@ -286,10 +287,6 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         if (channel == null) {
             channel = exchange.getResponseChannel();
         }
-        flushBlocking();
-    }
-
-    private void flushBlocking() throws IOException {
         BlockingChannels.flushBlockingOrThrow(channel, writeTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
@@ -355,7 +352,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
             }
             StreamSinkChannel channel = this.channel;
             channel.shutdownWrites();
-            flushBlocking();
+            BlockingChannels.flushBlockingOrThrow(channel, writeTimeoutMillis, TimeUnit.MILLISECONDS);
         } finally {
             if (pooledBuffer != null) {
                 pooledBuffer.close();

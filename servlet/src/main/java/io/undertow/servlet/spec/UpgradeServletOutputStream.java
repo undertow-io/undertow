@@ -48,6 +48,7 @@ public class UpgradeServletOutputStream extends ServletOutputStream {
 
     private WriteListener listener;
     private final Executor ioExecutor;
+    /** {@link UndertowOptions#BLOCKING_WRITE_TIMEOUT}. */
     private final int writeTimeoutMillis;
 
     /**

@@ -27,8 +27,6 @@ import org.xnio.IoUtils;
 import org.xnio.Options;
 import io.undertow.connector.PooledByteBuffer;
 import org.xnio.SslClientAuthMode;
-import org.xnio.channels.Channels;
-import org.xnio.channels.ReadTimeoutException;
 import org.xnio.channels.SslChannel;
 import org.xnio.channels.StreamSourceChannel;
 
@@ -205,15 +203,7 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
     private int readBlocking(HttpServerExchange exchange, StreamSourceChannel channel, ByteBuffer buffer) throws IOException {
         int readTimeoutMillis = exchange.getConnection().getUndertowOptions()
                 .get(UndertowOptions.BLOCKING_READ_TIMEOUT, -1);
-        if (readTimeoutMillis > 0) {
-            int result = Channels.readBlocking(channel, buffer, readTimeoutMillis, TimeUnit.MILLISECONDS);
-            if (result == 0 && buffer.hasRemaining()) {
-                throw new ReadTimeoutException();
-            }
-            return result;
-        } else {
-            return Channels.readBlocking(channel, buffer);
-        }
+        return BlockingChannels.readBlockingOrThrow(channel, buffer, readTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     public void renegotiateNoRequest(HttpServerExchange exchange, SslClientAuthMode newAuthMode) throws IOException {

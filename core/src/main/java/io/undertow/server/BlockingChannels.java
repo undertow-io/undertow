@@ -55,6 +55,7 @@ public final class BlockingChannels {
     /**
      * Same as flushBlocking with two exceptions: A timeout exception is thrown if an operation does not succeed
      * within the time limit, and non-positive values do not apply a timeout.
+     * When the timeout is exceeded and an exception is thrown, the provided channel is closed.
      * @throws WriteTimeoutException when a flush does not succeed before the timeout is exceeded.
      */
     public static void flushBlockingOrThrow(
@@ -105,6 +106,7 @@ public final class BlockingChannels {
     /**
      * Same as readBlocking with two exceptions: A timeout exception is thrown if an operation does not succeed
      * within the time limit, and non-positive values do not apply a timeout.
+     * When the timeout is exceeded and an exception is thrown, the provided channel is closed.
      * @throws ReadTimeoutException when a read does not succeed before the timeout is exceeded.
      */
     public static <C extends ReadableByteChannel & SuspendableReadChannel> int readBlockingOrThrow(
@@ -171,7 +173,8 @@ public final class BlockingChannels {
      * Same as writeBlocking with two exceptions: A timeout exception is thrown if a write does not succeed
      * within the time limit, and non-positive values do not apply a timeout.
      * Note that the timeout applies between writes, execution may take longer as long as writes
-     * ucceed within the specified time.
+     * succeed within the specified time.
+     * When the timeout is exceeded and an exception is thrown, the provided channel is closed.
      * @throws WriteTimeoutException when a write does not succeed before the timeout is exceeded.
      */
     public static <C extends GatheringByteChannel & SuspendableWriteChannel> long writeBlockingOrThrow(
@@ -200,6 +203,7 @@ public final class BlockingChannels {
      * within the time limit, and non-positive values do not apply a timeout.
      * Note that the timeout applies between writes, execution may take longer as long as writes
      * succeed within the specified time.
+     * When the timeout is exceeded and an exception is thrown, the provided channel is closed.
      * @throws WriteTimeoutException when a write does not succeed before the timeout is exceeded.
      */
     public static <C extends WritableByteChannel & SuspendableWriteChannel> int writeBlockingOrThrow(
