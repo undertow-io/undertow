@@ -39,6 +39,8 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.HttpString;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.BadRequestException;
+import org.xnio.channels.ReadTimeoutException;
+import org.xnio.channels.WriteTimeoutException;
 
 /**
  * @author Stuart Douglas
@@ -610,4 +612,10 @@ public interface UndertowMessages {
 
     @Message(id = 196, value = "Session with id %s already exists")
     IllegalStateException sessionWithIdAlreadyExists(String sessionID);
+
+    @Message(id = 197, value = "Blocking read timed out after %s nanoseconds.")
+    ReadTimeoutException blockingReadTimedOut(long timeoutNanoseconds);
+
+    @Message(id = 198, value = "Blocking write timed out after %s nanoseconds.")
+    WriteTimeoutException blockingWriteTimedOut(long timeoutNanoseconds);
 }
