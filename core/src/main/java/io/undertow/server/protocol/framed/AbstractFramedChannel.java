@@ -388,7 +388,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             } else if (read == -1 && !hasData) {
                 forceFree = true;
                 readChannelDone = true;
-                lastDataRead();
+                getIoThread().execute(()->{
+                    lastDataRead();});
                 return null;
             } else if(isLastFrameReceived() && frameDataRemaining == 0) {
                 //we got data, although we should have received the last frame
