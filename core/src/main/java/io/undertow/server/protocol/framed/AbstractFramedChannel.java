@@ -139,8 +139,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private final Runnable taskRunQueueRunnable = new Runnable() {
         @Override
         public void run() {
-            while (!taskRunQueue.isEmpty()) {
-                taskRunQueue.poll().run();
+            Runnable runnable;
+            while ((runnable = taskRunQueue.poll()) != null) {
+                runnable.run();
             }
         }
     };
@@ -596,8 +597,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         flushingSenders = true;
         try {
             int toSend = 0;
-            while (!newFrames.isEmpty()) {
-                S frame = newFrames.poll();
+            S frame;
+            while ((frame = newFrames.poll()) != null) {
                 frame.preWrite();
                 if (framePriority.insertFrame(frame, pendingFrames)) {
                     if (!heldFrames.isEmpty()) {
@@ -933,8 +934,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         @Override
         public void handleEvent(final StreamSourceChannel channel) {
             //clear the task queue before reading
-            while (!taskRunQueue.isEmpty()) {
-                taskRunQueue.poll().run();
+            Runnable runnable;
+            while ((runnable = taskRunQueue.poll()) != null) {
+                runnable.run();
             }
 
             final R receiver = AbstractFramedChannel.this.receiver;
