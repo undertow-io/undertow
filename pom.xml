@@ -140,6 +140,7 @@
                             <head>Implementation Note:</head>
                         </tag>
                     </tags>
+                    <source>1.8</source> 
                 </configuration>
                 <executions>
                     <execution>
