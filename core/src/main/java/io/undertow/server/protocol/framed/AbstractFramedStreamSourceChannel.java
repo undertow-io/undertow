@@ -622,7 +622,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     }
 
     @Override
-    public void close() {
+    public synchronized void close() {
         if(anyAreSet(state, STATE_CLOSED)) {
             return;
         }

@@ -342,173 +342,185 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * existing source channels. In general if you suspend receives or don't have some other way
      * of calling this method then it can prevent frame channels for being fully consumed.
      */
-    public synchronized R receive() throws IOException {
-        if (readChannelDone && receiver == null) {
-            //we have received the last frame, we just shut down and return
-            //it would probably make more sense to have the last channel responsible for this
-            //however it is much simpler just to have it here
-            if(readData != null) {
-                readData.close();
-                readData = null;
-            }
-            channel.getSourceChannel().suspendReads();
-            channel.getSourceChannel().shutdownReads();
-            return null;
-        }
-        partialRead = false;
-        boolean requiresReinvoke = false;
-        int reinvokeDataRemaining = 0;
-        ReferenceCountedPooled pooled = this.readData;
-        boolean hasData = false;
-        if (pooled == null) {
-            pooled = allocateReferenceCountedBuffer();
-            if (pooled == null) {
-                return null;
-            }
-        } else if(pooled.isFreed()) {
-            //we attempt to re-used an existing buffer
-            if(!pooled.tryUnfree()) {
-                pooled = allocateReferenceCountedBuffer();
-                if (pooled == null) {
-                    return null;
-                }
-            }
-            pooled.getBuffer().clear();
-        } else {
-            hasData = pooled.getBuffer().hasRemaining();
-            pooled.getBuffer().compact();
-        }
-        boolean forceFree = false;
-        int read = 0;
+    public R receive() throws IOException {
+        // store in a local variable to prevent invoking lastDataRead twice
+        boolean receivedMinusOne = false;
         try {
-            read = channel.getSourceChannel().read(pooled.getBuffer());
-            if (read == 0 && !hasData) {
-                //no data, we just free the buffer
-                forceFree = true;
-                return null;
-            } else if (read == -1 && !hasData) {
-                forceFree = true;
-                readChannelDone = true;
-                lastDataRead();
-                return null;
-            } else if(isLastFrameReceived() && frameDataRemaining == 0) {
-                //we got data, although we should have received the last frame
-                forceFree = true;
-                markReadsBroken(new ClosedChannelException());
-            }
-            pooled.getBuffer().flip();
-            if(read == -1) {
-                requiresReinvoke = true;
-                reinvokeDataRemaining = pooled.getBuffer().remaining();
-            }
-            if (frameDataRemaining > 0) {
-                if (frameDataRemaining >= pooled.getBuffer().remaining()) {
-                    frameDataRemaining -= pooled.getBuffer().remaining();
-                    if(receiver != null) {
-                        //we still create a pooled view, this means that if the buffer is still active we can re-used it
-                        //which prevents attacks based on sending lots of small fragments
-                        PooledByteBuffer frameData = pooled.createView();
-                        receiver.dataReady(null, frameData);
-                    } else {
-                        //we are dropping a frame
-                        pooled.close();
-                        readData = null;
-                    }
-                    if(frameDataRemaining == 0) {
-                        receiver = null;
-                    }
-                    return null;
-                } else {
-                    PooledByteBuffer frameData = pooled.createView((int) frameDataRemaining);
-                    frameDataRemaining = 0;
-                    if(receiver != null) {
-                        receiver.dataReady(null, frameData);
-                    } else{
-                        //we are dropping the frame
-                        frameData.close();
-                    }
-                    receiver = null;
-                }
-                //if we read data into a frame we just return immediately, even if there is more remaining
-                //see https://issues.jboss.org/browse/UNDERTOW-410
-                //basically if we don't do this we loose some message ordering semantics
-                //as the second message may be processed before the first one
-
-                //this is problematic for HTTPS, where the read listener may also be invoked by a queued task
-                //and not by the selector mechanism
-                return null;
-            }
-            FrameHeaderData data = parseFrame(pooled.getBuffer());
-            if (data != null) {
-                PooledByteBuffer frameData;
-                if (data.getFrameLength() >= pooled.getBuffer().remaining()) {
-                    frameDataRemaining = data.getFrameLength() - pooled.getBuffer().remaining();
-                    frameData = pooled.createView();
-                    pooled.getBuffer().position(pooled.getBuffer().limit());
-                } else {
-                    frameData = pooled.createView((int) data.getFrameLength());
-                }
-                AbstractFramedStreamSourceChannel<?, ?, ?> existing = data.getExistingChannel();
-                if (existing != null) {
-                    if (data.getFrameLength() > frameData.getBuffer().remaining()) {
-                        receiver = (R) existing;
-                    }
-                    existing.dataReady(data, frameData);
-                    if(isLastFrameReceived()) {
-                        handleLastFrame(existing);
-                    }
-                    return null;
-                } else {
-                    boolean moreData = data.getFrameLength() > frameData.getBuffer().remaining();
-                    R newChannel = createChannel(data, frameData);
-                    if (newChannel != null) {
-                        if (moreData) {
-                            receiver = newChannel;
-                        }
-
-                        if(isLastFrameReceived()) {
-                            handleLastFrame(newChannel);
-                        }
-                    } else {
-                        frameData.close();
-                    }
-                    return newChannel;
-                }
-            } else {
-                //we set partial read to true so the read listener knows not to immediately call receive again
-                partialRead = true;
-            }
-            return null;
-        } catch (IOException|RuntimeException|Error e) {
-            //something has code wrong with parsing, close the read side
-            //we don't close the write side, as the underlying implementation will most likely want to send an error
-            markReadsBroken(e);
-            forceFree = true;
-            throw e;
-        }finally {
-            //if the receive caused the channel to break the close listener may be have been called
-            //which will make readData null
-            if (readData != null) {
-                if (!pooled.getBuffer().hasRemaining() || forceFree) {
-                    if(pooled.getBuffer().capacity() < 1024 || forceFree) {
-                        //if there is less than 1k left we don't allow it to be re-aquired
-                        readData = null;
-                    }
-                    //even though this is freed we may un-free it if we get a new packet
-                    //this prevents many small reads resulting in a large number of allocated buffers
-                    pooled.close();
-
-                }
-            }
-            if(requiresReinvoke) {
-                if(readData != null && !readData.isFreed()) {
-                    if(readData.getBuffer().remaining() == reinvokeDataRemaining) {
+            synchronized (this) {
+                if (readChannelDone && receiver == null) {
+                    //we have received the last frame, we just shut down and return
+                    //it would probably make more sense to have the last channel responsible for this
+                    //however it is much simpler just to have it here
+                    if(readData != null) {
                         readData.close();
                         readData = null;
-                        UndertowLogger.REQUEST_IO_LOGGER.debugf("Partial message read before connection close %s", this);
+                    }
+                    channel.getSourceChannel().suspendReads();
+                    channel.getSourceChannel().shutdownReads();
+                    return null;
+                }
+                partialRead = false;
+                boolean requiresReinvoke = false;
+                int reinvokeDataRemaining = 0;
+                ReferenceCountedPooled pooled = this.readData;
+                boolean hasData = false;
+                if (pooled == null) {
+                    pooled = allocateReferenceCountedBuffer();
+                    if (pooled == null) {
+                        return null;
+                    }
+                } else if(pooled.isFreed()) {
+                    //we attempt to re-used an existing buffer
+                    if(!pooled.tryUnfree()) {
+                        pooled = allocateReferenceCountedBuffer();
+                        if (pooled == null) {
+                            return null;
+                        }
+                    }
+                    pooled.getBuffer().clear();
+                } else {
+                    hasData = pooled.getBuffer().hasRemaining();
+                    pooled.getBuffer().compact();
+                }
+                boolean forceFree = false;
+                int read = 0;
+                try {
+                    read = channel.getSourceChannel().read(pooled.getBuffer());
+                    if (read == 0 && !hasData) {
+                        //no data, we just free the buffer
+                        forceFree = true;
+                        return null;
+                    } else if (read == -1 && !hasData) {
+                        forceFree = true;
+                        receivedMinusOne = readChannelDone = true;
+                        return null;
+                    } else if(isLastFrameReceived() && frameDataRemaining == 0) {
+                        //we got data, although we should have received the last frame
+                        forceFree = true;
+                        markReadsBroken(new ClosedChannelException());
+                    }
+                    pooled.getBuffer().flip();
+                    if(read == -1) {
+                        requiresReinvoke = true;
+                        reinvokeDataRemaining = pooled.getBuffer().remaining();
+                    }
+                    if (frameDataRemaining > 0) {
+                        if (frameDataRemaining >= pooled.getBuffer().remaining()) {
+                            frameDataRemaining -= pooled.getBuffer().remaining();
+                            if(receiver != null) {
+                                //we still create a pooled view, this means that if the buffer is still active we can re-used it
+                                //which prevents attacks based on sending lots of small fragments
+                                PooledByteBuffer frameData = pooled.createView();
+                                receiver.dataReady(null, frameData);
+                            } else {
+                                //we are dropping a frame
+                                pooled.close();
+                                readData = null;
+                            }
+                            if(frameDataRemaining == 0) {
+                                receiver = null;
+                            }
+                            return null;
+                        } else {
+                            PooledByteBuffer frameData = pooled.createView((int) frameDataRemaining);
+                            frameDataRemaining = 0;
+                            if(receiver != null) {
+                                receiver.dataReady(null, frameData);
+                            } else{
+                                //we are dropping the frame
+                                frameData.close();
+                            }
+                            receiver = null;
+                        }
+                        //if we read data into a frame we just return immediately, even if there is more remaining
+                        //see https://issues.jboss.org/browse/UNDERTOW-410
+                        //basically if we don't do this we loose some message ordering semantics
+                        //as the second message may be processed before the first one
+
+                        //this is problematic for HTTPS, where the read listener may also be invoked by a queued task
+                        //and not by the selector mechanism
+                        return null;
+                    }
+                    FrameHeaderData data = parseFrame(pooled.getBuffer());
+                    if (data != null) {
+                        PooledByteBuffer frameData;
+                        if (data.getFrameLength() >= pooled.getBuffer().remaining()) {
+                            frameDataRemaining = data.getFrameLength() - pooled.getBuffer().remaining();
+                            frameData = pooled.createView();
+                            pooled.getBuffer().position(pooled.getBuffer().limit());
+                        } else {
+                            frameData = pooled.createView((int) data.getFrameLength());
+                        }
+                        AbstractFramedStreamSourceChannel<?, ?, ?> existing = data.getExistingChannel();
+                        if (existing != null) {
+                            if (data.getFrameLength() > frameData.getBuffer().remaining()) {
+                                receiver = (R) existing;
+                            }
+                            existing.dataReady(data, frameData);
+                            if (isLastFrameReceived()) {
+                                handleLastFrame(existing);
+                            }
+                            return null;
+                        } else {
+                            boolean moreData = data.getFrameLength() > frameData.getBuffer().remaining();
+                            R newChannel = createChannel(data, frameData);
+                            if (newChannel != null) {
+                                if (moreData) {
+                                    receiver = newChannel;
+                                }
+
+                                if(isLastFrameReceived()) {
+                                    handleLastFrame(newChannel);
+                                }
+                            } else {
+                                frameData.close();
+                            }
+                            return newChannel;
+                        }
+                    } else {
+                        //we set partial read to true so the read listener knows not to immediately call receive again
+                        partialRead = true;
+                    }
+                    return null;
+                } catch (IOException|RuntimeException|Error e) {
+                    //something has code wrong with parsing, close the read side
+                    //we don't close the write side, as the underlying implementation will most likely want to send an error
+                    markReadsBroken(e);
+                    forceFree = true;
+                    throw e;
+                }finally {
+                    //if the receive caused the channel to break the close listener may be have been called
+                    //which will make readData null
+                    if (readData != null) {
+                        if (!pooled.getBuffer().hasRemaining() || forceFree) {
+                            if(pooled.getBuffer().capacity() < 1024 || forceFree) {
+                                //if there is less than 1k left we don't allow it to be re-aquired
+                                readData = null;
+                            }
+                            //even though this is freed we may un-free it if we get a new packet
+                            //this prevents many small reads resulting in a large number of allocated buffers
+                            pooled.close();
+
+                        }
+                    }
+                    if(requiresReinvoke) {
+                        if(readData != null && !readData.isFreed()) {
+                            if(readData.getBuffer().remaining() == reinvokeDataRemaining) {
+                                readData.close();
+                                readData = null;
+                                UndertowLogger.REQUEST_IO_LOGGER.debugf("Partial message read before connection close %s", this);
+                            }
+                        }
+                        channel.getSourceChannel().wakeupReads();
                     }
                 }
-                channel.getSourceChannel().wakeupReads();
+            }
+        } finally {
+            // read receivedMinusOne, and not readChannelDone
+            // to prevent lastDataRead being invoked twice in case of
+            // two concurrent receive invocations
+            if (receivedMinusOne) {
+                lastDataRead();
             }
         }
     }
@@ -814,13 +826,15 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     @Override
     public void close() throws IOException {
-        if (UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
-            UndertowLogger.REQUEST_IO_LOGGER.tracef(new ClosedChannelException(), "Channel %s is being closed", this);
-        }
-        safeClose(channel);
-        if (readData != null) {
-            readData.close();
-            readData = null;
+        synchronized (this) {
+            if (UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
+                UndertowLogger.REQUEST_IO_LOGGER.tracef(new ClosedChannelException(), "Channel %s is being closed", this);
+            }
+            safeClose(channel);
+            if (readData != null) {
+                readData.close();
+                readData = null;
+            }
         }
         closeSubChannels();
     }

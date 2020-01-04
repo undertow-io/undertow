@@ -527,7 +527,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     @Override
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
         if(fullyFlushed || anyAreSet(state, STATE_CLOSED)) {
             return;
         }

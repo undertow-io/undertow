@@ -147,7 +147,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
     }
 
     @Override
-    protected void lastDataRead() {
+    protected synchronized void lastDataRead() {
         if(!closeFrameReceived && !closeFrameSent) {
             //the peer has likely already gone away, but try and send a close frame anyway
             //this will likely just result in the write() failing an immediate connection termination
