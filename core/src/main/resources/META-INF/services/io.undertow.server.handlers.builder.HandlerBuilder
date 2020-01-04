@@ -25,6 +25,7 @@ io.undertow.server.handlers.PathSeparatorHandler$Builder
 io.undertow.server.handlers.IPAddressAccessControlHandler$Builder
 io.undertow.server.handlers.ByteRangeHandler$Builder
 io.undertow.server.handlers.encoding.EncodingHandler$Builder
+io.undertow.server.handlers.encoding.RequestEncodingHandler$Builder
 io.undertow.server.handlers.LearningPushHandler$Builder
 io.undertow.server.handlers.SetHeaderHandler$Builder
 io.undertow.predicate.PredicatesHandler$DoneHandlerBuilder
