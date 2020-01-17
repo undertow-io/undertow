@@ -534,18 +534,18 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         try {
             synchronized (lock) {
                 state |= STATE_CLOSED;
-            }
-            if(writeBuffer != null) {
-                writeBuffer.close();
-                writeBuffer = null;
-            }
-            if(body != null) {
-                body.close();
-                body = null;
-            }
-            if (header != null && header.getByteBuffer() != null) {
-                header.getByteBuffer().close();
-                header = null;
+                if (writeBuffer != null) {
+                    writeBuffer.close();
+                    writeBuffer = null;
+                }
+                if (body != null) {
+                    body.close();
+                    body = null;
+                }
+                if (header != null && header.getByteBuffer() != null) {
+                    header.getByteBuffer().close();
+                    header = null;
+                }
             }
             channelForciblyClosed();
             //we need to wake up/invoke the write listener
