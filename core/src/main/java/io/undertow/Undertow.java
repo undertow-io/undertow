@@ -273,6 +273,7 @@ public final class Undertow {
                 }
             } catch (InterruptedException e) {
                 worker.shutdownNow();
+                Thread.currentThread().interrupt();
                 throw new RuntimeException(e);
             }
             worker = null;

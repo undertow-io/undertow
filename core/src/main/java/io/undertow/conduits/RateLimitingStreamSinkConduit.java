@@ -229,6 +229,7 @@ public class RateLimitingStreamSinkConduit extends AbstractStreamSinkConduit<Str
             try {
                 Thread.sleep(toGo);
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new InterruptedIOException();
             }
         }
@@ -243,6 +244,7 @@ public class RateLimitingStreamSinkConduit extends AbstractStreamSinkConduit<Str
             try {
                 Thread.sleep(Math.min(toGo, timeUnit.toMillis(time)));
             } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 throw new InterruptedIOException();
             }
             return;
