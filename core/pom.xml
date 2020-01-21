@@ -239,7 +239,6 @@
                         <test.openssl>${openssl}</test.openssl>
                         <test.bufferSize>${bufferSize}</test.bufferSize>
                         <default.server.address>localhost</default.server.address>
-                        <default.server.port>7777</default.server.port>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                         <test.level>${test.level}</test.level>
                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
@@ -303,7 +302,6 @@
                                 <test.dump>${dump}</test.dump>
                                 <test.bufferSize>${bufferSize}</test.bufferSize>
                                 <default.server.address>localhost</default.server.address>
-                                <default.server.port>7777</default.server.port>
                                 <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                                 <test.level>${test.level}</test.level>
                                 <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
@@ -339,7 +337,6 @@
                                         <test.dump>${dump}</test.dump>
                                         <test.bufferSize>${bufferSize}</test.bufferSize>
                                         <default.server.address>localhost</default.server.address>
-                                        <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
@@ -362,7 +359,6 @@
                                         <test.dump>${dump}</test.dump>
                                         <test.bufferSize>${bufferSize}</test.bufferSize>
                                         <default.server.address>localhost</default.server.address>
-                                        <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
@@ -386,7 +382,6 @@
                                         <test.dump>${dump}</test.dump>
                                         <test.bufferSize>${bufferSize}</test.bufferSize>
                                         <default.server.address>localhost</default.server.address>
-                                        <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
@@ -410,7 +405,6 @@
                                         <test.dump>${dump}</test.dump>
                                         <test.bufferSize>${bufferSize}</test.bufferSize>
                                         <default.server.address>localhost</default.server.address>
-                                        <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
@@ -434,7 +428,6 @@
                                         <test.dump>${dump}</test.dump>
                                         <test.bufferSize>${bufferSize}</test.bufferSize>
                                         <default.server.address>localhost</default.server.address>
-                                        <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>
@@ -459,7 +452,6 @@
                                         <test.dump>${dump}</test.dump>
                                         <test.bufferSize>${bufferSize}</test.bufferSize>
                                         <default.server.address>localhost</default.server.address>
-                                        <default.server.port>7777</default.server.port>
                                         <java.util.logging.manager>org.jboss.logmanager.LogManager
                                         </java.util.logging.manager>
                                         <test.level>${test.level}</test.level>

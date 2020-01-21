@@ -33,6 +33,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import javax.net.ssl.KeyManager;
@@ -104,6 +105,8 @@ import io.undertow.util.SingleByteStreamSourceConduit;
 public class DefaultServer extends BlockJUnit4ClassRunner {
 
     private static final Throwable OPENSSL_FAILURE;
+    // Avoid reusing the same port in order to avoid 'BindException: Address already in use'
+    private static final AtomicInteger defaultPort = new AtomicInteger(7777);
 
     static {
         Throwable failure = null;
@@ -277,7 +280,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
             @Override
             public void testFinished(Description description) throws Exception {
-
                 if (!DebuggingSlicePool.BUFFERS.isEmpty()) {
                     try {
                         Thread.sleep(200);
@@ -335,7 +337,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         int port = 8888;
                         server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), port), acceptListener, serverOptions);
                     } else {
-                        server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
+                        server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getProxyHostPort(DEFAULT)), acceptListener, serverOptions);
 
                         proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                         proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
@@ -349,7 +351,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(new AlpnOpenListener(pool).addProtocol(Http2OpenListener.HTTP2, (io.undertow.server.DelegateOpenListener) openListener, 10)));
 
                     SSLContext clientContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE), true);
-                    server = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
+                    server = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), getProxyHostPort(DEFAULT)), acceptListener, serverOptions);
                     server.resumeAccepts();
 
                     proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
@@ -381,7 +383,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     XnioSsl clientSsl = new UndertowXnioSsl(xnio, OptionMap.EMPTY, SSL_BUFFER_POOL, createClientSslContext());
                     openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
-                    server = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
+                    server = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), getProxyHostPort(DEFAULT)), acceptListener, serverOptions);
                     server.getAcceptSetter().set(acceptListener);
                     server.resumeAccepts();
 
@@ -431,6 +433,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     server.close();
                     stopSSLServer();
                     worker.shutdown();
+                    defaultPort.incrementAndGet();
                 }
             });
         }
@@ -724,11 +727,20 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         return getHostAddress(DEFAULT);
     }
 
+
+    private static int getRawHostPort(String serverName) {
+        return Integer.getInteger(serverName + ".server.port", defaultPort.get());
+    }
+
     public static int getHostPort(String serverName) {
         if (isApacheTest()) {
             return APACHE_PORT;
         }
-        return Integer.getInteger(serverName + ".server.port", 7777);
+        return getRawHostPort(serverName);
+    }
+
+    public static int getProxyHostPort(String serverName) {
+        return getRawHostPort(serverName) + PROXY_OFFSET;
     }
 
     public static int getHostPort() {
