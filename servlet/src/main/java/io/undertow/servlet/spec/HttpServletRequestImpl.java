@@ -806,7 +806,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                             values.add(v.getValue());
                         }
                     }
-                    arrayMap.put(name, values);
+                    if (!values.isEmpty()) {
+                        arrayMap.put(name, values);
+                    }
                 }
             }
         }

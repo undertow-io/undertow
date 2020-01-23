@@ -21,6 +21,7 @@ package io.undertow.servlet.test.multipart;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.TreeSet;
 
 import javax.servlet.ServletException;
@@ -42,6 +43,8 @@ public class MultiPartServlet extends HttpServlet {
             Collection<Part> parts = req.getParts();
             PrintWriter writer = resp.getWriter();
             writer.println("PARAMS:");
+            writer.println("parameter count: " + req.getParameterMap().size());
+            writer.println("parameter name count: " + count(req.getParameterNames()));
             for (Part part : parts) {
                 writer.println("name: " + part.getName());
                 writer.println("filename: " + part.getSubmittedFileName());
@@ -56,5 +59,14 @@ public class MultiPartServlet extends HttpServlet {
         } catch (Exception e) {
             resp.getWriter().write("EXCEPTION: " + e.getClass());
         }
+    }
+
+    private int count(Enumeration<String> parameterNames) {
+        int count = 0;
+        while(parameterNames.hasMoreElements()) {
+            parameterNames.nextElement();
+            count++;
+        }
+        return count;
     }
 }
