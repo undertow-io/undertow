@@ -169,7 +169,7 @@ public class AjpClientChannel extends AbstractFramedChannel<AjpClientChannel, Ab
         return lastFrameSent;
     }
 
-    protected synchronized void lastDataRead() {
+    protected void lastDataRead() {
         if(!lastFrameSent) {
             markReadsBroken(new ClosedChannelException());
             markWritesBroken(new ClosedChannelException());
