@@ -365,17 +365,17 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 state |= STATE_CLOSED;
                 return true;
             }
-        }
-        if (anyAreSet(state, STATE_WRITES_SHUTDOWN) && !finalFrameQueued) {
-            queueFinalFrame();
-            return false;
-        }
-        if(anyAreSet(state, STATE_WRITES_SHUTDOWN)) {
-            return false;
-        }
-        if(isFlushRequiredOnEmptyBuffer() || (writeBuffer != null && writeBuffer.getBuffer().position() > 0)) {
-            handleBufferFull();
-            return !readyForFlush;
+            if (anyAreSet(state, STATE_WRITES_SHUTDOWN) && !finalFrameQueued) {
+                queueFinalFrame();
+                return false;
+            }
+            if (anyAreSet(state, STATE_WRITES_SHUTDOWN)) {
+                return false;
+            }
+            if (isFlushRequiredOnEmptyBuffer() || (writeBuffer != null && writeBuffer.getBuffer().position() > 0)) {
+                handleBufferFull();
+                return !readyForFlush;
+            }
         }
         return true;
     }
@@ -386,19 +386,21 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        if(!safeToSend()) {
-            return 0;
+        synchronized (lock) {
+            if(!safeToSend()) {
+                return 0;
+            }
+            if (writeBuffer == null) {
+                writeBuffer = getChannel().getBufferPool().allocate();
+            }
+            ByteBuffer buffer = writeBuffer.getBuffer();
+            int copied = Buffers.copy(buffer, srcs, offset, length);
+            if (!buffer.hasRemaining()) {
+                handleBufferFull();
+            }
+            writeSucceeded = writeSucceeded || copied > 0;
+            return copied;
         }
-        if(writeBuffer == null) {
-            writeBuffer = getChannel().getBufferPool().allocate();
-        }
-        ByteBuffer buffer = writeBuffer.getBuffer();
-        int copied = Buffers.copy(buffer, srcs, offset, length);
-        if(!buffer.hasRemaining()) {
-            handleBufferFull();
-        }
-        writeSucceeded = writeSucceeded || copied > 0;
-        return copied;
     }
 
     @Override
@@ -408,19 +410,21 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public int write(ByteBuffer src) throws IOException {
-        if(!safeToSend()) {
-            return 0;
+        synchronized (lock) {
+            if (!safeToSend()) {
+                return 0;
+            }
+            if (writeBuffer == null) {
+                writeBuffer = getChannel().getBufferPool().allocate();
+            }
+            ByteBuffer buffer = writeBuffer.getBuffer();
+            int copied = Buffers.copy(buffer, src);
+            if (!buffer.hasRemaining()) {
+                handleBufferFull();
+            }
+            writeSucceeded = writeSucceeded || copied > 0;
+            return copied;
         }
-        if(writeBuffer == null) {
-            writeBuffer = getChannel().getBufferPool().allocate();
-        }
-        ByteBuffer buffer = writeBuffer.getBuffer();
-        int copied = Buffers.copy(buffer, src);
-        if(!buffer.hasRemaining()) {
-            handleBufferFull();
-        }
-        writeSucceeded = writeSucceeded || copied > 0;
-        return copied;
     }
 
     /**
@@ -444,9 +448,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     protected boolean sendInternal(PooledByteBuffer pooled) throws IOException {
         if (safeToSend()) {
-            this.body = pooled;
-            writeSucceeded = true;
-            return true;
+            synchronized (lock) {
+                this.body = pooled;
+                writeSucceeded = true;
+                return true;
+            }
         }
         return false;
     }
@@ -705,19 +711,21 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 ChannelListeners.invokeChannelListener(getIoThread(), (S) this, closeListener);
             }
         } finally {
-            if(header != null) {
-                if( header.getByteBuffer() != null) {
-                    header.getByteBuffer().close();
-                    header = null;
+            synchronized (lock) {
+                if (header != null) {
+                    if (header.getByteBuffer() != null) {
+                        header.getByteBuffer().close();
+                        header = null;
+                    }
                 }
-            }
-            if(body != null) {
-                body.close();
-                body = null;
-            }
-            if(writeBuffer != null) {
-                writeBuffer.close();
-                writeBuffer = null;
+                if (body != null) {
+                    body.close();
+                    body = null;
+                }
+                if (writeBuffer != null) {
+                    writeBuffer.close();
+                    writeBuffer = null;
+                }
             }
         }
     }
