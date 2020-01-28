@@ -273,22 +273,18 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void awaitWritable() throws IOException {
-        if(Thread.currentThread() == getIoThread()) {
+        if (Thread.currentThread() == getIoThread()) {
             throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
         }
         synchronized (lock) {
-            if (anyAreSet(state, STATE_CLOSED) || broken) {
-                return;
-            }
-            if (readyForFlush) {
-                try {
-                    waiterCount++;
-                    //we need to re-check after incrementing the waiters count
+            while (readyForFlush) {
+                if (anyAreSet(state, STATE_CLOSED) || broken) return;
 
-                    if(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken) {
-                        lock.wait();
-                    }
+                waiterCount++;
+                try {
+                    lock.wait();
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     throw new InterruptedIOException();
                 } finally {
                     waiterCount--;
@@ -298,21 +294,23 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     @Override
-    public void awaitWritable(long l, TimeUnit timeUnit) throws IOException {
-        if(Thread.currentThread() == getIoThread()) {
+    public void awaitWritable(long timeout, TimeUnit unit) throws IOException {
+        if (Thread.currentThread() == getIoThread()) {
             throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
         }
+        long now = System.nanoTime();
+        long remaining = unit.toNanos(timeout);
         synchronized (lock) {
-            if (anyAreSet(state, STATE_CLOSED) || broken) {
-                return;
-            }
-            if (readyForFlush) {
+            while (readyForFlush) {
+                if (anyAreSet(state, STATE_CLOSED) || broken) return;
+                if (remaining <= 0L) return;
+
+                waiterCount++;
                 try {
-                    waiterCount++;
-                    if(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken) {
-                        lock.wait(timeUnit.toMillis(l));
-                    }
+                    lock.wait(remaining / 1000000L, (int) (remaining % 1000000L));
+                    remaining -= (-now + (now = System.nanoTime()));
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     throw new InterruptedIOException();
                 } finally {
                     waiterCount--;
@@ -685,7 +683,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     public void markBroken() {
-        this.broken = true;
+        synchronized (lock) {
+            this.broken = true;
+        }
         try {
             wakeupWrites();
             wakeupWaiters();
