@@ -240,12 +240,12 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void shutdownWrites() throws IOException {
+        // Queue prior to shutting down writes, since we might send the write buffer
+        queueFinalFrame();
         synchronized (lock) {
             if (anyAreSet(state, STATE_WRITES_SHUTDOWN) || broken) {
                 return;
             }
-            // Queue prior to shutting down writes, since we might send the write buffer
-            queueFinalFrame();
             state |= STATE_WRITES_SHUTDOWN;
         }
     }
