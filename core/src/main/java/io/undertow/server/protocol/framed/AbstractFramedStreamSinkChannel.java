@@ -262,9 +262,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 state |= STATE_FIRST_DATA_WRITTEN;
                 state |= STATE_WRITES_SHUTDOWN; // Mark writes as shutdown as well, since we want that set prior to queueing
                 finalFrameQueued = true;
-                channel.queueFrame((S) this);
-            }
+            } else return;
         }
+        channel.queueFrame((S) this);
     }
 
     protected boolean isFinalFrameQueued() {
@@ -481,13 +481,12 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private void handleBufferFull() throws IOException {
         synchronized (lock) {
             bufferFull = true;
-            if (!readyForFlush) {
-                sendWriteBuffer();
-                readyForFlush = true;
-                state |= STATE_FIRST_DATA_WRITTEN;
-                channel.queueFrame((S) this);
-            }
+            if (readyForFlush) return;
+            sendWriteBuffer();
+            readyForFlush = true;
+            state |= STATE_FIRST_DATA_WRITTEN;
         }
+        channel.queueFrame((S) this);
     }
 
     private void sendWriteBuffer() throws IOException {
