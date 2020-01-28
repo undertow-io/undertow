@@ -342,43 +342,47 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
 
     @Override
     public void awaitReadable() throws IOException {
-        if(Thread.currentThread() == getIoThread()) {
+        if (Thread.currentThread() == getIoThread()) {
             throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
         }
-        if (data == null && pendingFrameData.isEmpty()) {
-            synchronized (lock) {
-                if (data == null && pendingFrameData.isEmpty()) {
-                    try {
-                        waiters++;
-                        lock.wait();
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new InterruptedIOException();
-                    } finally {
-                        waiters--;
-                    }
+        synchronized (lock) {
+            while (data == null && pendingFrameData.isEmpty()) {
+                if (anyAreSet(state, STATE_CLOSED | STATE_STREAM_BROKEN)) return;
+
+                waiters++;
+                try {
+                    lock.wait();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new InterruptedIOException();
+                } finally {
+                    waiters--;
                 }
             }
         }
     }
 
     @Override
-    public void awaitReadable(long l, TimeUnit timeUnit) throws IOException {
-        if(Thread.currentThread() == getIoThread()) {
+    public void awaitReadable(long timeout, TimeUnit unit) throws IOException {
+        if (Thread.currentThread() == getIoThread()) {
             throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
         }
-        if (data == null) {
-            synchronized (lock) {
-                if (data == null) {
-                    try {
-                        waiters++;
-                        lock.wait(timeUnit.toMillis(l));
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new InterruptedIOException();
-                    } finally {
-                        waiters--;
-                    }
+        long now = System.nanoTime();
+        long remaining = unit.toNanos(timeout);
+        synchronized (lock) {
+            while (data == null && pendingFrameData.isEmpty()) {
+                if (anyAreSet(state, STATE_CLOSED | STATE_STREAM_BROKEN)) return;
+                if (remaining <= 0L) return;
+
+                waiters++;
+                try {
+                    lock.wait(remaining / 1000000L, (int) (remaining % 1000000L));
+                    remaining -= (-now + (now = System.nanoTime()));
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new InterruptedIOException();
+                } finally {
+                    waiters--;
                 }
             }
         }
