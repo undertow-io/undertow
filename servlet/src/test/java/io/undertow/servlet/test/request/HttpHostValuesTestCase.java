@@ -22,7 +22,6 @@ import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
-import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -37,6 +36,8 @@ import org.junit.runner.RunWith;
 
 import javax.servlet.ServletException;
 
+import java.net.InetAddress;
+
 import static io.undertow.servlet.Servlets.servlet;
 
 /**
@@ -48,13 +49,13 @@ import static io.undertow.servlet.Servlets.servlet;
 public class HttpHostValuesTestCase {
 
     @BeforeClass
-    public static void setup() throws ServletException {
+    public static void setup() {
 
 
         final PathHandler pathHandler = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
         DeploymentInfo builder = new DeploymentInfo()
-                .setClassLoader(SimpleServletTestCase.class.getClassLoader())
+                .setClassLoader(HttpHostValuesTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
@@ -86,9 +87,12 @@ public class HttpHostValuesTestCase {
             if(System.getProperty("os.name").toLowerCase().contains("windows") || System.getSecurityManager() != null) {
                 Assert.assertTrue(String.format("hostName: %s , response: %s", DefaultServer.getDefaultServerAddress().toString(), response), DefaultServer.getDefaultServerAddress().toString().contains(response));
             } else {
-                Assert.assertTrue(String.format("hostName: %s , response: %s", DefaultServer.getHostAddress(), response), DefaultServer.getHostAddress().equals(response));
+                if (DefaultServer.isProxy()) {
+                    Assert.assertTrue(String.format("hostName: %s , response: %s", DefaultServer.getHostAddress(), response), DefaultServer.getHostAddress().equals(response));
+                } else {
+                    Assert.assertTrue(String.format("hostName: %s , response: %s", InetAddress.getLocalHost().getCanonicalHostName(), response), InetAddress.getLocalHost().getCanonicalHostName().equals(response));
+                }
             }
-
         } finally {
             client.close();
         }
