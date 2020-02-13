@@ -328,6 +328,11 @@ public class Http2ServerConnection extends ServerConnection {
         DateUtils.addDateHeaderIfRequired(exchange);
         headers.add(STATUS, exchange.getStatusCode());
         Connectors.flattenCookies(exchange);
+        if(!Connectors.isEntityBodyAllowed(exchange)) {
+            //we are not allowed to send an entity body for some requests
+            exchange.getResponseHeaders().remove(Headers.CONTENT_LENGTH);
+            exchange.getResponseHeaders().remove(Headers.TRANSFER_ENCODING);
+        }
         return originalSinkConduit;
     }
 
