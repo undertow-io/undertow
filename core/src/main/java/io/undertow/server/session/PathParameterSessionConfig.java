@@ -113,13 +113,13 @@ public class PathParameterSessionConfig implements SessionConfig {
                     for (int i = 1; i < fragment.length(); ++i) {
                         char c = fragment.charAt(i);
                         if (key == null) {
-                            if (c == '&' || c == '=') {
+                            if (c == ';' || c == '=') {
                                 key = paramBuilder.toString();
                                 paramBuilder.setLength(0);
-                                if (c == '&') {
+                                if (c == ';') {
                                     if (!key.equals(name)) { //we don't append if it matches the name
                                         sb.append(key);
-                                        sb.append('&');
+                                        sb.append(';');
                                     }
                                     key = null;
                                 }
@@ -127,14 +127,14 @@ public class PathParameterSessionConfig implements SessionConfig {
                                 paramBuilder.append(c);
                             }
                         } else {
-                            if (c == '&') {
+                            if (c == ';') {
                                 String value = paramBuilder.toString();
                                 paramBuilder.setLength(0);
                                 if (!key.equals(name)) { //we don't append if it matches the name
                                     sb.append(key);
                                     sb.append('=');
                                     sb.append(value);
-                                    sb.append('&');
+                                    sb.append(';');
                                 }
                                 key = null;
                             } else {
@@ -147,7 +147,7 @@ public class PathParameterSessionConfig implements SessionConfig {
                             key = paramBuilder.toString();
                             if (!key.equals(name)) { //we don't append if it matches the name
                                 sb.append(key);
-                                sb.append('&');
+                                sb.append(';');
                             }
                         } else {
                             String value = paramBuilder.toString();
@@ -155,13 +155,13 @@ public class PathParameterSessionConfig implements SessionConfig {
                                 sb.append(key);
                                 sb.append('=');
                                 sb.append(value);
-                                sb.append('&');
+                                sb.append(';');
                             }
                         }
                     }
                 } else {
                     sb.append(fragment);
-                    sb.append("&");
+                    sb.append(";");
                 }
             } else {
                 sb.append(';');

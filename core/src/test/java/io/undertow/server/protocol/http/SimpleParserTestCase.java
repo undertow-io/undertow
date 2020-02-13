@@ -216,6 +216,19 @@ public class SimpleParserTestCase {
         Assert.assertEquals("http://myurl.com", result.getRequestURI());
     }
 
+    @Test
+    public void testSth() throws BadRequestException {
+        byte[] in = "GET http://myurl.com/goo;foo=bar;blah=foobar HTTP/1.1\r\n\r\n".getBytes();
+
+        final ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+//        Assert.assertEquals("/", result.getRequestPath());
+//        Assert.assertEquals("http://myurl.com", result.getRequestURI());
+        Assert.assertEquals(2, result.getPathParameters().size());
+    }
+
     @Test(expected = BadRequestException.class)
     public void testLineEndingInsteadOfSpacesAfterVerb() throws BadRequestException {
         byte[] in = "GET\r/somepath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\n\r\n".getBytes();

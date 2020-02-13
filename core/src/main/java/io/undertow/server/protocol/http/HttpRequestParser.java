@@ -640,9 +640,10 @@ public abstract class HttpRequestParser {
                 }
                 finalizePath(state, exchange, urlDecodeRequired);
                 if(next == '?') {
-                    state.parseState = ParseState.QUERY_PARAMETERS;
+                    state.state = ParseState.QUERY_PARAMETERS;
+                    handleQueryParameters(buffer, state, exchange);
                 } else {
-                    state.parseState = ParseState.VERSION;
+                    state.state = ParseState.VERSION;
                 }
                 state.stringBuilder.setLength(0);
                 state.pos = 0;
