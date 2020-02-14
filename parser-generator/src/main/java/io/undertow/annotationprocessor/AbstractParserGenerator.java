@@ -325,7 +325,7 @@ public abstract class AbstractParserGenerator {
             prefixHandleSpace.add(c.ifIcmpeq());
             c.dup();
             c.iconst(' ');
-            prefixHandleSpace.add(c.ifIcmpeq());
+            badPrefixHandleSpace.add(c.ifIcmpeq());
             c.dup();
             c.iconst('\r');
             prefixHandleSpace.add(c.ifIcmpeq());
