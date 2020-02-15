@@ -24,6 +24,7 @@ import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.server.ConduitWrapper;
+import io.undertow.server.Connectors;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -81,6 +82,7 @@ public class HttpContinueReadHandler implements HttpHandler {
         public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
             if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
+                Connectors.terminateRequest(exchange);
                 return -1;
             }
             if (!sent) {
@@ -100,6 +102,7 @@ public class HttpContinueReadHandler implements HttpHandler {
         public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
             if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
+                Connectors.terminateRequest(exchange);
                 return -1;
             }
             if (!sent) {
@@ -119,6 +122,7 @@ public class HttpContinueReadHandler implements HttpHandler {
         public int read(final ByteBuffer dst) throws IOException {
             if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
+                Connectors.terminateRequest(exchange);
                 return -1;
             }
             if (!sent) {
@@ -138,6 +142,7 @@ public class HttpContinueReadHandler implements HttpHandler {
         public long read(final ByteBuffer[] dsts, final int offs, final int len) throws IOException {
             if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
+                Connectors.terminateRequest(exchange);
                 return -1;
             }
             if (!sent) {
