@@ -365,6 +365,10 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 }
             }
         } else if (!exchange.isPersistent()) {
+            if (connection.getExtraBytes() != null) {
+                connection.getExtraBytes().close();
+                connection.setExtraBytes(null);
+            }
             ConnectionUtils.cleanClose(connection.getChannel(), connection);
         } else {
             //upgrade or connect handling
