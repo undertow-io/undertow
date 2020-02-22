@@ -314,6 +314,13 @@ public abstract class HttpRequestParser {
             if (!buffer.hasRemaining()) {
                 return;
             }
+            // we could go back to PATH after PATH_PARAMETERS
+            if (currentState.state == ParseState.PATH) {
+                handlePath(buffer, currentState, builder);
+                if (!buffer.hasRemaining()) {
+                    return;
+                }
+            }
         }
 
         if (currentState.state == ParseState.VERSION) {
@@ -370,10 +377,10 @@ public abstract class HttpRequestParser {
      * @return The number of bytes remaining
      */
     @SuppressWarnings("unused")
-    private void handlePath(ByteBuffer buffer, ParseState state, HttpServerExchange exchange) throws BadRequestException {
+    final void handlePath(ByteBuffer buffer, ParseState state, HttpServerExchange exchange) throws BadRequestException {
         StringBuilder stringBuilder = state.stringBuilder;
         int parseState = state.parseState;
-        int pos = state.pos;
+        int canonicalPathStart = state.pos;
         boolean urlDecodeRequired = state.urlDecodeRequired;
 
         while (buffer.hasRemaining()) {
@@ -388,38 +395,44 @@ public abstract class HttpRequestParser {
                         exchange.setRequestPath("/");
                         exchange.setRelativePath("/");
                         exchange.setRequestURI(path);
-                    } else if (parseState < HOST_DONE) {
+                    } else if (parseState < HOST_DONE && state.canonicalPath.length() == 0) {
                         String decodedPath = decode(path, urlDecodeRequired, state, allowEncodedSlash, false);
                         exchange.setRequestPath(decodedPath);
                         exchange.setRelativePath(decodedPath);
                         exchange.setRequestURI(path);
                     } else {
-                        handleFullUrl(state, exchange, pos, urlDecodeRequired, path);
+                        handleFullUrl(state, exchange, canonicalPathStart, urlDecodeRequired, path);
                     }
                     exchange.setQueryString("");
                     state.state = ParseState.VERSION;
                     state.stringBuilder.setLength(0);
+                    state.canonicalPath.setLength(0);
                     state.parseState = 0;
                     state.pos = 0;
-                    state.segmentStart = 0;
                     state.urlDecodeRequired = false;
                     return;
                 }
             } else if (next == '\r' || next == '\n') {
                 throw UndertowMessages.MESSAGES.failedToParsePath();
             } else if (next == '?' && (parseState == START || parseState == HOST_DONE || parseState == IN_PATH)) {
-                beginQueryParameters(buffer, state, exchange, stringBuilder, parseState, pos, urlDecodeRequired);
+                beginQueryParameters(buffer, state, exchange, stringBuilder, parseState, canonicalPathStart, urlDecodeRequired);
                 return;
-            } else if (next == ';' && (parseState == START || parseState == HOST_DONE || parseState == IN_PATH)) {
-                state.canonicalPath.append(stringBuilder.subSequence(state.segmentStart, stringBuilder.length()));
+            } else if (next == ';') {
+                state.parseState = parseState;
+                state.urlDecodeRequired = urlDecodeRequired;
+                state.pos = canonicalPathStart;
+                // store at canonical path the partial path parsed up until here
+                state.canonicalPath.append(stringBuilder.substring(canonicalPathStart));
+                // handle the path parameters
                 handlePathParameters(buffer, state, exchange);
-                if(state.parseState == ParseState.QUERY_PARAMETERS) {
-                    handleQueryParameters(buffer, state, exchange);
-                }
-
-                if(state.parseState == ParseState.PATH) {
+                // if state is PATH, it means that handlePathParameters found a / after parsing path parameters
+                // so, we expect a next chunk of path in the next bytes, mark this with canonicalPathStart
+                // and append the '/' read by handlePathParameters
+                if(state.state == ParseState.PATH) {
+                    canonicalPathStart = stringBuilder.length();
                     stringBuilder.append('/');
                 } else {
+                    // path has been entirely parsed, just return
                     return;
                 }
             } else {
@@ -434,7 +447,7 @@ public abstract class HttpRequestParser {
                     parseState = SECOND_SLASH;
                 } else if (next == '/' && parseState == SECOND_SLASH) {
                     parseState = HOST_DONE;
-                    pos = stringBuilder.length();
+                    canonicalPathStart = stringBuilder.length();
                 } else if (parseState == FIRST_COLON || parseState == FIRST_SLASH) {
                     parseState = IN_PATH;
                 } else if (next == '/' && parseState != HOST_DONE) {
@@ -445,35 +458,8 @@ public abstract class HttpRequestParser {
 
         }
         state.parseState = parseState;
-        state.pos = pos;
+        state.pos = canonicalPathStart;
         state.urlDecodeRequired = urlDecodeRequired;
-    }
-
-    private void finalizePath(ParseState state, HttpServerExchange exchange, boolean urlDecodeRequired) {
-        int parseState = state.parseState;
-        final String uri = state.stringBuilder.toString();
-        final String path = state.canonicalPath.toString();
-
-        if(parseState == SECOND_SLASH) {
-            exchange.setRequestPath("/");
-            exchange.setRelativePath("/");
-            exchange.setRequestURI(uri);
-        } else if (parseState < HOST_DONE) {
-            final String decodedPath = decode(path, urlDecodeRequired, state, allowEncodedSlash, false);
-            final String decodedUri = decode(uri, urlDecodeRequired, state, allowEncodedSlash, false);
-            exchange.setRequestPath(decodedPath);
-            exchange.setRelativePath(decodedPath);
-            exchange.setRequestURI(decodedUri);
-        } else {
-            exchange.setRequestPath(path);
-            exchange.setRelativePath(path);
-            exchange.setRequestURI(uri, true);
-        }
-        state.stringBuilder.setLength(0);
-        state.canonicalPath.setLength(0);
-        state.parseState = 0;
-        state.pos = 0;
-        state.urlDecodeRequired = false;
     }
 
     private void beginQueryParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange, StringBuilder stringBuilder, int parseState, int canonicalPathStart, boolean urlDecodeRequired) throws BadRequestException {
@@ -492,6 +478,7 @@ public abstract class HttpRequestParser {
         }
         state.state = ParseState.QUERY_PARAMETERS;
         state.stringBuilder.setLength(0);
+        state.canonicalPath.setLength(0);
         state.parseState = 0;
         state.pos = 0;
         state.urlDecodeRequired = false;
@@ -499,7 +486,8 @@ public abstract class HttpRequestParser {
     }
 
     private void handleFullUrl(ParseState state, HttpServerExchange exchange, int canonicalPathStart, boolean urlDecodeRequired, String path) {
-        String thePath = decode(path.substring(canonicalPathStart), urlDecodeRequired, state, allowEncodedSlash, false);
+        state.canonicalPath.append(path.substring(canonicalPathStart));
+        String thePath = decode(state.canonicalPath.toString(), urlDecodeRequired, state, allowEncodedSlash, false);
         exchange.setRequestPath(thePath);
         exchange.setRelativePath(thePath);
         exchange.setRequestURI(path, true);
@@ -597,20 +585,24 @@ public abstract class HttpRequestParser {
         }
     }
 
-
     /**
-     * this method should only ever be called if the path contains am unencoded semi colon character ';'
+     * This method should only ever be called if the path contains am non-decoded semi colon character ';'
      */
-    private void handlePathParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange) throws BadRequestException {
+    final void handlePathParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange) throws BadRequestException {
 
-        state.parseState = ParseState.PATH_PARAMETERS;
-        StringBuilder stringBuilder = state.stringBuilder;
-        stringBuilder.append(";");
-
-        int pos = state.pos + stringBuilder.length();
-        int mapCount = state.mapCount;
+        state.state = ParseState.PATH_PARAMETERS;
         boolean urlDecodeRequired = state.urlDecodeRequired;
-        String param = null;
+        String param = state.nextQueryParam;
+        final StringBuilder stringBuilder = state.stringBuilder;
+        stringBuilder.append(";");
+        int pos = stringBuilder.length();
+
+        //so this is a bit funky, because it not only deals with parsing, but
+        //also deals with URL decoding the query parameters as well, while also
+        //maintaining a non-decoded version to use as the query string
+        //In most cases these string will be the same, and as we do not want to
+        //build up two separate strings we don't use encodedStringBuilder unless
+        //we encounter an encoded character
 
         while (buffer.hasRemaining()) {
             char next = (char) (buffer.get() & 0xFF);
@@ -619,39 +611,39 @@ public abstract class HttpRequestParser {
             }
             // end of HTTP URI
             if (next == ' ' || next == '\t' || next == '?') {
-                if (param == null) {
-                    if (pos != stringBuilder.length()) { // parse the path param at the end
-                        if (++mapCount >= maxParameters) {
-                            // FIXME the exception is misleadinng as we parsing canonicalPath and not query parameters
-                            throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
-                        }
-                        exchange.addPathParam(decode(stringBuilder.substring(pos), urlDecodeRequired, state, true, true), "");
-                    }
-                } else {  // path param already parsed so parse and add the value
-                    if (++mapCount >= maxParameters) {
-                        // FIXME the exception is misleadinng as we parsing canonicalPath and not query parameters
-                        throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
-                    }
-                    if (pos == stringBuilder.length()) { // parse the path param at the end
-                        exchange.addPathParam(param, "");
-                    } else {
-                        exchange.addPathParam(param, decode(stringBuilder.substring(pos), urlDecodeRequired, state, true, true));
-                    }
+                handleParsedParam(param, stringBuilder.substring(pos), exchange, urlDecodeRequired, state);
+                final String path = stringBuilder.toString();
+                if(state.parseState == SECOND_SLASH) {
+                    exchange.setRequestPath("/");
+                    exchange.setRelativePath("/");
+                    exchange.setRequestURI(path);
+                } else {
+                    String decodedPath = decode(state.canonicalPath.toString(), urlDecodeRequired, state, allowEncodedSlash, false);
+                    exchange.setRequestPath(decodedPath);
+                    exchange.setRelativePath(decodedPath);
+                    exchange.setRequestURI(path);
                 }
-                finalizePath(state, exchange, urlDecodeRequired);
-                if(next == '?') {
+                state.state = ParseState.VERSION;
+                state.stringBuilder.setLength(0);
+                state.canonicalPath.setLength(0);
+                state.parseState = 0;
+                state.pos = 0;
+                state.urlDecodeRequired = false;
+                state.nextQueryParam = null;
+                if (next == '?') {
                     state.state = ParseState.QUERY_PARAMETERS;
                     handleQueryParameters(buffer, state, exchange);
-                } else {
-                    state.state = ParseState.VERSION;
-                }
-                state.stringBuilder.setLength(0);
-                state.pos = 0;
-                state.mapCount = mapCount;
-                state.urlDecodeRequired = false;
+                } else
+                    exchange.setQueryString("");
                 return;
             } else if (next == '\r' || next == '\n') {
                 throw UndertowMessages.MESSAGES.failedToParsePath();
+            } else if (next == '/') {
+                handleParsedParam(param, stringBuilder.substring(pos), exchange, urlDecodeRequired, state);
+                state.pos = stringBuilder.length();
+                state.state = ParseState.PATH;
+                state.nextQueryParam = null;
+                return;
             } else {
                 if (decode && (next == '+' || next == '%' || next > 127)) {
                     urlDecodeRequired = true;
@@ -660,52 +652,35 @@ public abstract class HttpRequestParser {
                     param = decode(stringBuilder.substring(pos), urlDecodeRequired, state, true, true);
                     urlDecodeRequired = false;
                     pos = stringBuilder.length() + 1;
-                } else if (next == ';' && param == null) {
-                    if (++mapCount >= maxParameters) {
-                        // FIXME the exception is misleadinng as we parsing path parameters and not query parameters
-                        throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
-                    }
-                    exchange.addPathParam(decode(stringBuilder.substring(pos), urlDecodeRequired, state, true, true), "");
-                    urlDecodeRequired = false;
-                    pos = stringBuilder.length() + 1;
                 } else if (next == ';') {
-                    if (++mapCount >= maxParameters) {
-                        // FIXME the exception is misleadinng as we parsing path parameters and not query parameters
-                        throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
-                    }
-                    exchange.addPathParam(param, decode(stringBuilder.substring(pos), urlDecodeRequired, state, true, true));
-                    urlDecodeRequired = false;
-                    pos = stringBuilder.length() + 1;
+                    handleParsedParam(param, stringBuilder.substring(pos), exchange, urlDecodeRequired, state);
                     param = null;
-                } else if (next == '/') {
-                    if(param == null) {
-                        // parse and add param name
-                        exchange.addPathParam(decode(stringBuilder.substring(pos), urlDecodeRequired, state, true, true), "");
-                    } else {
-                        // parse value and add param
-                        exchange.addPathParam(param, decode(stringBuilder.substring(pos), urlDecodeRequired, state, true, true));
-                    }
-                    state.segmentStart = stringBuilder.length();
-                    state.parseState = ParseState.PATH;
-                    return;
+                    pos = stringBuilder.length() + 1;
                 } else if (next == ',') {
                     if(param == null) {
                         throw UndertowMessages.MESSAGES.failedToParsePath();
                     } else {
-                        // parse value and add param
-                        exchange.addPathParam(param, decode(stringBuilder.substring(pos), urlDecodeRequired, state, true, true));
+                        handleParsedParam(param, stringBuilder.substring(pos), exchange, urlDecodeRequired, state);
                         pos = stringBuilder.length() + 1;
                     }
                 }
                 stringBuilder.append(next);
             }
-
         }
-        state.pos = pos;
-        state.mapCount = mapCount;
+
         state.urlDecodeRequired = urlDecodeRequired;
+        state.pos = pos;
+        state.urlDecodeRequired = urlDecodeRequired;
+        state.nextQueryParam = param;
     }
 
+    private void handleParsedParam(String previouslyParsedParam, String parsedParam, HttpServerExchange exchange, boolean urlDecodeRequired, ParseState state) throws BadRequestException {
+        if (previouslyParsedParam == null) {
+            exchange.addPathParam(decode(parsedParam, urlDecodeRequired, state, true, true), "");
+        } else {  // path param already parsed so parse and add the value
+            exchange.addPathParam(previouslyParsedParam, decode(parsedParam, urlDecodeRequired, state, true, true));
+        }
+    }
 
     /**
      * The parse states for parsing heading values

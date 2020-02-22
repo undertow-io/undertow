@@ -82,11 +82,6 @@ class ParseState {
     final StringBuilder stringBuilder = new StringBuilder();
 
     /**
-     * Start of a path segment, used for creating the canonical path
-     */
-    int segmentStart;
-
-    /**
      * We need to keep track of the canonical path
      */
     final StringBuilder canonicalPath = new StringBuilder();
