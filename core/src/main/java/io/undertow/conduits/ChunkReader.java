@@ -47,6 +47,8 @@ class ChunkReader<T extends Conduit> {
 
     private static final long MASK_COUNT = longBitMask(0, 56);
 
+    private static final long LIMIT = Long.MAX_VALUE >> 4;
+
     private long state;
     private final Attachable attachable;
     private final AttachmentKey<HeaderMap> trailerAttachmentKey;
@@ -100,6 +102,9 @@ class ChunkReader<T extends Conduit> {
                 while (buf.hasRemaining()) {
                     byte b = buf.get();
                     if ((b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F')) {
+                        if (chunkRemaining > LIMIT) {
+                            throw UndertowMessages.MESSAGES.chunkSizeTooLarge();
+                        }
                         chunkRemaining <<= 4; //shift it 4 bytes and then add the next value to the end
                         chunkRemaining += Character.digit((char) b, 16);
                     } else {
