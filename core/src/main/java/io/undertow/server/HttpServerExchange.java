@@ -937,7 +937,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
 
     public HttpServerExchange addExchangeCompleteListener(final ExchangeCompletionListener listener) {
-        if(isComplete() || this.exchangeCompletionListenersCount == -1) {
+        if(isComplete() || hasListenersBeenInvoked()) {
             throw UndertowMessages.MESSAGES.exchangeAlreadyComplete();
         }
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
@@ -951,6 +951,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         }
         exchangeCompleteListeners[exchangeCompletionListenersCount] = listener;
         return this;
+    }
+
+    public boolean hasListenersBeenInvoked() {
+        return this.exchangeCompletionListenersCount == -1;
     }
 
     public HttpServerExchange addDefaultResponseListener(final DefaultResponseListener listener) {
