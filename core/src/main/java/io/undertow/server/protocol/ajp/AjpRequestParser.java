@@ -50,6 +50,8 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -67,7 +69,6 @@ import io.undertow.util.URLUtils;
  */
 public class AjpRequestParser {
 
-
     private final String encoding;
     private final boolean doDecode;
     private final boolean allowEncodedSlash;
@@ -75,6 +76,7 @@ public class AjpRequestParser {
     private final int maxHeaders;
     private StringBuilder decodeBuffer;
     private final boolean allowUnescapedCharactersInUrl;
+    private final Pattern allowedRequestAttributesPattern;
 
     private static final HttpString[] HTTP_HEADERS;
 
@@ -178,12 +180,21 @@ public class AjpRequestParser {
     }
 
     public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean allowEncodedSlash, boolean allowUnescapedCharactersInUrl) {
+        this(encoding, doDecode, maxParameters, maxHeaders, allowEncodedSlash, allowUnescapedCharactersInUrl, null);
+    }
+
+    public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean allowEncodedSlash, boolean allowUnescapedCharactersInUrl, String allowedRequestAttributesPattern) {
         this.encoding = encoding;
         this.doDecode = doDecode;
         this.maxParameters = maxParameters;
         this.maxHeaders = maxHeaders;
         this.allowEncodedSlash = allowEncodedSlash;
         this.allowUnescapedCharactersInUrl = allowUnescapedCharactersInUrl;
+        if (allowedRequestAttributesPattern != null && !allowedRequestAttributesPattern.isEmpty()) {
+            this.allowedRequestAttributesPattern = Pattern.compile(allowedRequestAttributesPattern);
+        } else {
+            this.allowedRequestAttributesPattern = null;
+        }
     }
 
 
@@ -458,12 +469,28 @@ public class AjpRequestParser {
                         state.sslCert = result;
                     } else if (state.currentAttribute.equals(SSL_KEY_SIZE)) {
                         state.sslKeySize = result;
-                    }  else {
-                        //other attributes
-                        if(state.attributes == null) {
+                    } else {
+                        // other attributes
+                        if (state.attributes == null) {
                             state.attributes = new TreeMap<>();
                         }
-                        state.attributes.put(state.currentAttribute, result);
+                        boolean isUnknownAttribute = true;
+                        // known attirubtes
+                        for (String attr : ATTRIBUTES) {
+                            if (state.currentAttribute.equals(attr)) {
+                                state.attributes.put(state.currentAttribute, result);
+                                isUnknownAttribute = false;
+                                break;
+                            }
+                        }
+                        // unknown attributes
+                        if (isUnknownAttribute && allowedRequestAttributesPattern != null) {
+                            // custom allowed attributes
+                            Matcher m = allowedRequestAttributesPattern.matcher(state.currentAttribute);
+                            if (m.matches()) {
+                                state.attributes.put(state.currentAttribute, result);
+                            }
+                        }
                     }
                     state.currentAttribute = null;
                 }

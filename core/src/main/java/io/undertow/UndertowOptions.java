@@ -354,6 +354,14 @@ public class UndertowOptions {
      */
     public static final Option<Integer> QUEUED_FRAMES_LOW_WATER_MARK = Option.simple(UndertowOptions.class, "QUEUED_FRAMES_LOW_WATER_MARK", Integer.class);
 
+    /**
+     * The AJP protocol itself supports the passing of arbitrary request attributes.
+     * The reverse proxy passes various information to the AJP connector using request attributes through AJP protocol.
+     * Unrecognised request attributes will be ignored unless the entire attribute name matches this regular expression.
+     *
+     * If not specified, the default value is null.
+     */
+    public static final Option<String> AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN = Option.simple(UndertowOptions.class, "AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN", String.class);
 
 
     private UndertowOptions() {
