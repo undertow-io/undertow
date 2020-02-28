@@ -82,6 +82,11 @@ class ParseState {
     final StringBuilder stringBuilder = new StringBuilder();
 
     /**
+     * We need to keep track of the canonical path
+     */
+    final StringBuilder canonicalPath = new StringBuilder();
+
+    /**
      * This has different meanings depending on the current state.
      *
      * In state {@link #HEADER} it is a the first character of the header, that was read by

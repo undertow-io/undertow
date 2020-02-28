@@ -84,95 +84,48 @@ public class PathParameterSessionConfig implements SessionConfig {
         String path = url;
         String query = "";
         String anchor = "";
-        String fragment = "";
-        int question = url.indexOf('?');
+        final int question = url.indexOf('?');
         if (question >= 0) {
             path = url.substring(0, question);
             query = url.substring(question);
         }
-        int pound = path.indexOf('#');
+        final int pound = path.indexOf('#');
         if (pound >= 0) {
             anchor = path.substring(pound);
             path = path.substring(0, pound);
         }
-        int fragmentIndex = path.lastIndexOf(';');
-        if(fragmentIndex >= 0) {
-            fragment = path.substring(fragmentIndex);
-            path = path.substring(0, fragmentIndex);
-        }
-
-        StringBuilder sb = new StringBuilder(path);
-        if (sb.length() > 0) { // jsessionid can't be first.
-            if(fragmentIndex > 0) {
-                if(fragment.contains(name)) {
-                    //this does not necessarily mean that this parameter is present. It could be part of the value, or the
-                    //name could be a substring of a larger key name
-                    sb.append(';'); //we make sure we append the fragment portion
-                    String key = null;
-                    StringBuilder paramBuilder = new StringBuilder();
-                    for (int i = 1; i < fragment.length(); ++i) {
-                        char c = fragment.charAt(i);
-                        if (key == null) {
-                            if (c == '&' || c == '=') {
-                                key = paramBuilder.toString();
-                                paramBuilder.setLength(0);
-                                if (c == '&') {
-                                    if (!key.equals(name)) { //we don't append if it matches the name
-                                        sb.append(key);
-                                        sb.append('&');
-                                    }
-                                    key = null;
-                                }
-                            } else {
-                                paramBuilder.append(c);
-                            }
-                        } else {
-                            if (c == '&') {
-                                String value = paramBuilder.toString();
-                                paramBuilder.setLength(0);
-                                if (!key.equals(name)) { //we don't append if it matches the name
-                                    sb.append(key);
-                                    sb.append('=');
-                                    sb.append(value);
-                                    sb.append('&');
-                                }
-                                key = null;
-                            } else {
-                                paramBuilder.append(c);
-                            }
-                        }
-                    }
-                    if(paramBuilder.length() > 0) {
-                        if(key == null) {
-                            key = paramBuilder.toString();
-                            if (!key.equals(name)) { //we don't append if it matches the name
-                                sb.append(key);
-                                sb.append('&');
-                            }
-                        } else {
-                            String value = paramBuilder.toString();
-                            if (!key.equals(name)) { //we don't append if it matches the name
-                                sb.append(key);
-                                sb.append('=');
-                                sb.append(value);
-                                sb.append('&');
-                            }
-                        }
-                    }
+        final StringBuilder sb = new StringBuilder();
+        // look for param
+        final int paramIndex = path.indexOf(";" + name);
+        // found param, strip it off from path
+        if (paramIndex >= 0) {
+            sb.append(path.substring(0, paramIndex));
+            final String remainder = path.substring(paramIndex + name.length() + 1);
+            final int endIndex1 = remainder.indexOf(";");
+            final int endIndex2 = remainder.indexOf("/");
+            if (endIndex1 != -1) {
+                if (endIndex2 != -1 && endIndex2 < endIndex1) {
+                    sb.append(remainder.substring(endIndex2));
                 } else {
-                    sb.append(fragment);
-                    sb.append("&");
+                    sb.append(remainder.substring(endIndex1));
                 }
-            } else {
-                sb.append(';');
+            } else if (endIndex2 != -1) {
+                sb.append(remainder.substring(endIndex2));
             }
-            sb.append(name);
-            sb.append('=');
-            sb.append(sessionId);
+            // else the rest of the path will be discarded, as it contains just the parameter we want to exclude
+        } else {
+            // name param was not found, we can use the path as is
+            sb.append(path);
         }
+        // append ;name=sessionId
+        sb.append(';');
+        sb.append(name);
+        sb.append('=');
+        sb.append(sessionId);
+        // apend anchor and query
         sb.append(anchor);
         sb.append(query);
-        UndertowLogger.SESSION_LOGGER.tracef("Rewrote URL from %s to %s", url, sessionId);
-        return (sb.toString());
+        UndertowLogger.SESSION_LOGGER.tracef("Rewrote URL from %s to %s", url, sb);
+        return sb.toString();
     }
 }
