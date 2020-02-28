@@ -587,22 +587,17 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     }
 
     protected void lastDataRead() {
-        final boolean peerGoneAway;
-        synchronized (this) {
-            lastDataRead = true;
-            peerGoneAway = this.peerGoneAway;
-            if(peerGoneAway) {
-                if(!thisGoneAway) {
-                    //we send a goaway message, and then close
-                    sendGoAway(ERROR_CONNECT_ERROR);
-                }
-            }
-        }
-        if (!peerGoneAway) {
+        lastDataRead = true;
+        if(!peerGoneAway) {
             //we just close the connection, as the peer has performed an unclean close
             IoUtils.safeClose(this);
+        } else {
+            peerGoneAway = true;
+            if(!thisGoneAway) {
+                //we send a goaway message, and then close
+                sendGoAway(ERROR_CONNECT_ERROR);
+            }
         }
-
     }
 
     @Override
