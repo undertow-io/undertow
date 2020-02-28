@@ -1724,6 +1724,13 @@ public final class HttpServerExchange extends AbstractAttachable {
                     getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                 }
                 getResponseChannel();
+            } else if (anyAreClear(state, FLAG_RESPONSE_TERMINATED) && !responseChannel.isOpen()) {
+                // UNDERTOW-1664: Http/2 response channels may be closed prior to the connection. There's
+                // no reason to attempt to flush a response for a closed channel but we must ensure
+                // the listeners have been invoked.
+                invokeExchangeCompleteListeners();
+                IoUtils.safeClose(connection);
+                return;
             }
             responseChannel.shutdownWrites();
             if (!responseChannel.flush()) {
