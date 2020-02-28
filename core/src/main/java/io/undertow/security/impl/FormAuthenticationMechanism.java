@@ -161,6 +161,13 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     public ChallengeResult sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext) {
+
+        // make sure a request to root context is handled with trailing slash. Otherwise call to j_security_check will not
+        // be handled correctly
+        if (exchange.getRelativePath().isEmpty()) {
+            exchange.getResponseHeaders().put(Headers.LOCATION, RedirectBuilder.redirect(exchange, exchange.getRelativePath() + "/", true));
+            return new ChallengeResult(true, StatusCodes.FOUND);
+        }
         if (exchange.getRequestPath().endsWith(postLocation) && exchange.getRequestMethod().equals(Methods.POST)) {
             UndertowLogger.SECURITY_LOGGER.debugf("Serving form auth error page %s for %s", loginPage, exchange);
             // This method would no longer be called if authentication had already occurred.
