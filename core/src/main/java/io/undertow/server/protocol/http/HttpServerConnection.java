@@ -111,7 +111,15 @@ public final class HttpServerConnection extends AbstractServerConnection {
             @Override
             public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
 
-                ServerFixedLengthStreamSinkConduit fixed = new ServerFixedLengthStreamSinkConduit(new HttpResponseConduit(getSinkChannel().getConduit(), getByteBufferPool(), HttpServerConnection.this, exchange), false, false);
+                HttpResponseConduit httpResponseConduit = new HttpResponseConduit(getSinkChannel().getConduit(), getByteBufferPool(), HttpServerConnection.this, exchange);
+                exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+                    @Override
+                    public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+                        httpResponseConduit.freeContinueResponse();
+                        nextListener.proceed();
+                    }
+                });
+                ServerFixedLengthStreamSinkConduit fixed = new ServerFixedLengthStreamSinkConduit(httpResponseConduit, false, false);
                 fixed.reset(0, exchange);
                 return fixed;
             }

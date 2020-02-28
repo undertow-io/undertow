@@ -25,11 +25,14 @@ import java.util.concurrent.TimeUnit;
 
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.Connectors;
+import io.undertow.server.ResponseCommitListener;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.StatusCodes;
+
+import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.StreamSourceConduit;
@@ -62,6 +65,17 @@ public class HttpContinueReadHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         if (HttpContinue.requiresContinueResponse(exchange)) {
             exchange.addRequestWrapper(WRAPPER);
+            exchange.addResponseCommitListener(new ResponseCommitListener() {
+                @Override
+                public void beforeCommit(HttpServerExchange exchange) {
+                    //we are writing the response, and have not read the request then we mark this as non-persistent
+                    if (!HttpContinue.isContinueResponseSent(exchange)) {
+                        exchange.setPersistent(false);
+                        //we also kill the request channel, because it is unusable now
+                        IoUtils.safeClose(exchange.getRequestChannel());
+                    }
+                }
+            });
         }
         handler.handleRequest(exchange);
     }

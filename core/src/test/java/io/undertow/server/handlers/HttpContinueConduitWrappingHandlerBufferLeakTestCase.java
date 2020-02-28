@@ -50,9 +50,11 @@ public class HttpContinueConduitWrappingHandlerBufferLeakTestCase {
             @Override
             public void handleRequest(final HttpServerExchange exchange) {
                 try {
-                    exchange.getRequestChannel();
-                    exchange.setStatusCode(StatusCodes.EXPECTATION_FAILED);
-                    exchange.getOutputStream().close();
+                    if (exchange.getQueryParameters().containsKey("reject")) {
+                        exchange.getRequestChannel();
+                        exchange.setStatusCode(StatusCodes.EXPECTATION_FAILED);
+                        exchange.getOutputStream().close();
+                    }
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -67,6 +69,21 @@ public class HttpContinueConduitWrappingHandlerBufferLeakTestCase {
 
     @Test
     public void testHttpContinueRejectedBodySentAnywayNoBufferLeak() throws IOException {
+        persistentSocket = new Socket(DefaultServer.getHostAddress(), DefaultServer.getHostPort());
+
+        String message = "POST /path?reject=true HTTP/1.1\r\n" +
+                "Expect: 100-continue\r\n" +
+                "Content-Length: 16\r\n" +
+                "Content-Type: text/plain; charset=ISO-8859-1\r\n" +
+                "Host: localhost:7777\r\n" +
+                "Connection: Keep-Alive\r\n\r\nMy HTTP Request!";
+        persistentSocket.getOutputStream().write(message.getBytes(StandardCharsets.UTF_8));
+        persistentSocket.getOutputStream().flush();
+        persistentSocket.getInputStream().read();
+    }
+
+    @Test
+    public void testHttpContinueBodySentAnywayNoLeak() throws IOException {
         persistentSocket = new Socket(DefaultServer.getHostAddress(), DefaultServer.getHostPort());
 
         String message = "POST /path HTTP/1.1\r\n" +
