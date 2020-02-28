@@ -1083,7 +1083,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                                                 try {
                                                     doHandshake();
                                                 } catch (IOException | RuntimeException | Error e) {
-                                                    UndertowLogger.REQUEST_LOGGER.error("Closing SSLConduit after exception on handshake", e);
+                                                    UndertowLogger.REQUEST_LOGGER.debug("Closing SSLConduit after exception on handshake", e);
                                                     IoUtils.safeClose(connection);
                                                 }
                                                 if (anyAreSet(state, FLAG_READS_RESUMED)) {
