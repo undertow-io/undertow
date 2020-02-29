@@ -627,6 +627,10 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
             return;
         }
         synchronized (lock) {
+            // Double check to avoid executing the the rest of this method multiple times
+            if(anyAreSet(state, STATE_CLOSED)) {
+                return;
+            }
             state |= STATE_CLOSED;
             if (allAreClear(state, STATE_DONE | STATE_LAST_FRAME)) {
                 state |= STATE_STREAM_BROKEN;

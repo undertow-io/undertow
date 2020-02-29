@@ -532,6 +532,10 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         }
         try {
             synchronized (lock) {
+                // Double check to avoid executing the the rest of this method multiple times
+                if(fullyFlushed || anyAreSet(state, STATE_CLOSED)) {
+                    return;
+                }
                 state |= STATE_CLOSED;
             }
             if(writeBuffer != null) {
