@@ -18,6 +18,7 @@
 
 package io.undertow.servlet.spec;
 
+import java.lang.ref.WeakReference;
 import java.security.PrivilegedAction;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -49,13 +50,13 @@ public class HttpSessionImpl implements HttpSession {
     private final ServletContext servletContext;
     private final boolean newSession;
     private volatile boolean invalid;
-    private final ServletRequestContext servletRequestContext;
+    private final WeakReference<ServletRequestContext> servletRequestContextRef;
 
     private HttpSessionImpl(final Session session, final ServletContext servletContext, final boolean newSession, ServletRequestContext servletRequestContext) {
         this.session = session;
         this.servletContext = servletContext;
         this.newSession = newSession;
-        this.servletRequestContext = servletRequestContext;
+        this.servletRequestContextRef = new WeakReference<>(servletRequestContext);
     }
 
     public static HttpSessionImpl forSession(final Session session, final ServletContext servletContext, final boolean newSession) {
@@ -191,6 +192,7 @@ public class HttpSessionImpl implements HttpSession {
     @Override
     public void invalidate() {
         invalid = true;
+        ServletRequestContext servletRequestContext = servletRequestContextRef.get();
         if (servletRequestContext == null) {
             session.invalidate(null);
         } else {
