@@ -119,6 +119,8 @@ public class MultiPartTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("PARAMS:\n" +
+                    "parameter count: 1\n" +
+                    "parameter name count: 1\n" +
                     "name: formValue\n" +
                     "filename: null\n" +
                     "content-type: null\n" +
@@ -154,6 +156,8 @@ public class MultiPartTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("PARAMS:\n" +
+                    "parameter count: 1\n" +
+                    "parameter name count: 1\n" +
                     "name: formValue\n" +
                     "filename: null\n" +
                     "content-type: null\n" +
