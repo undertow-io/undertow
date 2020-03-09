@@ -41,24 +41,21 @@ public class SameSiteCookieHandler implements HttpHandler {
     private final String mode;
     private final Pattern cookiePattern;
     private final boolean enableClientChecker;
+    private final boolean addSecureForNone;
 
     public SameSiteCookieHandler(final HttpHandler next, final String mode) {
-        this(next, mode, null, true, true);
-    }
-
-    public SameSiteCookieHandler(final HttpHandler next, final String mode, final boolean enableClientChecker) {
-        this(next, mode, null, true, enableClientChecker);
+        this(next, mode, null, true, true, true);
     }
 
     public SameSiteCookieHandler(final HttpHandler next, final String mode, final String cookiePattern) {
-        this(next, mode, cookiePattern, true, true);
+        this(next, mode, cookiePattern, true, true, true);
     }
 
     public SameSiteCookieHandler(final HttpHandler next, final String mode, final String cookiePattern, final boolean caseSensitive) {
-        this(next, mode, cookiePattern, caseSensitive, true);
+        this(next, mode, cookiePattern, caseSensitive, true, true);
     }
 
-    public SameSiteCookieHandler(final HttpHandler next, final String mode, final String cookiePattern, final boolean caseSensitive, final boolean enableClientChecker) {
+    public SameSiteCookieHandler(final HttpHandler next, final String mode, final String cookiePattern, final boolean caseSensitive, final boolean enableClientChecker, final boolean addSecureForNone) {
         this.next = next;
         this.mode = mode;
         if (cookiePattern != null && !cookiePattern.isEmpty()) {
@@ -66,7 +63,9 @@ public class SameSiteCookieHandler implements HttpHandler {
         } else {
             this.cookiePattern = null;
         }
-        this.enableClientChecker = enableClientChecker && CookieSameSiteMode.NONE.toString().equalsIgnoreCase(mode); // client checker is enabled only for "SameSite=None"
+        final boolean modeIsNone = CookieSameSiteMode.NONE.toString().equalsIgnoreCase(mode);
+        this.enableClientChecker = enableClientChecker && modeIsNone; // client checker is enabled only for SameSite=None
+        this.addSecureForNone = addSecureForNone && modeIsNone; // Add secure attribute for SameSite=None
     }
 
     @Override
@@ -84,6 +83,10 @@ public class SameSiteCookieHandler implements HttpHandler {
                             // set SameSite attribute to all response cookies when cookie pattern is not specified.
                             // or, set SameSite attribute if cookie name matches the specified cookie pattern.
                             cookie.getValue().setSameSiteMode(mode);
+                            if (addSecureForNone) {
+                                // Add secure attribute for "SameSite=None"
+                                cookie.getValue().setSecure(true);
+                            }
                         }
                     }
                 }
@@ -106,6 +109,7 @@ public class SameSiteCookieHandler implements HttpHandler {
             parameters.put("cookie-pattern", String.class);
             parameters.put("case-sensitive", Boolean.class);
             parameters.put("enable-client-checker", Boolean.class);
+            parameters.put("add-secure-for-none", Boolean.class);
             return parameters;
         }
 
@@ -125,10 +129,14 @@ public class SameSiteCookieHandler implements HttpHandler {
             final String pattern = (String) config.get("cookie-pattern");
             final Boolean caseSensitive = (Boolean) config.get("case-sensitive");
             final Boolean enableClientChecker = (Boolean) config.get("enable-client-checker");
+            final Boolean addSecureForNone = (Boolean) config.get("add-secure-for-none");
             return new HandlerWrapper() {
                 @Override
                 public HttpHandler wrap(HttpHandler handler) {
-                    return new SameSiteCookieHandler(handler, mode, pattern, caseSensitive == null ? true : caseSensitive, enableClientChecker == null ? true : enableClientChecker);
+                    return new SameSiteCookieHandler(handler, mode, pattern,
+                            caseSensitive == null ? true : caseSensitive,
+                            enableClientChecker == null ? true : enableClientChecker,
+                            addSecureForNone == null ? true : addSecureForNone);
                 }
             };
         }

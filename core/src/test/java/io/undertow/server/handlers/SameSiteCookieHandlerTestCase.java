@@ -39,16 +39,15 @@ import io.undertow.util.StatusCodes;
 public class SameSiteCookieHandlerTestCase {
 
     @Test
-    public void testSameSiteCookieHandlerStrictExactPattern() throws IOException, GeneralSecurityException {
-
+    public void testStrict() throws IOException, GeneralSecurityException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "Strict", "foo"));
-
         DefaultServer.startSSLServer();
+
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(DefaultServer.getClientSSLContext());
         try {
@@ -65,16 +64,15 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testSameSiteCookieHandlerLaxRegexPattern() throws IOException, GeneralSecurityException {
-
+    public void testLax() throws IOException, GeneralSecurityException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
-        }, "Lax", "fo.*"));
-
+        }, "Lax", "foo"));
         DefaultServer.startSSLServer();
+
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(DefaultServer.getClientSSLContext());
         try {
@@ -91,16 +89,15 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testSameSiteCookieHandlerNoneCaseInsensitivePattern() throws IOException, GeneralSecurityException {
-
+    public void testNone() throws IOException, GeneralSecurityException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
-        }, "None", "Foo", false));
-
+        }, "None", "foo"));
         DefaultServer.startSSLServer();
+
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(DefaultServer.getClientSSLContext());
         try {
@@ -108,7 +105,7 @@ public class SameSiteCookieHandlerTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("foo=bar; SameSite=None", header.getValue());
+            Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
         } finally {
             client.getConnectionManager().shutdown();
@@ -117,42 +114,91 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testSameSiteCookieHandlerPatternUnmatched() throws IOException, GeneralSecurityException {
-
-        DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
-            }
-        }, "Strict", "FO.*"));
-
-        DefaultServer.startSSLServer();
-        TestHttpClient client = new TestHttpClient();
-        client.setSSLContext(DefaultServer.getClientSSLContext());
-        try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("foo=bar", header.getValue());
-            FileUtils.readFile(result.getEntity().getContent());
-        } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
-        }
-    }
-
-    @Test
-    public void testSameSiteCookieHandlerInvalidMode() throws IOException, GeneralSecurityException {
-
+    public void testInvalidMode() throws IOException, GeneralSecurityException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "invalidmode", "foo"));
-
         DefaultServer.startSSLServer();
+
+        TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(DefaultServer.getClientSSLContext());
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Header header = result.getFirstHeader("set-cookie");
+            Assert.assertEquals("foo=bar", header.getValue()); // invalid mode is ignored
+            FileUtils.readFile(result.getEntity().getContent());
+        } finally {
+            client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
+        }
+    }
+
+    @Test
+    public void testRegexPattern() throws IOException, GeneralSecurityException {
+        DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
+            }
+        }, "Lax", "fo.*"));
+        DefaultServer.startSSLServer();
+
+        TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(DefaultServer.getClientSSLContext());
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Header header = result.getFirstHeader("set-cookie");
+            Assert.assertEquals("foo=bar; SameSite=Lax", header.getValue());
+            FileUtils.readFile(result.getEntity().getContent());
+        } finally {
+            client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
+        }
+    }
+
+
+    @Test
+    public void testCaseInsensitivePattern() throws IOException, GeneralSecurityException {
+        DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
+            }
+        }, "Lax", "FOO", false));
+        DefaultServer.startSSLServer();
+
+        TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(DefaultServer.getClientSSLContext());
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Header header = result.getFirstHeader("set-cookie");
+            Assert.assertEquals("foo=bar; SameSite=Lax", header.getValue());
+            FileUtils.readFile(result.getEntity().getContent());
+        } finally {
+            client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
+        }
+    }
+
+    @Test
+    public void testPatternUnmatched() throws IOException, GeneralSecurityException {
+        DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
+            }
+        }, "Lax", "FO.*"));
+        DefaultServer.startSSLServer();
+
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(DefaultServer.getClientSSLContext());
         try {
@@ -169,8 +215,7 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testSameSiteCookieHandlerAllCookies() throws IOException, GeneralSecurityException {
-
+    public void testAllCookies() throws IOException, GeneralSecurityException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
@@ -179,8 +224,8 @@ public class SameSiteCookieHandlerTestCase {
                 exchange.getResponseCookies().put("test", new CookieImpl("test", "test"));
             }
         }, "Strict"));
-
         DefaultServer.startSSLServer();
+
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(DefaultServer.getClientSSLContext());
         try {
@@ -208,8 +253,7 @@ public class SameSiteCookieHandlerTestCase {
 
 
     @Test
-    public void testSameSiteCookieHandlerMachtedMultipleCookies() throws IOException, GeneralSecurityException {
-
+    public void testMultipleCookiesMatched() throws IOException, GeneralSecurityException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
@@ -217,9 +261,9 @@ public class SameSiteCookieHandlerTestCase {
                 exchange.getResponseCookies().put("baz", new CookieImpl("baz", "qux"));
                 exchange.getResponseCookies().put("test", new CookieImpl("test", "test"));
             }
-        }, "Lax","foo|baz"));
-
+        }, "Lax", "foo|baz"));
         DefaultServer.startSSLServer();
+
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(DefaultServer.getClientSSLContext());
         try {
@@ -244,4 +288,84 @@ public class SameSiteCookieHandlerTestCase {
             DefaultServer.stopSSLServer();
         }
     }
+
+    @Test
+    public void testNoneIncompatibleUA() throws IOException, GeneralSecurityException {
+        DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
+            }
+        }, "None", "foo"));
+        DefaultServer.startSSLServer();
+
+        TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(DefaultServer.getClientSSLContext());
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+            // Chrome version whic is known to be incompatible with the `SameSite=None` attribute
+            get.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Header header = result.getFirstHeader("set-cookie");
+            Assert.assertEquals("foo=bar", header.getValue());
+            FileUtils.readFile(result.getEntity().getContent());
+        } finally {
+            client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
+        }
+    }
+
+    @Test
+    public void testNoneUACheckerDisabled() throws IOException, GeneralSecurityException {
+        DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
+            }
+        }, "None", "foo", true, false, true));
+        DefaultServer.startSSLServer();
+
+        TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(DefaultServer.getClientSSLContext());
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+            // Chrome version whic is known to be incompatible with the `SameSite=None` attribute
+            get.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Header header = result.getFirstHeader("set-cookie");
+            Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
+            FileUtils.readFile(result.getEntity().getContent());
+        } finally {
+            client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
+        }
+    }
+
+    @Test
+    public void testNoneWithoutSecure() throws IOException, GeneralSecurityException {
+        DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
+            }
+        }, "None", "foo", true, true, false));
+        DefaultServer.startSSLServer();
+
+        TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(DefaultServer.getClientSSLContext());
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Header header = result.getFirstHeader("set-cookie");
+            Assert.assertEquals("foo=bar; SameSite=None", header.getValue());
+            FileUtils.readFile(result.getEntity().getContent());
+        } finally {
+            client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
+        }
+    }
+
 }
