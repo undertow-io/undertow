@@ -83,6 +83,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     private long frameDataRemaining;
 
     private final Object lock = new Object();
+    // Guarded by lock
     private int waiters;
     private volatile boolean waitingForFrame;
     private int readFrameCount = 0;
@@ -345,9 +346,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         if(Thread.currentThread() == getIoThread()) {
             throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
         }
-        if (data == null && pendingFrameData.isEmpty()) {
+        if (data == null && pendingFrameData.isEmpty() && !anyAreSet(state, STATE_STREAM_BROKEN | STATE_CLOSED)) {
             synchronized (lock) {
-                if (data == null && pendingFrameData.isEmpty()) {
+                if (data == null && pendingFrameData.isEmpty() && !anyAreSet(state, STATE_STREAM_BROKEN | STATE_CLOSED)) {
                     try {
                         waiters++;
                         lock.wait();
@@ -367,9 +368,9 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         if(Thread.currentThread() == getIoThread()) {
             throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
         }
-        if (data == null) {
+        if (data == null && pendingFrameData.isEmpty() && !anyAreSet(state, STATE_STREAM_BROKEN | STATE_CLOSED)) {
             synchronized (lock) {
-                if (data == null) {
+                if (data == null && pendingFrameData.isEmpty() && !anyAreSet(state, STATE_STREAM_BROKEN | STATE_CLOSED)) {
                     try {
                         waiters++;
                         lock.wait(timeUnit.toMillis(l));
@@ -649,6 +650,11 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                 for (int i = 0; i < closeListeners.length; ++i) {
                     closeListeners[i].handleEvent(this);
                 }
+            }
+            // UNDERTOW-1639: Close may be called from an I/O thread while a worker is blocked on awaitReadable.
+            // Once the channel is closed, callers must be awoken.
+            if (waiters > 0) {
+                lock.notifyAll();
             }
         }
     }
