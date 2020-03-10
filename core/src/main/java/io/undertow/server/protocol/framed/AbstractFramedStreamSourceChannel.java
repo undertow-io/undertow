@@ -330,7 +330,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
         waitingForFrame = false;
         if(data == null && pendingFrameData.isEmpty() && frameDataRemaining == 0) {
             synchronized (lock) {
-                state |= STATE_DONE | STATE_CLOSED;
+                state |= STATE_DONE;
             }
             getFramedChannel().notifyFrameReadComplete(this);
             IoUtils.safeClose(this);
