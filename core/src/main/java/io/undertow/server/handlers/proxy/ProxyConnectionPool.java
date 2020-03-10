@@ -18,6 +18,19 @@
 
 package io.undertow.server.handlers.proxy;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.client.ClientCallback;
@@ -35,19 +48,6 @@ import org.xnio.OptionMap;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.ssl.XnioSsl;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * A pool of connections to a target host.
@@ -270,35 +270,50 @@ public class ProxyConnectionPool implements Closeable {
         if (!exclusive) {
             data.connections++;
         }
-        client.connect(new ClientCallback<ClientConnection>() {
-            @Override
-            public void completed(final ClientConnection result) {
-                openConnections.incrementAndGet();
-                final ConnectionHolder connectionHolder = new ConnectionHolder(result);
-                if (!exclusive) {
-                    result.getCloseSetter().set(new ChannelListener<ClientConnection>() {
-                        @Override
-                        public void handleEvent(ClientConnection channel) {
-                            handleClosedConnection(data, connectionHolder);
-                        }
-                    });
+        try {
+            client.connect(new ClientCallback<ClientConnection>() {
+                @Override
+                public void completed(final ClientConnection result) {
+                    openConnections.incrementAndGet();
+                    final ConnectionHolder connectionHolder = new ConnectionHolder(result);
+                    if (!exclusive) {
+                        result.getCloseSetter().set(new ChannelListener<ClientConnection>() {
+                            @Override
+                            public void handleEvent(ClientConnection channel) {
+                                handleClosedConnection(data, connectionHolder);
+                            }
+                        });
+                    }
+                    connectionReady(connectionHolder, callback, exchange, exclusive);
                 }
-                connectionReady(connectionHolder, callback, exchange, exclusive);
-            }
 
-            @Override
-            public void failed(IOException e) {
-                if (!exclusive) {
-                    data.connections--;
+                @Override
+                public void failed(IOException e) {
+                    if (!exclusive) {
+                        data.connections--;
+                    }
+                    UndertowLogger.REQUEST_LOGGER.debug("Failed to connect", e);
+                    if (!connectionPoolManager.handleError()) {
+                        redistributeQueued(getData());
+                        scheduleFailedHostRetry(exchange);
+                    }
+                    callback.failed(exchange);
                 }
-                UndertowLogger.REQUEST_LOGGER.debug("Failed to connect", e);
-                if (!connectionPoolManager.handleError()) {
-                    redistributeQueued(getData());
-                    scheduleFailedHostRetry(exchange);
-                }
-                callback.failed(exchange);
+            }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getByteBufferPool(), options);
+         } catch (RuntimeException e) {
+            // UNDERTOW-1611
+            // even though exception is unchecked, we still need
+            // to update counts and notify callback and pool manager
+            if (!exclusive) {
+                data.connections--;
             }
-        }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getByteBufferPool(), options);
+            // skip scheduling retry, a runtime exception represents the result of a programming problem,
+            // and as such, the client code of such exception cannot reasonably be expected to recover from them
+            // or to handle them in any way
+            connectionPoolManager.handleError();
+            callback.failed(exchange);
+            throw e;
+        }
     }
 
     private void redistributeQueued(HostThreadData hostData) {
@@ -375,35 +390,43 @@ public class ProxyConnectionPool implements Closeable {
                     }
 
                     UndertowLogger.PROXY_REQUEST_LOGGER.debugf("Attempting to reconnect to failed host %s", getUri());
-                    client.connect(new ClientCallback<ClientConnection>() {
-                        @Override
-                        public void completed(ClientConnection result) {
-                            UndertowLogger.PROXY_REQUEST_LOGGER.debugf("Connected to previously failed host %s, returning to service", getUri());
-                            if (connectionPoolManager.clearError()) {
-                                // In case the node is available now, return the connection
-                                final ConnectionHolder connectionHolder = new ConnectionHolder(result);
-                                final HostThreadData data = getData();
-                                result.getCloseSetter().set(new ChannelListener<ClientConnection>() {
-                                    @Override
-                                    public void handleEvent(ClientConnection channel) {
-                                        handleClosedConnection(data, connectionHolder);
-                                    }
-                                });
-                                data.connections++;
-                                returnConnection(connectionHolder);
-                            } else {
-                                // Otherwise reschedule the retry task
+                    try {
+                        client.connect(new ClientCallback<ClientConnection>() {
+                            @Override
+                            public void completed(ClientConnection result) {
+                                UndertowLogger.PROXY_REQUEST_LOGGER.debugf("Connected to previously failed host %s, returning to service", getUri());
+                                if (connectionPoolManager.clearError()) {
+                                    // In case the node is available now, return the connection
+                                    final ConnectionHolder connectionHolder = new ConnectionHolder(result);
+                                    final HostThreadData data = getData();
+                                    result.getCloseSetter().set(new ChannelListener<ClientConnection>() {
+                                        @Override
+                                        public void handleEvent(ClientConnection channel) {
+                                            handleClosedConnection(data, connectionHolder);
+                                        }
+                                    });
+                                    data.connections++;
+                                    returnConnection(connectionHolder);
+                                } else {
+                                    // Otherwise reschedule the retry task
+                                    scheduleFailedHostRetry(exchange);
+                                }
+                            }
+
+                            @Override
+                            public void failed(IOException e) {
+                                UndertowLogger.PROXY_REQUEST_LOGGER.debugf("Failed to reconnect to failed host %s", getUri());
+                                connectionPoolManager.handleError();
                                 scheduleFailedHostRetry(exchange);
                             }
-                        }
-
-                        @Override
-                        public void failed(IOException e) {
-                            UndertowLogger.PROXY_REQUEST_LOGGER.debugf("Failed to reconnect to failed host %s", getUri());
-                            connectionPoolManager.handleError();
-                            scheduleFailedHostRetry(exchange);
-                        }
-                    }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getByteBufferPool(), options);
+                        }, bindAddress, getUri(), exchange.getIoThread(), ssl, exchange.getConnection().getByteBufferPool(), options);
+                    } catch (RuntimeException e) {
+                        // UNDERTOW-1611
+                        // even though exception is unchecked, we still need
+                        // to handle the failed to connect error
+                        connectionPoolManager.handleError();
+                        scheduleFailedHostRetry(exchange);
+                    }
                 }
             }, retry, TimeUnit.SECONDS);
         }
