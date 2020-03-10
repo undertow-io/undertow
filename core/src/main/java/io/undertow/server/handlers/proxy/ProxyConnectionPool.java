@@ -589,6 +589,7 @@ public class ProxyConnectionPool implements Closeable {
         try {
             latch.await(10, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new RuntimeException(e);
         }
     }

@@ -289,6 +289,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                         lock.wait();
                     }
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     throw new InterruptedIOException();
                 } finally {
                     waiterCount--;
@@ -313,6 +314,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                         lock.wait(timeUnit.toMillis(l));
                     }
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     throw new InterruptedIOException();
                 } finally {
                     waiterCount--;

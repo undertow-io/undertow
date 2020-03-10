@@ -295,6 +295,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     wait();
                     return;
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     throw new InterruptedIOException();
                 }
             }
@@ -320,6 +321,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     wait(timeUnit.toMillis(time));
                     return;
                 } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     throw new InterruptedIOException();
                 }
             }
@@ -449,6 +451,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                         this.wait();
                         return;
                     } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
                         throw new InterruptedIOException();
                     }
                 }
@@ -473,6 +476,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                         this.wait(timeUnit.toMillis(time));
                         return;
                     } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
                         throw new InterruptedIOException();
                     }
                 }
