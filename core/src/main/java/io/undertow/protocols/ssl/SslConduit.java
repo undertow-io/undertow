@@ -18,13 +18,28 @@
 
 package io.undertow.protocols.ssl;
 
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.FileChannel;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLEngineResult;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLSession;
+
 import io.undertow.UndertowLogger;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.DefaultByteBufferPool;
 import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -40,25 +55,15 @@ import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.StreamSourceConduit;
 import org.xnio.conduits.WriteReadyHandler;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSession;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreSet;
 
 /**
+ * Conduit for SSL connections.
+ *
  * @author Stuart Douglas
+ * @author Flavia Rainone
  */
 public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
@@ -116,6 +121,13 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     private static final int FLAG_WRITE_CLOSED = 1 << 13;
     private static final int FLAG_READ_CLOSED = 1 << 14;
     public static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
+
+    /**
+     * Buffer pool created and used only when large fragments handling is
+     * enabled in the underlying SSL Engine. When this happens, we need
+     * a specific buffer with expanded capacity.
+     */
+    private static ByteBufferPool EXPANDED_BUFFER_POOL;
 
 
     private final UndertowSslConnection connection;
@@ -898,21 +910,27 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             wrappedData = bufferPool.allocate();
         }
         try {
-            SSLEngineResult result = null;
-            while (result == null || (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP && result.getStatus() != SSLEngineResult.Status.BUFFER_OVERFLOW)) {
-                if (userBuffers == null) {
-                    result = engine.wrap(EMPTY_BUFFER, wrappedData.getBuffer());
-                } else {
-                    result = engine.wrap(userBuffers, off, len, wrappedData.getBuffer());
-                }
-            }
-            wrappedData.getBuffer().flip();
+            SSLEngineResult result = wrapAndFlip(userBuffers, off, len);
 
             if (result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
-                throw new IOException("underflow"); //todo: can this happen?
+                throw new IOException("underflow"); // unexpected result
             } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
-                if (!wrappedData.getBuffer().hasRemaining()) { //if an earlier wrap suceeded we ignore this
-                    throw new IOException("overflow"); //todo: handle properly
+                //if an earlier wrap succeeded we ignore this
+                if (!wrappedData.getBuffer().hasRemaining()) {
+                    if (wrappedData.getBuffer().capacity() < engine.getSession().getPacketBufferSize()) {
+                        wrappedData.close();
+                        final int bufferSize = engine.getSession().getPacketBufferSize();
+                        UndertowLogger.REQUEST_IO_LOGGER.tracev(
+                                "Expanded buffer enabled due to overflow with empty buffer, buffer size is %s", bufferSize);
+                        if (EXPANDED_BUFFER_POOL == null || EXPANDED_BUFFER_POOL.getBufferSize() < bufferSize)
+                            EXPANDED_BUFFER_POOL = new DefaultByteBufferPool(false, bufferSize, -1, 12);
+                        wrappedData = EXPANDED_BUFFER_POOL.allocate();
+                        result = wrapAndFlip(userBuffers, off, len);
+                        if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW &&
+                                !wrappedData.getBuffer().hasRemaining())
+                            throw new IOException("overflow"); // unexpected result
+                    }
+                    else throw new IOException("overflow"); // unexpected result
                 }
             }
             //attempt to write it out, if we fail we just return
@@ -950,6 +968,19 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 }
             }
         }
+    }
+
+    private SSLEngineResult wrapAndFlip(ByteBuffer[] userBuffers, int off, int len) throws IOException {
+        SSLEngineResult result = null;
+        while (result == null || (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP && result.getStatus() != SSLEngineResult.Status.BUFFER_OVERFLOW)) {
+            if (userBuffers == null) {
+                result = engine.wrap(EMPTY_BUFFER, wrappedData.getBuffer());
+            } else {
+                result = engine.wrap(userBuffers, off, len, wrappedData.getBuffer());
+            }
+        }
+        wrappedData.getBuffer().flip();
+        return result;
     }
 
     private boolean handleHandshakeResult(SSLEngineResult result) throws IOException {
