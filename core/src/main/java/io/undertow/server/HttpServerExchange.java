@@ -1727,6 +1727,8 @@ public final class HttpServerExchange extends AbstractAttachable {
                                 channel.getWriteSetter().set(null);
                                 //defensive programming, should never happen
                                 if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
+                                    //make sure the listeners have been invoked
+                                    invokeExchangeCompleteListeners();
                                     UndertowLogger.ROOT_LOGGER.responseWasNotTerminated(connection, HttpServerExchange.this);
                                     IoUtils.safeClose(connection);
                                 }
@@ -1745,6 +1747,8 @@ public final class HttpServerExchange extends AbstractAttachable {
             } else {
                 //defensive programming, should never happen
                 if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
+                    //make sure the listeners have been invoked
+                    invokeExchangeCompleteListeners();
                     UndertowLogger.ROOT_LOGGER.responseWasNotTerminated(connection, this);
                     IoUtils.safeClose(connection);
                 }
