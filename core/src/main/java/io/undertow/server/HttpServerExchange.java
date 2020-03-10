@@ -935,10 +935,33 @@ public final class HttpServerExchange extends AbstractAttachable {
         return this;
     }
 
-
+    /**
+     * Adds an  {@link ExchangeCompletionListener} to this {@link HttpServerExchange}. This method
+     * behaves similarly to {@link #tryAddExchangeCompleteListener(ExchangeCompletionListener)}, but
+     * throws an {@link IllegalStateException} when the listener cannot be added.
+     *
+     * @param listener Listener to add
+     * @return this exchange
+     * @throws IllegalStateException if the exchange is already complete or listeners have already been invoked.
+     */
     public HttpServerExchange addExchangeCompleteListener(final ExchangeCompletionListener listener) {
-        if(isComplete() || this.exchangeCompletionListenersCount == -1) {
+        if (!tryAddExchangeCompleteListener(listener)) {
             throw UndertowMessages.MESSAGES.exchangeAlreadyComplete();
+        }
+        return this;
+    }
+
+    /**
+     * Attempt to add an {@link ExchangeCompletionListener} if the {@link HttpServerExchange} is not already complete.
+     * This is expected to return <pre>false</pre> if {@link #isComplete()} or
+     * {@link #invokeExchangeCompleteListeners() Listeners have already been invoked}.
+     *
+     * @param listener Listener to add
+     * @return true if the listener was successfully added, otherwise false.
+     */
+    public boolean tryAddExchangeCompleteListener(final ExchangeCompletionListener listener) {
+        if(isComplete() || this.exchangeCompletionListenersCount == -1) {
+            return false;
         }
         final int exchangeCompletionListenersCount = this.exchangeCompletionListenersCount++;
         ExchangeCompletionListener[] exchangeCompleteListeners = this.exchangeCompleteListeners;
@@ -950,7 +973,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
         }
         exchangeCompleteListeners[exchangeCompletionListenersCount] = listener;
-        return this;
+        return true;
     }
 
     public HttpServerExchange addDefaultResponseListener(final DefaultResponseListener listener) {

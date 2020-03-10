@@ -335,22 +335,20 @@ public class ProxyConnectionPool implements Closeable {
     }
 
     private void connectionReady(final ConnectionHolder result, final ProxyCallback<ProxyConnection> callback, final HttpServerExchange exchange, final boolean exclusive) {
-        try {
-            exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
-                @Override
-                public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
-                    if (!exclusive) {
-                        returnConnection(result);
-                    }
-                    nextListener.proceed();
+        if (exchange.tryAddExchangeCompleteListener(new ExchangeCompletionListener() {
+            @Override
+            public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+                if (!exclusive) {
+                    returnConnection(result);
                 }
-            });
-        } catch (Exception e) {
+                nextListener.proceed();
+            }
+        })) {
+            callback.completed(exchange, new ProxyConnection(result.clientConnection, uri.getPath() == null ? "/" : uri.getPath()));
+        } else {
             returnConnection(result);
             callback.failed(exchange);
-            return;
         }
-        callback.completed(exchange, new ProxyConnection(result.clientConnection, uri.getPath() == null ? "/" : uri.getPath()));
     }
 
     public AvailabilityType available() {

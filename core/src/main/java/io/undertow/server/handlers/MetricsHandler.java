@@ -52,7 +52,7 @@ public class MetricsHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         if(!exchange.isComplete()) {
             final long start = System.currentTimeMillis();
-            exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+            exchange.tryAddExchangeCompleteListener(new ExchangeCompletionListener() {
                 @Override
                 public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
                     long time = System.currentTimeMillis() - start;
