@@ -216,8 +216,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
     }
 
     /**
-     * Handles the initial request when the exchange was started by a HTTP ugprade.
-     *
+     * Handles the initial request when the exchange was started by a HTTP upgrade.
      *
      * @param initial The initial upgrade request that started the HTTP2 connection
      */
