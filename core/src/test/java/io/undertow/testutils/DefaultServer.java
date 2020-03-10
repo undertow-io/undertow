@@ -33,6 +33,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import javax.net.ssl.KeyManager;
@@ -430,7 +431,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 public void testRunFinished(final Result result) throws Exception {
                     server.close();
                     stopSSLServer();
-                    worker.shutdown();
+                    worker.shutdownNow();
+                    if (!worker.awaitTermination(10, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("Worker failed to shutdown within ten seconds");
+                    }
                 }
             });
         }
