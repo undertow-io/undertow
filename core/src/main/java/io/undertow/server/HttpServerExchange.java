@@ -1668,7 +1668,8 @@ public final class HttpServerExchange extends AbstractAttachable {
 
                                             //make sure the listeners have been invoked
                                             //unless the connection has been killed this is a no-op
-                                            invokeExchangeCompleteListeners();
+                                            terminateRequest();
+                                            terminateResponse();
                                             UndertowLogger.REQUEST_LOGGER.debug("Exception draining request stream", e);
                                             IoUtils.safeClose(connection);
                                         }
@@ -1706,7 +1707,8 @@ public final class HttpServerExchange extends AbstractAttachable {
             //not much point trying to flush
 
             //make sure the listeners have been invoked
-            invokeExchangeCompleteListeners();
+            terminateRequest();
+            terminateResponse();
             return;
         }
         try {
