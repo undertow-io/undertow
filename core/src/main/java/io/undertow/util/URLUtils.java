@@ -34,13 +34,13 @@ public class URLUtils {
 
     private static final char PATH_SEPARATOR = '/';
 
-    private static final QueryStringParser QUERY_STRING_PARSER = new QueryStringParser() {
+    private static final QueryStringParser QUERY_STRING_PARSER = new QueryStringParser('&') {
         @Override
         void handle(HttpServerExchange exchange, String key, String value) {
             exchange.addQueryParam(key, value);
         }
     };
-    private static final QueryStringParser PATH_PARAM_PARSER = new QueryStringParser() {
+    private static final QueryStringParser PATH_PARAM_PARSER = new QueryStringParser(';') {
         @Override
         void handle(HttpServerExchange exchange, String key, String value) {
             exchange.addPathParam(key, value);
@@ -238,6 +238,12 @@ public class URLUtils {
 
     private abstract static class QueryStringParser {
 
+        private final char separator;
+
+        QueryStringParser(final char separator) {
+            this.separator = separator;
+        }
+
         void parse(final String string, final HttpServerExchange exchange, final String charset, final boolean doDecode, int max) throws ParameterLimitException {
             int count = 0;
             try {
@@ -248,7 +254,7 @@ public class URLUtils {
                     if (c == '=' && attrName == null) {
                         attrName = string.substring(stringStart, i);
                         stringStart = i + 1;
-                    } else if (c == '&') {
+                    } else if (c == separator) {
                         if (attrName != null) {
                             handle(exchange, decode(charset, attrName, doDecode), decode(charset, string.substring(stringStart, i), doDecode));
                             if(++count > max) {
