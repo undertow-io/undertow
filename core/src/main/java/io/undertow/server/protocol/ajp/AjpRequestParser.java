@@ -49,6 +49,9 @@ import static io.undertow.util.Methods.VERSION_CONTROL;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -88,6 +91,7 @@ public class AjpRequestParser {
 
     private static final HttpString[] HTTP_METHODS;
     private static final String[] ATTRIBUTES;
+    private static final Set<String> ATTR_SET;
 
     public static final String QUERY_STRING = "query_string";
 
@@ -177,6 +181,7 @@ public class AjpRequestParser {
         ATTRIBUTES[11] = SSL_KEY_SIZE;
         ATTRIBUTES[12] = SECRET;
         ATTRIBUTES[13] = STORED_METHOD;
+        ATTR_SET = new HashSet<String>(Arrays.asList(ATTRIBUTES));
     }
 
     public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean allowEncodedSlash, boolean allowUnescapedCharactersInUrl) {
@@ -474,17 +479,10 @@ public class AjpRequestParser {
                         if (state.attributes == null) {
                             state.attributes = new TreeMap<>();
                         }
-                        boolean isUnknownAttribute = true;
-                        // known attirubtes
-                        for (String attr : ATTRIBUTES) {
-                            if (state.currentAttribute.equals(attr)) {
-                                state.attributes.put(state.currentAttribute, result);
-                                isUnknownAttribute = false;
-                                break;
-                            }
-                        }
-                        // unknown attributes
-                        if (isUnknownAttribute && allowedRequestAttributesPattern != null) {
+                        if (ATTR_SET.contains(state.currentAttribute)) {
+                            // known attirubtes
+                            state.attributes.put(state.currentAttribute, result);
+                        } else if (allowedRequestAttributesPattern != null) {
                             // custom allowed attributes
                             Matcher m = allowedRequestAttributesPattern.matcher(state.currentAttribute);
                             if (m.matches()) {
