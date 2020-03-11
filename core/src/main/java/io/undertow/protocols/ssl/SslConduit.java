@@ -127,7 +127,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
      * enabled in the underlying SSL Engine. When this happens, we need
      * a specific buffer with expanded capacity.
      */
-    private static ByteBufferPool EXPANDED_BUFFER_POOL;
+    private static volatile ByteBufferPool expandedBufferPool;
 
 
     private final UndertowSslConnection connection;
@@ -922,9 +922,9 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                         final int bufferSize = engine.getSession().getPacketBufferSize();
                         UndertowLogger.REQUEST_IO_LOGGER.tracev(
                                 "Expanded buffer enabled due to overflow with empty buffer, buffer size is %s", bufferSize);
-                        if (EXPANDED_BUFFER_POOL == null || EXPANDED_BUFFER_POOL.getBufferSize() < bufferSize)
-                            EXPANDED_BUFFER_POOL = new DefaultByteBufferPool(false, bufferSize, -1, 12);
-                        wrappedData = EXPANDED_BUFFER_POOL.allocate();
+                        if (expandedBufferPool == null || expandedBufferPool.getBufferSize() < bufferSize)
+                            expandedBufferPool = new DefaultByteBufferPool(false, bufferSize, -1, 12);
+                        wrappedData = expandedBufferPool.allocate();
                         result = wrapAndFlip(userBuffers, off, len);
                         if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW &&
                                 !wrappedData.getBuffer().hasRemaining())
