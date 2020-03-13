@@ -89,7 +89,7 @@ public class HttpHostValuesTestCase {
                 if (DefaultServer.isProxy()) {
                     Assert.assertTrue(String.format("hostName: %s , response: %s", DefaultServer.getHostAddress(), response), DefaultServer.getHostAddress().equals(response));
                 } else {
-                    Assert.assertTrue(String.format("hostName: %s , response: %s", DefaultServer.getDefaultServerAddress().getHostName(), response), DefaultServer.getDefaultServerAddress().getHostName().equals(response));
+                    Assert.assertTrue(String.format("hostName: %s , response: %s", DefaultServer.getDefaultServerAddress().toString(), response), DefaultServer.getDefaultServerAddress().toString().equals(response));
                 }
             }
         } finally {
