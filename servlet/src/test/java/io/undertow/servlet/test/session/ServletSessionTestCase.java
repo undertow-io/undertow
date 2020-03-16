@@ -183,4 +183,52 @@ public class ServletSessionTestCase {
         }
     }
 
+    @Test
+    public void testSessionConfigNoCookiesMatrixParameters() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        client.setCookieStore(new CookieStore() {
+            @Override
+            public void addCookie(Cookie cookie) {
+
+            }
+
+            @Override
+            public List<Cookie> getCookies() {
+                return Collections.EMPTY_LIST;
+            }
+
+            @Override
+            public boolean clearExpired(Date date) {
+                return false;
+            }
+
+            @Override
+            public void clear() {
+
+            }
+        });
+        try {
+            HttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + ";foo=bar/servletContext/aa/b"));
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("1", response);
+            String url = result.getHeaders("url")[0].getValue();
+
+            result = client.execute(new HttpGet(url));
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            url = result.getHeaders("url")[0].getValue();
+            Assert.assertEquals("2", response);
+
+            result = client.execute(new HttpGet(url));
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("3", response);
+
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
 }
