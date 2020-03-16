@@ -279,8 +279,24 @@ public class AjpRequestParser {
                         exchange.setRequestPath(res);
                         exchange.setRelativePath(res);
                     } else {
-                        final String url = result.value.substring(0, colon);
-                        String res = decode(url, result.containsUrlCharacters);
+                        final StringBuffer resBuffer = new StringBuffer();
+                        int pathParamParsingIndex = 0;
+                        try {
+                            do {
+                                final String url = result.value.substring(pathParamParsingIndex, colon);
+                                resBuffer.append(decode(url, result.containsUrlCharacters));
+                                pathParamParsingIndex = colon + 1 + URLUtils.parsePathParams(result.value.substring(colon + 1), exchange, encoding, doDecode && result.containsUrlCharacters, maxParameters);
+                                colon = result.value.indexOf(';', pathParamParsingIndex + 1);
+                            } while (pathParamParsingIndex < result.value.length() && colon != -1);
+                        } catch (ParameterLimitException e) {
+                            UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
+                            state.badRequest = true;
+                        }
+                        if (pathParamParsingIndex < result.value.length()) {
+                            final String url = result.value.substring(pathParamParsingIndex);
+                            resBuffer.append(decode(url, result.containsUrlCharacters));
+                        }
+                        final String res = resBuffer.toString();
                         if(result.containsUnencodedCharacters) {
                             exchange.setRequestURI(res);
                         } else {
@@ -288,12 +304,6 @@ public class AjpRequestParser {
                         }
                         exchange.setRequestPath(res);
                         exchange.setRelativePath(res);
-                        try {
-                            URLUtils.parsePathParams(result.value.substring(colon + 1), exchange, encoding, doDecode && result.containsUrlCharacters, maxParameters);
-                        } catch (ParameterLimitException e) {
-                            UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
-                            state.badRequest = true;
-                        }
                     }
                 } else {
                     state.state = AjpRequestParseState.READING_REQUEST_URI;
