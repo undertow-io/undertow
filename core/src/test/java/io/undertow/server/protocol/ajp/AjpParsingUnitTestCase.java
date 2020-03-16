@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Deque;
+import java.util.Map;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -135,6 +137,50 @@ public class AjpParsingUnitTestCase {
         AjpRequestParseState state = new AjpRequestParseState();
         AJP_REQUEST_PARSER.parse(data, state, result);
         Assert.assertTrue(state.badRequest);
+    }
+
+    @Test
+    public void testPathParamsQueryString() throws Exception {
+        ByteBuffer data = createAjpRequest("/hi;path=param".getBytes(StandardCharsets.UTF_8),
+                "param=value".getBytes(StandardCharsets.UTF_8));
+        HttpServerExchange result = new HttpServerExchange(null);
+        AjpRequestParseState state = new AjpRequestParseState();
+        AJP_REQUEST_PARSER.parse(data, state, result);
+        Assert.assertFalse(state.badRequest);
+        Assert.assertEquals("/hi", result.getRequestPath());
+        Assert.assertEquals("/hi;path=param", result.getRequestURI());
+        Assert.assertEquals("param=value", result.getQueryString());
+        Map<String, Deque<String>> paramsMap = result.getPathParameters();
+        Assert.assertNotNull(paramsMap);
+        Assert.assertEquals(1, paramsMap.size());
+        assertPathParamValue(paramsMap, "path", "param");
+    }
+
+    @Test
+    public void testPathParamMatrixQueryString() throws Exception {
+        ByteBuffer data = createAjpRequest("/hi1;path1=param1;path2=param2/hi2;path3=param3/hi3/hi4/hi5;path4=param4;path5=param5/hi6".getBytes(StandardCharsets.UTF_8),
+                "param=value".getBytes(StandardCharsets.UTF_8));
+        HttpServerExchange result = new HttpServerExchange(null);
+        AjpRequestParseState state = new AjpRequestParseState();
+        AJP_REQUEST_PARSER.parse(data, state, result);
+        Assert.assertFalse(state.badRequest);
+        Assert.assertEquals("/hi1/hi2/hi3/hi4/hi5/hi6", result.getRequestPath());
+        Assert.assertEquals("/hi1;path1=param1;path2=param2/hi2;path3=param3/hi3/hi4/hi5;path4=param4;path5=param5/hi6", result.getRequestURI());
+        Assert.assertEquals("param=value", result.getQueryString());
+        Map<String, Deque<String>> paramsMap = result.getPathParameters();
+        Assert.assertNotNull(paramsMap);
+        Assert.assertEquals(5, paramsMap.size());
+        assertPathParamValue(paramsMap, "path1", "param1");
+        assertPathParamValue(paramsMap, "path2", "param2");
+        assertPathParamValue(paramsMap, "path3", "param3");
+        assertPathParamValue(paramsMap, "path4", "param4");
+        assertPathParamValue(paramsMap, "path5", "param5");
+    }
+
+    private void assertPathParamValue(Map<String, Deque<String>> pathParams, String pathParam, String pathParamValue) {
+        final Deque<String> pathValue = pathParams.get(pathParam);
+        Assert.assertNotNull(pathValue);
+        Assert.assertArrayEquals(new String[]{pathParamValue}, pathValue.toArray());
     }
 
     protected ByteBuffer createAjpRequest(byte[] path, byte[] query) {
