@@ -276,12 +276,12 @@ public class URLUtils {
                     }
                 }
                 if (attrName != null) {
-                    handle(exchange, decode(charset, attrName, doDecode), decode(charset, string.substring(stringStart, string.length()), doDecode));
+                    handle(exchange, decode(charset, attrName, doDecode), decode(charset, string.substring(stringStart, i), doDecode));
                     if(++count > max) {
                         throw UndertowMessages.MESSAGES.tooManyParameters(max);
                     }
                 } else if (string.length() != stringStart) {
-                    handle(exchange, decode(charset, string.substring(stringStart, string.length()), doDecode), "");
+                    handle(exchange, decode(charset, string.substring(stringStart, i), doDecode), "");
                     if(++count > max) {
                         throw UndertowMessages.MESSAGES.tooManyParameters(max);
                     }
