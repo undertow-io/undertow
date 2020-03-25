@@ -162,16 +162,22 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
         }
         String sessionID = config.findSessionId(serverExchange);
-        int count = 0;
-        while (sessionID == null) {
-            sessionID = sessionIdGenerator.createSessionId();
-            if(sessions.containsKey(sessionID)) {
-                sessionID = null;
+        if (sessionID == null) {
+            int count = 0;
+            while (sessionID == null) {
+                sessionID = sessionIdGenerator.createSessionId();
+                if (sessions.containsKey(sessionID)) {
+                    sessionID = null;
+                }
+                if (count++ == 100) {
+                    //this should never happen
+                    //but we guard against pathalogical session id generators to prevent an infinite loop
+                    throw UndertowMessages.MESSAGES.couldNotGenerateUniqueSessionId();
+                }
             }
-            if(count++ == 100) {
-                //this should never happen
-                //but we guard against pathalogical session id generators to prevent an infinite loop
-                throw UndertowMessages.MESSAGES.couldNotGenerateUniqueSessionId();
+        } else {
+            if (sessions.containsKey(sessionID)) {
+                throw UndertowMessages.MESSAGES.sessionWithIdAlreadyExists(sessionID);
             }
         }
         Object evictionToken;

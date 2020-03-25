@@ -900,6 +900,14 @@ public class ServletContextImpl implements ServletContext {
                             return null;
                         }
                     };
+
+                    //first we check if there is a session with this id already
+                    //this can happen with a shared session manager
+                    session = sessionManager.getSession(exchange, c);
+                    if (session != null) {
+                        httpSession = SecurityActions.forSession(session, this, false);
+                        exchange.putAttachment(sessionAttachmentKey, httpSession);
+                    }
                 } else if (existing != null) {
                     if(deploymentInfo.isCheckOtherSessionManagers()) {
                         boolean found = false;
@@ -920,9 +928,11 @@ public class ServletContextImpl implements ServletContext {
                     }
                 }
 
-                final Session newSession = sessionManager.createSession(exchange, c);
-                httpSession = SecurityActions.forSession(newSession, this, true);
-                exchange.putAttachment(sessionAttachmentKey, httpSession);
+                if (httpSession == null) {
+                    final Session newSession = sessionManager.createSession(exchange, c);
+                    httpSession = SecurityActions.forSession(newSession, this, true);
+                    exchange.putAttachment(sessionAttachmentKey, httpSession);
+                }
             }
         }
         return httpSession;
