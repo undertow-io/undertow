@@ -78,8 +78,12 @@ public class RedirectTestCase {
     public void testServletRedirect() throws Exception {
         int port = DefaultServer.getHostPort("default");
         //test redirects
-        runtest("/servletContext/redirect/foo?redirect=../bar", "null", "/bar", "http://localhost:" + port + "/servletContext/bar", "/servletContext/bar", "");
-        runtest("/servletContext/redirect/foo/?redirect=../../bar", "null", "/bar", "http://localhost:" + port + "/servletContext/bar", "/servletContext/bar", "");
+        runtest("/servletContext/redirect/foo?redirect=../bar", "null", "/bar",
+                "http://" + DefaultServer.getHostAddress() + ":" + port + "/servletContext/bar", "/servletContext/bar"
+                , "");
+        runtest("/servletContext/redirect/foo/?redirect=../../bar", "null", "/bar",
+                "http://" + DefaultServer.getHostAddress() + ":" + port + "/servletContext/bar", "/servletContext/bar"
+                , "");
     }
 
     private void runtest(String request, String... expectedBody) throws Exception {

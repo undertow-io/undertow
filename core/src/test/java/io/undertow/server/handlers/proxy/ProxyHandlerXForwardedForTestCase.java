@@ -89,7 +89,7 @@ public class ProxyHandlerXForwardedForTestCase {
 
             Assert.assertEquals(port, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
             Assert.assertEquals("http", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
-            Assert.assertEquals("localhost", result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
+            Assert.assertEquals(DefaultServer.getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
             Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
 
         } finally {
@@ -111,7 +111,7 @@ public class ProxyHandlerXForwardedForTestCase {
 
             Assert.assertEquals(sslPort, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
             Assert.assertEquals("https", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
-            Assert.assertEquals("localhost", result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
+            Assert.assertEquals(DefaultServer.getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
             Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
 
         } finally {
@@ -132,7 +132,7 @@ public class ProxyHandlerXForwardedForTestCase {
 
             Assert.assertEquals(port, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
             Assert.assertEquals("http", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
-            Assert.assertEquals("localhost", result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
+            Assert.assertEquals(DefaultServer.getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
             Assert.assertEquals("50.168.245.32," + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
 
         } finally {
@@ -141,7 +141,7 @@ public class ProxyHandlerXForwardedForTestCase {
     }
 
     @Test
-    public void testReqriteHostHeader() throws Exception {
+    public void testRewriteHostHeader() throws Exception {
         setProxyHandler(true, false);
         TestHttpClient client = new TestHttpClient();
 
@@ -153,7 +153,7 @@ public class ProxyHandlerXForwardedForTestCase {
 
             Assert.assertEquals(port, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
             Assert.assertEquals("http", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
-            Assert.assertEquals(String.format("localhost:%d", port), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
+            Assert.assertEquals(String.format("%s:%d", DefaultServer.getHostAddress(), port), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
             Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
 
         } finally {
