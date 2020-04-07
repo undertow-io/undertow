@@ -37,6 +37,7 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.FileBody;
@@ -217,4 +218,37 @@ public class MultiPartTestCase {
             client.getConnectionManager().shutdown();
         }
     }
+
+    @Test
+    public void testMultiPartRequestUtf8CharsetInPart() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/1";
+            HttpPost post = new HttpPost(uri);
+
+            MultipartEntity entity = new MultipartEntity();
+
+            entity.addPart("formValue", new StringBody("myValue\u00E5", ContentType.create("text/plain", StandardCharsets.UTF_8)));
+
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+
+            Assert.assertEquals("PARAMS:\n" +
+                    "parameter count: 1\n" +
+                    "parameter name count: 1\n" +
+                    "name: formValue\n" +
+                    "filename: null\n" +
+                    "content-type: text/plain; charset=UTF-8\n" +
+                    "Content-Disposition: form-data; name=\"formValue\"\n" +
+                    "Content-Transfer-Encoding: 8bit\n" +
+                    "Content-Type: text/plain; charset=UTF-8\n" +
+                    "size: 9\n" +
+                    "content: myValue\u00E5\n", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
 }

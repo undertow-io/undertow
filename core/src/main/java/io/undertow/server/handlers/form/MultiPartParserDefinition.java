@@ -372,7 +372,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                         }
                     }
 
-                    data.add(currentName, new String(contentBytes.toByteArray(), charset), headers);
+                    data.add(currentName, new String(contentBytes.toByteArray(), charset), charset, headers);
                 } catch (UnsupportedEncodingException e) {
                     throw new RuntimeException(e);
                 }

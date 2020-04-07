@@ -41,6 +41,8 @@ public class MultiPartServlet extends HttpServlet {
     protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         try {
             Collection<Part> parts = req.getParts();
+            resp.setContentType("text/plain; charset=UTF-8");
+            resp.setCharacterEncoding("UTF-8");
             PrintWriter writer = resp.getWriter();
             writer.println("PARAMS:");
             writer.println("parameter count: " + req.getParameterMap().size());
