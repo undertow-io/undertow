@@ -27,6 +27,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import io.undertow.security.handlers.SinglePortConfidentialityHandler;
@@ -91,6 +92,8 @@ public class SimpleConfidentialRedirectTestCase {
         }
     }
 
+    @Ignore
+    @Test
     @ProxyIgnore
     public void testRedirectWithFullURLInPath() throws IOException {
         DefaultServer.isProxy();

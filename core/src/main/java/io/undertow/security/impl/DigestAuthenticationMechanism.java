@@ -140,7 +140,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     public DigestAuthenticationMechanism(final String realmName, final String domain, final String mechanismName, final IdentityManager identityManager) {
-        this(Collections.singletonList(DigestAlgorithm.MD5), Collections.singletonList(DigestQop.AUTH), realmName, domain, new SimpleNonceManager(), DEFAULT_NAME, identityManager);
+        this(Collections.singletonList(DigestAlgorithm.MD5), Collections.singletonList(DigestQop.AUTH), realmName, domain, new SimpleNonceManager(), mechanismName, identityManager);
     }
 
     @SuppressWarnings("deprecation")
