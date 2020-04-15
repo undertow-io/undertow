@@ -26,6 +26,8 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.util.DateUtils;
+
+import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
@@ -61,7 +63,9 @@ public final class AjpServerConnection extends AbstractServerConnection {
 
     @Override
     public void terminateRequestChannel(HttpServerExchange exchange) {
-        //todo: terminate
+        if (!exchange.isPersistent()) {
+            IoUtils.safeClose(getChannel().getSourceChannel());
+        }
     }
 
     @Override

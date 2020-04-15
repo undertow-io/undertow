@@ -36,6 +36,8 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediatePooledByteBuffer;
 import io.undertow.util.Methods;
+
+import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
@@ -143,7 +145,9 @@ public final class HttpServerConnection extends AbstractServerConnection {
 
     @Override
     public void terminateRequestChannel(HttpServerExchange exchange) {
-
+        if (!exchange.isPersistent()) {
+            IoUtils.safeClose(getChannel().getSourceChannel());
+        }
     }
 
     /**
