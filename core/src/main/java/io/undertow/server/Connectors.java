@@ -37,7 +37,6 @@ import org.xnio.conduits.ConduitStreamSinkChannel;
 
 import java.io.IOException;
 import java.util.Date;
-import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
@@ -48,6 +47,7 @@ import java.util.concurrent.RejectedExecutionException;
  * by connector implementations.
  *
  * @author Stuart Douglas
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class Connectors {
 
@@ -92,12 +92,9 @@ public class Connectors {
      * @param exchange The server exchange
      */
     public static void flattenCookies(final HttpServerExchange exchange) {
-        Map<String, Cookie> cookies = exchange.getResponseCookiesInternal();
         boolean enableRfc6265Validation = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION);
-        if (cookies != null) {
-            for (Map.Entry<String, Cookie> entry : cookies.entrySet()) {
-                exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(entry.getValue(), enableRfc6265Validation));
-            }
+        for (Cookie cookie : exchange.responseCookies()) {
+            exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(cookie, enableRfc6265Validation));
         }
     }
 

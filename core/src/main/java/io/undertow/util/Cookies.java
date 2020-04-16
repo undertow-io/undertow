@@ -24,8 +24,10 @@ import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -33,6 +35,7 @@ import java.util.TreeMap;
  *
  * @author Stuart Douglas
  * @author Andre Dietisheim
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class Cookies {
 
@@ -196,28 +199,51 @@ public class Cookies {
      *
      * @see Cookie
      * @see <a href="http://tools.ietf.org/search/rfc2109">rfc2109</a>
+     * @deprecated use {@link #parseRequestCookies(int, boolean, List, Set)} instead
      */
+    @Deprecated
     public static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies) {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, LegacyCookieSupport.COMMA_IS_SEPARATOR);
     }
 
+    public static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies) {
+        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, LegacyCookieSupport.COMMA_IS_SEPARATOR);
+    }
+
+    @Deprecated
     static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator) {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0);
+    }
+
+    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean commaIsSeperator) {
+        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0);
     }
 
     static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
         if (cookies == null) {
             return new TreeMap<>();
         }
-        final Map<String, Cookie> parsedCookies = new TreeMap<>();
-
+        final Set<Cookie> parsedCookies = new HashSet<>();
         for (String cookie : cookies) {
             parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0);
         }
-        return parsedCookies;
+
+        final Map<String, Cookie> retVal = new TreeMap<>();
+        for (Cookie cookie : parsedCookies) {
+            retVal.put(cookie.getName(), cookie);
+        }
+        return retVal;
     }
 
-    private static void parseCookie(final String cookie, final Map<String, Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
+    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
+        if (cookies != null) {
+            for (String cookie : cookies) {
+                parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0);
+            }
+        }
+    }
+
+    private static void parseCookie(final String cookie, final Set<Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
         int state = 0;
         String name = null;
         int start = 0;
@@ -332,7 +358,7 @@ public class Cookies {
             if (path != null) {
                 c.setPath(path);
             }
-            parsedCookies.put(c.getName(), c);
+            parsedCookies.add(c);
         }
     }
 

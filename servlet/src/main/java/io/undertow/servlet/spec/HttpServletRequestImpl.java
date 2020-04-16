@@ -96,6 +96,7 @@ import javax.servlet.http.PushBuilder;
  * The http servlet request implementation. This class is not thread safe
  *
  * @author Stuart Douglas
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class HttpServletRequestImpl implements HttpServletRequest {
 
@@ -145,15 +146,17 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public Cookie[] getCookies() {
         if (cookies == null) {
-            Map<String, io.undertow.server.handlers.Cookie> cookies = exchange.getRequestCookies();
-            if (cookies.isEmpty()) {
+            Iterable<io.undertow.server.handlers.Cookie> cookies = exchange.requestCookies();
+            int count = 0;
+            for (io.undertow.server.handlers.Cookie cookie : cookies) {
+                count++;
+            }
+            if (count == 0) {
                 return null;
             }
-            int count = cookies.size();
             Cookie[] value = new Cookie[count];
             int i = 0;
-            for (Map.Entry<String, io.undertow.server.handlers.Cookie> entry : cookies.entrySet()) {
-                io.undertow.server.handlers.Cookie cookie = entry.getValue();
+            for (io.undertow.server.handlers.Cookie cookie : cookies) {
                 try {
                     Cookie c = new Cookie(cookie.getName(), cookie.getValue());
                     if (cookie.getDomain() != null) {

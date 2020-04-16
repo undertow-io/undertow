@@ -48,6 +48,7 @@ import static org.xnio.IoUtils.safeClose;
  * will likely change.
  *
  * @author Stuart Douglas
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class LoadBalancingProxyClient implements ProxyClient {
 
@@ -366,11 +367,11 @@ public class LoadBalancingProxyClient implements ProxyClient {
     }
 
     protected Iterator<CharSequence> parseRoutes(HttpServerExchange exchange) {
-        Map<String, Cookie> cookies = exchange.getRequestCookies();
         for (String cookieName : sessionCookieNames) {
-            Cookie sessionCookie = cookies.get(cookieName);
-            if (sessionCookie != null) {
-                return routeIteratorFactory.iterator(sessionCookie.getValue());
+            for (Cookie cookie : exchange.requestCookies()) {
+                if (cookieName.equals(cookie.getName())) {
+                    return routeIteratorFactory.iterator(cookie.getValue());
+                }
             }
         }
         return routeIteratorFactory.iterator(null);

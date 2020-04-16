@@ -73,8 +73,8 @@ public class ResponseCookiesTestCase {
 
             final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
             assertEquals(2, setCookieHeaders.length);
-            assertEquals("test1=test1; path=/test", setCookieHeaders[0].getValue());
-            assertEquals("test2=test2", setCookieHeaders[1].getValue());
+            assertTrue(setCookieHeadersContainsValue("test1=test1; path=/test", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValue("test2=test2", setCookieHeaders));
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -94,13 +94,14 @@ public class ResponseCookiesTestCase {
             final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
             assertEquals(7, setCookieHeaders.length);
             Arrays.sort(setCookieHeaders, Comparator.comparing(Object::toString));
-            assertEquals("test1=test1; path=/test1_1", setCookieHeaders[0].getValue());
-            assertEquals("test1=test1; path=/test1_2", setCookieHeaders[1].getValue());
-            assertEquals("test2=test2; path=/test2", setCookieHeaders[2].getValue());
-            assertEquals("test2=test2; path=/test2; domain=www.domain2.com", setCookieHeaders[3].getValue());
-            assertEquals("test3=test3", setCookieHeaders[4].getValue());
-            assertEquals("test3=test3; domain=www.domain3-1.com", setCookieHeaders[5].getValue());
-            assertEquals("test3=test3; domain=www.domain3-2.com", setCookieHeaders[6].getValue());
+            assertTrue(setCookieHeadersContainsValue("test1=test1; path=/test1_1", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValue("test1=test1; path=/test1_1", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValue("test1=test1; path=/test1_2", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValue("test2=test2; path=/test2", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValue("test2=test2; path=/test2; domain=www.domain2.com", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValue("test3=test3", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValue("test3=test3; domain=www.domain3-1.com", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValue("test3=test3; domain=www.domain3-2.com", setCookieHeaders));
 
         } finally {
             client.getConnectionManager().shutdown();
@@ -121,12 +122,11 @@ public class ResponseCookiesTestCase {
             final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
             assertEquals(5, setCookieHeaders.length);
             Arrays.sort(setCookieHeaders, Comparator.comparing(Object::toString));
-            assertTrue("Header " + setCookieHeaders[0] + "didn't match expected regex",
-                    setCookieHeaders[0].getValue().matches("JSESSIONID=.*; path=/servletContext"));
-            assertEquals("test=test10; domain=www.domain.com", setCookieHeaders[1].getValue());
-            assertEquals("test=test2; path=/test", setCookieHeaders[2].getValue());
-            assertEquals("test=test5", setCookieHeaders[3].getValue());
-            assertEquals("test=test8; path=/test; domain=www.domain.com", setCookieHeaders[4].getValue());
+            assertTrue(setCookieHeadersMatchesValue("JSESSIONID=.*; path=/servletContext", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValue("test=test10; domain=www.domain.com", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValue("test=test2; path=/test", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValue("test=test5", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValue("test=test8; path=/test; domain=www.domain.com", setCookieHeaders));
 
         } finally {
             client.getConnectionManager().shutdown();
@@ -145,16 +145,36 @@ public class ResponseCookiesTestCase {
             assertEquals("Served at: /servletContext", response);
 
             final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
-            assertEquals(3, setCookieHeaders.length);
-            assertTrue("Header " + setCookieHeaders[0] + "didn't start with expected prefix",
-                    setCookieHeaders[0].getValue().startsWith("JSESSIONID=_bug_fix; path=/path3; Max-Age=500; Expires="));
-            assertTrue("Header " + setCookieHeaders[1] + "didn't start with expected prefix",
-                    setCookieHeaders[1].getValue().startsWith("JSESSIONID=_bug_fix; path=/path4; Max-Age=1000; Expires="));
-           assertTrue("Header " + setCookieHeaders[2] + "didn't match expected regex",
-                    setCookieHeaders[2].getValue().matches("JSESSIONID=.*; path=/servletContext"));
+            assertEquals(4, setCookieHeaders.length);
+            assertTrue(setCookieHeadersContainsValueStartingWithPrefix("JSESSIONID=_bug_fix; path=/path3; Max-Age=500; Expires=", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValueStartingWithPrefix("JSESSIONID=_bug_fix; path=/path4; Max-Age=1000; Expires=", setCookieHeaders));
+            assertTrue(setCookieHeadersMatchesValue("JSESSIONID=.*; path=/servletContext", setCookieHeaders));
         } finally {
             client.getConnectionManager().shutdown();
         }
     }
 
+    private static boolean setCookieHeadersContainsValue(final String value, final Header[] setCookieHeaders) {
+        if (setCookieHeaders == null) return false;
+        for (Header h : setCookieHeaders) {
+            if (value.equals(h.getValue())) return true;
+        }
+        return false;
+    }
+
+    private static boolean setCookieHeadersContainsValueStartingWithPrefix(final String prefix, final Header[] setCookieHeaders) {
+        if (setCookieHeaders == null) return false;
+        for (Header h : setCookieHeaders) {
+            if (h.getValue().startsWith(prefix)) return true;
+        }
+        return false;
+    }
+
+    private static boolean setCookieHeadersMatchesValue(final String regexp, final Header[] setCookieHeaders) {
+        if (setCookieHeaders == null) return false;
+        for (Header h : setCookieHeaders) {
+            if (h.getValue().matches(regexp)) return true;
+        }
+        return false;
+    }
 }

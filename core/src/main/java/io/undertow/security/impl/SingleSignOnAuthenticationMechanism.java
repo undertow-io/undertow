@@ -48,6 +48,7 @@ import java.util.WeakHashMap;
  *
  * @author Stuart Douglas
  * @author Paul Ferraro
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class SingleSignOnAuthenticationMechanism implements AuthenticationMechanism {
 
@@ -84,7 +85,12 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
 
     @Override
     public AuthenticationMechanismOutcome authenticate(HttpServerExchange exchange, SecurityContext securityContext) {
-        Cookie cookie = exchange.getRequestCookies().get(cookieName);
+        Cookie cookie = null;
+        for (Cookie c : exchange.requestCookies()) {
+            if (cookieName.equals(c.getName())) {
+                cookie = c;
+            }
+        }
         if (cookie != null) {
             final String ssoId = cookie.getValue();
             log.tracef("Found SSO cookie %s", ssoId);
@@ -142,7 +148,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
     }
 
     private void clearSsoCookie(HttpServerExchange exchange) {
-        exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName).setMaxAge(0).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain).setPath(path));
+        exchange.setResponseCookie(new CookieImpl(cookieName).setMaxAge(0).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain).setPath(path));
     }
 
     @Override
@@ -164,7 +170,7 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
                 try (SingleSignOn sso = singleSignOnManager.createSingleSignOn(account, sc.getMechanismName())) {
                     Session session = getSession(exchange);
                     registerSessionIfRequired(sso, session);
-                    exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName, sso.getId()).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain).setPath(path));
+                    exchange.setResponseCookie(new CookieImpl(cookieName, sso.getId()).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain).setPath(path));
                 }
             }
             return factory.create();

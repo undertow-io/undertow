@@ -33,6 +33,7 @@ import org.xnio.conduits.StreamSinkConduit;
  * Handler that appends the JVM route to the session id.
  *
  * @author Stuart Douglas
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class JvmRouteHandler implements HttpHandler {
 
@@ -50,12 +51,12 @@ public class JvmRouteHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-
-        Cookie sessionId = exchange.getRequestCookies().get(sessionCookieName);
-        if (sessionId != null) {
-            int part = sessionId.getValue().indexOf('.');
-            if (part != -1) {
-                sessionId.setValue(sessionId.getValue().substring(0, part));
+        for (Cookie cookie : exchange.requestCookies()) {
+            if (sessionCookieName.equals(cookie.getName())) {
+                int part = cookie.getValue().indexOf('.');
+                if (part != -1) {
+                    cookie.setValue(cookie.getValue().substring(0, part));
+                }
             }
         }
         exchange.addResponseWrapper(wrapper);
@@ -66,15 +67,12 @@ public class JvmRouteHandler implements HttpHandler {
 
         @Override
         public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
-
-            Map<String, Cookie> cookies = exchange.getResponseCookiesInternal();
-            if (cookies != null) {
-                Cookie sessionId = cookies.get(sessionCookieName);
-                if (sessionId != null) {
-                    StringBuilder sb = new StringBuilder(sessionId.getValue());
+            for (Cookie cookie : exchange.responseCookies()) {
+                if (sessionCookieName.equals(cookie.getName())) {
+                    StringBuilder sb = new StringBuilder(cookie.getValue());
                     sb.append('.');
                     sb.append(jvmRoute);
-                    sessionId.setValue(sb.toString());
+                    cookie.setValue(sb.toString());
                 }
             }
             return factory.create();

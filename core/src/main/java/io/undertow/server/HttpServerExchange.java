@@ -74,6 +74,7 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -88,6 +89,7 @@ import static org.xnio.Bits.intBitMask;
  * fully parsed.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class HttpServerExchange extends AbstractAttachable {
 
@@ -137,8 +139,11 @@ public final class HttpServerExchange extends AbstractAttachable {
     private Map<String, Deque<String>> queryParameters;
     private Map<String, Deque<String>> pathParameters;
 
-    private Map<String, Cookie> requestCookies;
-    private Map<String, Cookie> responseCookies;
+    private DelegatingIterable<Cookie> requestCookies;
+    private DelegatingIterable<Cookie> responseCookies;
+
+    private Map<String, Cookie> deprecatedRequestCookies;
+    private Map<String, Cookie> deprecatedResponseCookies;
 
     /**
      * The actual response channel. May be null if it has not been created yet.
@@ -1128,23 +1133,23 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     /**
      * @return A mutable map of request cookies
+     * @deprecated use either {@link #requestCookies()} or {@link #getRequestCookie(String)} or {@link #setRequestCookie(Cookie)} methods instead
      */
+    @Deprecated
     public Map<String, Cookie> getRequestCookies() {
-        if (requestCookies == null) {
-            requestCookies = Cookies.parseRequestCookies(
-                    getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, 200),
-                    getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false),
-                    requestHeaders.get(Headers.COOKIE));
+        if (deprecatedRequestCookies == null) {
+            deprecatedRequestCookies = new MapDelegatingToSet((Set<Cookie>)((DelegatingIterable<Cookie>)requestCookies()).getDelegate());
         }
-        return requestCookies;
+        return deprecatedRequestCookies;
     }
 
     /**
-     * Sets a response cookie
+     * Sets a request cookie
      *
      * @param cookie The cookie
      */
-    public HttpServerExchange setResponseCookie(final Cookie cookie) {
+    public HttpServerExchange setRequestCookie(final Cookie cookie) {
+        if (cookie == null) return this;
         if (getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION)) {
             if (cookie.getValue() != null && !cookie.getValue().isEmpty()) {
                 Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
@@ -1156,29 +1161,81 @@ public final class HttpServerExchange extends AbstractAttachable {
                 Rfc6265CookieSupport.validateDomain(cookie.getDomain());
             }
         }
-        if (responseCookies == null) {
-            responseCookies = new TreeMap<>(); //hashmap is slow to allocate in JDK7
+        ((Set<Cookie>)((DelegatingIterable<Cookie>)requestCookies()).getDelegate()).add(cookie);
+        return this;
+    }
+
+    public Cookie getRequestCookie(final String name) {
+        if (name == null) return null;
+        for (Cookie cookie : requestCookies()) {
+            if (name.equals(cookie.getName())) {
+                // TODO: QUESTION: Shouldn't we check instead of just name also
+                // TODO  requestPath (stored in this exchange request path) and
+                // TODO: domain (stored in Host HTTP header).
+                return cookie;
+            }
         }
-        responseCookies.put(cookie.getName(), cookie);
+        return null;
+    }
+
+    /**
+     * Returns unmodifiable enumeration of request cookies.
+     * @return A read-only enumeration of request cookies
+     */
+    public Iterable<Cookie> requestCookies() {
+        if (requestCookies == null) {
+            Set<Cookie> requestCookiesParam = new OverridableHashSet<>();
+            requestCookies = new DelegatingIterable<>(requestCookiesParam);
+            Cookies.parseRequestCookies(
+                    getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, 200),
+                    getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false),
+                    requestHeaders.get(Headers.COOKIE), requestCookiesParam);
+        }
+        return requestCookies;
+    }
+
+    /**
+     * Sets a response cookie
+     *
+     * @param cookie The cookie
+     */
+    public HttpServerExchange setResponseCookie(final Cookie cookie) {
+        if (cookie == null) return this;
+        if (getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION)) {
+            if (cookie.getValue() != null && !cookie.getValue().isEmpty()) {
+                Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
+            }
+            if (cookie.getPath() != null && !cookie.getPath().isEmpty()) {
+                Rfc6265CookieSupport.validatePath(cookie.getPath());
+            }
+            if (cookie.getDomain() != null && !cookie.getDomain().isEmpty()) {
+                Rfc6265CookieSupport.validateDomain(cookie.getDomain());
+            }
+        }
+        ((Set<Cookie>)((DelegatingIterable<Cookie>)responseCookies()).getDelegate()).add(cookie);
         return this;
     }
 
     /**
      * @return A mutable map of response cookies
+     * @deprecated use either {@link #responseCookies()} or {@link #setResponseCookie(Cookie)} methods instead
      */
+    @Deprecated
     public Map<String, Cookie> getResponseCookies() {
-        if (responseCookies == null) {
-            responseCookies = new TreeMap<>();
+        if (deprecatedResponseCookies == null) {
+            deprecatedResponseCookies = new MapDelegatingToSet((Set<Cookie>)((DelegatingIterable<Cookie>)responseCookies()).getDelegate());
         }
-        return responseCookies;
+        return deprecatedResponseCookies;
     }
 
     /**
-     * For internal use only
-     *
-     * @return The response cookies, or null if they have not been set yet
+     * Returns unmodifiable enumeration of response cookies.
+     * @return A read-only enumeration of response cookies
      */
-    Map<String, Cookie> getResponseCookiesInternal() {
+    public Iterable<Cookie> responseCookies() {
+        if (responseCookies == null) {
+            responseCookies = new DelegatingIterable<>(new OverridableHashSet<>());
+        }
         return responseCookies;
     }
 
