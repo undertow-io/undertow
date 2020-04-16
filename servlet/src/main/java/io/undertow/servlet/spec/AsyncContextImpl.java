@@ -145,6 +145,10 @@ public class AsyncContextImpl implements AsyncContext {
                 servletResponse instanceof HttpServletResponseImpl;
     }
 
+    public boolean isInitialRequestDone() {
+        return initialRequestDone;
+    }
+
     @Override
     public void dispatch() {
         if (dispatched) {
