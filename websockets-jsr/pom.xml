@@ -60,12 +60,6 @@
             <artifactId>jboss-logging-processor</artifactId>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.core</artifactId>
-            <optional>true</optional>
-            <scope>provided</scope>
-        </dependency>
 
         <!-- Test dependencies -->
 
@@ -135,31 +129,6 @@
 
         <plugins>
             <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>generate-manifest</id>
-                        <goals>
-                            <goal>manifest</goal>
-                        </goals>
-                        <configuration>
-                            <instructions>
-                                <Export-Package>
-                                    io.undertow.websockets.jsr.*;version=${project.version};-noimport:=true
-                                </Export-Package>
-                                <Import-Package>
-                                    !sun.*, *
-                                </Import-Package>
-                                <Bundle-Activator>
-                                    io.undertow.websockets.jsr.osgi.Activator
-                                </Bundle-Activator>
-                            </instructions>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
@@ -178,15 +147,6 @@
                         <org.wildfly.openssl.path>${org.wildfly.openssl.path}</org.wildfly.openssl.path>
                     </systemPropertyVariables>
                     <argLine>${surefire.system.args} ${jacoco.agent.argLine}</argLine>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
-                    </archive>
                 </configuration>
             </plugin>
         </plugins>
