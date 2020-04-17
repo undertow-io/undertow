@@ -155,7 +155,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     // mutable state
 
     private int state = 200;
-    private HttpString requestMethod;
+    private HttpString requestMethod = HttpString.EMPTY;
     private String requestScheme;
 
     /**
