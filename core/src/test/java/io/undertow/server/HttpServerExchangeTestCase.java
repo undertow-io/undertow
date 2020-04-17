@@ -65,11 +65,11 @@ public class HttpServerExchangeTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somepath");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("localhost:" + protocol + ":GET:" + port + ":/somepath:/somepath:", HttpClientUtils.readResponse(result));
+            Assert.assertEquals(DefaultServer.getHostAddress() + ":" + protocol + ":GET:" + port + ":/somepath:/somepath:", HttpClientUtils.readResponse(result));
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somepath?a=b");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("localhost:" + protocol + ":GET:" + port + ":/somepath:/somepath:a=b", HttpClientUtils.readResponse(result));
+            Assert.assertEquals(DefaultServer.getHostAddress() + ":" + protocol + ":GET:" + port + ":/somepath:/somepath:a=b", HttpClientUtils.readResponse(result));
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somepath?a=b");
             get.addHeader("Host", "[::1]:8080");
             result = client.execute(get);
