@@ -60,7 +60,7 @@
             versions, add the artifactId or other qualifier to the property name.
             For example: <version.org.jboss.as.console>
          -->
-        <version.com.h2database>1.4.197</version.com.h2database>
+        <version.com.h2database>1.4.200</version.com.h2database>
         <version.easymock>3.6</version.easymock>
         <version.junit>4.12</version.junit>
         <version.netty>4.1.34.Final</version.netty>
