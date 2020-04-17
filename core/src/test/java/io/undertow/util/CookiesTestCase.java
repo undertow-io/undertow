@@ -362,7 +362,13 @@ public class CookiesTestCase {
 
     @Test
     public void testSameSiteCookie() {
-        Cookie cookie = Cookies.parseSetCookieHeader("CUSTOMER=WILE_E_COYOTE; path=/; SameSite=None");
+        Cookie cookie = Cookies.parseSetCookieHeader("CUSTOMER=WILE_E_COYOTE; path=/");
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+        Assert.assertEquals("/", cookie.getPath());
+        Assert.assertNull(cookie.getSameSiteMode());
+
+        cookie = Cookies.parseSetCookieHeader("CUSTOMER=WILE_E_COYOTE; path=/; SameSite=None");
         Assert.assertEquals("CUSTOMER", cookie.getName());
         Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
         Assert.assertEquals("/", cookie.getPath());
