@@ -52,7 +52,6 @@ import org.xnio.conduits.StreamSinkConduit;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Supplier;
 
 import javax.net.ssl.SSLSession;
@@ -82,17 +81,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
     private final int maxParameters;
     private final boolean recordRequestStartTime;
 
-
-
     private final ConnectorStatisticsImpl connectorStatistics;
-
-    private static final AtomicIntegerFieldUpdater<Http2ReceiveListener> concurrentRequestsUpdater = AtomicIntegerFieldUpdater.newUpdater(Http2ReceiveListener.class, "concurrentRequests");
-
-    /**
-     * Field that is used to track concurrent requests. Only used if the max concurrent requests option is set
-     */
-    private volatile int concurrentRequests;
-
 
     public Http2ReceiveListener(HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize, ConnectorStatisticsImpl connectorStatistics) {
         this.rootHandler = rootHandler;
