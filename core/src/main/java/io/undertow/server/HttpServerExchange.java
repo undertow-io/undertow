@@ -116,6 +116,12 @@ public final class HttpServerExchange extends AbstractAttachable {
     public static final AttachmentKey<Map<String, String>> REQUEST_ATTRIBUTES = AttachmentKey.create(Map.class);
 
     /**
+     * Attachment key that can be used to hold a remotely authenticated user
+     */
+    public static final AttachmentKey<String> REMOTE_USER = AttachmentKey.create(String.class);
+
+
+    /**
      * Attachment key that can be used as a flag of secure attribute
      */
     public static final AttachmentKey<Boolean> SECURE_REQUEST = AttachmentKey.create(Boolean.class);
