@@ -74,8 +74,9 @@ public class SameSiteCookieHandler implements HttpHandler {
             exchange.addResponseCommitListener(new ResponseCommitListener() {
                 @Override
                 public void beforeCommit(HttpServerExchange exchange) {
-                    // Check user-agents and skip sending "SameSite=None" for incompatible user-agents
-                    if (enableClientChecker && !SameSiteNoneIncompatibleClientChecker.shouldSendSameSiteNone(exchange.getRequestHeaders().getFirst(Headers.USER_AGENT))) {
+                    // If user-agent is available check it and skip sending "SameSite=None" for incompatible user-agents
+                    String userAgent = exchange.getRequestHeaders().getFirst(Headers.USER_AGENT);
+                    if (enableClientChecker && userAgent != null && !SameSiteNoneIncompatibleClientChecker.shouldSendSameSiteNone(userAgent)) {
                         return;
                     }
                     for (Map.Entry<String, Cookie> cookie : exchange.getResponseCookies().entrySet()) {
