@@ -19,7 +19,6 @@
 package io.undertow.server.handlers;
 
 import java.io.IOException;
-import java.security.GeneralSecurityException;
 
 import io.undertow.util.Headers;
 import org.apache.http.Header;
@@ -43,10 +42,10 @@ import io.undertow.util.StatusCodes;
 public class SameSiteCookieHandlerTestCase {
 
     @Test
-    public void testStrict() throws IOException, GeneralSecurityException {
+    public void testStrict() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "Strict", "foo"));
@@ -68,10 +67,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testLax() throws IOException, GeneralSecurityException {
+    public void testLax() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "Lax", "foo"));
@@ -93,10 +92,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testNone() throws IOException, GeneralSecurityException {
+    public void testNone() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "None", "foo"));
@@ -118,10 +117,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testInvalidMode() throws IOException, GeneralSecurityException {
+    public void testInvalidMode() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "invalidmode", "foo"));
@@ -143,10 +142,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testRegexPattern() throws IOException, GeneralSecurityException {
+    public void testRegexPattern() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "Lax", "fo.*"));
@@ -169,10 +168,10 @@ public class SameSiteCookieHandlerTestCase {
 
 
     @Test
-    public void testCaseInsensitivePattern() throws IOException, GeneralSecurityException {
+    public void testCaseInsensitivePattern() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "Lax", "FOO", false));
@@ -194,10 +193,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testPatternUnmatched() throws IOException, GeneralSecurityException {
+    public void testPatternUnmatched() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "Lax", "FO.*"));
@@ -219,10 +218,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testAllCookies() throws IOException, GeneralSecurityException {
+    public void testAllCookies() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
                 exchange.getResponseCookies().put("baz", new CookieImpl("baz", "qux"));
                 exchange.getResponseCookies().put("test", new CookieImpl("test", "test"));
@@ -257,10 +256,10 @@ public class SameSiteCookieHandlerTestCase {
 
 
     @Test
-    public void testMultipleCookiesMatched() throws IOException, GeneralSecurityException {
+    public void testMultipleCookiesMatched() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
                 exchange.getResponseCookies().put("baz", new CookieImpl("baz", "qux"));
                 exchange.getResponseCookies().put("test", new CookieImpl("test", "test"));
@@ -294,10 +293,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testNoneIncompatibleUA() throws IOException, GeneralSecurityException {
+    public void testNoneIncompatibleUA() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "None", "foo"));
@@ -321,10 +320,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testNoneUACheckerDisabled() throws IOException, GeneralSecurityException {
+    public void testNoneUACheckerDisabled() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "None", "foo", true, false, true));
@@ -410,10 +409,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testNoneWithoutSecure() throws IOException, GeneralSecurityException {
+    public void testNoneWithoutSecure() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "None", "foo", true, true, false));
