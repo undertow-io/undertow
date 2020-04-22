@@ -21,9 +21,13 @@ package io.undertow.server.handlers;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 
+import io.undertow.util.Headers;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.params.CoreProtocolPNames;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -332,6 +336,68 @@ public class SameSiteCookieHandlerTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
             // Chrome version whic is known to be incompatible with the `SameSite=None` attribute
             get.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.62 Safari/537.36");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Header header = result.getFirstHeader("set-cookie");
+            Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
+            FileUtils.readFile(result.getEntity().getContent());
+        } finally {
+            client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
+        }
+    }
+
+    @Test
+    public void testNoneUACheckerEnabledAlthoughUAHeaderEmpty() throws IOException {
+        DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) {
+                exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
+            }
+        }, "None", "foo"));
+        DefaultServer.startSSLServer();
+
+        TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(DefaultServer.getClientSSLContext());
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+            // Use empty User-Agent header
+            get.setHeader(Headers.USER_AGENT.toString(), "");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Header header = result.getFirstHeader("set-cookie");
+            Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
+            FileUtils.readFile(result.getEntity().getContent());
+        } finally {
+            client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
+        }
+    }
+
+    @Test
+    public void testNoneUACheckerEnabledAlthoughUAHeaderNotSet() throws IOException {
+        DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) {
+                exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
+            }
+        }, "None", "foo"));
+        DefaultServer.startSSLServer();
+
+        TestHttpClient client = new TestHttpClient() {
+            // Here we need to get client instance that does not set ANY User-Agent header by default.
+            @Override
+            protected HttpParams createHttpParams() {
+                HttpParams params = super.createHttpParams();
+                params.removeParameter(CoreProtocolPNames.USER_AGENT);
+                HttpConnectionParams.setSoTimeout(params, 30000);
+                return params;
+            }
+        };
+        client.setSSLContext(DefaultServer.getClientSSLContext());
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+            // Don't set any User-Agent header
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header header = result.getFirstHeader("set-cookie");
