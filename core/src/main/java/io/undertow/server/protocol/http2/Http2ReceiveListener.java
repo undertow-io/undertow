@@ -18,6 +18,16 @@
 
 package io.undertow.server.protocol.http2;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.function.Supplier;
+
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
+
+import javax.net.ssl.SSLSession;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.HeadStreamSinkConduit;
@@ -33,6 +43,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
+import io.undertow.server.protocol.http.HttpRequestParser;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
@@ -47,14 +58,6 @@ import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.channels.Channels;
 import org.xnio.conduits.StreamSinkConduit;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.function.Supplier;
-
-import javax.net.ssl.SSLSession;
 
 import static io.undertow.protocols.http2.Http2Channel.AUTHORITY;
 import static io.undertow.protocols.http2.Http2Channel.METHOD;
@@ -151,6 +154,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
 
         final HttpServerExchange exchange = new HttpServerExchange(connection, dataChannel.getHeaders(), dataChannel.getResponseChannel().getHeaders(), maxEntitySize);
+
 
         dataChannel.setTrailersHandler(new Http2StreamSourceChannel.TrailersHandler() {
             @Override
@@ -324,6 +328,38 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
             }
         }
 
+        // verify content of request pseudo-headers. Each header should only have a single value.
+        if (headers.contains(PATH)) {
+            for (byte b: headers.get(PATH).getFirst().getBytes(ISO_8859_1)) {
+                if (!HttpRequestParser.isTargetCharacterAllowed((char)b)){
+                    return false;
+                }
+            }
+        }
+
+        if (headers.contains(SCHEME)) {
+            for (byte b: headers.get(SCHEME).getFirst().getBytes(ISO_8859_1)) {
+                if (!Connectors.isValidSchemeCharacter(b)){
+                    return false;
+                }
+            }
+        }
+
+        if (headers.contains(AUTHORITY)) {
+            for (byte b: headers.get(AUTHORITY).getFirst().getBytes(ISO_8859_1)) {
+                if (!HttpRequestParser.isTargetCharacterAllowed((char)b)){
+                    return false;
+                }
+            }
+        }
+
+        if (headers.contains(METHOD)) {
+            for (byte b: headers.get(METHOD).getFirst().getBytes(ISO_8859_1)) {
+                if (!Connectors.isValidTokenCharacter(b)){
+                    return false;
+                }
+            }
+        }
         return true;
     }
 }
