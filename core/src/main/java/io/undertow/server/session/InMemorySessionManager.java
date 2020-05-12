@@ -476,6 +476,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             if(existing != null) {
                 lastAccessed = existing;
             }
+            bumpTimeout();
         }
 
         @Override
@@ -501,7 +502,6 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             }
             UndertowLogger.SESSION_LOGGER.debugf("Setting max inactive interval for %s to %s", sessionId, interval);
             maxInactiveInterval = interval;
-            bumpTimeout();
         }
 
         @Override
@@ -517,7 +517,6 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             if (invalid) {
                 throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
-            bumpTimeout();
             return attributes.get(name);
         }
 
@@ -526,7 +525,6 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             if (invalid) {
                 throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
-            bumpTimeout();
             return attributes.keySet();
         }
 
@@ -544,7 +542,6 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             } else {
                sessionManager.sessionListeners.attributeUpdated(this, name, value, existing);
             }
-            bumpTimeout();
             UndertowLogger.SESSION_LOGGER.tracef("Setting session attribute %s to %s for session %s", name, value, sessionId);
             return existing;
         }
@@ -556,7 +553,6 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             }
             final Object existing = attributes.remove(name);
             sessionManager.sessionListeners.attributeRemoved(this, name, existing);
-            bumpTimeout();
             UndertowLogger.SESSION_LOGGER.tracef("Removing session attribute %s for session %s", name, sessionId);
             return existing;
         }
