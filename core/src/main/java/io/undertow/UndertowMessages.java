@@ -604,4 +604,7 @@ public interface UndertowMessages {
 
     @Message(id = 194, value = "Character decoding failed. Parameter with name [%s] has been ignored. Note: further occurrences of Parameter errors will be logged at DEBUG level.")
     String failedToDecodeParameterName(String parameter, @Cause Exception e);
+
+    @Message(id = 196, value = "Session with id %s already exists")
+    IllegalStateException sessionWithIdAlreadyExists(String sessionID);
 }
