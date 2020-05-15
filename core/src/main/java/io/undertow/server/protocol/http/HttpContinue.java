@@ -91,6 +91,9 @@ public class HttpContinue {
         return false;
     }
 
+    public static boolean isContinueResponseSent(HttpServerExchange exchange) {
+        return exchange.getAttachment(ALREADY_SENT) != null;
+    }
 
     /**
      * Sends a continuation using async IO, and calls back when it is complete.
