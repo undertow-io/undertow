@@ -306,7 +306,7 @@ public class PathResourceManager implements ResourceManager  {
         int rootCount = root.getNameCount();
         Path f = file;
         for (int i = nameCount - 1; i>=0; i--) {
-            if (Files.isSymbolicLink(f)) {
+            if (SecurityActions.isSymbolicLink(f)) {
                 return new SymlinkResult(i+1 > rootCount, f);
             }
             f = f.getParent();
