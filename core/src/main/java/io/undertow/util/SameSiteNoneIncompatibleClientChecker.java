@@ -65,17 +65,21 @@ public final class SameSiteNoneIncompatibleClientChecker {
 
     // browsers known to be incompatible.
     public static boolean isSameSiteNoneIncompatible(String useragent) {
+        if (useragent == null || useragent.isEmpty()) {
+            return false;
+        }
+
         return hasWebKitSameSiteBug(useragent) ||
             dropsUnrecognizedSameSiteCookies(useragent);
     }
 
-    static boolean hasWebKitSameSiteBug(String useragent) {
+    private static boolean hasWebKitSameSiteBug(String useragent) {
         return isIosVersion(12, useragent) ||
             (isMacosxVersion(10, 14, useragent) &&
              (isSafari(useragent) || isMacEmbeddedBrowser(useragent)));
     }
 
-    static boolean dropsUnrecognizedSameSiteCookies(String useragent) {
+    private static boolean dropsUnrecognizedSameSiteCookies(String useragent) {
         if (isUcBrowser(useragent)) {
             return !isUcBrowserVersionAtLeast(12, 13, 2, useragent);
         }
@@ -86,7 +90,7 @@ public final class SameSiteNoneIncompatibleClientChecker {
 
     // Regex parsing of User-Agent String. (See note above!)
 
-    static boolean isIosVersion(int major, String useragent) {
+    private static boolean isIosVersion(int major, String useragent) {
         Matcher m = IOS_PATTERN.matcher(useragent);
         if (m.find()) {
             // Extract digits from first capturing group.
@@ -95,7 +99,7 @@ public final class SameSiteNoneIncompatibleClientChecker {
         return false;
     }
 
-    static boolean isMacosxVersion(int major, int minor, String useragent) {
+    private static boolean isMacosxVersion(int major, int minor, String useragent) {
         Matcher m = MACOSX_PATTERN.matcher(useragent);
         if (m.find()) {
             // Extract digits from first and second capturing groups.
@@ -105,20 +109,20 @@ public final class SameSiteNoneIncompatibleClientChecker {
         return false;
     }
 
-    static boolean isSafari(String useragent) {
+    private static boolean isSafari(String useragent) {
         return SAFARI_PATTERN.matcher(useragent).find() &&
             !isChromiumBased(useragent);
     }
 
-    static boolean isMacEmbeddedBrowser(String useragent) {
+    private static boolean isMacEmbeddedBrowser(String useragent) {
         return MAC_EMBEDDED_BROWSER_PATTERN.matcher(useragent).find();
     }
 
-    static boolean isChromiumBased(String useragent) {
+    private static boolean isChromiumBased(String useragent) {
         return CHROMIUM_PATTERN.matcher(useragent).find();
     }
 
-    static boolean isChromiumVersionAtLeast(int major, String useragent) {
+    private static boolean isChromiumVersionAtLeast(int major, String useragent) {
         Matcher m = CHROMIUM_VERSION_PATTERN.matcher(useragent);
         if (m.find()) {
             // Extract digits from first capturing group.
@@ -132,7 +136,7 @@ public final class SameSiteNoneIncompatibleClientChecker {
         return useragent.contains("UCBrowser/");
     }
 
-    static boolean isUcBrowserVersionAtLeast(int major, int minor, int build, String useragent) {
+    private static boolean isUcBrowserVersionAtLeast(int major, int minor, int build, String useragent) {
         Matcher m = UC_BROWSER_VERSION_PATTERN.matcher(useragent);
         if (m.find()) {
             // Extract digits from three capturing groups.

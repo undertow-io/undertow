@@ -19,11 +19,14 @@
 package io.undertow.server.handlers;
 
 import java.io.IOException;
-import java.security.GeneralSecurityException;
 
+import io.undertow.util.Headers;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.params.CoreProtocolPNames;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -39,10 +42,10 @@ import io.undertow.util.StatusCodes;
 public class SameSiteCookieHandlerTestCase {
 
     @Test
-    public void testStrict() throws IOException, GeneralSecurityException {
+    public void testStrict() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "Strict", "foo"));
@@ -64,10 +67,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testLax() throws IOException, GeneralSecurityException {
+    public void testLax() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "Lax", "foo"));
@@ -89,10 +92,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testNone() throws IOException, GeneralSecurityException {
+    public void testNone() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "None", "foo"));
@@ -114,10 +117,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testInvalidMode() throws IOException, GeneralSecurityException {
+    public void testInvalidMode() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "invalidmode", "foo"));
@@ -139,10 +142,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testRegexPattern() throws IOException, GeneralSecurityException {
+    public void testRegexPattern() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "Lax", "fo.*"));
@@ -165,10 +168,10 @@ public class SameSiteCookieHandlerTestCase {
 
 
     @Test
-    public void testCaseInsensitivePattern() throws IOException, GeneralSecurityException {
+    public void testCaseInsensitivePattern() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "Lax", "FOO", false));
@@ -190,10 +193,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testPatternUnmatched() throws IOException, GeneralSecurityException {
+    public void testPatternUnmatched() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "Lax", "FO.*"));
@@ -215,10 +218,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testAllCookies() throws IOException, GeneralSecurityException {
+    public void testAllCookies() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
                 exchange.getResponseCookies().put("baz", new CookieImpl("baz", "qux"));
                 exchange.getResponseCookies().put("test", new CookieImpl("test", "test"));
@@ -253,10 +256,10 @@ public class SameSiteCookieHandlerTestCase {
 
 
     @Test
-    public void testMultipleCookiesMatched() throws IOException, GeneralSecurityException {
+    public void testMultipleCookiesMatched() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
                 exchange.getResponseCookies().put("baz", new CookieImpl("baz", "qux"));
                 exchange.getResponseCookies().put("test", new CookieImpl("test", "test"));
@@ -290,10 +293,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testNoneIncompatibleUA() throws IOException, GeneralSecurityException {
+    public void testNoneIncompatibleUA() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "None", "foo"));
@@ -317,10 +320,10 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testNoneUACheckerDisabled() throws IOException, GeneralSecurityException {
+    public void testNoneUACheckerDisabled() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "None", "foo", true, false, true));
@@ -344,10 +347,72 @@ public class SameSiteCookieHandlerTestCase {
     }
 
     @Test
-    public void testNoneWithoutSecure() throws IOException, GeneralSecurityException {
+    public void testNoneUACheckerEnabledAlthoughUAHeaderEmpty() throws IOException {
         DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            public void handleRequest(final HttpServerExchange exchange) {
+                exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
+            }
+        }, "None", "foo"));
+        DefaultServer.startSSLServer();
+
+        TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(DefaultServer.getClientSSLContext());
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+            // Use empty User-Agent header
+            get.setHeader(Headers.USER_AGENT.toString(), "");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Header header = result.getFirstHeader("set-cookie");
+            Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
+            FileUtils.readFile(result.getEntity().getContent());
+        } finally {
+            client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
+        }
+    }
+
+    @Test
+    public void testNoneUACheckerEnabledAlthoughUAHeaderNotSet() throws IOException {
+        DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) {
+                exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
+            }
+        }, "None", "foo"));
+        DefaultServer.startSSLServer();
+
+        TestHttpClient client = new TestHttpClient() {
+            // Here we need to get client instance that does not set ANY User-Agent header by default.
+            @Override
+            protected HttpParams createHttpParams() {
+                HttpParams params = super.createHttpParams();
+                params.removeParameter(CoreProtocolPNames.USER_AGENT);
+                HttpConnectionParams.setSoTimeout(params, 30000);
+                return params;
+            }
+        };
+        client.setSSLContext(DefaultServer.getClientSSLContext());
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+            // Don't set any User-Agent header
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Header header = result.getFirstHeader("set-cookie");
+            Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
+            FileUtils.readFile(result.getEntity().getContent());
+        } finally {
+            client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
+        }
+    }
+
+    @Test
+    public void testNoneWithoutSecure() throws IOException {
+        DefaultServer.setRootHandler(new SameSiteCookieHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) {
                 exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
             }
         }, "None", "foo", true, true, false));
