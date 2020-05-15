@@ -195,6 +195,9 @@ public class AsyncContextImpl implements AsyncContext {
                 Connectors.executeRootHandler(new HttpHandler() {
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                        ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+                        src.setServletRequest(servletRequest);
+                        src.setServletResponse(servletResponse);
                         servletDispatcher.dispatchToPath(exchange, pathInfo, DispatcherType.ASYNC);
                     }
                 }, exchange);
