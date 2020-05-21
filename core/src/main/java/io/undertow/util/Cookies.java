@@ -271,7 +271,11 @@ public class Cookies {
                             state = 4;
                             start = i + 1;
                         }
-                    } else if (!allowHttpSepartorsV0 && LegacyCookieSupport.isHttpSeparator(c)) {
+                    } else if (c != ':' && !allowHttpSepartorsV0 && LegacyCookieSupport.isHttpSeparator(c)) {
+                        // http separators are not allowed in V0 cookie value unless io.undertow.legacy.cookie.ALLOW_HTTP_SEPARATORS_IN_V0 is set to true.
+                        // However, "<hostcontroller-name>:<server-name>" (e.g. master:node1) is added as jvmRoute (instance-id) by default in WildFly domain mode.
+                        // Though ":" is http separator, we allow it by default. Because, when Undertow runs as a proxy server (mod_cluster),
+                        // we need to handle jvmRoute containing ":" in the request cookie value correctly to maintain the sticky session.
                         cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         state = 4;
                         start = i + 1;

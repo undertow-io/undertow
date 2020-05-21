@@ -262,6 +262,62 @@ public class CookiesTestCase {
     }
 
     @Test
+    public void testCookieContainsColonInJvmRoute() {
+        // "<hostcontroller-name>:<server-name>" (e.g. master:node1) is added as jvmRoute (instance-id) by default in WildFly domain mode.
+        // ":" is http separator, so it's not allowed in V0 cookie value.
+        // However, we need to allow it exceptionally by default. Because, when Undertow runs as a proxy server (like mod_cluster),
+        // we need to handle jvmRoute containing ":" in the request cookie value correctly to maintain the sticky session.
+
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(3, false, Arrays.asList("JSESSIONID=WCGWBPJ8DUmv0fvREqVQZb8E6bzW92iHnzysV_q_.master:node1; CUSTOMER=WILE_E COYOTE; SHIPPING=FEDEX" ), true, false);
+        Assert.assertEquals(3, cookies.size());
+        Cookie cookie = cookies.get("CUSTOMER");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WILE_E", cookie.getValue());
+        cookie = cookies.get("SHIPPING");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("FEDEX", cookie.getValue());
+        cookie = cookies.get("JSESSIONID");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WCGWBPJ8DUmv0fvREqVQZb8E6bzW92iHnzysV_q_.master:node1", cookie.getValue());
+
+        cookies = Cookies.parseRequestCookies(3, false, Arrays.asList("JSESSIONID=WCGWBPJ8DUmv0fvREqVQZb8E6bzW92iHnzysV_q_.master:node1; CUSTOMER=WILE_E COYOTE; SHIPPING=FEDEX" ), true, true);
+        Assert.assertEquals(3, cookies.size());
+        cookie = cookies.get("CUSTOMER");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WILE_E COYOTE", cookie.getValue());
+        cookie = cookies.get("SHIPPING");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("FEDEX", cookie.getValue());
+        cookie = cookies.get("JSESSIONID");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WCGWBPJ8DUmv0fvREqVQZb8E6bzW92iHnzysV_q_.master:node1", cookie.getValue());
+
+        cookies = Cookies.parseRequestCookies(3, false, Arrays.asList("JSESSIONID=WCGWBPJ8DUmv0fvREqVQZb8E6bzW92iHnzysV_q_.master:node1; CUSTOMER=WILE_E_COYOTE\"; SHIPPING=FEDEX" ), true, false);
+        Assert.assertEquals(3, cookies.size());
+        cookie = cookies.get("CUSTOMER");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+        cookie = cookies.get("SHIPPING");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("FEDEX", cookie.getValue());
+        cookie = cookies.get("JSESSIONID");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WCGWBPJ8DUmv0fvREqVQZb8E6bzW92iHnzysV_q_.master:node1", cookie.getValue());
+
+        cookies = Cookies.parseRequestCookies(3, false, Arrays.asList("JSESSIONID=WCGWBPJ8DUmv0fvREqVQZb8E6bzW92iHnzysV_q_.master:node1; CUSTOMER=WILE_E_COYOTE\"; SHIPPING=FEDEX" ), true, true);
+        Assert.assertEquals(3, cookies.size());
+        cookie = cookies.get("CUSTOMER");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WILE_E_COYOTE\"", cookie.getValue());
+        cookie = cookies.get("SHIPPING");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("FEDEX", cookie.getValue());
+        cookie = cookies.get("JSESSIONID");
+        Assert.assertNotNull(cookie);
+        Assert.assertEquals("WCGWBPJ8DUmv0fvREqVQZb8E6bzW92iHnzysV_q_.master:node1", cookie.getValue());
+    }
+
+    @Test
     public void testQuotedEscapedStringInRequestCookie() {
         Map<String, Cookie> cookies = Cookies.parseRequestCookies(3, false, Arrays.asList(
                     "Customer=\"WILE_\\\"E_\\\"COYOTE\"; $Version=\"1\"; $Path=\"/acme\";"
