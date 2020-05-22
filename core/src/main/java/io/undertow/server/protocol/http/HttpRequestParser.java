@@ -490,7 +490,11 @@ public abstract class HttpRequestParser {
         String thePath = decode(state.canonicalPath.toString(), urlDecodeRequired, state, allowEncodedSlash, false);
         exchange.setRequestPath(thePath);
         exchange.setRelativePath(thePath);
-        exchange.setRequestURI(path, true);
+        exchange.setRequestURI(path, containsHost(path));
+    }
+
+    private boolean containsHost( String path){
+        return path.startsWith("http://") || path.startsWith("https://");
     }
 
 

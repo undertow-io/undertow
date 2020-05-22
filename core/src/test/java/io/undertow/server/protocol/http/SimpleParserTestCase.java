@@ -189,6 +189,22 @@ public class SimpleParserTestCase {
     }
 
     @Test
+    public void testServletURLWithPathParamEndedBySlash() throws BadRequestException {
+        byte[] in = "GET http://localhost:7777/servletContext/aaaa/b;param=1/ HTTP/1.1\r\n\r\n".getBytes();
+        ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("http://localhost:7777/servletContext/aaaa/b;param=1/", result.getRequestURI());
+        Assert.assertEquals("/servletContext/aaaa/b/", result.getRequestPath());
+        Assert.assertEquals(1, result.getPathParameters().size());
+        Assert.assertFalse(result.isHostIncludedInRequestURI());
+        Assert.assertEquals("param", result.getPathParameters().keySet().toArray()[0]);
+        Assert.assertEquals("1", result.getPathParameters().get("param").getFirst());
+        Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+    }
+
+    @Test
     public void testServletPathWithPathParams() throws BadRequestException {
         byte[] in = "GET /servletContext/aa/b;foo=bar;mysessioncookie=mSwrYUX8_e3ukAylNMkg3oMRglB4-YjxqeWqXQsI HTTP/1.1\r\n\r\n".getBytes();
         ParseState context = new ParseState(10);
