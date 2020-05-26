@@ -190,12 +190,12 @@ public class SimpleParserTestCase {
 
     @Test
     public void testServletURLWithPathParamEndedBySlash() throws BadRequestException {
-        byte[] in = "GET http://localhost:7777/servletContext/aaaa/b;param=1/ HTTP/1.1\r\n\r\n".getBytes();
+        byte[] in = "GET /servletContext/aaaa/b;param=1/ HTTP/1.1\r\n\r\n".getBytes();
         ParseState context = new ParseState(10);
         HttpServerExchange result = new HttpServerExchange(null);
         HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
-        Assert.assertEquals("http://localhost:7777/servletContext/aaaa/b;param=1/", result.getRequestURI());
+        Assert.assertEquals("/servletContext/aaaa/b;param=1/", result.getRequestURI());
         Assert.assertEquals("/servletContext/aaaa/b/", result.getRequestPath());
         Assert.assertEquals(1, result.getPathParameters().size());
         Assert.assertFalse(result.isHostIncludedInRequestURI());
