@@ -221,6 +221,14 @@ public class RangeRequestTestCase {
             Assert.assertEquals("bytes */10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
+            get.addHeader(Headers.RANGE_STRING, "bytes=10-");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE, result.getStatusLine().getStatusCode());
+            response = EntityUtils.toString(result.getEntity());
+            Assert.assertEquals("", response);
+            Assert.assertEquals("bytes */10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader(Headers.RANGE_STRING, "bytes=2-3");
             get.addHeader(Headers.IF_RANGE_STRING, DateUtils.toDateString(new Date(System.currentTimeMillis() + 1000)));
             result = client.execute(get);
