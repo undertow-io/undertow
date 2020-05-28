@@ -133,13 +133,13 @@ public class ByteRangeTestCase {
 
         Assert.assertEquals(0, byteRange.getResponseResult(0, null,
                 new Date(1559820153000L), "foo").getStart());
-        Assert.assertEquals(-1, byteRange.getResponseResult(0, null,
+        Assert.assertEquals(0, byteRange.getResponseResult(0, null,
                 new Date(1559820153000L), "foo").getEnd());
         Assert.assertEquals(0, byteRange.getResponseResult(0, null,
                 new Date(1559820153000L), "foo").getContentLength());
-        Assert.assertEquals("bytes 0--1/0", byteRange.getResponseResult(0, null,
+        Assert.assertEquals("bytes */0", byteRange.getResponseResult(0, null,
                 new Date(1559820153000L), "foo").getContentRange());
-        Assert.assertEquals(206, byteRange.getResponseResult(0, null,
+        Assert.assertEquals(416, byteRange.getResponseResult(0, null,
                 new Date(1559820153000L), "foo").getStatusCode());
     }
 
