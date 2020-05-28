@@ -43,7 +43,8 @@ public class BlockingSenderImpl implements Sender {
 
     private final HttpServerExchange exchange;
     private final OutputStream outputStream;
-    private boolean inCall;
+    private volatile Thread inCall;
+    private volatile Thread sendThread;
     private ByteBuffer[] next;
     private FileChannel pendingFile;
     private IoCallback queuedCallback;
@@ -55,7 +56,8 @@ public class BlockingSenderImpl implements Sender {
 
     @Override
     public void send(final ByteBuffer buffer, final IoCallback callback) {
-        if (inCall) {
+        sendThread = Thread.currentThread();
+        if (inCall == Thread.currentThread()) {
             queue(new ByteBuffer[]{buffer}, callback);
             return;
         } else {
@@ -78,7 +80,8 @@ public class BlockingSenderImpl implements Sender {
 
     @Override
     public void send(final ByteBuffer[] buffer, final IoCallback callback) {
-        if (inCall) {
+        sendThread = Thread.currentThread();
+        if (inCall == Thread.currentThread()) {
             queue(buffer, callback);
             return;
         } else {
@@ -112,7 +115,8 @@ public class BlockingSenderImpl implements Sender {
     @Override
     public void send(final String data, final IoCallback callback) {
         byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
-        if (inCall) {
+        sendThread = Thread.currentThread();
+        if (inCall == Thread.currentThread()) {
             queue(new ByteBuffer[]{ByteBuffer.wrap(bytes)}, callback);
             return;
         } else {
@@ -138,7 +142,8 @@ public class BlockingSenderImpl implements Sender {
     @Override
     public void send(final String data, final Charset charset, final IoCallback callback) {
         byte[] bytes = data.getBytes(charset);
-        if (inCall) {
+        sendThread = Thread.currentThread();
+        if (inCall == Thread.currentThread()) {
             queue(new ByteBuffer[]{ByteBuffer.wrap(bytes)}, callback);
             return;
         }else {
@@ -173,7 +178,8 @@ public class BlockingSenderImpl implements Sender {
 
     @Override
     public void transferFrom(FileChannel source, IoCallback callback) {
-        if (inCall) {
+        sendThread = Thread.currentThread();
+        if (inCall == Thread.currentThread()) {
             queue(source, callback);
             return;
         }
@@ -271,11 +277,15 @@ public class BlockingSenderImpl implements Sender {
 
 
     private void invokeOnComplete(final IoCallback callback) {
-        inCall = true;
+        sendThread = null;
+        inCall = Thread.currentThread();
         try {
             callback.onComplete(exchange, this);
         } finally {
-            inCall = false;
+            inCall = null;
+        }
+        if (Thread.currentThread() != sendThread) {
+            return;
         }
         while (next != null || pendingFile != null) {
             ByteBuffer[] next = this.next;
@@ -292,11 +302,15 @@ public class BlockingSenderImpl implements Sender {
             } else if (file != null) {
                 performTransfer(file, queuedCallback);
             }
-            inCall = true;
+            sendThread = null;
+            inCall = Thread.currentThread();
             try {
                 queuedCallback.onComplete(exchange, this);
             } finally {
-                inCall = false;
+                inCall = null;
+            }
+            if (Thread.currentThread() != sendThread) {
+                return;
             }
         }
     }

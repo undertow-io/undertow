@@ -25,17 +25,18 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.Headers;
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSinkChannel;
+
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
 
 /**
  * @author Stuart Douglas
@@ -44,11 +45,28 @@ public class AsyncSenderImpl implements Sender {
 
     private StreamSinkChannel channel;
     private final HttpServerExchange exchange;
-    private ByteBuffer[] buffer;
     private PooledByteBuffer[] pooledBuffers = null;
     private FileChannel fileChannel;
     private IoCallback callback;
-    private boolean inCallback;
+
+    private ByteBuffer[] buffer;
+
+    /**
+     * This object is not intended to be used in a multi threaded manner
+     * however as we run code after the callback it is possible that another
+     * thread may call send while we are still running
+     * we use the 'writeThread' state guard to protect against this happening.
+     *
+     * During a send() call the 'writeThread' object is set first, followed by the
+     * buffer. The inCallback variable is used to determine if the current thread
+     * is in the process of running a callback.
+     *
+     * After the callback has been invoked the thread that initiated the callback
+     * will only continue to process if it is the writeThread.
+     *
+     */
+    private volatile Thread writeThread;
+    private volatile Thread inCallback;
 
     private ChannelListener<StreamSinkChannel> writeListener;
 
@@ -116,6 +134,7 @@ public class AsyncSenderImpl implements Sender {
 
     @Override
     public void send(final ByteBuffer buffer, final IoCallback callback) {
+        writeThread = Thread.currentThread();
         if (callback == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
         }
@@ -147,7 +166,7 @@ public class AsyncSenderImpl implements Sender {
             }
         }
         this.callback = callback;
-        if (inCallback) {
+        if (inCallback == Thread.currentThread()) {
             this.buffer = new ByteBuffer[]{buffer};
             return;
         }
@@ -180,6 +199,7 @@ public class AsyncSenderImpl implements Sender {
 
     @Override
     public void send(final ByteBuffer[] buffer, final IoCallback callback) {
+        writeThread = Thread.currentThread();
         if (callback == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
         }
@@ -195,7 +215,7 @@ public class AsyncSenderImpl implements Sender {
             throw UndertowMessages.MESSAGES.dataAlreadyQueued();
         }
         this.callback = callback;
-        if (inCallback) {
+        if (inCallback == Thread.currentThread()) {
             this.buffer = buffer;
             return;
         }
@@ -249,6 +269,7 @@ public class AsyncSenderImpl implements Sender {
 
     @Override
     public void transferFrom(FileChannel source, IoCallback callback) {
+        writeThread = Thread.currentThread();
         if (callback == null) {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("callback");
         }
@@ -266,7 +287,7 @@ public class AsyncSenderImpl implements Sender {
 
         this.callback = callback;
         this.fileChannel = source;
-        if (inCallback) {
+        if (inCallback == Thread.currentThread()) {
             return;
         }
         if(transferTask == null) {
@@ -297,7 +318,7 @@ public class AsyncSenderImpl implements Sender {
 
     @Override
     public void send(final String data, final Charset charset, final IoCallback callback) {
-
+        writeThread = Thread.currentThread();
         if(!exchange.getConnection().isOpen()) {
             invokeOnException(callback, new ClosedChannelException());
             return;
@@ -408,11 +429,15 @@ public class AsyncSenderImpl implements Sender {
             this.buffer = null;
             this.fileChannel = null;
             this.callback = null;
-            inCallback = true;
+            writeThread = null;
+            inCallback = Thread.currentThread();
             try {
                 callback.onComplete(exchange, this);
             } finally {
-                inCallback = false;
+                inCallback = null;
+            }
+            if (Thread.currentThread() != writeThread) {
+                return;
             }
 
             StreamSinkChannel channel = this.channel;
