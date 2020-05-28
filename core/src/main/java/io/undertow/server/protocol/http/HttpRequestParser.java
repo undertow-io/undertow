@@ -391,25 +391,9 @@ public abstract class HttpRequestParser {
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
-                    if(parseState == SECOND_SLASH) {
-                        exchange.setRequestPath("/");
-                        exchange.setRelativePath("/");
-                        exchange.setRequestURI(path);
-                    } else if (parseState < HOST_DONE && state.canonicalPath.length() == 0) {
-                        String decodedPath = decode(path, urlDecodeRequired, state, allowEncodedSlash, false);
-                        exchange.setRequestPath(decodedPath);
-                        exchange.setRelativePath(decodedPath);
-                        exchange.setRequestURI(path);
-                    } else {
-                        handleFullUrl(state, exchange, canonicalPathStart, urlDecodeRequired, path);
-                    }
+                    parsePathComplete(state, exchange, canonicalPathStart, parseState, urlDecodeRequired, path);
                     exchange.setQueryString("");
                     state.state = ParseState.VERSION;
-                    state.stringBuilder.setLength(0);
-                    state.canonicalPath.setLength(0);
-                    state.parseState = 0;
-                    state.pos = 0;
-                    state.urlDecodeRequired = false;
                     return;
                 }
             } else if (next == '\r' || next == '\n') {
@@ -462,35 +446,39 @@ public abstract class HttpRequestParser {
         state.urlDecodeRequired = urlDecodeRequired;
     }
 
-    private void beginQueryParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange, StringBuilder stringBuilder, int parseState, int canonicalPathStart, boolean urlDecodeRequired) throws BadRequestException {
-        final String path = stringBuilder.toString();
+    private void parsePathComplete(ParseState state, HttpServerExchange exchange, int canonicalPathStart, int parseState, boolean urlDecodeRequired, String path) {
         if (parseState == SECOND_SLASH) {
             exchange.setRequestPath("/");
             exchange.setRelativePath("/");
-            exchange.setRequestURI(path);
-        } else if (parseState < HOST_DONE) {
+            exchange.setRequestURI(path, true);
+        } else if (parseState < HOST_DONE && state.canonicalPath.length() == 0) {
             String decodedPath = decode(path, urlDecodeRequired, state, allowEncodedSlash, false);
             exchange.setRequestPath(decodedPath);
             exchange.setRelativePath(decodedPath);
             exchange.setRequestURI(path, false);
         } else {
-            handleFullUrl(state, exchange, canonicalPathStart, urlDecodeRequired, path);
+            handleFullUrl(state, exchange, canonicalPathStart, urlDecodeRequired, path, parseState);
         }
-        state.state = ParseState.QUERY_PARAMETERS;
         state.stringBuilder.setLength(0);
         state.canonicalPath.setLength(0);
         state.parseState = 0;
         state.pos = 0;
         state.urlDecodeRequired = false;
+    }
+
+    private void beginQueryParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange, StringBuilder stringBuilder, int parseState, int canonicalPathStart, boolean urlDecodeRequired) throws BadRequestException {
+        final String path = stringBuilder.toString();
+        parsePathComplete(state, exchange, canonicalPathStart, parseState, urlDecodeRequired, path);
+        state.state = ParseState.QUERY_PARAMETERS;
         handleQueryParameters(buffer, state, exchange);
     }
 
-    private void handleFullUrl(ParseState state, HttpServerExchange exchange, int canonicalPathStart, boolean urlDecodeRequired, String path) {
+    private void handleFullUrl(ParseState state, HttpServerExchange exchange, int canonicalPathStart, boolean urlDecodeRequired, String path, int parseState) {
         state.canonicalPath.append(path.substring(canonicalPathStart));
         String thePath = decode(state.canonicalPath.toString(), urlDecodeRequired, state, allowEncodedSlash, false);
         exchange.setRequestPath(thePath);
         exchange.setRelativePath(thePath);
-        exchange.setRequestURI(path, true);
+        exchange.setRequestURI(path, parseState == HOST_DONE);
     }
 
 
@@ -613,22 +601,9 @@ public abstract class HttpRequestParser {
             if (next == ' ' || next == '\t' || next == '?') {
                 handleParsedParam(param, stringBuilder.substring(pos), exchange, urlDecodeRequired, state);
                 final String path = stringBuilder.toString();
-                if(state.parseState == SECOND_SLASH) {
-                    exchange.setRequestPath("/");
-                    exchange.setRelativePath("/");
-                    exchange.setRequestURI(path);
-                } else {
-                    String decodedPath = decode(state.canonicalPath.toString(), urlDecodeRequired, state, allowEncodedSlash, false);
-                    exchange.setRequestPath(decodedPath);
-                    exchange.setRelativePath(decodedPath);
-                    exchange.setRequestURI(path);
-                }
+                // the canonicalPathStart should be the current length to not add anything to it
+                parsePathComplete(state, exchange, path.length(), state.parseState, urlDecodeRequired, path);
                 state.state = ParseState.VERSION;
-                state.stringBuilder.setLength(0);
-                state.canonicalPath.setLength(0);
-                state.parseState = 0;
-                state.pos = 0;
-                state.urlDecodeRequired = false;
                 state.nextQueryParam = null;
                 if (next == '?') {
                     state.state = ParseState.QUERY_PARAMETERS;
