@@ -614,6 +614,7 @@ public class AsyncContextImpl implements AsyncContext {
             response.responseDone();
             try {
                 servletRequestContext.getOriginalRequest().closeAndDrainRequest();
+                servletRequestContext.getOriginalRequest().clearAttributes();
             } catch (IOException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             } catch (Throwable t) {
