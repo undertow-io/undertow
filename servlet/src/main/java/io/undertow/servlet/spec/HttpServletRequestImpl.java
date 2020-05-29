@@ -1188,6 +1188,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         return "HttpServletRequestImpl [ " + getMethod() + ' ' + getRequestURI() + " ]";
     }
 
+    public void clearAttributes() {
+        if(attributes != null) {
+            this.attributes.clear();
+        }
+    }
+
     @Override
     public PushBuilder newPushBuilder() {
         if(exchange.getConnection().isPushSupported()) {
