@@ -157,7 +157,7 @@ public class ByteRange {
         } else if(end == -1) {
             //prefix range
             long toWrite = resourceContentLength - start;
-            if(toWrite >= 0) {
+            if (toWrite > 0) {
                 rangeLength = toWrite;
             } else {
                 //ignore the range request
