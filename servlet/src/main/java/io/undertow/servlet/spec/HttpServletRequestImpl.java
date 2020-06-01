@@ -682,13 +682,17 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     public void closeAndDrainRequest() throws IOException {
-        if(reader != null) {
-            reader.close();
+        try {
+            if (reader != null) {
+                reader.close();
+            }
+            if (servletInputStream == null) {
+                servletInputStream = new ServletInputStreamImpl(this);
+            }
+            servletInputStream.close();
+        } finally {
+            clearAttributes();
         }
-        if(servletInputStream == null) {
-            servletInputStream = new ServletInputStreamImpl(this);
-        }
-        servletInputStream.close();
     }
 
     /**
@@ -696,11 +700,15 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
      *
      */
     public void freeResources() throws IOException {
-        if(reader != null) {
-            reader.close();
-        }
-        if(servletInputStream != null) {
-            servletInputStream.close();
+        try {
+            if(reader != null) {
+                reader.close();
+            }
+            if(servletInputStream != null) {
+                servletInputStream.close();
+            }
+        } finally {
+            clearAttributes();
         }
     }
 
