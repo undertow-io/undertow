@@ -229,6 +229,8 @@
                     <configuration>
                         <groups>${test.categories}</groups>
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                        <forkCount>1</forkCount>
+                        <reuseForks>false</reuseForks>
                     </configuration>
                 </plugin>
                 <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
