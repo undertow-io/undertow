@@ -108,6 +108,22 @@ public class SimpleParserTestCase {
         Assert.assertEquals(1, result.getPathParameters().size());
         Assert.assertEquals("p1", result.getPathParameters().keySet().toArray()[0]);
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertFalse(result.isHostIncludedInRequestURI());
+    }
+
+    @Test
+    public void testMatrixParamFlagEndingWithNormalPath() throws BadRequestException {
+        byte[] in = "GET /somepath;p1/more HTTP/1.1\r\n\r\n".getBytes();
+        ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("/somepath;p1/more", result.getRequestURI());
+        Assert.assertEquals("/somepath/more", result.getRequestPath());
+        Assert.assertEquals(1, result.getPathParameters().size());
+        Assert.assertEquals("p1", result.getPathParameters().keySet().toArray()[0]);
+        Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertFalse(result.isHostIncludedInRequestURI());
     }
 
     @Test
@@ -124,6 +140,7 @@ public class SimpleParserTestCase {
         Assert.assertEquals("v1", result.getPathParameters().get("p1").getFirst());
         Assert.assertEquals("v2", result.getPathParameters().get("p1").getLast());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertFalse(result.isHostIncludedInRequestURI());
     }
 
     @Test
@@ -140,6 +157,7 @@ public class SimpleParserTestCase {
         Assert.assertEquals("v1", result.getPathParameters().get("p1").getFirst());
         Assert.assertEquals("v2", result.getPathParameters().get("p1").getLast());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertFalse(result.isHostIncludedInRequestURI());
     }
 
     @Test
@@ -155,6 +173,23 @@ public class SimpleParserTestCase {
         Assert.assertEquals("param", result.getPathParameters().keySet().toArray()[0]);
         Assert.assertEquals("1", result.getPathParameters().get("param").getFirst());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertTrue(result.isHostIncludedInRequestURI());
+    }
+
+    @Test
+    public void testServletURLWithPathParamEndingWithNormalPath() throws BadRequestException {
+        byte[] in = "GET http://localhost:7777/servletContext/aaaa/b;param=1/cccc HTTP/1.1\r\n\r\n".getBytes();
+        ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("http://localhost:7777/servletContext/aaaa/b;param=1/cccc", result.getRequestURI());
+        Assert.assertEquals("/servletContext/aaaa/b/cccc", result.getRequestPath());
+        Assert.assertEquals(1, result.getPathParameters().size());
+        Assert.assertEquals("param", result.getPathParameters().keySet().toArray()[0]);
+        Assert.assertEquals("1", result.getPathParameters().get("param").getFirst());
+        Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertTrue(result.isHostIncludedInRequestURI());
     }
 
     @Test
@@ -171,6 +206,7 @@ public class SimpleParserTestCase {
         Assert.assertEquals("bar", result.getPathParameters().get("foo").getFirst());
         Assert.assertEquals("mSwrYUX8_e3ukAylNMkg3oMRglB4-YjxqeWqXQsI", result.getPathParameters().get("mysessioncookie").getFirst());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertTrue(result.isHostIncludedInRequestURI());
     }
 
     @Test
@@ -186,6 +222,7 @@ public class SimpleParserTestCase {
         Assert.assertEquals("param", result.getPathParameters().keySet().toArray()[0]);
         Assert.assertEquals("1", result.getPathParameters().get("param").getFirst());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertFalse(result.isHostIncludedInRequestURI());
     }
 
     @Test
@@ -202,6 +239,7 @@ public class SimpleParserTestCase {
         Assert.assertEquals("bar", result.getPathParameters().get("foo").getFirst());
         Assert.assertEquals("mSwrYUX8_e3ukAylNMkg3oMRglB4-YjxqeWqXQsI", result.getPathParameters().get("mysessioncookie").getFirst());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertFalse(result.isHostIncludedInRequestURI());
     }
 
     @Test
@@ -232,6 +270,7 @@ public class SimpleParserTestCase {
         Assert.assertEquals("q1=v3", result.getQueryString());
         Assert.assertEquals("v3", result.getQueryParameters().get("q1").getFirst());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertFalse(result.isHostIncludedInRequestURI());
     }
 
     @Test
@@ -248,6 +287,24 @@ public class SimpleParserTestCase {
         Assert.assertEquals("v2", result.getPathParameters().get("p1").getLast());
         Assert.assertEquals("v3", result.getQueryParameters().get("q1").getFirst());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertFalse(result.isHostIncludedInRequestURI());
+    }
+
+    @Test
+    public void testServletURLMultiLevelMatrixParameter() throws BadRequestException {
+        byte[] in = "GET http://localhost:7777/some;p1=v1/path;p1=v2?q1=v3 HTTP/1.1\r\n\r\n".getBytes();
+        ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("http://localhost:7777/some;p1=v1/path;p1=v2", result.getRequestURI());
+        Assert.assertEquals("/some/path", result.getRequestPath());
+        Assert.assertEquals("q1=v3", result.getQueryString());
+        Assert.assertEquals("v1", result.getPathParameters().get("p1").getFirst());
+        Assert.assertEquals("v2", result.getPathParameters().get("p1").getLast());
+        Assert.assertEquals("v3", result.getQueryParameters().get("q1").getFirst());
+        Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertTrue(result.isHostIncludedInRequestURI());
     }
 
     @Test
@@ -264,6 +321,41 @@ public class SimpleParserTestCase {
         Assert.assertEquals("v2", result.getPathParameters().get("p2").getFirst());
         Assert.assertEquals("v3", result.getQueryParameters().get("q1").getFirst());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertFalse(result.isHostIncludedInRequestURI());
+    }
+
+    @Test
+    public void testMultiLevelMatrixParameterEndingWithNormalPathAndQuery() throws BadRequestException {
+        byte[] in = "GET /some;p1=v1/path;p1=v2/more?q1=v3 HTTP/1.1\r\n\r\n".getBytes();
+        ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("/some;p1=v1/path;p1=v2/more", result.getRequestURI());
+        Assert.assertEquals("/some/path/more", result.getRequestPath());
+        Assert.assertEquals("q1=v3", result.getQueryString());
+        Assert.assertEquals("v1", result.getPathParameters().get("p1").getFirst());
+        Assert.assertEquals("v2", result.getPathParameters().get("p1").getLast());
+        Assert.assertEquals("v3", result.getQueryParameters().get("q1").getFirst());
+        Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertFalse(result.isHostIncludedInRequestURI());
+    }
+
+    @Test
+    public void testServletURLMultiLevelMatrixParameterEndingWithNormalPathAndQuery() throws BadRequestException {
+        byte[] in = "GET http://localhost:7777/some;p1=v1/path;p1=v2/more?q1=v3 HTTP/1.1\r\n\r\n".getBytes();
+        ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true)).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("http://localhost:7777/some;p1=v1/path;p1=v2/more", result.getRequestURI());
+        Assert.assertEquals("/some/path/more", result.getRequestPath());
+        Assert.assertEquals("q1=v3", result.getQueryString());
+        Assert.assertEquals("v1", result.getPathParameters().get("p1").getFirst());
+        Assert.assertEquals("v2", result.getPathParameters().get("p1").getLast());
+        Assert.assertEquals("v3", result.getQueryParameters().get("q1").getFirst());
+        Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertTrue(result.isHostIncludedInRequestURI());
     }
 
     @Test
@@ -276,6 +368,7 @@ public class SimpleParserTestCase {
         Assert.assertSame(Methods.GET, result.getRequestMethod());
         Assert.assertEquals("/", result.getRequestPath());
         Assert.assertEquals("http://myurl.com", result.getRequestURI());
+        Assert.assertTrue(result.isHostIncludedInRequestURI());
     }
 
     @Test
@@ -289,6 +382,7 @@ public class SimpleParserTestCase {
         Assert.assertEquals("/goo", result.getRequestPath());
         Assert.assertEquals("http://myurl.com/goo;foo=bar;blah=foobar", result.getRequestURI());
         Assert.assertEquals(2, result.getPathParameters().size());
+        Assert.assertTrue(result.isHostIncludedInRequestURI());
     }
 
     @Test(expected = BadRequestException.class)
