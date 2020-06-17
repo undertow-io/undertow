@@ -84,6 +84,7 @@ public class HttpContinueAcceptingHandlerTestCase {
     @Before
     public void before() {
         Assume.assumeFalse(DefaultServer.isAjp());
+        Assume.assumeFalse(DefaultServer.isH2upgrade());
     }
 
     @Test
