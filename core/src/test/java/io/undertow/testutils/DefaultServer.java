@@ -718,6 +718,12 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         } else {
             openListener.closeConnections();
         }
+        //some environments seem to need a small delay to re-bind the socket
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            //ignore
+        }
     }
 
     public static String getHostAddress(String serverName) {
