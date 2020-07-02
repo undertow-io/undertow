@@ -213,11 +213,9 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
      * @param initial The initial upgrade request that started the HTTP2 connection
      */
     void handleInitialRequest(HttpServerExchange initial, Http2Channel channel, byte[] data) {
-
         //we have a request
         Http2HeadersStreamSinkChannel sink = channel.createInitialUpgradeResponseStream();
         final Http2ServerConnection connection = new Http2ServerConnection(channel, sink, undertowOptions, bufferSize, rootHandler);
-
 
         HeaderMap requestHeaders = new HeaderMap();
         for(HeaderValues hv : initial.getRequestHeaders()) {
@@ -235,11 +233,10 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         exchange.setRequestScheme(initial.getRequestScheme());
         exchange.setRequestMethod(initial.getRequestMethod());
         exchange.setQueryString(initial.getQueryString());
-        if(data != null) {
+        if (data != null) {
             Connectors.ungetRequestBytes(exchange, new ImmediatePooledByteBuffer(ByteBuffer.wrap(data)));
-        } else {
-            Connectors.terminateRequest(exchange);
         }
+        Connectors.terminateRequest(exchange);
         String uri = exchange.getQueryString().isEmpty() ? initial.getRequestURI() : initial.getRequestURI() + '?' + exchange.getQueryString();
         try {
             Connectors.setExchangeRequestPath(exchange, uri, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
@@ -248,7 +245,6 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
             exchange.endExchange();
             return;
         }
-
 
         handleCommonSetup(sink, exchange, connection);
         Connectors.executeRootHandler(rootHandler, exchange);
