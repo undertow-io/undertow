@@ -29,8 +29,11 @@ import io.undertow.util.Headers;
  * Predicate that returns true if the Content-Size of a request is below a
  * given value.
  *
+ * Use {@link RequestSmallerThanPredicate} instead.
+ *
  * @author Stuart Douglas
  */
+@Deprecated
 public class MinContentSizePredicate implements Predicate {
 
     private final long minSize;
