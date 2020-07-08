@@ -12,3 +12,5 @@ io.undertow.predicate.MaxContentSizePredicate$Builder
 io.undertow.predicate.MinContentSizePredicate$Builder
 io.undertow.predicate.SecurePredicate$Builder
 io.undertow.predicate.IdempotentPredicate$Builder
+io.undertow.predicate.RequestLargerThanPredicate$Builder
+io.undertow.predicate.RequestSmallerThanPredicate$Builder
