@@ -26,57 +26,54 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 
 /**
- * Predicate that returns true if the Content-Size of a request is above a
- * given value.
+ * Predicate that returns true if the Content-Size of a request is smaller than a
+ * given size.
  *
- * Use {@link RequestLargerThanPredicate} instead.
- *
- * @author Stuart Douglas
+ * @author Brad Wood
  */
-@Deprecated
-public class MaxContentSizePredicate implements Predicate {
+public class RequestSmallerThanPredicate implements Predicate {
 
-    private final long maxSize;
+    private final long size;
 
-    MaxContentSizePredicate(final long maxSize) {
-        this.maxSize = maxSize;
+    RequestSmallerThanPredicate(final long size) {
+        this.size = size;
     }
 
     @Override
-    public boolean resolve(final HttpServerExchange value) {
-        final String length = value.getResponseHeaders().getFirst(Headers.CONTENT_LENGTH);
+    public boolean resolve(final HttpServerExchange exchange) {
+        final String length = exchange.getResponseHeaders().getFirst(Headers.CONTENT_LENGTH);
         if (length == null) {
             return false;
         }
-        return Long.parseLong(length) > maxSize;
+        return Long.parseLong(length) < size;
     }
 
     public static class Builder implements PredicateBuilder {
 
         @Override
         public String name() {
-            return "max-content-size";
+            return "request-smaller-than";
         }
 
         @Override
         public Map<String, Class<?>> parameters() {
-            return Collections.<String, Class<?>>singletonMap("value", Long.class);
+            return Collections.<String, Class<?>>singletonMap("size", Long.class);
         }
 
         @Override
         public Set<String> requiredParameters() {
-            return Collections.singleton("value");
+            return Collections.singleton("size");
         }
 
         @Override
         public String defaultParameter() {
-            return "value";
+            return "size";
         }
 
         @Override
         public Predicate build(final Map<String, Object> config) {
-            Long max = (Long) config.get("value");
-            return new MaxContentSizePredicate(max);
+            Long size = (Long) config.get("size");
+            return new RequestSmallerThanPredicate(size);
         }
     }
 }
