@@ -46,7 +46,7 @@ public class SendErrorPageHandler implements HttpHandler {
         ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
 
         // If the servlet is available and the status code has been set to an error, return the error page
-        if( src != null && exchange.getStatusCode() > 399 && exchange.getResponseContentLength() == -1 ) {
+        if( src != null && exchange.getStatusCode() > 399 && !exchange.isResponseStarted() ) {
             ((HttpServletResponse)src.getServletResponse()).sendError(exchange.getStatusCode());
         } else {
             next.handleRequest(exchange);
