@@ -154,7 +154,7 @@ public class PathResourceManagerTestCase {
                 Assert.assertTrue(dir.isDirectory());
                 List<Resource> list = dir.list();
                 Assert.assertEquals(1, list.size());
-                Assert.assertEquals(resource.getFilePath(), list.get(0).getFilePath());
+                Assert.assertEquals(resource.getFilePath().normalize(), list.get(0).getFilePath().normalize());
 
                 Resource outside = resourceManager.getResource("../root_resource.txt");
                 Assert.assertNull(outside);
