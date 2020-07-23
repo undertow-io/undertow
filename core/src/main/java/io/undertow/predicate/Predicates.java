@@ -119,8 +119,9 @@ public class Predicates {
      * Predicate that returns true if the Content-Size of a request is above a
      * given value.
      *
-     * @author Stuart Douglas
+     * Use {@link #requestLargerThan(long)} instead.
      */
+    @Deprecated
     public static Predicate maxContentSize(final long size) {
         return new MaxContentSizePredicate(size);
     }
@@ -128,9 +129,29 @@ public class Predicates {
     /**
      * Predicate that returns true if the Content-Size of a request is below a
      * given value.
+     *
+     * Use {@link #requestSmallerThan(long)} instead.
      */
+    @Deprecated
     public static Predicate minContentSize(final long size) {
         return new MinContentSizePredicate(size);
+    }
+
+
+    /**
+     * Predicate that returns true if the Content-Size of a request is smaller than a
+     * given size.
+     */
+    public static Predicate requestSmallerThan(final long size) {
+        return new RequestSmallerThanPredicate(size);
+    }
+
+    /**
+     * Predicate that returns true if the Content-Size of a request is larger than a
+     * given size.
+     */
+    public static Predicate requestLargerThan(final long size) {
+        return new RequestLargerThanPredicate(size);
     }
 
     /**
