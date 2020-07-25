@@ -69,6 +69,11 @@ public class ServletRelativePathAttribute implements ExchangeAttribute {
         RelativePathAttribute.INSTANCE.writeAttribute(exchange, newValue);
     }
 
+    @Override
+    public String toString() {
+        return RELATIVE_PATH;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

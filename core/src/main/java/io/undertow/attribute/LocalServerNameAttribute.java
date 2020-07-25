@@ -46,6 +46,11 @@ public class LocalServerNameAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Local server name", newValue);
     }
 
+    @Override
+    public String toString() {
+        return LOCAL_SERVER_NAME;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

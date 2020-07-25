@@ -51,6 +51,11 @@ public class RemoteUserAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Remote user", newValue);
     }
 
+    @Override
+    public String toString() {
+        return REMOTE_USER;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

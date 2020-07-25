@@ -73,6 +73,11 @@ public class ResponseRateLimitingHandler implements HttpHandler {
         next.handleRequest(exchange);
     }
 
+    @Override
+    public String toString() {
+        return "response-rate-limit( bytes=" + bytes + ", time=" + time + " )";
+    }
+
 
     public static class Builder implements HandlerBuilder {
 

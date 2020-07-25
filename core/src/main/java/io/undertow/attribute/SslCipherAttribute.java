@@ -42,6 +42,11 @@ public class SslCipherAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("SSL Cipher", newValue);
     }
 
+    @Override
+    public String toString() {
+        return "%{SSL_CIPHER}";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

@@ -98,6 +98,11 @@ public class SetHeaderHandler implements HttpHandler {
         return header;
     }
 
+    @Override
+    public String toString() {
+        return "set( header='" + header.toString() + "', value='" + value.toString() + "' )";
+    }
+
     public static class Builder implements HandlerBuilder {
         @Override
         public String name() {

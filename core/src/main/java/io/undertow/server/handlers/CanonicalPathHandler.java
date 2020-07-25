@@ -59,6 +59,11 @@ public class CanonicalPathHandler implements HttpHandler {
         return this;
     }
 
+    @Override
+    public String toString() {
+        return "canonical-path()";
+    }
+
     public static class Builder implements HandlerBuilder {
 
         @Override

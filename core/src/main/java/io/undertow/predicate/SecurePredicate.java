@@ -36,6 +36,10 @@ public class SecurePredicate implements Predicate {
         return value.getRequestScheme().equals("https");
     }
 
+    public String toString() {
+        return "secure()";
+    }
+
     public static class Builder implements PredicateBuilder {
 
         @Override

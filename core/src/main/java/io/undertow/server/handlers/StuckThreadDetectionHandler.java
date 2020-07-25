@@ -286,6 +286,11 @@ public class StuckThreadDetectionHandler implements HttpHandler {
         }
     }
 
+    @Override
+    public String toString() {
+        return "stuck-thread-detector( " + threshold + " )";
+    }
+
     public static class Builder implements HandlerBuilder {
 
         @Override

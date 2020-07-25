@@ -55,6 +55,11 @@ public class ServletRequestedSessionIdAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Session ID", newValue);
     }
 
+    @Override
+    public String toString() {
+        return REQUESTED_SESSION_ID;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

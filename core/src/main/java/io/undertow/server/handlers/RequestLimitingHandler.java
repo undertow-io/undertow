@@ -15,7 +15,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package io.undertow.server.handlers;
 
 import java.util.Collections;
@@ -34,6 +33,7 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class RequestLimitingHandler implements HttpHandler {
+
     private final HttpHandler nextHandler;
 
     private final RequestLimit requestLimit;
@@ -43,7 +43,7 @@ public final class RequestLimitingHandler implements HttpHandler {
      * must not be {@code null}.
      *
      * @param maximumConcurrentRequests the maximum concurrent requests
-     * @param nextHandler               the next handler
+     * @param nextHandler the next handler
      */
     public RequestLimitingHandler(int maximumConcurrentRequests, HttpHandler nextHandler) {
         this(maximumConcurrentRequests, -1, nextHandler);
@@ -54,8 +54,8 @@ public final class RequestLimitingHandler implements HttpHandler {
      * must not be {@code null}.
      *
      * @param maximumConcurrentRequests the maximum concurrent requests
-     * @param queueSize                 the maximum number of requests to queue
-     * @param nextHandler               the next handler
+     * @param queueSize the maximum number of requests to queue
+     * @param nextHandler the next handler
      */
     public RequestLimitingHandler(int maximumConcurrentRequests, int queueSize, HttpHandler nextHandler) {
         if (nextHandler == null) {
@@ -73,7 +73,7 @@ public final class RequestLimitingHandler implements HttpHandler {
      * handlers.
      *
      * @param requestLimit the request limit information.
-     * @param nextHandler  the next handler
+     * @param nextHandler the next handler
      */
     public RequestLimitingHandler(RequestLimit requestLimit, HttpHandler nextHandler) {
         if (nextHandler == null) {
@@ -91,6 +91,10 @@ public final class RequestLimitingHandler implements HttpHandler {
         return requestLimit;
     }
 
+    @Override
+    public String toString() {
+        return "request-limit( " + requestLimit.getMaximumConcurrentRequests() + " )";
+    }
 
     public static class Builder implements HandlerBuilder {
 

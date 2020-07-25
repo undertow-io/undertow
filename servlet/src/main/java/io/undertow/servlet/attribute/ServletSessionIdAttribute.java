@@ -60,6 +60,11 @@ public class ServletSessionIdAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Session ID", newValue);
     }
 
+    @Override
+    public String toString() {
+        return SESSION_ID;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

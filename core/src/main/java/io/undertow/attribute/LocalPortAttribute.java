@@ -49,6 +49,11 @@ public class LocalPortAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Local port", newValue);
     }
 
+    @Override
+    public String toString() {
+        return LOCAL_PORT;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

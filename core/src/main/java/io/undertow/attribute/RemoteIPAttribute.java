@@ -59,6 +59,11 @@ public class RemoteIPAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Remote IP", newValue);
     }
 
+    @Override
+    public String toString() {
+        return REMOTE_IP;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

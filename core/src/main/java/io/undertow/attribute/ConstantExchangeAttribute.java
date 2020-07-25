@@ -42,4 +42,9 @@ public class ConstantExchangeAttribute implements ExchangeAttribute {
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
         throw new ReadOnlyAttributeException("constant", newValue);
     }
+
+    @Override
+    public String toString() {
+        return value;
+    }
 }

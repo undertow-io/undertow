@@ -45,6 +45,11 @@ public class RequestSchemeAttribute implements ExchangeAttribute {
         exchange.setRequestScheme(newValue);
     }
 
+    @Override
+    public String toString() {
+        return REQUEST_SCHEME;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

@@ -40,4 +40,16 @@ class OrPredicate implements Predicate {
         }
         return false;
     }
+
+    @Override
+    public String toString() {
+        String result = "";
+        for(final Predicate predicate : predicates) {
+            if( result.length() > 0 ) {
+                result += " or ";
+            }
+            result += predicate.toString();
+        }
+        return result;
+    }
 }

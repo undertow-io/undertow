@@ -59,6 +59,11 @@ public class StoredResponseHandler implements HttpHandler {
         next.handleRequest(exchange);
     }
 
+    @Override
+    public String toString() {
+        return "store-response()";
+    }
+
     public static class Builder implements HandlerBuilder {
 
         @Override

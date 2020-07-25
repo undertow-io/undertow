@@ -52,6 +52,11 @@ public class ServletRequestCharacterEncodingAttribute implements ExchangeAttribu
         throw new ReadOnlyAttributeException("Request Character Encoding", newValue);
     }
 
+    @Override
+    public String toString() {
+        return REQUEST_CHARACTER_ENCODING;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

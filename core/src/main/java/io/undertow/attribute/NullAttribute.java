@@ -46,6 +46,11 @@ public class NullAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException(NAME, newValue);
     }
 
+    @Override
+    public String toString() {
+        return NAME;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

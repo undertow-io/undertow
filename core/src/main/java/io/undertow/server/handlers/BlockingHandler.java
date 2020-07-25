@@ -66,6 +66,10 @@ public final class BlockingHandler implements HttpHandler {
         return this;
     }
 
+    @Override
+    public String toString() {
+        return "blocking()";
+    }
 
     public static class Builder implements HandlerBuilder {
 

@@ -35,4 +35,9 @@ public class FalsePredicate implements Predicate {
     public boolean resolve(final HttpServerExchange value) {
         return false;
     }
+
+    @Override
+    public String toString() {
+        return "false";
+    }
 }

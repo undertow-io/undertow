@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import io.undertow.util.MimeMappings;
 import org.jboss.logging.Logger;
@@ -213,6 +214,11 @@ public class FileErrorPageHandler implements HttpHandler {
     public FileErrorPageHandler setFile(final Path file) {
         this.file = file;
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return "response-codes( file='" + file.toString() + "', response-codes={ " + responseCodes.stream().map(s -> s.toString()).collect(Collectors.joining(", ")) + " } )";
     }
 
     public static class Builder implements HandlerBuilder {

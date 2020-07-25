@@ -98,6 +98,11 @@ public class HttpContinueAcceptingHandler implements HttpHandler {
         }
     }
 
+    @Override
+    public String toString() {
+        return "http-continue-accept()";
+    }
+
     public static class Builder implements HandlerBuilder {
 
         @Override

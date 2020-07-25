@@ -91,6 +91,15 @@ public class SetAttributeHandler implements HttpHandler {
         this.value = parser.parse(value);
     }
 
+    public ExchangeAttribute getValue() {
+        return value;
+    }
+
+    @Override
+    public String toString() {
+        return "set( attribute='" + attribute.toString() + "', value='" + value.toString() + "' )";
+    }
+
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         if(preCommit) {

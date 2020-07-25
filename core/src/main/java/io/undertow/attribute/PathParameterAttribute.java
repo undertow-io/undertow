@@ -67,6 +67,11 @@ public class PathParameterAttribute implements ExchangeAttribute {
         exchange.getPathParameters().put(parameter, value);
     }
 
+    @Override
+    public String toString() {
+        return "%{p," + parameter + "}";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

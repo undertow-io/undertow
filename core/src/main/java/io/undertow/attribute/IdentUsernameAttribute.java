@@ -45,6 +45,11 @@ public class IdentUsernameAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Ident username", newValue);
     }
 
+    @Override
+    public String toString() {
+        return IDENT_USERNAME;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

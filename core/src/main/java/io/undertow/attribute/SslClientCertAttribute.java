@@ -61,6 +61,11 @@ public class SslClientCertAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("SSL Client Cert", newValue);
     }
 
+    @Override
+    public String toString() {
+        return "%{SSL_CLIENT_CERT}";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

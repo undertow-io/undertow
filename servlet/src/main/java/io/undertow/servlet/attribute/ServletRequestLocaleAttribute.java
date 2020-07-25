@@ -52,6 +52,11 @@ public class ServletRequestLocaleAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Locale", newValue);
     }
 
+    @Override
+    public String toString() {
+        return REQUEST_LOCALE;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

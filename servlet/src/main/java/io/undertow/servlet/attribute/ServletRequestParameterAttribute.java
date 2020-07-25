@@ -54,6 +54,11 @@ public class ServletRequestParameterAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException();
     }
 
+    @Override
+    public String toString() {
+        return "%{rp," + attributeName + "}";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

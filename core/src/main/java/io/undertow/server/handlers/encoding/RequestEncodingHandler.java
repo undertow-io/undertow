@@ -80,6 +80,11 @@ public class RequestEncodingHandler implements HttpHandler {
         return next;
     }
 
+    @Override
+    public String toString() {
+        return "uncompress()";
+    }
+
 
     public static class Builder implements HandlerBuilder {
 

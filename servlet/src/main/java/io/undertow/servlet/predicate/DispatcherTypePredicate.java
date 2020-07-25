@@ -55,6 +55,10 @@ public class DispatcherTypePredicate implements Predicate {
         return value.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getDispatcherType() == dispatcherType;
     }
 
+    @Override
+    public String toString() {
+        return "dispatcher( " + dispatcherType.toString() + " )";
+    }
 
     public static class Builder implements PredicateBuilder {
 

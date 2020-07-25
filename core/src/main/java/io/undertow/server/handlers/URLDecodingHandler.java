@@ -119,6 +119,11 @@ public class URLDecodingHandler implements HttpHandler {
         return new StringBuilder();
     }
 
+    @Override
+    public String toString() {
+        return "url-decoding( " + charset + " )";
+    }
+
     public static class Builder implements HandlerBuilder {
 
         @Override

@@ -15,7 +15,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package io.undertow.server.handlers;
 
 import java.util.Collections;
@@ -66,6 +65,10 @@ public class RedirectHandler implements HttpHandler {
         exchange.endExchange();
     }
 
+    @Override
+    public String toString() {
+        return "redirect( '" + attribute.toString() + "' )";
+    }
 
     public static class Builder implements HandlerBuilder {
 
@@ -94,8 +97,7 @@ public class RedirectHandler implements HttpHandler {
 
         @Override
         public HandlerWrapper build(Map<String, Object> config) {
-
-            return new Wrapper((ExchangeAttribute)config.get("value"));
+            return new Wrapper((ExchangeAttribute) config.get("value"));
         }
 
     }

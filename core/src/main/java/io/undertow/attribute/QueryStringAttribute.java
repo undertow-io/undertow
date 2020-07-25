@@ -54,6 +54,15 @@ public class QueryStringAttribute implements ExchangeAttribute {
         exchange.setQueryString(newValue);
     }
 
+    @Override
+    public String toString() {
+        if(includeQuestionMark) {
+            return QUERY_STRING;
+        } else {
+            return BARE_QUERY_STRING;
+        }
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

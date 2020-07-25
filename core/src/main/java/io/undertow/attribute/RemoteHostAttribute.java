@@ -49,6 +49,11 @@ public class RemoteHostAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Remote host", newValue);
     }
 
+    @Override
+    public String toString() {
+        return REMOTE_HOST;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

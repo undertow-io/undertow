@@ -49,6 +49,11 @@ public class CookieAttribute implements ExchangeAttribute {
         exchange.setResponseCookie(new CookieImpl(cookieName, newValue));
     }
 
+    @Override
+    public String toString() {
+        return "%{c," + cookieName + "}";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override
