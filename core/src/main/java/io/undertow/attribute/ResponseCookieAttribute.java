@@ -51,6 +51,11 @@ public class ResponseCookieAttribute implements ExchangeAttribute {
         exchange.setResponseCookie(new CookieImpl(cookieName, newValue));
     }
 
+    @Override
+    public String toString() {
+        return TOKEN_PREFIX + cookieName + "}";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

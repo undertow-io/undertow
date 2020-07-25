@@ -73,6 +73,11 @@ public class ServletSessionAttribute implements ExchangeAttribute {
         }
     }
 
+    @Override
+    public String toString() {
+        return "%{s," + attributeName + "}";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

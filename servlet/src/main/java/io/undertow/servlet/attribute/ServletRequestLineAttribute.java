@@ -71,6 +71,11 @@ public class ServletRequestLineAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Request line", newValue);
     }
 
+    @Override
+    public String toString() {
+        return REQUEST_LINE;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

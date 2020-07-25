@@ -67,6 +67,11 @@ public class QueryParameterAttribute implements ExchangeAttribute {
         exchange.getQueryParameters().put(parameter, value);
     }
 
+    @Override
+    public String toString() {
+        return "%{q," + parameter + "}";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

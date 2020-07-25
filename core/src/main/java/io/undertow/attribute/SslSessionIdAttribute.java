@@ -43,6 +43,11 @@ public class SslSessionIdAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("SSL Session ID", newValue);
     }
 
+    @Override
+    public String toString() {
+        return "%{SSL_SESSION_ID}";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

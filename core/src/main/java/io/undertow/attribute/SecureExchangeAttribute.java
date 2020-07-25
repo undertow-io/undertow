@@ -40,6 +40,11 @@ public class SecureExchangeAttribute implements ExchangeAttribute {
         exchange.putAttachment(HttpServerExchange.SECURE_REQUEST, Boolean.parseBoolean(newValue));
     }
 
+    @Override
+    public String toString() {
+        return TOKEN;
+    }
+
     public static class Builder implements ExchangeAttributeBuilder {
 
         @Override

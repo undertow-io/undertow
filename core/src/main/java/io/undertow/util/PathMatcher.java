@@ -57,6 +57,15 @@ public class PathMatcher<T> {
     public PathMatcher() {
     }
 
+    public Set<String> getExactPathMatchesSet(){
+        return exactPathMatches.keySet();
+    }
+
+
+    public Set<String> getPathMatchesSet(){
+        return paths.toMap().keySet();
+    }
+
     /**
      * Matches a path against the registered handlers.
      * @param path The relative path to match

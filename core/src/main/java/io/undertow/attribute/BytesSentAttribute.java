@@ -53,6 +53,11 @@ public class BytesSentAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Bytes sent", newValue);
     }
 
+    @Override
+    public String toString() {
+        return BYTES_SENT;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

@@ -33,6 +33,11 @@ public class DisableCacheHandler implements HttpHandler {
         next.handleRequest(exchange);
     }
 
+    @Override
+    public String toString() {
+        return "disable-cache()";
+    }
+
     public static class Builder implements HandlerBuilder {
 
         @Override

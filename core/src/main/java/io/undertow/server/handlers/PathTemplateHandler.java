@@ -15,15 +15,17 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package io.undertow.server.handlers;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.PathTemplate;
 import io.undertow.util.PathTemplateMatcher;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * A handler that matches URI templates
@@ -62,7 +64,6 @@ public class PathTemplateHandler implements HttpHandler {
         this.next = next;
     }
 
-
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         PathTemplateMatcher.PathMatchResult<HttpHandler> match = pathTemplateMatcher.match(exchange.getRelativePath());
@@ -90,11 +91,22 @@ public class PathTemplateHandler implements HttpHandler {
         return this;
     }
 
+    @Override
+    public String toString() {
+        Set<PathTemplate> paths = pathTemplateMatcher.getPathTemplates();
+        if (paths.size() == 1) {
+            return "path-template( " + paths.toArray()[0] + " )";
+        } else {
+            return "path-template( {" + paths.stream().map(s -> s.getTemplateString().toString()).collect(Collectors.joining(", ")) + "} )";
+        }
+    }
+
     /**
      * @see io.undertow.util.PathTemplateMatch
      */
     @Deprecated
     public static final class PathTemplateMatch {
+
         private final String matchedTemplate;
         private final Map<String, String> parameters;
 

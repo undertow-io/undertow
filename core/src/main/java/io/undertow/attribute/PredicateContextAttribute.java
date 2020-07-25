@@ -52,6 +52,11 @@ public class PredicateContextAttribute implements ExchangeAttribute {
         }
     }
 
+    @Override
+    public String toString() {
+        return "${" + name + "}";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

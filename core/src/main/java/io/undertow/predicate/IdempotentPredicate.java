@@ -55,6 +55,11 @@ public class IdempotentPredicate implements Predicate {
         return METHODS.contains(value.getRequestMethod());
     }
 
+    @Override
+    public String toString() {
+        return "idempotent()";
+    }
+
     public static class Builder implements PredicateBuilder {
 
         @Override

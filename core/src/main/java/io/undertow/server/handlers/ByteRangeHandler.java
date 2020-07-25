@@ -121,6 +121,11 @@ public class ByteRangeHandler implements HttpHandler {
 
     }
 
+    @Override
+    public String toString() {
+        return "byte-range( " + sendAcceptRanges + " )";
+    }
+
     public static class Wrapper implements HandlerWrapper {
 
         private final boolean sendAcceptRanges;

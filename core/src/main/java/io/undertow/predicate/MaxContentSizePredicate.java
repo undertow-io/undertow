@@ -51,6 +51,11 @@ public class MaxContentSizePredicate implements Predicate {
         return Long.parseLong(length) > maxSize;
     }
 
+    @Override
+    public String toString() {
+        return "max-content-size( " + maxSize + " )";
+    }
+
     public static class Builder implements PredicateBuilder {
 
         @Override

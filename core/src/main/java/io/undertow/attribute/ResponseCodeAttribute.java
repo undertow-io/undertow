@@ -46,6 +46,11 @@ public class ResponseCodeAttribute implements ExchangeAttribute {
         exchange.setStatusCode(Integer.parseInt(newValue));
     }
 
+    @Override
+    public String toString() {
+        return RESPONSE_CODE;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

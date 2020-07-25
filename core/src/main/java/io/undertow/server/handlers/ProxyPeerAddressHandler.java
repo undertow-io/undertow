@@ -128,6 +128,11 @@ public class ProxyPeerAddressHandler implements HttpHandler {
         return (port == 80 && "http".equals(scheme)) || (port == 443 && "https".equals(scheme));
     }
 
+    @Override
+    public String toString() {
+        return "proxy-peer-address()";
+    }
+
     public static class Builder implements HandlerBuilder {
 
         @Override

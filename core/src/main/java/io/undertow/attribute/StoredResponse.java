@@ -76,6 +76,11 @@ public class StoredResponse implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Stored Response", newValue);
     }
 
+    @Override
+    public String toString() {
+        return "%{STORED_RESPONSE}";
+    }
+
     public static class Builder implements ExchangeAttributeBuilder {
 
         @Override

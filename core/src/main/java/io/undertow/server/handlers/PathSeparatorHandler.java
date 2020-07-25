@@ -56,6 +56,11 @@ public class PathSeparatorHandler implements HttpHandler {
         next.handleRequest(exchange);
     }
 
+    @Override
+    public String toString() {
+        return "path-separator()";
+    }
+
 
     public static class Builder implements HandlerBuilder {
 

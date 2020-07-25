@@ -249,6 +249,11 @@ public class ForwardedHandler implements HttpHandler {
         }
     };
 
+    @Override
+    public String toString() {
+        return "forwarded()";
+    }
+
 
     public static class Builder implements HandlerBuilder {
 

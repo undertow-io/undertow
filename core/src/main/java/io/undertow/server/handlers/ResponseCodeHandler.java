@@ -18,9 +18,9 @@
 
 package io.undertow.server.handlers;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import org.jboss.logging.Logger;
 
 /**
  * A handler which simply sets a response code.
@@ -29,11 +29,10 @@ import org.jboss.logging.Logger;
  */
 public final class ResponseCodeHandler implements HttpHandler {
 
-    private static final Logger log = Logger.getLogger(ResponseCodeHandler.class);
-    private static final boolean traceEnabled;
+    private static final boolean debugEnabled;
 
     static {
-        traceEnabled = log.isTraceEnabled();
+        debugEnabled = UndertowLogger.PREDICATE_LOGGER.isDebugEnabled();
     }
 
     /**
@@ -77,8 +76,13 @@ public final class ResponseCodeHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.setStatusCode(responseCode);
-        if(traceEnabled) {
-            log.tracef("Setting response code %s for exchange %s", responseCode, exchange);
+        if(debugEnabled) {
+            UndertowLogger.PREDICATE_LOGGER.debugf("Response code set to [%s] for %s.", responseCode, exchange);
         }
+    }
+
+    @Override
+    public String toString() {
+        return "response-code( " + this.responseCode + " )";
     }
 }

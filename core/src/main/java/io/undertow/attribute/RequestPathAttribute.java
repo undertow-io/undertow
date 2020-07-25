@@ -59,6 +59,11 @@ public class RequestPathAttribute implements ExchangeAttribute {
         }
     }
 
+    @Override
+    public String toString() {
+        return REQUEST_PATH;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

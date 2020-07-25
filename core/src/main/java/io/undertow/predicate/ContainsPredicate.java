@@ -18,6 +18,7 @@
 
 package io.undertow.predicate;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -64,6 +65,11 @@ public class ContainsPredicate implements Predicate {
         String[] ret = new String[values.length];
         System.arraycopy(values, 0, ret, 0, values.length);
         return ret;
+    }
+
+    @Override
+    public String toString() {
+        return "contains( search={" +  String.join(", ", Arrays.asList( values ) ) + "}, value='" + attribute.toString() + "' )";
     }
 
     public static class Builder implements PredicateBuilder {

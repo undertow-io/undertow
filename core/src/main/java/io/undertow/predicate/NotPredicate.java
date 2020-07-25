@@ -35,4 +35,9 @@ public class NotPredicate implements Predicate {
     public boolean resolve(final HttpServerExchange value) {
         return !predicate.resolve(value);
     }
+
+    @Override
+    public String toString() {
+        return " not " + predicate.toString();
+    }
 }

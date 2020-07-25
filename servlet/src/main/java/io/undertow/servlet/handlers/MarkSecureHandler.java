@@ -56,6 +56,11 @@ public class MarkSecureHandler implements HttpHandler  {
         }
     }
 
+    @Override
+    public String toString() {
+        return "mark-secure()";
+    }
+
     public static class Builder implements HandlerBuilder {
 
         @Override

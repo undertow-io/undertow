@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.UndertowLogger;
 
 /**
  * @author Stuart Douglas
@@ -30,6 +31,11 @@ import io.undertow.server.HttpServerExchange;
 public class PathSuffixPredicate implements Predicate {
 
     private final String suffix;
+    private static final boolean traceEnabled;
+
+    static {
+        traceEnabled = UndertowLogger.PREDICATE_LOGGER.isTraceEnabled();
+    }
 
     PathSuffixPredicate(final String suffix) {
             this.suffix = suffix;
@@ -37,7 +43,15 @@ public class PathSuffixPredicate implements Predicate {
 
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        return value.getRelativePath().endsWith(suffix);
+        boolean matches = value.getRelativePath().endsWith(suffix);
+        if (traceEnabled) {
+            UndertowLogger.PREDICATE_LOGGER.tracef("Path suffix [%s] %s input [%s] for %s.", suffix, (matches ? "MATCHES" : "DOES NOT MATCH" ), value.getRelativePath(), value);
+        }
+        return matches;
+    }
+
+    public String toString() {
+        return "path-suffix( '" + suffix +  "' )";
     }
 
 

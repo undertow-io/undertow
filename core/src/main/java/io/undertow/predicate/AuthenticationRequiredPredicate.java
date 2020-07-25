@@ -26,6 +26,10 @@ public class AuthenticationRequiredPredicate implements Predicate {
         return sc.isAuthenticationRequired();
     }
 
+    @Override
+    public String toString() {
+        return "auth-required()";
+    }
 
     public static class Builder implements PredicateBuilder {
 

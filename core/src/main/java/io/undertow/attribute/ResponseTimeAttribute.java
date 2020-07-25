@@ -82,6 +82,23 @@ public class ResponseTimeAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Response Time", newValue);
     }
 
+    @Override
+    public String toString() {
+        if (timeUnit.equals(TimeUnit.MILLISECONDS)) {
+            return RESPONSE_TIME_MILLIS;
+        }
+        if (timeUnit.equals(TimeUnit.SECONDS)) {
+            return RESPONSE_TIME_SECONDS_SHORT;
+        }
+        if(timeUnit.equals(TimeUnit.MICROSECONDS)) {
+            return RESPONSE_TIME_MICROS;
+        }
+        if(timeUnit.equals(TimeUnit.NANOSECONDS)) {
+            return RESPONSE_TIME_NANOS;
+        }
+        return "ResponseTimeAttribute";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

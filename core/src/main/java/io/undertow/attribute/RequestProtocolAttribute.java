@@ -46,6 +46,11 @@ public class RequestProtocolAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Request protocol", newValue);
     }
 
+    @Override
+    public String toString() {
+        return REQUEST_PROTOCOL;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override
