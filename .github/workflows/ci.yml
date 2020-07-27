@@ -48,7 +48,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, windows-latest]
+        os: [ubuntu-latest, windows-latest]
         module: [core, servlet, websockets-jsr]
         jdk: [8, 11]
     steps:
@@ -90,11 +90,20 @@ jobs:
       with:
         name: surefire-reports-${{ matrix.module}}-${{ matrix.os }}-${{ matrix.jdk }}
         path: '**/surefire-reports/*.txt'
-  jdk11-ipv6-noproxy:
-    name: JDK 11 ipv6 noproxy
-    runs-on: ubuntu-latest
+  test-matrix-ipv6:
+    name: JDK ${{ matrix.jdk }} - ipv6 - ${{ matrix.module }} ${{ matrix.proxy }} - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs: build-all
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        module: [core, servlet, websockets-jsr]
+        proxy: ['-Pproxy', '']
+        jdk: [11]
     steps:
     - name: Update hosts - linux
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo bash -c "echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' > /etc/hosts"
         sudo bash -c "echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> /etc/hosts"
@@ -106,33 +115,22 @@ jobs:
       run: |
        hostname || true
     - uses: actions/checkout@v2
+    - name: Download Maven Repo
+      uses: actions/download-artifact@v1
+      with:
+        name: maven-repo
+        path: .
+    - name: Extract Maven Repo
+      shell: bash
+      run: tar -xzf maven-repo.tgz -C ~
+    - name: Set up JDK ${{ matrix.java }}
+      uses: joschi/setup-jdk@v2
+      with:
+        java-version: ${{ matrix.jdk }}
     - name: Run Tests
-      run: mvn -U -B -fae clean install '-DfailIfNoTests=false' -Dtest.ipv6=true
+      run: mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
     - uses: actions/upload-artifact@v2
       if: failure()
       with:
-        name: surefire-reports-jdk11-ipv6-noproxy
-        path: '**/surefire-reports/*.txt'
-  jdk11-ipv6:
-    name: JDK 11 ipv6 noproxy
-    runs-on: ubuntu-latest
-    steps:
-    - name: Update hosts - linux
-      run: |
-        sudo bash -c "echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' > /etc/hosts"
-        sudo bash -c "echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> /etc/hosts"
-        sudo sysctl -w fs.file-max=2097152
-    - uses: n1hility/cancel-previous-runs@v2
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-    - name: Host information
-      run: |
-       hostname || true
-    - uses: actions/checkout@v2
-    - name: Run Tests
-      run: mvn -U -B -fae clean install '-DfailIfNoTests=false' -Dtest.ipv6=true
-    - uses: actions/upload-artifact@v2
-      if: failure()
-      with:
-        name: surefire-reports-jdk11-ipv6
+        name: surefire-reports-${{ matrix.module}}-${{ matrix.os }}-${{ matrix.jdk }}
         path: '**/surefire-reports/*.txt'
