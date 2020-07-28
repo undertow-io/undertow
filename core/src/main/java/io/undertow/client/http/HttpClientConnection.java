@@ -594,6 +594,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                     if (buffer.hasRemaining()) {
                         free = false;
                         pushBackStreamSourceConduit.pushBack(new PooledAdaptor(pooled));
+                        pushBackStreamSourceConduit.wakeupReads();
                     }
 
                 } while (!state.isComplete());
