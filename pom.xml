@@ -63,7 +63,7 @@
         <version.com.h2database>1.4.200</version.com.h2database>
         <version.easymock>4.2</version.easymock>
         <version.junit>4.13</version.junit>
-        <version.netty>4.1.50.Final</version.netty>
+        <version.netty>4.1.51.Final</version.netty>
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
         <version.org.apache.httpcomponents>4.5.12</version.org.apache.httpcomponents>
         <version.org.jboss.classfilewriter>1.2.4.Final</version.org.jboss.classfilewriter>
