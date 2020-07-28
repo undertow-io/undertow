@@ -55,12 +55,14 @@ jobs:
     - name: Update hosts - linux
       if: matrix.os == 'ubuntu-latest'
       run: |
+        cat /etc/hosts
         sudo bash -c "echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' > /etc/hosts"
         sudo bash -c "echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> /etc/hosts"
         sudo sysctl -w fs.file-max=2097152
     - name: Update hosts - windows
       if: matrix.os == 'windows-latest'
       run: |
+        type %SystemRoot%\System32\drivers\etc\hosts
         echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' >	%SystemRoot%\System32\drivers\etc\hosts
         echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> %SystemRoot%\System32\drivers\etc\hosts
       shell: cmd
