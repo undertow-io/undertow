@@ -25,6 +25,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
@@ -209,7 +210,11 @@ class KerberosKDCUtil {
 
     private static void setupEnvironment() {
         final URL configPath = KerberosKDCUtil.class.getResource("/krb5.conf");
-        System.setProperty("java.security.krb5.conf", configPath.getFile());
+        try {
+            System.setProperty("java.security.krb5.conf", Paths.get(configPath.toURI()).normalize().toAbsolutePath().toString());
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private static void createWorkingDir() throws IOException {
