@@ -140,7 +140,7 @@ jobs:
         with:
           java-version: ${{ matrix.jdk }}
       - name: Run Tests
-        run: mvn -U -B -fae test ${{ matrix.ip }} '-DfailIfNoTests=false' -pl ${{ matrix.module }}
+        run: mvn -U -B -fae test ${{ matrix.ip }} '-DfailIfNoTests=false' -pl websockets-jsr
       - uses: actions/upload-artifact@v2
         if: failure()
         with:
