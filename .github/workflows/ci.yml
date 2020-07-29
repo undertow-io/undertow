@@ -42,17 +42,17 @@ jobs:
         name: surefire-reports-build
         path: '**/surefire-reports/*.txt'
   test-matrix:
-    name: JDK ${{ matrix.jdk }} - ${{ matrix.module }} - ${{ matrix.os }} - ${{ matrix.protocol }} - ${{ matrix.ip }}
+    name: ${{ matrix.module }} ${{ matrix.protocol }} - ${{ matrix.os }} - JDK${{ matrix.jdk }} - ${{ matrix.ip }}
     runs-on: ${{ matrix.os }}
     needs: build-all
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
         module: [core, servlet]
+        protocol: ['', '''-Dtest.proxy=true''', '''-Dtest.https=true''', '''-Dtest.ajp=true''', '''-Dtest.h2=true''', '''-Dtest.h2c=true''', '''-Dtest.h2c-upgrade=true''']
+        os: [ubuntu-latest, windows-latest]
         jdk: [8, 11]
-        ip: ['-Dtest.ipv6=true', '']
-        protocol: ['', '-Dtest.proxy=true', '-Dtest.https=true', '-Dtest.ajp=true', '-Dtest.h2=true', '-Dtest.h2c=true', '-Dtest.h2c-upgrade=true']
+        ip: ['''-Dtest.ipv6=true''', '']
     steps:
     - name: Update hosts - linux
       if: matrix.os == 'ubuntu-latest'
@@ -103,7 +103,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         jdk: [8, 11]
-        ip: ['-Dtest.ipv6=true', '']
+        ip: ['''-Dtest.ipv6=true''', '']
     steps:
       - name: Update hosts - linux
         if: matrix.os == 'ubuntu-latest'
