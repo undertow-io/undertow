@@ -110,6 +110,7 @@ public class AsyncInputStreamServlet extends HttpServlet {
             }
         }
 
+        int count;
         private void doOnDataAvailable() {
             int read;
             try {
@@ -124,7 +125,7 @@ public class AsyncInputStreamServlet extends HttpServlet {
                         onWritePossible();
                     }
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 context.complete();
                 throw new RuntimeException(e);
             }
