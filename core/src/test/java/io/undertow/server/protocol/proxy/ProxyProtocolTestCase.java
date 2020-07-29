@@ -41,8 +41,8 @@ public class ProxyProtocolTestCase {
         @Override
         public void handleRequest(HttpServerExchange exchange) throws Exception {
             exchange.setPersistent(false);
-            exchange.getResponseHeaders().put(new HttpString("result"), exchange.getSourceAddress().toString()
-                    + " " + exchange.getDestinationAddress().toString());
+            exchange.getResponseHeaders().put(new HttpString("result"), exchange.getSourceAddress().toString().replace("[","").replace("]","")
+                    + " " + exchange.getDestinationAddress().toString().replace("[","").replace("]",""));
         }
     }).build();
 
