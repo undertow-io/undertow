@@ -152,6 +152,34 @@
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${project.basedir}/target/input</outputDirectory>
                                 </artifactItem>
+                                <!-- source files -->
+                                <artifactItem>
+                                    <groupId>io.undertow</groupId>
+                                    <artifactId>undertow-servlet</artifactId>
+                                    <version>${project.version}</version>
+                                    <overWrite>true</overWrite>
+                                    <classifier>sources</classifier>
+                                    <outputDirectory>${project.basedir}/target/output</outputDirectory>
+                                    <destFileName>undertow-servlet-jakartaee9-${project.version}-sources.jar</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>io.undertow</groupId>
+                                    <artifactId>undertow-examples</artifactId>
+                                    <version>${project.version}</version>
+                                    <overWrite>true</overWrite>
+                                    <classifier>sources</classifier>
+                                    <outputDirectory>${project.basedir}/target/output</outputDirectory>
+                                    <destFileName>undertow-examples-jakartaee9-${project.version}-sources.jar</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>io.undertow</groupId>
+                                    <artifactId>undertow-websockets-jsr</artifactId>
+                                    <version>${project.version}</version>
+                                    <overWrite>true</overWrite>
+                                    <classifier>sources</classifier>
+                                    <outputDirectory>${project.basedir}/target/output</outputDirectory>
+                                    <destFileName>undertow-websockets-jsr-jakartaee9-${project.version}-sources.jar</destFileName>
+                                </artifactItem>
                             </artifactItems>
                         </configuration>
                     </execution>
@@ -182,16 +210,6 @@
                             <mainClass>io.undertow.jakartaee9.JakartaEE9Installer</mainClass>
                         </configuration>
                     </execution>
-                    <execution>
-                        <id>deploy-artifacts</id>
-                        <phase>deploy</phase>
-                        <goals>
-                            <goal>java</goal>
-                        </goals>
-                        <configuration>
-                            <mainClass>io.undertow.jakartaee9.JakartaEE9Deployer</mainClass>
-                        </configuration>
-                    </execution>
                 </executions>
                 <configuration>
                     <systemProperties>
@@ -206,22 +224,29 @@
                     </systemProperties>
                 </configuration>
             </plugin>
-            <plugin>
+            <!-- <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
                 <version>3.0.0-M1</version>
                 <executions>
-                    <!--<execution>
+                    <execution>
                         <id>run</id>
-                        <phase>package</phase>
+                        <phase>deploy</phase>
                         <goals>
                             <goal>deploy-file</goal>
                         </goals>
-                    </execution>-->
+                        <configuration>
+                            <file>${project.basedir}/target/output/undertow-examples-jakartaee9-${project.version}.jar</file>
+                            <pomFile>${project.basedir}/target/output/undertow-examples-jakartaee9-${project.version}.pom</pomFile>
+                            <sources>${project.basedir}/target/output/undertow-examples-jakartaee9-${project.version}-sources.jar</sources>
+                            <repositoryId>jboss-releases-repository</repositoryId>
+                            <url>https://repository.jboss.org/nexus/service/local/staging/deploy/maven2</url>
+                        </configuration>
+                    </execution>
                 </executions>
                 <configuration>
                 </configuration>
-            </plugin>
+            </plugin> -->
         </plugins>
     </build>
 

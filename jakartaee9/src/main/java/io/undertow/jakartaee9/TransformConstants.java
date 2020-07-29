@@ -44,6 +44,7 @@ class TransformConstants {
     static final String JAR_EXTENSION = "." + JAR_TYPE;
     static final String POM_TYPE = "pom";
     static final String POM_EXTENSION = "." + POM_TYPE;
+    static final String SOURCES_EXTENSION = "-sources." + JAR_TYPE;
 
     // spec versions
     private static final String SERVLET_SPEC_VERSION_PROPERTY = "version.jakarta.servlet-api";

@@ -30,6 +30,7 @@ import org.apache.maven.shared.invoker.MavenInvocationException;
 import static io.undertow.jakartaee9.TransformConstants.JAR_EXTENSION;
 import static io.undertow.jakartaee9.TransformConstants.OUTPUT_DIR;
 import static io.undertow.jakartaee9.TransformConstants.POM_EXTENSION;
+import static io.undertow.jakartaee9.TransformConstants.SOURCES_EXTENSION;
 import static io.undertow.jakartaee9.UndertowJakartaEE9Logger.LOGGER;
 
 /**
@@ -49,10 +50,13 @@ public class JakartaEE9Installer {
             final String pomFileName = pomFile.getAbsolutePath();
             final String jarFileName = pomFile.getAbsolutePath().substring(0, pomFileName.length() - POM_EXTENSION
                     .length()) + JAR_EXTENSION;
+            final String sourcesJarFileName = pomFile.getAbsolutePath().substring(0, pomFileName.length() - POM_EXTENSION
+                    .length()) + SOURCES_EXTENSION;
             LOGGER.installingFile(jarFileName, pomFile.getAbsolutePath());
 
             final Properties properties = new Properties();
             properties.put("file", jarFileName);
+            properties.put("sources", sourcesJarFileName);
             properties.put("pomFile", pomFileName);
 
             final InvocationRequest request = new DefaultInvocationRequest();
