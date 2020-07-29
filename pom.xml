@@ -102,6 +102,7 @@
 
         <version.jmh>1.21</version.jmh>
 
+        <version.batavia>1.0.0.Alpha1-SNAPSHOT</version.batavia>
     </properties>
 
     <modules>
@@ -111,6 +112,7 @@
         <module>examples</module>
         <module>websockets-jsr</module>
         <module>benchmarks</module>
+        <module>jakartaee9</module>
     </modules>
 
     <build>
@@ -500,6 +502,27 @@
                 <artifactId>jmh-generator-annprocess</artifactId>
                 <version>${version.jmh}</version>
                 <scope>provided</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.wildfly-extras</groupId>
+                <artifactId>transformer-api</artifactId>
+                <version>${version.batavia}</version>
+                <!-- <scope>runtime</scope> -->
+            </dependency>
+
+           <dependency>
+                <groupId>org.wildfly-extras</groupId>
+                <artifactId>transformer-tools-api</artifactId>
+                <version>${version.batavia}</version>
+                <!--<scope>runtime</scope> -->
+            </dependency>
+
+            <dependency>
+                <groupId>org.wildfly-extras</groupId>
+                <artifactId>asm-based-transformer</artifactId>
+                <version>${version.batavia}</version>
+                <!-- <scope>runtime</scope> -->
             </dependency>
 
         </dependencies>
