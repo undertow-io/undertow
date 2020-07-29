@@ -109,8 +109,13 @@ class UndertowSslConnection extends SslConnection {
             try {
                 return option.cast(engine.getNeedClientAuth() ? SslClientAuthMode.REQUIRED : engine.getWantClientAuth() ? SslClientAuthMode.REQUESTED : SslClientAuthMode.NOT_REQUESTED);
             } finally {
-                engine.setNeedClientAuth(value == SslClientAuthMode.REQUIRED);
-                engine.setWantClientAuth(value == SslClientAuthMode.REQUESTED);
+                engine.setWantClientAuth(false);
+                engine.setNeedClientAuth(false);
+                if (value == SslClientAuthMode.REQUESTED) {
+                    engine.setWantClientAuth(true);
+                } else if (value == SslClientAuthMode.REQUIRED) {
+                    engine.setNeedClientAuth(true);
+                }
             }
         } else if (option == Options.SECURE) {
             throw new IllegalArgumentException();
