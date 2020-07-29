@@ -417,6 +417,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     }
 
                 }
+                if (loadBalancingProxyClient != null) {
+                    loadBalancingProxyClient.setConnectionsPerThread(100);
+                }
                 if (h2cUpgrade) {
                     openListener.setRootHandler(new Http2UpgradeHandler(rootHandler));
                 } else {
