@@ -93,7 +93,7 @@ jobs:
         name: surefire-reports-${{ matrix.jdk }}-${{ matrix.module }}-${{ matrix.os }}
         path: '**/surefire-reports/*.txt'
     - uses: scacap/action-surefire-report@v1
-      if: ${{ always() && secrets.GITHUB_TOKEN != '' }}
+      if: ${{ always() && github.token != '' }}
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         report_paths: '**/surefire-reports/*.xml'
@@ -142,7 +142,7 @@ jobs:
         name: surefire-reports-${{ matrix.jdk }}-ipv6-${{ matrix.module }}${{ matrix.proxy }}-${{ matrix.os }}
         path: '**/surefire-reports/*.txt'
     - uses: scacap/action-surefire-report@v1
-      if: ${{ always() && secrets.GITHUB_TOKEN != '' }}
+      if: ${{ always() && github.token != '' }}
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         report_paths: '**/surefire-reports/*.xml'
