@@ -92,6 +92,11 @@ jobs:
       with:
         name: surefire-reports-${{ matrix.jdk }}-${{ matrix.module }}-${{ matrix.os }}
         path: '**/surefire-reports/*.txt'
+    - uses: scacap/action-surefire-report@v1
+      if: always()
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        report_paths: '**/surefire-reports/*.xml'
   test-matrix-ipv6:
     name: JDK ${{ matrix.jdk }} - ipv6 - ${{ matrix.module }} ${{ matrix.proxy }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -136,3 +141,8 @@ jobs:
       with:
         name: surefire-reports-${{ matrix.jdk }}-ipv6-${{ matrix.module }}${{ matrix.proxy }}-${{ matrix.os }}
         path: '**/surefire-reports/*.txt'
+    - uses: scacap/action-surefire-report@v1
+      if: always()
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        report_paths: '**/surefire-reports/*.xml'
