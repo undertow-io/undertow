@@ -182,10 +182,11 @@ public class SimpleSSLTestCase {
                 executorService.submit(task);
             }
             executorService.shutdown();
-            Assert.assertTrue(executorService.awaitTermination(70, TimeUnit.SECONDS));
+            boolean result = executorService.awaitTermination(70, TimeUnit.SECONDS);
             if (failed.get() != null) {
                 throw new RuntimeException(failed.get());
             }
+            Assert.assertTrue(result);
         } finally {
             DefaultServer.stopSSLServer();
         }
