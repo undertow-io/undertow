@@ -26,6 +26,7 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -68,6 +69,8 @@ import static org.xnio.Bits.anyAreSet;
 public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     public static final int MAX_READ_LISTENER_INVOCATIONS = Integer.getInteger("io.undertow.ssl.max-read-listener-invocations", 100);
+
+    private static final AtomicIntegerFieldUpdater<SslConduit> readListenerQueuedUpdater = AtomicIntegerFieldUpdater.newUpdater(SslConduit.class, "readListenerQueued");
 
     /**
      * If this is set we are in the middle of a handshake, and we cannot
@@ -170,6 +173,8 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     private boolean invokingReadListenerHandshake = false;
 
+    private volatile int readListenerQueued = 0;
+
 
 
     private final Runnable runReadListenerCommand = new Runnable() {
@@ -268,9 +273,23 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 return;
             }
             if(resumeInListener) {
-                delegate.getIoThread().execute(runReadListenerAndResumeCommand);
+                if (readListenerQueuedUpdater.compareAndSet(this, 0, 1)) {
+                    delegate.getIoThread().execute(runReadListenerAndResumeCommand);
+                } else {
+                    //edge case
+                    delegate.getIoThread().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (allAreSet(state, FLAG_READS_RESUMED)) {
+                                delegate.getSourceChannel().resumeReads();
+                            }
+                        }
+                    });
+                }
             } else {
-                delegate.getIoThread().execute(runReadListenerCommand);
+                if (readListenerQueuedUpdater.compareAndSet(this, 0, 1)) {
+                    delegate.getIoThread().execute(runReadListenerCommand);
+                }
             }
         } catch (Throwable e) {
             //will only happen on shutdown
@@ -1166,6 +1185,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
         @Override
         public void readReady() {
+            readListenerQueuedUpdater.set(SslConduit.this, 0);
             if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ) && anyAreSet(state, FLAG_WRITES_RESUMED | FLAG_READS_RESUMED) && !anyAreSet(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
                 try {
                     invokingReadListenerHandshake = true;
