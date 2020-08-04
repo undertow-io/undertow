@@ -59,6 +59,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
     //0 = not running
     //1 = queued
     //2 = running
+    //3 = final state of running (inside finally of run())
     @SuppressWarnings("unused")
     private volatile int state = 0;
 
@@ -188,22 +189,40 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
                 writeMessage(messages);
             }
         } finally {
-            stateUpdater.set(this, 0);
+            // change this state to final state
+            stateUpdater.set(this, 3);
             //check to see if there is still more messages
             //if so then run this again
             if (!pendingMessages.isEmpty() || forceLogRotation) {
-                if (stateUpdater.compareAndSet(this, 0, 1)) {
+                if (stateUpdater.compareAndSet(this, 3, 1)) {
                     logWriteExecutor.execute(this);
                 }
-            } else if (closed) {
-                try {
-                    if(writer != null) {
-                        writer.flush();
-                        writer.close();
-                        writer = null;
+            }
+            // Check the state before resetting the state to 0 (not running) and checking if a writer needs to be closed:
+            // - If state != 3 here, another thread is executing this.
+            //   The other thread will visit here and will check if a writer needs to be closed.
+            //   We can leave state and skip closing a writer.
+            // - If state == 3 here, there is no another thread executing this.
+            //   So, update the state to 0 (not running) and check if a writer needs be closed.
+            if (stateUpdater.compareAndSet(this, 3, 0) && closed) {
+                // As close() can be invoked from another thread in parallel,
+                // it will dispatch a new thread to close writer if state == 0 (not running) at that moment.
+                // So, just in case, check the state again:
+                // - if state != 0, another thread has already dispatched from close() and it will visit here. So, closing writer can be skipped here.
+                // - if state == 0, writer can be closed here. Let's change state to 3 again in order to prevent close() from dispatching a new thread.
+                if (stateUpdater.compareAndSet(this, 0, 3)) {
+                    try {
+                        if(writer != null) {
+                            writer.flush();
+                            writer.close();
+                            writer = null;
+                        }
+                    } catch (IOException e) {
+                        UndertowLogger.ROOT_LOGGER.errorWritingAccessLog(e);
+                    } finally {
+                        // reset the state to 0 again finally
+                        stateUpdater.set(this, 0);
                     }
-                } catch (IOException e) {
-                    UndertowLogger.ROOT_LOGGER.errorWritingAccessLog(e);
                 }
             }
         }
