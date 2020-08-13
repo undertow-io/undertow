@@ -61,10 +61,13 @@ public class ErrorPages {
         if (location == null && exception instanceof ServletException) {
             Throwable rootCause = ((ServletException) exception).getRootCause();
             //Iterate through any nested JasperException in case it is in JSP development mode
-            while (rootCause != null && rootCause instanceof ServletException) {
+            while (rootCause != null && rootCause instanceof ServletException && location == null) {
+                for (Class c = rootCause.getClass(); c != null && location == null; c = c.getSuperclass()) {
+                    location = exceptionMappings.get(c);
+                }
                 rootCause = ((ServletException) rootCause).getRootCause();
             }
-            if (rootCause != null) {
+            if (rootCause != null && location == null) {
                 for (Class c = rootCause.getClass(); c != null && location == null; c = c.getSuperclass()) {
                     location = exceptionMappings.get(c);
                 }
