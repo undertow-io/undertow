@@ -18,9 +18,9 @@
 
 package io.undertow.protocols.ssl;
 
-import static org.xnio.IoUtils.safeClose;
-
 import java.io.IOException;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
@@ -41,6 +41,8 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 
 import io.undertow.UndertowOptions;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.server.DefaultByteBufferPool;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.FutureResult;
@@ -66,8 +68,7 @@ import org.xnio.ssl.JsseXnioSsl;
 import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.server.DefaultByteBufferPool;
+import static org.xnio.IoUtils.safeClose;
 
 /**
  * @author Stuart Douglas
@@ -431,8 +432,14 @@ public class UndertowXnioSsl extends XnioSsl {
 
                 SSLEngine sslEngine = JsseSslUtils.createSSLEngine(sslContext, optionMap, destination);
                 SSLParameters params = sslEngine.getSSLParameters();
-                params.setServerNames(Collections.singletonList(new SNIHostName(destination.getHostString())));
-
+                InetAddress address = destination.getAddress();
+                String hostnameValue = destination.getHostString();
+                if (address instanceof Inet6Address && hostnameValue.contains(":")) {
+                    // WFLY-13748 get hostname value instead of IPV6adress if it's ipv6
+                    // SNIHostname throw exception if adress contains :
+                    hostnameValue = address.getHostName();
+                }
+                params.setServerNames(Collections.singletonList(new SNIHostName(hostnameValue)));
                 final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, null);
                 if (endpointIdentificationAlgorithm != null) {
                     params.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
