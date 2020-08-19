@@ -155,6 +155,7 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
         return peerCertificate;
     }
 
+    @Deprecated
     @Override
     public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
         if (certificate == null) {

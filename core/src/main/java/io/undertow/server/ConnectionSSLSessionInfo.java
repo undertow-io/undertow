@@ -99,10 +99,10 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
 
     @Override
     public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException, RenegotiationRequiredException {
-        if(unverified != null) {
+        if (unverified != null) {
             throw unverified;
         }
-        if(renegotiationRequiredException != null) {
+        if (renegotiationRequiredException != null) {
             throw renegotiationRequiredException;
         }
         try {
@@ -115,13 +115,12 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
                     throw renegotiationRequiredException;
                 }
             } catch (IOException e1) {
-                //ignore, will not actually happen
+                // ignore, will not actually happen
             }
             unverified = PEER_UNVERIFIED_EXCEPTION;
             throw unverified;
         }
     }
-
 
     @Override
     public void renegotiate(HttpServerExchange exchange, SslClientAuthMode sslClientAuthMode) throws IOException {
@@ -144,6 +143,8 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
         return channel.getSslSession();
     }
 
+    //Suppress incorrect resource leak warning.
+    @SuppressWarnings("resource")
     public void renegotiateBufferRequest(HttpServerExchange exchange, SslClientAuthMode newAuthMode) throws IOException {
         int maxSize = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_BUFFERED_REQUEST_SIZE, UndertowOptions.DEFAULT_MAX_BUFFERED_REQUEST_SIZE);
         if (maxSize <= 0) {
@@ -178,6 +179,8 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
                         overflow = true;
                         break;
                     } else {
+                        //Not a leak here as old buffer has been captured in array and will
+                        //be closed if/when needed.
                         pooled = exchange.getConnection().getByteBufferPool().allocate();
                         poolArray[usedBuffers++] = pooled;
                     }

@@ -29,16 +29,14 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.Certificates;
 import io.undertow.util.HeaderMap;
 
-import javax.security.cert.CertificateException;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 
 import static io.undertow.util.Headers.SSL_CIPHER;
 import static io.undertow.util.Headers.SSL_CIPHER_USEKEYSIZE;
 import static io.undertow.util.Headers.SSL_CLIENT_CERT;
 import static io.undertow.util.Headers.SSL_SESSION_ID;
-
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Handler that sets SSL information on the connection based on the following headers:
@@ -114,7 +112,7 @@ public class SSLHeaderHandler implements HttpHandler {
                 exchange.setRequestScheme(HTTPS);
                 exchange.getConnection().setSslSessionInfo(info);
                 exchange.addExchangeCompleteListener(CLEAR_SSL_LISTENER);
-            } catch (java.security.cert.CertificateException | CertificateException e) {
+            } catch (java.security.cert.CertificateException e) {
                 UndertowLogger.REQUEST_LOGGER.debugf(e, "Could not create certificate from header %s", clientCert);
             }
         }

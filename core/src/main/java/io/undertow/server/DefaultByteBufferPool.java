@@ -233,12 +233,6 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         }
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        super.finalize();
-        close();
-    }
-
     private static class DefaultPooledBuffer implements PooledByteBuffer {
 
         private final DefaultByteBufferPool pool;
@@ -293,14 +287,17 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
         @Override
         protected void finalize() throws Throwable {
-            super.finalize();
-            reclaimedThreadLocalsUpdater.incrementAndGet(DefaultByteBufferPool.this);
-            if (buffers != null) {
-                // Recycle them
-                ByteBuffer buffer;
-                while ((buffer = buffers.poll()) != null) {
-                    queueIfUnderMax(buffer);
+            try {
+                reclaimedThreadLocalsUpdater.incrementAndGet(DefaultByteBufferPool.this);
+                if (buffers != null) {
+                    // Recycle them
+                    ByteBuffer buffer;
+                    while ((buffer = buffers.poll()) != null) {
+                        queueIfUnderMax(buffer);
+                    }
                 }
+            } finally {
+                super.finalize();
             }
         }
     }
@@ -316,9 +313,12 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
         @Override
         protected void finalize() throws Throwable {
-            super.finalize();
-            if(!closed) {
-                allocationPoint.printStackTrace();
+            try {
+                if(!closed) {
+                    allocationPoint.printStackTrace();
+                }
+            } finally {
+                super.finalize();
             }
         }
     }

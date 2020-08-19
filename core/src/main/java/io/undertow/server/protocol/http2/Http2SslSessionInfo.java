@@ -81,11 +81,12 @@ class Http2SslSessionInfo implements SSLSessionInfo {
                     throw new RenegotiationRequiredException();
                 }
             } catch (IOException e1) {
-                //ignore, will not actually happen
+              // ignore, will not actually happen
             }
             throw e;
         }
     }
+
     @Override
     public void renegotiate(HttpServerExchange exchange, SslClientAuthMode sslClientAuthMode) throws IOException {
         throw UndertowMessages.MESSAGES.renegotiationNotSupported();
