@@ -18,26 +18,27 @@
 
 package io.undertow.server;
 
-import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
-import io.undertow.server.protocol.http.HttpServerConnection;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.security.cert.Certificate;
+import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.SSLPeerUnverifiedException;
+import javax.net.ssl.SSLSession;
+import javax.security.cert.X509Certificate;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Options;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.SslClientAuthMode;
 import org.xnio.channels.Channels;
 import org.xnio.channels.SslChannel;
 import org.xnio.channels.StreamSourceChannel;
 
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.net.ssl.SSLSession;
-import javax.security.cert.X509Certificate;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.security.cert.Certificate;
-import java.util.concurrent.TimeUnit;
+import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.protocol.http.HttpServerConnection;
 
 /**
  * SSL session information that is read directly from the SSL session of the
@@ -108,14 +109,14 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
         try {
             return channel.getSslSession().getPeerCertificateChain();
         } catch (SSLPeerUnverifiedException e) {
-            try {
-                SslClientAuthMode sslClientAuthMode = channel.getOption(Options.SSL_CLIENT_AUTH_MODE);
-                if (sslClientAuthMode == SslClientAuthMode.NOT_REQUESTED) {
-                    renegotiationRequiredException = RENEGOTIATION_REQUIRED_EXCEPTION;
-                    throw renegotiationRequiredException;
-                }
+          try {
+              SslClientAuthMode sslClientAuthMode = channel.getOption(Options.SSL_CLIENT_AUTH_MODE);
+              if (sslClientAuthMode == SslClientAuthMode.NOT_REQUESTED) {
+                  renegotiationRequiredException = RENEGOTIATION_REQUIRED_EXCEPTION;
+                  throw renegotiationRequiredException;
+              }
             } catch (IOException e1) {
-                // ignore, will not actually happen
+            	// ignore, will not actually happen
             }
             unverified = PEER_UNVERIFIED_EXCEPTION;
             throw unverified;

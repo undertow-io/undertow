@@ -71,7 +71,8 @@ class Http2SslSessionInfo implements SSLSessionInfo {
     }
 
     @Override
-    public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException, RenegotiationRequiredException {
+    public X509Certificate[] getPeerCertificateChain()
+        throws SSLPeerUnverifiedException, RenegotiationRequiredException {
         try {
             return channel.getSslSession().getPeerCertificateChain();
         } catch (SSLPeerUnverifiedException e) {
