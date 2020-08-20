@@ -187,7 +187,6 @@ public class DeploymentManagerImpl implements DeploymentManager {
                 @Override
                 public Void call(HttpServerExchange exchange, Object ignore) throws Exception {
                     final ApplicationListeners listeners = createListeners();
-                    listeners.start();
 
                     deployment.setApplicationListeners(listeners);
 
@@ -206,6 +205,8 @@ public class DeploymentManagerImpl implements DeploymentManager {
                             instance.release();
                         }
                     }
+
+                    listeners.start();
 
                     deployment.getSessionManager().registerSessionListener(new SessionListenerBridge(deployment, listeners, servletContext));
                     for(SessionListener listener : deploymentInfo.getSessionListeners()) {
