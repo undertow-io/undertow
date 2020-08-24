@@ -100,8 +100,6 @@ public class InMemorySessionTestCase {
         }
     }
 
-
-
     @Test
     public void inMemoryMaxSessionsTest() throws IOException {
 
@@ -166,4 +164,89 @@ public class InMemorySessionTestCase {
         }
     }
 
+    @Test // https://issues.redhat.com/browse/UNDERTOW-1419
+    public void inMemorySessionTimeoutExpirationTest() throws IOException, InterruptedException {
+
+        final int maxInactiveIntervalInSeconds = 1;
+        final int accessorThreadSleepInMilliseconds = 200;
+
+        TestHttpClient client = new TestHttpClient();
+        client.setCookieStore(new BasicCookieStore());
+        try {
+            final SessionCookieConfig sessionConfig = new SessionCookieConfig();
+            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(""), sessionConfig);
+            handler.setNext(new HttpHandler() {
+                @Override
+                public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                    final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
+                    Session session = manager.getSession(exchange, sessionConfig);
+                    if (session == null) {
+                        //  set 1 second timeout for this session expiration
+                        manager.setDefaultSessionTimeout(maxInactiveIntervalInSeconds);
+                        session = manager.createSession(exchange, sessionConfig);
+                        session.setAttribute(COUNT, 0);
+                        //  let's call getAttribute() some times to be sure that the session timeout is no longer bumped
+                        //  by the method invocation
+                        Runnable r = new Runnable() {
+                            public void run() {
+                                Session innerThreadSession = manager.getSession(exchange, sessionConfig);
+                                int iterations = ((maxInactiveIntervalInSeconds * 1000)/accessorThreadSleepInMilliseconds);
+                                for (int i = 0; i <= iterations; i++) {
+                                    try {
+                                        Thread.sleep(accessorThreadSleepInMilliseconds);
+                                    } catch (InterruptedException e) {
+                                        System.out.println(
+                                                String.format("Unexpected error during Thread.sleep(): %s", e.getMessage()));
+                                    }
+                                    if (innerThreadSession != null) {
+                                        try {
+                                            System.out.println(String.format("Session is still valid. Attribute is: %s", innerThreadSession.getAttribute(COUNT).toString()));
+                                            if (i == iterations) {
+                                                System.out.println("Session should not still be valid!");
+                                            }
+                                        } catch (IllegalStateException e) {
+                                            if ((e instanceof IllegalStateException) && e.getMessage().startsWith("UT000010")) {
+                                                System.out.println(
+                                                        String.format("This is expected as session is not valid anymore: %s", e.getMessage()));
+                                            } else {
+                                                System.out.println(
+                                                        String.format("Unexpected exception while calling session.getAttribute(): %s", e.getMessage()));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        };
+                        Thread thread = new Thread(r);
+                        thread.start();
+                    }
+                    //  here the server is accessing one session attribute, so we're sure that the bumped timeout
+                    //  issue is being replicated and we can test for regression
+                    Integer count = (Integer) session.getAttribute(COUNT);
+                    exchange.getResponseHeaders().add(new HttpString(COUNT), count.toString());
+                    session.setAttribute(COUNT, ++count);
+                }
+            });
+            DefaultServer.setRootHandler(handler);
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+            Header[] header = result.getHeaders(COUNT);
+            Assert.assertEquals("0", header[0].getValue());
+
+            Thread.sleep(2 * 1000L);
+            //  after 2 seconds from the last call, the session expiration timeout hasn't been bumped anymore,
+            //  so now "COUNT" should be still set to 0 (zero)
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+            header = result.getHeaders(COUNT);
+            Assert.assertEquals("0", header[0].getValue());
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }
