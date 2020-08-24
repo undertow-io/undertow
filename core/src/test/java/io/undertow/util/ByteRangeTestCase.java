@@ -107,6 +107,17 @@ public class ByteRangeTestCase {
                 new Date(1559820153000L), "foo").getContentRange());
         Assert.assertEquals(416, byteRange.getResponseResult(0, null,
                 new Date(1559820153000L), "foo").getStatusCode());
+
+        Assert.assertEquals(0, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getStart());
+        Assert.assertEquals(0, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getEnd());
+        Assert.assertEquals(0, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getContentLength());
+        Assert.assertEquals("bytes */6", byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getContentRange());
+        Assert.assertEquals(416, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getStatusCode());
     }
 
     @Test
@@ -124,6 +135,17 @@ public class ByteRangeTestCase {
                 new Date(1559820153000L), "foo").getContentRange());
         Assert.assertEquals(416, byteRange.getResponseResult(0, null,
                 new Date(1559820153000L), "foo").getStatusCode());
+
+        Assert.assertEquals(5, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getStart());
+        Assert.assertEquals(5, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getEnd());
+        Assert.assertEquals(1, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getContentLength());
+        Assert.assertEquals("bytes 5-5/6", byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getContentRange());
+        Assert.assertEquals(206, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getStatusCode());
     }
 
     @Test
@@ -133,13 +155,24 @@ public class ByteRangeTestCase {
 
         Assert.assertEquals(0, byteRange.getResponseResult(0, null,
                 new Date(1559820153000L), "foo").getStart());
-        Assert.assertEquals(-1, byteRange.getResponseResult(0, null,
+        Assert.assertEquals(0, byteRange.getResponseResult(0, null,
                 new Date(1559820153000L), "foo").getEnd());
         Assert.assertEquals(0, byteRange.getResponseResult(0, null,
                 new Date(1559820153000L), "foo").getContentLength());
-        Assert.assertEquals("bytes 0--1/0", byteRange.getResponseResult(0, null,
+        Assert.assertEquals("bytes */0", byteRange.getResponseResult(0, null,
                 new Date(1559820153000L), "foo").getContentRange());
-        Assert.assertEquals(206, byteRange.getResponseResult(0, null,
+        Assert.assertEquals(416, byteRange.getResponseResult(0, null,
+                new Date(1559820153000L), "foo").getStatusCode());
+
+        Assert.assertEquals(0, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getStart());
+        Assert.assertEquals(5, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getEnd());
+        Assert.assertEquals(6, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getContentLength());
+        Assert.assertEquals("bytes 0-5/6", byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getContentRange());
+        Assert.assertEquals(206, byteRange.getResponseResult(6, null,
                 new Date(1559820153000L), "foo").getStatusCode());
     }
 
@@ -158,7 +191,6 @@ public class ByteRangeTestCase {
                 new Date(1559820153000L), "foo").getContentRange());
         Assert.assertEquals(416, byteRange.getResponseResult(0, null,
                 new Date(1559820153000L), "foo").getStatusCode());
-
 
         Assert.assertEquals(3, byteRange.getResponseResult(6, null,
                 new Date(1559820153000L), "foo").getStart());
@@ -186,6 +218,17 @@ public class ByteRangeTestCase {
         Assert.assertEquals("bytes 0--1/0", byteRange.getResponseResult(0, null,
                 new Date(1559820153000L), "foo").getContentRange());
         Assert.assertEquals(206, byteRange.getResponseResult(0, null,
+                new Date(1559820153000L), "foo").getStatusCode());
+
+        Assert.assertEquals(1, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getStart());
+        Assert.assertEquals(5, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getEnd());
+        Assert.assertEquals(5, byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getContentLength());
+        Assert.assertEquals("bytes 1-5/6", byteRange.getResponseResult(6, null,
+                new Date(1559820153000L), "foo").getContentRange());
+        Assert.assertEquals(206, byteRange.getResponseResult(6, null,
                 new Date(1559820153000L), "foo").getStatusCode());
     }
 
