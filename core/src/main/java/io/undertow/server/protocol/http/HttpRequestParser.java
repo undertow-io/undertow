@@ -391,9 +391,31 @@ public abstract class HttpRequestParser {
             if (next == ' ' || next == '\t') {
                 if (stringBuilder.length() != 0) {
                     final String path = stringBuilder.toString();
+<<<<<<< HEAD
                     parsePathComplete(state, exchange, canonicalPathStart, parseState, urlDecodeRequired, path);
                     exchange.setQueryString("");
                     state.state = ParseState.VERSION;
+=======
+                    if(parseState == SECOND_SLASH) {
+                        exchange.setRequestPath("/");
+                        exchange.setRelativePath("/");
+                        exchange.setRequestURI(path);
+                    } else if (parseState < HOST_DONE && state.canonicalPath.length() == 0) {
+                        String decodedPath = decode(path, urlDecodeRequired, state, allowEncodedSlash, false);
+                        exchange.setRequestPath(decodedPath);
+                        exchange.setRelativePath(decodedPath);
+                        exchange.setRequestURI(path);
+                    } else {
+                        handleFullUrl(state, exchange, canonicalPathStart, urlDecodeRequired, path);
+                    }
+                    exchange.setQueryString("");
+                    state.state = ParseState.VERSION;
+                    state.stringBuilder.setLength(0);
+                    state.canonicalPath.setLength(0);
+                    state.parseState = 0;
+                    state.pos = 0;
+                    state.urlDecodeRequired = false;
+>>>>>>> 171186d9c... [UNDERTOW-1464] Add a few extra tests to SimpleParserTestCase, prevent the parsing algorithm of path params from affecting relative path in certain scenarios (see testcase) and update PathParamterSessionConfig to strip name param regardless of whether the param is in the end of the path or not
                     return;
                 }
             } else if (next == '\r' || next == '\n') {
@@ -446,6 +468,7 @@ public abstract class HttpRequestParser {
         state.urlDecodeRequired = urlDecodeRequired;
     }
 
+<<<<<<< HEAD
     private void parsePathComplete(ParseState state, HttpServerExchange exchange, int canonicalPathStart, int parseState, boolean urlDecodeRequired, String path) {
         if (parseState == SECOND_SLASH) {
             exchange.setRequestPath("/");
@@ -466,14 +489,28 @@ public abstract class HttpRequestParser {
         state.urlDecodeRequired = false;
     }
 
+=======
+>>>>>>> 171186d9c... [UNDERTOW-1464] Add a few extra tests to SimpleParserTestCase, prevent the parsing algorithm of path params from affecting relative path in certain scenarios (see testcase) and update PathParamterSessionConfig to strip name param regardless of whether the param is in the end of the path or not
     private void beginQueryParameters(ByteBuffer buffer, ParseState state, HttpServerExchange exchange, StringBuilder stringBuilder, int parseState, int canonicalPathStart, boolean urlDecodeRequired) throws BadRequestException {
         final String path = stringBuilder.toString();
         parsePathComplete(state, exchange, canonicalPathStart, parseState, urlDecodeRequired, path);
         state.state = ParseState.QUERY_PARAMETERS;
+<<<<<<< HEAD
         handleQueryParameters(buffer, state, exchange);
     }
 
     private void handleFullUrl(ParseState state, HttpServerExchange exchange, int canonicalPathStart, boolean urlDecodeRequired, String path, int parseState) {
+=======
+        state.stringBuilder.setLength(0);
+        state.canonicalPath.setLength(0);
+        state.parseState = 0;
+        state.pos = 0;
+        state.urlDecodeRequired = false;
+        handleQueryParameters(buffer, state, exchange);
+    }
+
+    private void handleFullUrl(ParseState state, HttpServerExchange exchange, int canonicalPathStart, boolean urlDecodeRequired, String path) {
+>>>>>>> 171186d9c... [UNDERTOW-1464] Add a few extra tests to SimpleParserTestCase, prevent the parsing algorithm of path params from affecting relative path in certain scenarios (see testcase) and update PathParamterSessionConfig to strip name param regardless of whether the param is in the end of the path or not
         state.canonicalPath.append(path.substring(canonicalPathStart));
         String thePath = decode(state.canonicalPath.toString(), urlDecodeRequired, state, allowEncodedSlash, false);
         exchange.setRequestPath(thePath);
@@ -601,9 +638,22 @@ public abstract class HttpRequestParser {
             if (next == ' ' || next == '\t' || next == '?') {
                 handleParsedParam(param, stringBuilder.substring(pos), exchange, urlDecodeRequired, state);
                 final String path = stringBuilder.toString();
-                // the canonicalPathStart should be the current length to not add anything to it
-                parsePathComplete(state, exchange, path.length(), state.parseState, urlDecodeRequired, path);
+                if(state.parseState == SECOND_SLASH) {
+                    exchange.setRequestPath("/");
+                    exchange.setRelativePath("/");
+                    exchange.setRequestURI(path);
+                } else {
+                    String decodedPath = decode(state.canonicalPath.toString(), urlDecodeRequired, state, allowEncodedSlash, false);
+                    exchange.setRequestPath(decodedPath);
+                    exchange.setRelativePath(decodedPath);
+                    exchange.setRequestURI(path);
+                }
                 state.state = ParseState.VERSION;
+                state.stringBuilder.setLength(0);
+                state.canonicalPath.setLength(0);
+                state.parseState = 0;
+                state.pos = 0;
+                state.urlDecodeRequired = false;
                 state.nextQueryParam = null;
                 if (next == '?') {
                     state.state = ParseState.QUERY_PARAMETERS;
