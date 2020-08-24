@@ -36,6 +36,8 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediatePooledByteBuffer;
 import io.undertow.util.Methods;
+
+import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
@@ -111,7 +113,15 @@ public final class HttpServerConnection extends AbstractServerConnection {
             @Override
             public StreamSinkConduit wrap(ConduitFactory<StreamSinkConduit> factory, HttpServerExchange exchange) {
 
-                ServerFixedLengthStreamSinkConduit fixed = new ServerFixedLengthStreamSinkConduit(new HttpResponseConduit(getSinkChannel().getConduit(), getByteBufferPool(), HttpServerConnection.this, exchange), false, false);
+                HttpResponseConduit httpResponseConduit = new HttpResponseConduit(getSinkChannel().getConduit(), getByteBufferPool(), HttpServerConnection.this, exchange);
+                exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
+                    @Override
+                    public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
+                        httpResponseConduit.freeContinueResponse();
+                        nextListener.proceed();
+                    }
+                });
+                ServerFixedLengthStreamSinkConduit fixed = new ServerFixedLengthStreamSinkConduit(httpResponseConduit, false, false);
                 fixed.reset(0, exchange);
                 return fixed;
             }
@@ -135,7 +145,9 @@ public final class HttpServerConnection extends AbstractServerConnection {
 
     @Override
     public void terminateRequestChannel(HttpServerExchange exchange) {
-
+        if (!exchange.isPersistent()) {
+            IoUtils.safeClose(getChannel().getSourceChannel());
+        }
     }
 
     /**

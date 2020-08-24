@@ -23,15 +23,18 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
 
-import io.undertow.server.ConduitWrapper;
-import io.undertow.server.protocol.http.HttpContinue;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.ConduitFactory;
-import io.undertow.util.StatusCodes;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.StreamSourceConduit;
+
+import io.undertow.server.ConduitWrapper;
+import io.undertow.server.Connectors;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.server.ResponseCommitListener;
+import io.undertow.server.protocol.http.HttpContinue;
+import io.undertow.util.ConduitFactory;
+import io.undertow.util.StatusCodes;
 
 /**
  * Handler for requests that require 100-continue responses. If an attempt is made to read from the source
@@ -44,7 +47,7 @@ public class HttpContinueReadHandler implements HttpHandler {
     private static final ConduitWrapper<StreamSourceConduit> WRAPPER = new ConduitWrapper<StreamSourceConduit>() {
         @Override
         public StreamSourceConduit wrap(final ConduitFactory<StreamSourceConduit> factory, final HttpServerExchange exchange) {
-            if(exchange.isRequestChannelAvailable() && !exchange.isResponseStarted()) {
+            if (exchange.isRequestChannelAvailable() && !exchange.isResponseStarted()) {
                 return new ContinueConduit(factory.create(), exchange);
             }
             return factory.create();
@@ -61,6 +64,17 @@ public class HttpContinueReadHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         if (HttpContinue.requiresContinueResponse(exchange)) {
             exchange.addRequestWrapper(WRAPPER);
+            exchange.addResponseCommitListener(new ResponseCommitListener() {
+                @Override
+                public void beforeCommit(HttpServerExchange exchange) {
+                    //we are writing the response, and have not read the request then we mark this as non-persistent
+                    if (!HttpContinue.isContinueResponseSent(exchange)) {
+                        exchange.setPersistent(false);
+                        //we also kill the request channel, because it is unusable now
+                        exchange.getConnection().terminateRequestChannel(exchange);
+                    }
+                }
+            });
         }
         handler.handleRequest(exchange);
     }
@@ -81,6 +95,7 @@ public class HttpContinueReadHandler implements HttpHandler {
         public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
             if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
+                Connectors.terminateRequest(exchange);
                 return -1;
             }
             if (!sent) {
@@ -100,6 +115,7 @@ public class HttpContinueReadHandler implements HttpHandler {
         public long transferTo(final long count, final ByteBuffer throughBuffer, final StreamSinkChannel target) throws IOException {
             if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
+                Connectors.terminateRequest(exchange);
                 return -1;
             }
             if (!sent) {
@@ -119,6 +135,7 @@ public class HttpContinueReadHandler implements HttpHandler {
         public int read(final ByteBuffer dst) throws IOException {
             if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
+                Connectors.terminateRequest(exchange);
                 return -1;
             }
             if (!sent) {
@@ -138,6 +155,7 @@ public class HttpContinueReadHandler implements HttpHandler {
         public long read(final ByteBuffer[] dsts, final int offs, final int len) throws IOException {
             if (exchange.getStatusCode() == StatusCodes.EXPECTATION_FAILED) {
                 //rejected
+                Connectors.terminateRequest(exchange);
                 return -1;
             }
             if (!sent) {
