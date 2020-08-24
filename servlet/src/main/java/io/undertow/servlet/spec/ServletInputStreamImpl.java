@@ -88,6 +88,9 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     @Override
     public boolean isReady() {
+        if (!asyncContext.isInitialRequestDone()) {
+            return false;
+        }
         boolean finished = anyAreSet(state, FLAG_FINISHED);
         if(finished) {
             if (anyAreClear(state, FLAG_ON_DATA_READ_CALLED)) {

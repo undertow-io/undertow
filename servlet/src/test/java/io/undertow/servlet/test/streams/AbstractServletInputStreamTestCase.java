@@ -58,6 +58,7 @@ public abstract class AbstractServletInputStreamTestCase {
     public static final String HELLO_WORLD = "Hello World";
     public static final String BLOCKING_SERVLET = "blockingInput";
     public static final String ASYNC_SERVLET = "asyncInput";
+    public static final String ASYNC_EAGER_SERVLET = "asyncEagerInput";
 
     @Test
     public void testBlockingServletInputStream() {

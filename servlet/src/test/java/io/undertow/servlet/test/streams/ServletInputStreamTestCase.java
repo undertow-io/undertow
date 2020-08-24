@@ -22,6 +22,7 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
@@ -37,7 +38,27 @@ public class ServletInputStreamTestCase extends AbstractServletInputStreamTestCa
                         .addMapping("/" + BLOCKING_SERVLET),
                 new ServletInfo(ASYNC_SERVLET, AsyncInputStreamServlet.class)
                         .addMapping("/" + ASYNC_SERVLET)
+                        .setAsyncSupported(true),
+                new ServletInfo(ASYNC_EAGER_SERVLET, EagerAsyncInputStreamServlet.class)
+                        .addMapping("/" + ASYNC_EAGER_SERVLET)
                         .setAsyncSupported(true));
     }
 
+    @Test
+    public void testAsyncServletInputStreamEagerIsReady() {
+        //for(int h = 0; h < 20 ; ++h) {
+        StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
+        for (int i = 0; i < 10; ++i) {
+            try {
+                for (int j = 0; j < 10000; ++j) {
+                    builder.append(HELLO_WORLD);
+                }
+                String message = builder.toString();
+                runTest(message, ASYNC_EAGER_SERVLET, false, false);
+            } catch (Throwable e) {
+                throw new RuntimeException("test failed with i equal to " + i, e);
+            }
+        }
+        //}
+    }
 }
