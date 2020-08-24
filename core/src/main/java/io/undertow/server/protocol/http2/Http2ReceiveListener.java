@@ -37,7 +37,6 @@ import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
 import io.undertow.util.ImmediatePooledByteBuffer;
 import io.undertow.util.Methods;
 import io.undertow.util.ParameterLimitException;
@@ -56,6 +55,11 @@ import java.util.function.Supplier;
 
 import javax.net.ssl.SSLSession;
 
+import static io.undertow.protocols.http2.Http2Channel.AUTHORITY;
+import static io.undertow.protocols.http2.Http2Channel.METHOD;
+import static io.undertow.protocols.http2.Http2Channel.PATH;
+import static io.undertow.protocols.http2.Http2Channel.SCHEME;
+
 /**
  * The recieve listener for a Http2 connection.
  * <p>
@@ -64,11 +68,6 @@ import javax.net.ssl.SSLSession;
  * @author Stuart Douglas
  */
 public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
-
-    static final HttpString METHOD = new HttpString(":method");
-    static final HttpString PATH = new HttpString(":path");
-    static final HttpString SCHEME = new HttpString(":scheme");
-    static final HttpString AUTHORITY = new HttpString(":authority");
 
     private final HttpHandler rootHandler;
     private final long maxEntitySize;
