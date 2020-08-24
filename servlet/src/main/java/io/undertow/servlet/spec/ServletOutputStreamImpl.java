@@ -73,6 +73,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     private StreamSinkChannel channel;
     private long written;
     private volatile int state;
+    private volatile boolean asyncIoStarted;
     private AsyncContextImpl asyncContext;
 
     private WriteListener listener;
@@ -756,6 +757,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             //TODO: is this the correct behaviour?
             throw UndertowServletMessages.MESSAGES.streamNotInAsyncMode();
         }
+        if (!asyncIoStarted) {
+            //if we don't add this guard here calls to isReady could start async IO too soon
+            //resulting in a 'resuming + dispatched' message
+            return false;
+        }
         if (!anyAreSet(state, FLAG_READY)) {
             if (channel != null) {
                 channel.resumeWrites();
@@ -790,6 +796,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         asyncContext.addAsyncTask(new Runnable() {
             @Override
             public void run() {
+                asyncIoStarted = true;
                 if (channel == null) {
                     servletRequestContext.getExchange().getIoThread().execute(new Runnable() {
                         @Override
