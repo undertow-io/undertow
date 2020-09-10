@@ -222,6 +222,7 @@
                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                         <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
                         <org.wildfly.openssl.path>${org.wildfly.openssl.path}</org.wildfly.openssl.path>
+                        <io.undertow.protocols.alpn.jdk8>true</io.undertow.protocols.alpn.jdk8>
                     </systemPropertyVariables>
                     <argLine>${jacoco.agent.argLine} ${surefire.system.args} ${libraryPath}</argLine>
                 </configuration>
