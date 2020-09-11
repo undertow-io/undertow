@@ -31,6 +31,8 @@ import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.LogMessage;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
+import org.xnio.channels.ReadTimeoutException;
+import org.xnio.channels.WriteTimeoutException;
 import org.xnio.ssl.SslConnection;
 
 import java.io.IOException;
@@ -423,4 +425,12 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = DEBUG)
     @Message(id = 5092, value = "Failed to free direct buffer")
     void directBufferDeallocationFailed(@Cause Throwable t);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5093, value = "Blocking read timed out")
+    void blockingReadTimedOut(@Cause ReadTimeoutException rte);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5094, value = "Blocking write timed out")
+    void blockingWriteTimedOut(@Cause WriteTimeoutException rte);
 }
