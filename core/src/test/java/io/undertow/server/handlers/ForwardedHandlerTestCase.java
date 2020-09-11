@@ -32,14 +32,17 @@ import static io.undertow.server.handlers.ForwardedHandler.parseHeader;
 @ProxyIgnore
 public class ForwardedHandlerTestCase {
 
+    private static ForwardedHandler handler;
+
     @BeforeClass
     public static void setup() {
-        DefaultServer.setRootHandler(new ForwardedHandler(new HttpHandler() {
+        handler = new ForwardedHandler(new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.getResponseSender().send(exchange.getRequestScheme() + "|" + exchange.getHostAndPort()+ "|" + exchange.getDestinationAddress() + "|" + exchange.getSourceAddress() );
+                exchange.getResponseSender().send(exchange.getRequestScheme() + "|" + exchange.getHostAndPort() + "|" + exchange.getDestinationAddress() + "|" + exchange.getSourceAddress());
             }
-        }));
+        }).setDefaultAllow(true);
+        DefaultServer.setRootHandler(handler);
     }
 
     @Test
@@ -132,6 +135,38 @@ public class ForwardedHandlerTestCase {
         Assert.assertEquals( "foo.com", res[1]);
         Assert.assertEquals( "foo.com:80", res[2]);
         Assert.assertEquals( "/9.9.9.9:2343", res[3]);
+    }
+
+    @Test
+    public void testForwardedHandlerDefaultDeny() throws IOException {
+        handler.clearRules();
+        handler.setDefaultAllow(false);
+
+        try {
+            String[] res = run();
+            Assert.assertEquals("http", res[0]);
+            Assert.assertEquals( DefaultServer.getHostAddress() + ":" + DefaultServer.getHostPort(), res[1]);
+            Assert.assertEquals( "/" + InetAddress.getByName(DefaultServer.getHostAddress()).getHostAddress() + ":" + DefaultServer.getHostPort(), res[2]);
+
+            res = run("host=google.com");
+            Assert.assertEquals("http", res[0]);
+            Assert.assertNotEquals( "google.com", res[1]);
+            Assert.assertNotEquals( "google.com:80", res[2]);
+
+            res = run("host=google.com, proto=https");
+            Assert.assertNotEquals("https", res[0]);
+            Assert.assertNotEquals( "google.com", res[1]);
+            Assert.assertNotEquals( "google.com:80", res[2]);
+
+            res = run("for=8.8.8.8:3545");
+            Assert.assertEquals("http", res[0]);
+            Assert.assertEquals( DefaultServer.getHostAddress() + ":" + DefaultServer.getHostPort(), res[1]);
+            Assert.assertEquals( "/" + InetAddress.getByName(DefaultServer.getHostAddress()).getHostAddress() + ":" + DefaultServer.getHostPort(), res[2]);
+            Assert.assertNotEquals( "/8.8.8.8:3545", res[3]);
+        } finally {
+            handler.clearRules();
+            handler.setDefaultAllow(true);
+        }
     }
 
     private static String[] run(String ... headers) throws IOException {
