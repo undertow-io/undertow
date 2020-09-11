@@ -318,7 +318,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             return false;
         }
         SecurityContext sc = exchange.getSecurityContext();
-        Account account = sc.getAuthenticatedAccount();
+        Account account = sc != null ? sc.getAuthenticatedAccount() : null;
         if (account == null) {
             return false;
         }
@@ -458,6 +458,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
 
         SecurityContext sc = exchange.getSecurityContext();
+        if (sc == null) {
+            throw UndertowServletMessages.MESSAGES.noSecurityContextAvailable();
+        }
+
         sc.setAuthenticationRequired();
         // TODO: this will set the status code and headers without going through any potential
         // wrappers, is this a problem?
@@ -482,7 +486,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             throw UndertowServletMessages.MESSAGES.loginFailed();
         }
         SecurityContext sc = exchange.getSecurityContext();
-        if (sc.isAuthenticated()) {
+        if (sc == null) {
+            throw UndertowServletMessages.MESSAGES.noSecurityContextAvailable();
+        } else if (sc.isAuthenticated()) {
             throw UndertowServletMessages.MESSAGES.userAlreadyLoggedIn();
         }
         boolean login = false;
@@ -502,6 +508,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public void logout() throws ServletException {
         SecurityContext sc = exchange.getSecurityContext();
+        if (sc == null) {
+            throw UndertowServletMessages.MESSAGES.noSecurityContextAvailable();
+        }
         sc.logout();
         if(servletContext.getDeployment().getDeploymentInfo().isInvalidateSessionOnLogout()) {
             HttpSession session = getSession(false);
