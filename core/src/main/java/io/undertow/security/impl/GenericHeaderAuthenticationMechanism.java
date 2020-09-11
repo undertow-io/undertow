@@ -43,6 +43,7 @@ import static io.undertow.security.api.AuthenticationMechanism.AuthenticationMec
  * principal and the other as a password credential.
  *
  * @author Stuart Douglas
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class GenericHeaderAuthenticationMechanism implements AuthenticationMechanism {
 
@@ -84,10 +85,11 @@ public class GenericHeaderAuthenticationMechanism implements AuthenticationMecha
     }
 
     private String getSession(HttpServerExchange exchange) {
-        for(String header : sessionCookieNames) {
-            Cookie cookie = exchange.getRequestCookies().get(header);
-            if(cookie != null) {
-                return cookie.getValue();
+        for (String header : sessionCookieNames) {
+            for (Cookie cookie : exchange.requestCookies()) {
+                if (header.equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
             }
         }
         return null;

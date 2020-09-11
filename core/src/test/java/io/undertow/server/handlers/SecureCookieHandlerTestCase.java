@@ -48,7 +48,7 @@ public class SecureCookieHandlerTestCase {
         DefaultServer.setRootHandler(new SecureCookieHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                exchange.getResponseCookies().put("foo", new CookieImpl("foo", "bar"));
+                exchange.setResponseCookie(new CookieImpl("foo", "bar"));
             }
         }));
 

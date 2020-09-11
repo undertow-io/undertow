@@ -32,11 +32,11 @@ import javax.servlet.http.PushBuilder;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 
 /**
  * @author Stuart Douglas
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class PushBuilderImpl implements PushBuilder {
 
@@ -104,21 +104,21 @@ public class PushBuilderImpl implements PushBuilder {
             this.headers.add(Headers.REFERER, servletRequest.getRequestURL()  + "?" + servletRequest.getQueryString());
         }
         this.path = null;
-        for(Map.Entry<String, Cookie> cookie : servletRequest.getExchange().getResponseCookies().entrySet()) {
-            if(cookie.getValue().getMaxAge() != null && cookie.getValue().getMaxAge() <= 0) {
+        for (Cookie cookie : servletRequest.getExchange().responseCookies()) {
+            if(cookie.getMaxAge() != null && cookie.getMaxAge() <= 0) {
                 //remove cookie
                 HeaderValues existing = headers.get(Headers.COOKIE);
                 if(existing != null) {
                     Iterator<String> it = existing.iterator();
                     while (it.hasNext()) {
                         String val = it.next();
-                        if(val.startsWith(cookie.getKey() + "=")) {
+                        if(val.startsWith(cookie.getName() + "=")) {
                             it.remove();
                         }
                     }
                 }
-            } else if(!cookie.getKey().equals(servletRequest.getServletContext().getSessionCookieConfig().getName())){
-                headers.add(Headers.COOKIE, cookie.getKey() + "=" + cookie.getValue().getValue());
+            } else if(!cookie.getName().equals(servletRequest.getServletContext().getSessionCookieConfig().getName())){
+                headers.add(Headers.COOKIE, cookie.getName() + "=" + cookie.getValue());
             }
         }
 

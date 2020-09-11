@@ -34,6 +34,7 @@ import io.undertow.util.SameSiteNoneIncompatibleClientChecker;
 
 /**
  * Handler that will set the SameSite flag to response cookies
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class SameSiteCookieHandler implements HttpHandler {
 
@@ -79,14 +80,14 @@ public class SameSiteCookieHandler implements HttpHandler {
                     if (enableClientChecker && userAgent != null && !SameSiteNoneIncompatibleClientChecker.shouldSendSameSiteNone(userAgent)) {
                         return;
                     }
-                    for (Map.Entry<String, Cookie> cookie : exchange.getResponseCookies().entrySet()) {
-                        if (cookiePattern == null || cookiePattern.matcher(cookie.getValue().getName()).matches()) {
+                    for (Cookie cookie : exchange.responseCookies()) {
+                        if (cookiePattern == null || cookiePattern.matcher(cookie.getName()).matches()) {
                             // set SameSite attribute to all response cookies when cookie pattern is not specified.
                             // or, set SameSite attribute if cookie name matches the specified cookie pattern.
-                            cookie.getValue().setSameSiteMode(mode);
+                            cookie.setSameSiteMode(mode);
                             if (addSecureForNone) {
                                 // Add secure attribute for "SameSite=None"
-                                cookie.getValue().setSecure(true);
+                                cookie.setSecure(true);
                             }
                         }
                     }

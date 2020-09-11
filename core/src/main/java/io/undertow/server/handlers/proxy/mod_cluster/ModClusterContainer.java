@@ -48,6 +48,7 @@ import java.util.concurrent.TimeUnit;
  * @author Stuart Douglas
  * @author Emanuel Muckenhuber
  * @author Radoslav Husar
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 class ModClusterContainer implements ModClusterController {
 
@@ -134,13 +135,14 @@ class ModClusterContainer implements ModClusterController {
             return null;
         }
         for (final Balancer balancer : balancers.values()) {
-            final Map<String, Cookie> cookies = exchange.getRequestCookies();
             if (balancer.isStickySession()) {
-                if (cookies.containsKey(balancer.getStickySessionCookie())) {
-                    String sessionId = cookies.get(balancer.getStickySessionCookie()).getValue();
-                    Iterator<CharSequence> routes = parseRoutes(sessionId);
-                    if (routes.hasNext()) {
-                        return new ModClusterProxyTarget.ExistingSessionTarget(sessionId, routes, entry.getValue(), this, balancer.isStickySessionForce());
+                for (Cookie cookie : exchange.requestCookies()) {
+                    if (balancer.getStickySessionCookie().equals(cookie.getName())) {
+                        String sessionId = cookie.getValue();
+                        Iterator<CharSequence> routes = parseRoutes(sessionId);
+                        if (routes.hasNext()) {
+                            return new ModClusterProxyTarget.ExistingSessionTarget(sessionId, routes, entry.getValue(), this, balancer.isStickySessionForce());
+                        }
                     }
                 }
                 if (exchange.getPathParameters().containsKey(balancer.getStickySessionPath())) {

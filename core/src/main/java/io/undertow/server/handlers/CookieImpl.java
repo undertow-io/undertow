@@ -26,6 +26,7 @@ import io.undertow.UndertowMessages;
 
 /**
  * @author Stuart Douglas
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class CookieImpl implements Cookie {
 
@@ -174,4 +175,37 @@ public class CookieImpl implements Cookie {
         }
         return this;
     }
+
+    @Override
+    public final int hashCode() {
+        int result = 17;
+        result = 37 * result + (getName() == null ? 0 : getName().hashCode());
+        result = 37 * result + (getPath() == null ? 0 : getPath().hashCode());
+        result = 37 * result + (getDomain() == null ? 0 : getDomain().hashCode());
+        return result;
+    }
+
+    @Override
+    public final boolean equals(final Object other) {
+        if (other == this) return true;
+        if (!(other instanceof CookieImpl)) return false;
+        final CookieImpl o = (CookieImpl) other;
+        // compare names
+        if (getName() == null && o.getName() != null) return false;
+        if (getName() != null && !getName().equals(o.getName())) return false;
+        // compare paths
+        if (getPath() == null && o.getPath() != null) return false;
+        if (getPath() != null && !getPath().equals(o.getPath())) return false;
+        // compare domains
+        if (getDomain() == null && o.getDomain() != null) return false;
+        if (getDomain() != null && !getDomain().equals(o.getDomain())) return false;
+        // same cookie
+        return true;
+    }
+
+    @Override
+    public final String toString() {
+        return "{CookieImpl@" + System.identityHashCode(this) + " name=" + getName() + " path=" + getPath() + " domain=" + getDomain() + "}";
+    }
+
 }

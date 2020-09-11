@@ -32,20 +32,17 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.function.Supplier;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.SessionTrackingMode;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import io.undertow.UndertowLogger;
-import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.ResponseCommitListener;
-import io.undertow.server.handlers.Cookie;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
@@ -61,9 +58,9 @@ import io.undertow.util.StatusCodes;
 
 import static io.undertow.util.URLUtils.isAbsoluteUrl;
 
-
 /**
  * @author Stuart Douglas
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public final class HttpServletResponseImpl implements HttpServletResponse {
 
@@ -88,8 +85,6 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private String contentType;
     private String charset;
     private Supplier<Map<String, String>> trailerSupplier;
-    // a map of cookie name -> a map of (cookie path + cookie domain) -> cookie
-    private Map<String, Map<String, Cookie>> duplicateCookies;
 
     public HttpServletResponseImpl(final HttpServerExchange exchange, final ServletContextImpl servletContext) {
         this.exchange = exchange;
@@ -102,45 +97,13 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     @Override
-    public void addCookie(final javax.servlet.http.Cookie cookie) {
+    public void addCookie(final Cookie newCookie) {
         if (insideInclude) {
             return;
         }
-        final ServletCookieAdaptor servletCookieAdaptor = new ServletCookieAdaptor(cookie);
-        if (cookie.getVersion() == 0) {
+        final ServletCookieAdaptor servletCookieAdaptor = new ServletCookieAdaptor(newCookie);
+        if (newCookie.getVersion() == 0) {
             servletCookieAdaptor.setVersion(servletContext.getDeployment().getDeploymentInfo().getDefaultCookieVersion());
-        }
-        // test for duplicate entry
-        if (exchange.getResponseCookies().containsKey(servletCookieAdaptor.getName())) {
-            final String cookieName = servletCookieAdaptor.getName();
-            final String path = servletCookieAdaptor.getPath();
-            final String domain = servletCookieAdaptor.getDomain();
-            final Cookie otherCookie = exchange.getResponseCookies().get(cookieName);
-            final String otherCookiePath = otherCookie.getPath();
-            final String otherCookieDomain = otherCookie.getDomain();
-            // if both cookies have same path, name, and domain, overwrite previous cookie
-            if ((path == otherCookiePath || (path != null && path.equals(otherCookiePath))) &&
-                    (domain == otherCookieDomain || (domain != null && domain.equals(otherCookieDomain)))) {
-                exchange.setResponseCookie(servletCookieAdaptor);
-            }
-            // else, create a duplicate cookie entry
-            else {
-                final Map<String, Cookie> cookiesByPathPlusDomain;
-                if (duplicateCookies == null) {
-                    duplicateCookies = new TreeMap<>();
-                    exchange.addResponseCommitListener(
-                            new DuplicateCookieCommitListener());
-                }
-                if (duplicateCookies.containsKey(cookieName)) {
-                    cookiesByPathPlusDomain = duplicateCookies.get(cookieName);
-                } else {
-                    cookiesByPathPlusDomain = new TreeMap<>();
-                    duplicateCookies.put(cookieName, cookiesByPathPlusDomain);
-                }
-                String pathPlusDomain = (otherCookiePath == null ? "null" : otherCookiePath) +
-                        (otherCookieDomain == null? "null" : otherCookieDomain);
-                cookiesByPathPlusDomain.put(pathPlusDomain, otherCookie);
-            }
         }
         exchange.setResponseCookie(servletCookieAdaptor);
     }
@@ -853,16 +816,4 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         return trailerSupplier;
     }
 
-    private class DuplicateCookieCommitListener implements
-            ResponseCommitListener {
-
-        @Override
-        public void beforeCommit(HttpServerExchange exchange) {
-            for (Map.Entry<String, Map<String, Cookie>> duplicateCookiesEntry : duplicateCookies.entrySet()) {
-                for (Map.Entry<String, Cookie> cookiesByPathEntry : duplicateCookiesEntry.getValue().entrySet()) {
-                    Connectors.addCookie(exchange, cookiesByPathEntry.getValue());
-                }
-            }
-        }
-    }
 }

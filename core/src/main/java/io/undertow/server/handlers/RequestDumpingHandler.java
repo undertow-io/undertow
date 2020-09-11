@@ -42,6 +42,7 @@ import io.undertow.util.LocaleUtils;
  * Handler that dumps a exchange to a log.
  *
  * @author Stuart Douglas
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class RequestDumpingHandler implements HttpHandler {
 
@@ -71,13 +72,9 @@ public class RequestDumpingHandler implements HttpHandler {
             }
         }
 
-        Map<String, Cookie> cookies = exchange.getRequestCookies();
-        if (cookies != null) {
-            for (Map.Entry<String, Cookie> entry : cookies.entrySet()) {
-                Cookie cookie = entry.getValue();
-                sb.append("            cookie=" + cookie.getName() + "=" +
-                        cookie.getValue() + "\n");
-            }
+        for (Cookie cookie : exchange.requestCookies()) {
+            sb.append("            cookie=" + cookie.getName() + "=" +
+                    cookie.getValue() + "\n");
         }
         for (HeaderValues header : exchange.getRequestHeaders()) {
             for (String value : header) {
@@ -131,11 +128,8 @@ public class RequestDumpingHandler implements HttpHandler {
                 }
                 sb.append("     contentLength=" + exchange.getResponseContentLength() + "\n");
                 sb.append("       contentType=" + exchange.getResponseHeaders().getFirst(Headers.CONTENT_TYPE) + "\n");
-                Map<String, Cookie> cookies = exchange.getResponseCookies();
-                if (cookies != null) {
-                    for (Cookie cookie : cookies.values()) {
-                        sb.append("            cookie=" + cookie.getName() + "=" + cookie.getValue() + "; domain=" + cookie.getDomain() + "; path=" + cookie.getPath() + "\n");
-                    }
+                for (Cookie cookie : exchange.responseCookies()) {
+                    sb.append("            cookie=" + cookie.getName() + "=" + cookie.getValue() + "; domain=" + cookie.getDomain() + "; path=" + cookie.getPath() + "\n");
                 }
                 for (HeaderValues header : exchange.getResponseHeaders()) {
                     for (String value : header) {

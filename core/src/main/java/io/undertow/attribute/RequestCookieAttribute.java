@@ -24,6 +24,7 @@ import io.undertow.server.handlers.CookieImpl;
 
 /**
  * A request cookie
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class RequestCookieAttribute implements ExchangeAttribute {
 
@@ -37,16 +38,17 @@ public class RequestCookieAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        Cookie cookie = exchange.getRequestCookies().get(cookieName);
-        if (cookie == null) {
-            return null;
+        for (Cookie cookie : exchange.requestCookies()) {
+            if (cookieName.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
         }
-        return cookie.getValue();
+        return null;
     }
 
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
-        exchange.getRequestCookies().put(cookieName, new CookieImpl(cookieName, newValue));
+        exchange.setRequestCookie(new CookieImpl(cookieName, newValue));
     }
 
     public static final class Builder implements ExchangeAttributeBuilder {
