@@ -135,15 +135,15 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private final String protocol;
 
     //local
-    private int encoderHeaderTableSize;
+    private final int encoderHeaderTableSize;
     private volatile boolean pushEnabled;
     private volatile int sendMaxConcurrentStreams = -1;
-    private volatile int receiveMaxConcurrentStreams = -1;
+    private final int receiveMaxConcurrentStreams;
     private volatile int sendConcurrentStreams = 0;
     private volatile int receiveConcurrentStreams = 0;
-    private volatile int initialReceiveWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
+    private final int initialReceiveWindowSize;
     private volatile int sendMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
-    private int receiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+    private final int receiveMaxFrameSize;
     private int unackedReceiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE; //the old max frame size, this gets updated when our setting frame is acked
     private final int maxHeaders;
     private final int maxHeaderListSize;
@@ -179,7 +179,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     private final Map<AttachmentKey<?>, Object> attachments = Collections.synchronizedMap(new HashMap<AttachmentKey<?>, Object>());
 
-    private ParseTimeoutUpdater parseTimeoutUpdater;
+    private final ParseTimeoutUpdater parseTimeoutUpdater;
 
     private final Object flowControlLock = new Object();
 
@@ -195,12 +195,13 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     /**
      * How much data we have told the remote endpoint we are prepared to accept, guarded by {@link #flowControlLock}
      */
-    private volatile int receiveWindowSize = initialReceiveWindowSize;
+    private volatile int receiveWindowSize;
 
 
     public Http2Channel(StreamConnection connectedStreamChannel, String protocol, ByteBufferPool bufferPool, PooledByteBuffer data, boolean clientSide, boolean fromUpgrade, OptionMap settings) {
         this(connectedStreamChannel, protocol, bufferPool, data, clientSide, fromUpgrade, true, null, settings);
     }
+
     public Http2Channel(StreamConnection connectedStreamChannel, String protocol, ByteBufferPool bufferPool, PooledByteBuffer data, boolean clientSide, boolean fromUpgrade, boolean prefaceRequired, OptionMap settings) {
         this(connectedStreamChannel, protocol, bufferPool, data, clientSide, fromUpgrade, prefaceRequired, null, settings);
     }
@@ -211,6 +212,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
         pushEnabled = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
         this.initialReceiveWindowSize = settings.get(UndertowOptions.HTTP2_SETTINGS_INITIAL_WINDOW_SIZE, DEFAULT_INITIAL_WINDOW_SIZE);
+        this.receiveWindowSize = initialReceiveWindowSize;
         this.receiveMaxConcurrentStreams = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS, -1);
 
         this.protocol = protocol == null ? Http2OpenListener.HTTP2 : protocol;
