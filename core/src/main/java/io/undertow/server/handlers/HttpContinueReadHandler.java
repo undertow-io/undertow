@@ -64,19 +64,23 @@ public class HttpContinueReadHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         if (HttpContinue.requiresContinueResponse(exchange)) {
             exchange.addRequestWrapper(WRAPPER);
-            exchange.addResponseCommitListener(new ResponseCommitListener() {
-                @Override
-                public void beforeCommit(HttpServerExchange exchange) {
-                    //we are writing the response, and have not read the request then we mark this as non-persistent
-                    if (!HttpContinue.isContinueResponseSent(exchange)) {
-                        exchange.setPersistent(false);
-                        //we also kill the request channel, because it is unusable now
-                        exchange.getConnection().terminateRequestChannel(exchange);
-                    }
-                }
-            });
+            exchange.addResponseCommitListener(ContinueResponseCommitListener.INSTANCE);
         }
         handler.handleRequest(exchange);
+    }
+
+    private enum ContinueResponseCommitListener implements ResponseCommitListener {
+        INSTANCE;
+
+        @Override
+        public void beforeCommit(HttpServerExchange exchange) {
+            //we are writing the response, and have not read the request then we mark this as non-persistent
+            if (!HttpContinue.isContinueResponseSent(exchange)) {
+                exchange.setPersistent(false);
+                //we also kill the request channel, because it is unusable now
+                exchange.getConnection().terminateRequestChannel(exchange);
+            }
+        }
     }
 
     private static final class ContinueConduit extends AbstractStreamSourceConduit<StreamSourceConduit> implements StreamSourceConduit {
