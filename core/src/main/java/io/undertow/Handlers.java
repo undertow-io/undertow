@@ -25,6 +25,7 @@ import io.undertow.predicate.PredicatesHandler;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.JvmRouteHandler;
 import io.undertow.server.RoutingHandler;
+import io.undertow.server.handlers.SetErrorHandler;
 import io.undertow.server.handlers.AccessControlListHandler;
 import io.undertow.server.handlers.LearningPushHandler;
 import io.undertow.server.handlers.DateHandler;
@@ -560,6 +561,18 @@ public class Handlers {
      */
     public static LearningPushHandler learningPushHandler(int maxEntries, int maxAge, HttpHandler next) {
         return new LearningPushHandler(maxEntries, maxAge, next);
+    }
+
+    /**
+     * A handler that sets response code but continues the exchange so the servlet's
+     * error page can be returned.
+     *
+     * @param responseCode The response code to set
+     * @param next The next handler
+     * @return A Set Error handler
+     */
+    public static SetErrorHandler setErrorHandler(int responseCode, HttpHandler next) {
+        return new SetErrorHandler(next, responseCode);
     }
 
     /**

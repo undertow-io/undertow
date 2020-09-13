@@ -41,3 +41,4 @@ io.undertow.server.handlers.ForwardedHandler$Builder
 io.undertow.server.handlers.HttpContinueAcceptingHandler$Builder
 io.undertow.server.handlers.form.EagerFormParsingHandler$Builder
 io.undertow.server.handlers.SameSiteCookieHandler$Builder
+io.undertow.server.handlers.SetErrorHandler$Builder
