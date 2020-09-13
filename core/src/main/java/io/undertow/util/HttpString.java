@@ -343,7 +343,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
     @SuppressWarnings("deprecation")
     public String toString() {
         if (string == null) {
-            string = new String(bytes, 0);
+            string = new String(bytes, java.nio.charset.StandardCharsets.US_ASCII);
         }
         return string;
     }
