@@ -43,13 +43,13 @@ class AndPredicate implements Predicate {
 
     @Override
     public String toString() {
-        String result = "";
+        StringBuilder result = new StringBuilder();
         for(final Predicate predicate : predicates) {
             if( result.length() > 0 ) {
-                result += " and ";
+                result.append(" and ");
             }
-            result += predicate.toString();
+            result.append(predicate.toString());
         }
-        return result;
+        return result.toString();
     }
 }

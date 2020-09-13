@@ -43,13 +43,13 @@ class OrPredicate implements Predicate {
 
     @Override
     public String toString() {
-        String result = "";
+        StringBuilder result = new StringBuilder();
         for(final Predicate predicate : predicates) {
             if( result.length() > 0 ) {
-                result += " or ";
+                result.append(" or ");
             }
-            result += predicate.toString();
+            result.append(predicate.toString());
         }
-        return result;
+        return result.toString();
     }
 }
