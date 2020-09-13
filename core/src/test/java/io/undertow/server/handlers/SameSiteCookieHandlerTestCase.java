@@ -29,7 +29,6 @@ import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -38,7 +37,6 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FileUtils;
 import io.undertow.util.StatusCodes;
 
-@RunWith(DefaultServer.class)
 public class SameSiteCookieHandlerTestCase {
 
     @Test
