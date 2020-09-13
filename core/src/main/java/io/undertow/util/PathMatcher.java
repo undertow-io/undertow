@@ -21,6 +21,7 @@ package io.undertow.util;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
@@ -58,12 +59,12 @@ public class PathMatcher<T> {
     }
 
     public Set<String> getExactPathMatchesSet(){
-        return exactPathMatches.keySet();
+        return Collections.unmodifiableSet(exactPathMatches.keySet());
     }
 
 
     public Set<String> getPathMatchesSet(){
-        return paths.toMap().keySet();
+        return Collections.unmodifiableSet(paths.toMap().keySet());
     }
 
     /**
