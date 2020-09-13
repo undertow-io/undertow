@@ -48,6 +48,10 @@ public class RequestLargerThanPredicate implements Predicate {
         return Long.parseLong(length) > size;
     }
 
+    public String toString() {
+        return "request-larger-than( '" + size + "' )";
+    }
+
     public static class Builder implements PredicateBuilder {
 
         @Override
