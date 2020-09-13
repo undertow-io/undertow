@@ -45,6 +45,11 @@ public class HostAndPortAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Host and Port", newValue);
     }
 
+    @Override
+    public String toString() {
+        return HOST_AND_PORT;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

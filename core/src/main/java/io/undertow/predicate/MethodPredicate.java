@@ -18,9 +18,11 @@
 
 package io.undertow.predicate;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.HttpString;
@@ -51,6 +53,14 @@ public class MethodPredicate implements Predicate {
         return false;
     }
 
+    @Override
+    public String toString() {
+        if( methods.length == 1 ) {
+            return "method( '" + methods[0] + "' )";
+        } else {
+            return "method( {" + Arrays.asList( methods ).stream().map(s->s.toString()).collect(Collectors.joining(", ")) + "} )";
+        }
+    }
 
     public static class Builder implements PredicateBuilder {
 

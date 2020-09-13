@@ -68,6 +68,10 @@ public class DirectoryPredicate implements Predicate {
         }
     }
 
+    @Override
+    public String toString() {
+        return "directory( " + location.toString() + " )";
+    }
 
     public static class Builder implements PredicateBuilder {
 

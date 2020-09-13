@@ -48,6 +48,11 @@ public class ExistsPredicate implements Predicate {
         return !att.isEmpty();
     }
 
+    @Override
+    public String toString() {
+        return "exists( '" + attribute.toString() + "' )";
+    }
+
     public static class Builder implements PredicateBuilder {
 
         @Override

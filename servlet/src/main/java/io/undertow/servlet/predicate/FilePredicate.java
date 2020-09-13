@@ -81,6 +81,10 @@ public class FilePredicate implements Predicate {
         }
     }
 
+    @Override
+    public String toString() {
+        return "file( " + location.toString() + " )";
+    }
 
     public static class Builder implements PredicateBuilder {
 

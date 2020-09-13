@@ -78,6 +78,13 @@ public class DateTimeAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Date time", newValue);
     }
 
+    @Override
+    public String toString() {
+        if (dateFormat == null)
+            return DATE_TIME;
+        return CUSTOM_TIME + dateFormat + "}";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

@@ -46,6 +46,11 @@ public class ThreadNameAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Thread name", newValue);
     }
 
+    @Override
+    public String toString() {
+        return THREAD_NAME;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

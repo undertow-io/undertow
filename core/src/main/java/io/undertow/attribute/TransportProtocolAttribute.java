@@ -45,6 +45,11 @@ public class TransportProtocolAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("transport protocol", newValue);
     }
 
+    @Override
+    public String toString() {
+        return TRANSPORT_PROTOCOL;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

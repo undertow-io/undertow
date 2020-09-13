@@ -105,6 +105,11 @@ public class PeerNameResolvingHandler implements HttpHandler {
 
     }
 
+    @Override
+    public String toString() {
+        return "resolve-peer-name()";
+    }
+
     public static class Builder implements HandlerBuilder {
 
         @Override

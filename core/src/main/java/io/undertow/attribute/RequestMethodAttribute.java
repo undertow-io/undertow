@@ -46,6 +46,11 @@ public class RequestMethodAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Request method", newValue);
     }
 
+    @Override
+    public String toString() {
+        return REQUEST_METHOD;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

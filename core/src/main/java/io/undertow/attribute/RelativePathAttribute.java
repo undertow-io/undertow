@@ -75,6 +75,11 @@ public class RelativePathAttribute implements ExchangeAttribute {
         }
     }
 
+    @Override
+    public String toString() {
+        return RELATIVE_PATH;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

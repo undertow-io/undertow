@@ -70,6 +70,11 @@ public class QuotingExchangeAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException();
     }
 
+    @Override
+    public String toString() {
+        return "\"" + exchangeAttribute.toString() + "\"";
+    }
+
     public static class Wrapper implements ExchangeAttributeWrapper {
 
         @Override

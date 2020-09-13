@@ -51,6 +51,11 @@ public class ServletNameAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException(NAME, newValue);
     }
 
+    @Override
+    public String toString() {
+        return SERVLET_NAME;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

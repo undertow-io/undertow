@@ -60,6 +60,11 @@ public class RemoteObfuscatedIPAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Remote Obfuscated IP", newValue);
     }
 
+    @Override
+    public String toString() {
+        return REMOTE_OBFUSCATED_IP;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

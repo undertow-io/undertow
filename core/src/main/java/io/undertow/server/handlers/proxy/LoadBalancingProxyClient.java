@@ -41,6 +41,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.undertow.server.handlers.proxy.ProxyConnectionPool.AvailabilityType.*;
 import static io.undertow.server.handlers.proxy.RouteIteratorFactory.*;
+import java.util.ArrayList;
+import java.util.List;
 import static org.xnio.IoUtils.safeClose;
 
 /**
@@ -91,6 +93,27 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
     private static final ProxyTarget PROXY_TARGET = new ProxyTarget() {
     };
+
+    @Override
+    public List<ProxyTarget> getAllTargets() {
+        List<ProxyTarget> arr = new ArrayList();
+        for (Host host : hosts) {
+            HostProxyTarget proxyTarget = new HostProxyTarget() {
+                Host host;
+                public void setHost(Host host) {
+                    this.host = host;
+                }
+                public String toString(){
+                    return host.getUri().toString();
+                }
+            };
+            proxyTarget.setHost(host);
+            arr.add(proxyTarget);
+        }
+        return arr;
+    }
+
+
 
     public LoadBalancingProxyClient() {
         this(UndertowClient.getInstance());
@@ -183,9 +206,11 @@ public class LoadBalancingProxyClient implements ProxyClient {
         return addHost(host, null, null);
     }
 
+
     public synchronized LoadBalancingProxyClient addHost(final URI host, XnioSsl ssl) {
         return addHost(host, null, ssl);
     }
+
 
     public synchronized LoadBalancingProxyClient addHost(final URI host, String jvmRoute) {
         return addHost(host, jvmRoute, null);
@@ -206,11 +231,9 @@ public class LoadBalancingProxyClient implements ProxyClient {
         return this;
     }
 
-
     public synchronized LoadBalancingProxyClient addHost(final URI host, String jvmRoute, XnioSsl ssl, OptionMap options) {
         return addHost(null, host, jvmRoute, ssl, options);
     }
-
 
     public synchronized LoadBalancingProxyClient addHost(final InetSocketAddress bindAddress, final URI host, String jvmRoute, XnioSsl ssl, OptionMap options) {
         Host h = new Host(jvmRoute, bindAddress, host, ssl, options);

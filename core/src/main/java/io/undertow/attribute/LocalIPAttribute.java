@@ -49,6 +49,11 @@ public class LocalIPAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Local IP", newValue);
     }
 
+    @Override
+    public String toString() {
+        return LOCAL_IP;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

@@ -61,6 +61,11 @@ public class RequestHeaderAttribute implements ExchangeAttribute {
         exchange.getRequestHeaders().put(requestHeader, newValue);
     }
 
+    @Override
+    public String toString() {
+        return "%{i," + requestHeader + "}";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

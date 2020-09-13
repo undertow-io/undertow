@@ -30,6 +30,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
+import java.util.stream.Collectors;
 
 /**
  * Handler that blacklists certain HTTP methods.
@@ -62,6 +63,14 @@ public class DisallowedMethodsHandler implements HttpHandler {
         }
     }
 
+    @Override
+    public String toString() {
+        if (disallowedMethods.size() == 1) {
+            return "disallowed-methods( " + disallowedMethods.toArray()[0] + " )";
+        } else {
+            return "disallowed-methods( {" + disallowedMethods.stream().map(s -> s.toString()).collect(Collectors.joining(", ")) + "} )";
+        }
+    }
 
     public static class Builder implements HandlerBuilder {
 

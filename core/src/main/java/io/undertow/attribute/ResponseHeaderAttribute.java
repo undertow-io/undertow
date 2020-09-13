@@ -61,6 +61,11 @@ public class ResponseHeaderAttribute implements ExchangeAttribute {
         exchange.getResponseHeaders().put(responseHeader, newValue);
     }
 
+    @Override
+    public String toString() {
+        return "%{o," + responseHeader + "}";
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

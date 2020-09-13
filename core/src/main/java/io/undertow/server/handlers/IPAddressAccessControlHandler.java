@@ -15,9 +15,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package io.undertow.server.handlers;
 
+import io.undertow.UndertowLogger;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -38,6 +38,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.StatusCodes;
+import java.util.stream.Collectors;
 import org.xnio.Bits;
 
 /**
@@ -82,9 +83,16 @@ public class IPAddressAccessControlHandler implements HttpHandler {
     private final int denyResponseCode;
     private final List<PeerMatch> ipv6acl = new CopyOnWriteArrayList<>();
     private final List<PeerMatch> ipv4acl = new CopyOnWriteArrayList<>();
+    private static final boolean traceEnabled;
+    private static final boolean debugEnabled;
+
+    static {
+        traceEnabled = UndertowLogger.PREDICATE_LOGGER.isTraceEnabled();
+        debugEnabled = UndertowLogger.PREDICATE_LOGGER.isDebugEnabled();
+    }
 
     public IPAddressAccessControlHandler(final HttpHandler next) {
-      this(next, StatusCodes.FORBIDDEN);
+        this(next, StatusCodes.FORBIDDEN);
     }
 
     public IPAddressAccessControlHandler(final HttpHandler next, final int denyResponseCode) {
@@ -103,20 +111,29 @@ public class IPAddressAccessControlHandler implements HttpHandler {
         if (isAllowed(peer.getAddress())) {
             next.handleRequest(exchange);
         } else {
+            if (debugEnabled) {
+                UndertowLogger.PREDICATE_LOGGER.debugf("Access to [%s] blocked from %s.", exchange, peer.getHostString());
+            }
             exchange.setStatusCode(denyResponseCode);
             exchange.endExchange();
         }
     }
 
     boolean isAllowed(InetAddress address) {
-        if(address instanceof Inet4Address) {
+        if (address instanceof Inet4Address) {
             for (PeerMatch rule : ipv4acl) {
+                if (traceEnabled) {
+                    UndertowLogger.PREDICATE_LOGGER.tracef("Comparing rule [%s] to IPv4 address %s.", rule.toPredicateString(), address.getHostAddress());
+                }
                 if (rule.matches(address)) {
                     return !rule.isDeny();
                 }
             }
-        } else if(address instanceof Inet6Address) {
+        } else if (address instanceof Inet6Address) {
             for (PeerMatch rule : ipv6acl) {
+                if (traceEnabled) {
+                    UndertowLogger.PREDICATE_LOGGER.tracef("Comparing rule [%s] to IPv6 address %s.", rule.toPredicateString(), address.getHostAddress());
+                }
                 if (rule.matches(address)) {
                     return !rule.isDeny();
                 }
@@ -146,7 +163,6 @@ public class IPAddressAccessControlHandler implements HttpHandler {
         this.next = next;
         return this;
     }
-
 
     /**
      * Adds an allowed peer to the ACL list
@@ -214,7 +230,6 @@ public class IPAddressAccessControlHandler implements HttpHandler {
         String[] parts = components[0].split("\\:");
         int maskLen = Integer.parseInt(components[1]);
         assert parts.length == 8;
-
 
         byte[] pattern = new byte[16];
         byte[] mask = new byte[16];
@@ -305,6 +320,22 @@ public class IPAddressAccessControlHandler implements HttpHandler {
         ipv4acl.add(new ExactIpV4PeerMatch(deny, peer, bytes));
     }
 
+    @Override
+    public String toString() {
+        //ip-access-control( default-allow=false, acl={'127.0.0.* allow', '192.168.1.123 deny'}, failure-status=404 )
+        String predicate = "ip-access-control( default-allow=" + defaultAllow + ", acl={ ";
+        List<PeerMatch> acl = new ArrayList<>();
+        acl.addAll(ipv4acl);
+        acl.addAll(ipv6acl);
+
+        predicate += acl.stream().map(s -> "'" + s.toPredicateString() + "'").collect(Collectors.joining(", "));
+        predicate += " }";
+        if (denyResponseCode != StatusCodes.FORBIDDEN) {
+            predicate += ", failure-status=" + denyResponseCode;
+        }
+        predicate += " )";
+        return predicate;
+    }
 
     abstract static class PeerMatch {
 
@@ -324,10 +355,14 @@ public class IPAddressAccessControlHandler implements HttpHandler {
 
         @Override
         public String toString() {
-            return getClass().getSimpleName() + "{" +
-                    "deny=" + deny +
-                    ", pattern='" + pattern + '\'' +
-                    '}';
+            return getClass().getSimpleName() + "{"
+                    + "deny=" + deny
+                    + ", pattern='" + pattern + '\''
+                    + '}';
+        }
+
+        public String toPredicateString() {
+            return pattern + " " + (deny ? "deny" : "allow");
         }
     }
 
@@ -413,7 +448,6 @@ public class IPAddressAccessControlHandler implements HttpHandler {
         }
     }
 
-
     public static class Builder implements HandlerBuilder {
 
         @Override
@@ -448,14 +482,14 @@ public class IPAddressAccessControlHandler implements HttpHandler {
             Integer failureStatus = (Integer) config.get("failure-status");
 
             List<Holder> peerMatches = new ArrayList<>();
-            for(String rule :acl) {
+            for (String rule : acl) {
                 String[] parts = rule.split(" ");
-                if(parts.length != 2) {
+                if (parts.length != 2) {
                     throw UndertowMessages.MESSAGES.invalidAclRule(rule);
                 }
-                if(parts[1].trim().equals("allow")) {
+                if (parts[1].trim().equals("allow")) {
                     peerMatches.add(new Holder(parts[0].trim(), false));
-                } else if(parts[1].trim().equals("deny")) {
+                } else if (parts[1].trim().equals("deny")) {
                     peerMatches.add(new Holder(parts[0].trim(), true));
                 } else {
                     throw UndertowMessages.MESSAGES.invalidAclRule(rule);
@@ -472,19 +506,17 @@ public class IPAddressAccessControlHandler implements HttpHandler {
         private final boolean defaultAllow;
         private final int failureStatus;
 
-
         private Wrapper(List<Holder> peerMatches, boolean defaultAllow, int failureStatus) {
             this.peerMatches = peerMatches;
             this.defaultAllow = defaultAllow;
             this.failureStatus = failureStatus;
         }
 
-
         @Override
         public HttpHandler wrap(HttpHandler handler) {
             IPAddressAccessControlHandler res = new IPAddressAccessControlHandler(handler, failureStatus);
-            for(Holder match: peerMatches) {
-                if(match.deny) {
+            for (Holder match : peerMatches) {
+                if (match.deny) {
                     res.addDeny(match.rule);
                 } else {
                     res.addAllow(match.rule);
@@ -496,6 +528,7 @@ public class IPAddressAccessControlHandler implements HttpHandler {
     }
 
     private static class Holder {
+
         final String rule;
         final boolean deny;
 

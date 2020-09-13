@@ -187,6 +187,11 @@ public class RequestDumpingHandler implements HttpHandler {
         }
     }
 
+    @Override
+    public String toString() {
+        return "dump-request()";
+    }
+
 
     public static class Builder implements HandlerBuilder {
 

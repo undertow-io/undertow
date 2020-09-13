@@ -91,6 +91,11 @@ public class EagerFormParsingHandler implements HttpHandler {
         return this;
     }
 
+    @Override
+    public String toString() {
+        return "eager-form-parser()";
+    }
+
 
     public static class Builder implements HandlerBuilder {
 

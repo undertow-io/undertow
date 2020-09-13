@@ -43,6 +43,11 @@ public class ResolvedPathAttribute implements ExchangeAttribute {
         exchange.setResolvedPath(newValue);
     }
 
+    @Override
+    public String toString() {
+        return RESOLVED_PATH;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

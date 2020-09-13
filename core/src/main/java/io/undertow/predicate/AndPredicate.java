@@ -40,4 +40,16 @@ class AndPredicate implements Predicate {
         }
         return true;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder result = new StringBuilder();
+        for(final Predicate predicate : predicates) {
+            if( result.length() > 0 ) {
+                result.append(" and ");
+            }
+            result.append(predicate.toString());
+        }
+        return result.toString();
+    }
 }

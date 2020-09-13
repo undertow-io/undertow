@@ -45,6 +45,11 @@ public class PredicatesHandler implements HttpHandler {
      */
     public static final AttachmentKey<Boolean> DONE = AttachmentKey.create(Boolean.class);
     public static final AttachmentKey<Boolean> RESTART = AttachmentKey.create(Boolean.class);
+    private static final boolean traceEnabled;
+
+    static {
+        traceEnabled = UndertowLogger.PREDICATE_LOGGER.isTraceEnabled();
+    }
 
     private volatile Holder[] handlers = new Holder[0];
     private volatile HttpHandler next;
@@ -60,6 +65,11 @@ public class PredicatesHandler implements HttpHandler {
     public PredicatesHandler(HttpHandler next, boolean outerHandler) {
         this.next = next;
         this.outerHandler = outerHandler;
+    }
+
+    @Override
+    public String toString() {
+        return "PredicatesHandler with " + handlers.length + " predicates";
     }
 
     @Override
@@ -80,6 +90,9 @@ public class PredicatesHandler implements HttpHandler {
             } else {
                 //if it has been marked as done
                 if (exchange.getAttachment(DONE) != null) {
+                    if (traceEnabled && outerHandler) {
+                        UndertowLogger.PREDICATE_LOGGER.tracef("Predicate chain marked done. Next handler is [%s] for %s.", next.toString(), exchange);
+                    }
                     exchange.removeAttachment(CURRENT_POSITION);
                     next.handleRequest(exchange);
                     return;
@@ -89,21 +102,39 @@ public class PredicatesHandler implements HttpHandler {
             for (; pos < length; ++pos) {
                 final Holder handler = handlers[pos];
                 if (handler.predicate.resolve(exchange)) {
+                    if(traceEnabled) {
+                        if( handler.predicate.toString().equals("true") ) {
+                            UndertowLogger.PREDICATE_LOGGER.tracef("Executing handler [%s] for %s.", handler.handler.toString(), exchange);
+                        } else {
+                            UndertowLogger.PREDICATE_LOGGER.tracef("Predicate [%s] resolved to true. Next handler is [%s] for %s.", handler.predicate.toString(), handler.handler.toString(), exchange);
+                        }
+                    }
                     exchange.putAttachment(CURRENT_POSITION, pos + 1);
                     handler.handler.handleRequest(exchange);
                     if(shouldRestart(exchange, current)) {
+                        if(traceEnabled) {
+                            UndertowLogger.PREDICATE_LOGGER.tracef("Restarting predicate resolution for %s.", exchange);
+                        }
                         break;
                     } else {
                         return;
                     }
                 } else if(handler.elseBranch != null) {
+                    if(traceEnabled) {
+                        UndertowLogger.PREDICATE_LOGGER.tracef("Predicate [%s] resolved to false. Else branch is [%s] for %s.", handler.predicate.toString(), handler.elseBranch.toString(), exchange);
+                    }
                     exchange.putAttachment(CURRENT_POSITION, pos + 1);
                     handler.elseBranch.handleRequest(exchange);
                     if(shouldRestart(exchange, current)) {
+                        if(traceEnabled) {
+                            UndertowLogger.PREDICATE_LOGGER.tracef("Restarting predicate resolution for %s.", exchange);
+                        }
                         break;
                     } else {
                         return;
                     }
+                } else if(traceEnabled) {
+                    UndertowLogger.PREDICATE_LOGGER.tracef("Predicate [%s] resolved to false for %s.", handler.predicate.toString(), exchange);
                 }
             }
         } while (shouldRestart(exchange, current));
@@ -201,6 +232,10 @@ public class PredicatesHandler implements HttpHandler {
                             exchange.putAttachment(DONE, true);
                             handler.handleRequest(exchange);
                         }
+                        @Override
+                        public String toString() {
+                            return "done";
+                        }
                     };
                 }
             };
@@ -252,6 +287,10 @@ public class PredicatesHandler implements HttpHandler {
                                 throw UndertowLogger.ROOT_LOGGER.maxRestartsExceeded(MAX_RESTARTS);
                             }
                             exchange.putAttachment(RESTART, true);
+                        }
+                        @Override
+                        public String toString() {
+                            return "restart";
                         }
                     };
                 }

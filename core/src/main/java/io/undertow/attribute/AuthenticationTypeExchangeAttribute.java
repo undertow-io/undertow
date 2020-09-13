@@ -43,6 +43,11 @@ public class AuthenticationTypeExchangeAttribute implements ExchangeAttribute {
         throw new ReadOnlyAttributeException("Authentication Type", newValue);
     }
 
+    @Override
+    public String toString() {
+        return TOKEN;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

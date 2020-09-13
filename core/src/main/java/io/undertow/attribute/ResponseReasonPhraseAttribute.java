@@ -47,6 +47,11 @@ public class ResponseReasonPhraseAttribute implements ExchangeAttribute {
         exchange.setReasonPhrase(newValue);
     }
 
+    @Override
+    public String toString() {
+        return RESPONSE_REASON_PHRASE;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

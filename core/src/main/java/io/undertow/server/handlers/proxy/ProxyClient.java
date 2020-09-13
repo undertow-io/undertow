@@ -19,6 +19,9 @@
 package io.undertow.server.handlers.proxy;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.proxy.LoadBalancingProxyClient.Host;
+import java.util.ArrayList;
+import java.util.List;
 
 import java.util.concurrent.TimeUnit;
 
@@ -66,5 +69,13 @@ public interface ProxyClient {
 
     interface MaxRetriesProxyTarget extends ProxyTarget {
         int getMaxRetries();
+    }
+
+    interface HostProxyTarget extends ProxyTarget {
+        void setHost(Host host);
+    }
+
+    default List<ProxyTarget> getAllTargets(){
+        return new ArrayList();
     }
 }

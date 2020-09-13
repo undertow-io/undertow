@@ -95,6 +95,11 @@ public class EncodingHandler implements HttpHandler {
         return this;
     }
 
+    @Override
+    public String toString() {
+        return "compress()";
+    }
+
     public static class Builder  implements HandlerBuilder {
 
         @Override

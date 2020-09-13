@@ -23,6 +23,9 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.cache.LRUCache;
 import io.undertow.util.PathMatcher;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Handler that dispatches to a given handler based of a prefix match of the path.
@@ -59,6 +62,16 @@ public class PathHandler implements HttpHandler {
             cache = new LRUCache<>(cacheSize, -1, true);
         } else {
             cache = null;
+        }
+    }
+
+    @Override
+    public String toString() {
+        Set<Entry<String,HttpHandler>> paths = pathMatcher.getPaths().entrySet();
+        if (paths.size() == 1) {
+            return "path( " + paths.toArray()[0] + " )";
+        } else {
+            return "path( {" + paths.stream().map(s -> s.getValue().toString()).collect(Collectors.joining(", ")) + "} )";
         }
     }
 

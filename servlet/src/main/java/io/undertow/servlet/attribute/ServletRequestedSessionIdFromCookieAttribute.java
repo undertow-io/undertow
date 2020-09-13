@@ -55,6 +55,11 @@ public class ServletRequestedSessionIdFromCookieAttribute implements ExchangeAtt
         throw new ReadOnlyAttributeException("Requested session ID from cookie", newValue);
     }
 
+    @Override
+    public String toString() {
+        return REQUESTED_SESSION_ID_FROM_COOKIE;
+    }
+
     public static final class Builder implements ExchangeAttributeBuilder {
 
         @Override

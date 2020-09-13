@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.UndertowLogger;
 
 /**
  * A predicate that does a regex match against an exchange.
@@ -44,6 +45,11 @@ public class RegularExpressionPredicate implements Predicate {
     private final Pattern pattern;
     private final ExchangeAttribute matchAttribute;
     private final boolean requireFullMatch;
+    private static final boolean traceEnabled;
+
+    static {
+        traceEnabled = UndertowLogger.PREDICATE_LOGGER.isTraceEnabled();
+    }
 
     public RegularExpressionPredicate(final String regex, final ExchangeAttribute matchAttribute, final boolean requireFullMatch, boolean caseSensitive) {
         this.requireFullMatch = requireFullMatch;
@@ -72,7 +78,9 @@ public class RegularExpressionPredicate implements Predicate {
         } else {
             matches = matcher.find();
         }
-
+        if (traceEnabled) {
+            UndertowLogger.PREDICATE_LOGGER.tracef("Regex pattern [%s] %s input [%s] for %s.", pattern.toString(), (matches ? "MATCHES" : "DOES NOT MATCH" ), input, value);
+        }
         if (matches) {
             Map<String, Object> context = value.getAttachment(PREDICATE_CONTEXT);
             if(context == null) {
@@ -80,10 +88,18 @@ public class RegularExpressionPredicate implements Predicate {
             }
             int count = matcher.groupCount();
             for (int i = 0; i <= count; ++i) {
+                if (traceEnabled) {
+                    UndertowLogger.PREDICATE_LOGGER.tracef("Storing regex match group [%s] as [%s] for %s.", i, matcher.group(i), value);
+                }
                 context.put(Integer.toString(i), matcher.group(i));
             }
         }
         return matches;
+    }
+
+    @Override
+    public String toString() {
+        return "regex( pattern='" + pattern.toString() +  "', value='" + matchAttribute.toString() + "', full-match='" + Boolean.valueOf( this.requireFullMatch ) + "', case-sensitive='" + Boolean.valueOf( ( pattern.flags() & Pattern.CASE_INSENSITIVE ) == Pattern.CASE_INSENSITIVE ) + "' )";
     }
 
     public static class Builder implements PredicateBuilder {

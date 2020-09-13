@@ -26,7 +26,7 @@ import io.undertow.util.AttachmentKey;
 /**
  * A predicate.
  *
- * This is mainly uses by handlers as a way to decide if a request should have certain
+ * This is mainly used by handlers as a way to decide if a request should have certain
  * processing applied, based on the given conditions.
  *
  * @author Stuart Douglas

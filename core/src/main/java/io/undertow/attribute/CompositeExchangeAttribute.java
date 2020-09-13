@@ -51,4 +51,13 @@ public class CompositeExchangeAttribute implements ExchangeAttribute {
     public void writeAttribute(HttpServerExchange exchange, String newValue) throws ReadOnlyAttributeException {
         throw new ReadOnlyAttributeException("combined", newValue);
     }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < attributes.length; ++i) {
+            sb.append(attributes[i].toString());
+        }
+        return sb.toString();
+    }
 }

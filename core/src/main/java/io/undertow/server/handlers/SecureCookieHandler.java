@@ -54,6 +54,11 @@ public class SecureCookieHandler implements HttpHandler {
         next.handleRequest(exchange);
     }
 
+    @Override
+    public String toString() {
+        return "secure-cookie()";
+    }
+
     public static class Builder implements HandlerBuilder {
 
         @Override

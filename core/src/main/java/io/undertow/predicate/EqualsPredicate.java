@@ -18,10 +18,12 @@
 
 package io.undertow.predicate;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.server.HttpServerExchange;
@@ -58,6 +60,11 @@ public class EqualsPredicate implements Predicate {
             }
         }
         return true;
+    }
+
+    @Override
+    public String toString() {
+        return "equals( {" +  Arrays.asList( attributes ).stream().map(a->a.toString()).collect(Collectors.joining(", ")) + "} )";
     }
 
     public static class Builder implements PredicateBuilder {

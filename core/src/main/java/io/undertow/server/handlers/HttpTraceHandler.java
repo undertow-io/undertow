@@ -71,6 +71,10 @@ public class HttpTraceHandler implements HttpHandler {
         }
     }
 
+    @Override
+    public String toString() {
+        return "trace()";
+    }
 
 
     public static class Builder implements HandlerBuilder {

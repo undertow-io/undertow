@@ -172,6 +172,11 @@ public class RequestBufferingHandler implements HttpHandler {
         }
     }
 
+    @Override
+    public String toString() {
+        return "buffer-request( " + maxBuffers + " )";
+    }
+
     public static final class Builder implements HandlerBuilder {
 
         @Override
