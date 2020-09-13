@@ -52,6 +52,7 @@ import java.util.concurrent.RejectedExecutionException;
 public class Connectors {
 
     private static final boolean[] ALLOWED_TOKEN_CHARACTERS = new boolean[256];
+    private static final boolean[] ALLOWED_SCHEME_CHARACTERS = new boolean[256];
 
     static {
         for(int i = 0; i < ALLOWED_TOKEN_CHARACTERS.length; ++i) {
@@ -81,6 +82,25 @@ public class Connectors {
                     }
                     default:
                         ALLOWED_TOKEN_CHARACTERS[i] = false;
+                }
+            }
+        }
+
+        for(int i = 0; i < ALLOWED_SCHEME_CHARACTERS.length; ++i) {
+            if((i >='0' && i <= '9') ||
+                    (i >='a' && i <= 'z') ||
+                    (i >='A' && i <= 'Z')) {
+                ALLOWED_SCHEME_CHARACTERS[i] = true;
+            } else {
+                switch (i) {
+                    case '+':
+                    case '-':
+                    case '.': {
+                        ALLOWED_SCHEME_CHARACTERS[i] = true;
+                        break;
+                    }
+                    default:
+                        ALLOWED_SCHEME_CHARACTERS[i] = false;
                 }
             }
         }
@@ -536,6 +556,10 @@ public class Connectors {
      */
     public static boolean isValidTokenCharacter(byte c) {
         return ALLOWED_TOKEN_CHARACTERS[c];
+    }
+
+    public static boolean isValidSchemeCharacter(byte c) {
+        return ALLOWED_SCHEME_CHARACTERS[c];
     }
 
 
