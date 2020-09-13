@@ -23,6 +23,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -78,20 +79,17 @@ public final class WebSocketTestClient {
         final WebSocketClientHandshaker handshaker =
                 WebSocketClientHandshakerFactory.newHandshaker(
                         uri, version, null, false, new DefaultHttpHeaders());
-
+        WSClientHandler handler = new WSClientHandler(handshaker);
         EventLoopGroup group = new NioEventLoopGroup();
-        final CountDownLatch handshakeLatch = new CountDownLatch(1);
         bootstrap.group(group)
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer() {
                     @Override
                     protected void initChannel(Channel channel) throws Exception {
-
                         ChannelPipeline p = channel.pipeline();
                         p.addLast(
                                 new HttpClientCodec(),
-                                new HttpObjectAggregator(8192),
-                                new WSClientHandler(handshaker, handshakeLatch));
+                                new HttpObjectAggregator(8192), handler);
                     }
                 });
 
@@ -100,12 +98,8 @@ public final class WebSocketTestClient {
                 bootstrap.connect(
                         new InetSocketAddress(uri.getHost(), uri.getPort()));
         future.syncUninterruptibly();
-
+        handler.handshakeFuture.syncUninterruptibly();
         ch = future.channel();
-
-        handshaker.handshake(ch).syncUninterruptibly();
-        handshakeLatch.await();
-
         return this;
     }
 
@@ -186,16 +180,28 @@ public final class WebSocketTestClient {
          */
         void onError(Throwable t);
     }
-
     private static final class WSClientHandler extends SimpleChannelInboundHandler<Object> {
 
         private final WebSocketClientHandshaker handshaker;
-        private final CountDownLatch handshakeLatch;
+        private ChannelPromise handshakeFuture;
 
-        WSClientHandler(WebSocketClientHandshaker handshaker, CountDownLatch handshakeLatch) {
+        WSClientHandler(WebSocketClientHandshaker handshaker) {
             super(false);
             this.handshaker = handshaker;
-            this.handshakeLatch = handshakeLatch;
+        }
+
+        public ChannelFuture handshakeFuture() {
+            return handshakeFuture;
+        }
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) {
+            handshakeFuture = ctx.newPromise();
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) {
+            handshaker.handshake(ctx.channel());
         }
 
         @Override
@@ -206,7 +212,7 @@ public final class WebSocketTestClient {
             if (!handshaker.isHandshakeComplete()) {
                 handshaker.finishHandshake(ch, (FullHttpResponse) o);
                 // the handshake response was processed upgrade is complete
-                handshakeLatch.countDown();
+                handshakeFuture.setSuccess();
                 ReferenceCountUtil.release(o);
                 return;
             }
@@ -218,6 +224,14 @@ public final class WebSocketTestClient {
                         + response.content().toString(CharsetUtil.UTF_8) + ')');
             }
             ctx.fireChannelRead(o);
+        }
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+            cause.printStackTrace();
+            if (!handshakeFuture.isDone()) {
+                handshakeFuture.setFailure(cause);
+            }
+            ctx.close();
         }
     }
 }
