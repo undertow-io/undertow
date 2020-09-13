@@ -80,7 +80,9 @@ public class DateTimeAttribute implements ExchangeAttribute {
 
     @Override
     public String toString() {
-        return DATE_TIME;
+        if (dateFormat == null)
+            return DATE_TIME;
+        return CUSTOM_TIME + dateFormat + "}";
     }
 
     public static final class Builder implements ExchangeAttributeBuilder {
