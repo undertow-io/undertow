@@ -25,12 +25,12 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>2.2.0.Final-SNAPSHOT</version>
+        <version>2.2.0.Final</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-parser-generator</artifactId>
-    <version>2.2.0.Final-SNAPSHOT</version>
+    <version>2.2.0.Final</version>
 
     <name>Undertow Parser Generator</name>
     <description>An annotation processor that is used to generate the HTTP parser</description>
