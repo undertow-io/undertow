@@ -18,6 +18,7 @@
 
 package io.undertow.server.protocol.ajp;
 
+import io.undertow.UndertowLogger;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -112,11 +113,19 @@ class AjpRequestParseState {
         String sessionId = sslSessionId;
         String cypher = sslCipher;
         String cert = sslCert;
+        Integer keySize = null;
         if (cert == null && sessionId == null) {
             return null;
         }
+        if (sslKeySize != null) {
+            try {
+                keySize = Integer.parseUnsignedInt(sslKeySize);
+            } catch (NumberFormatException e) {
+                UndertowLogger.REQUEST_LOGGER.debugf("Invalid sslKeySize %s", sslKeySize);
+            }
+        }
         try {
-            return new BasicSSLSessionInfo(sessionId, cypher, cert);
+            return new BasicSSLSessionInfo(sessionId, cypher, cert, keySize);
         } catch (CertificateException e) {
             return null;
         } catch (javax.security.cert.CertificateException e) {
