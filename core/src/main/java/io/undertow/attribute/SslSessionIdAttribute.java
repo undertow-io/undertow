@@ -20,7 +20,7 @@ package io.undertow.attribute;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
-import io.undertow.util.FlexBase64;
+import io.undertow.util.HexConverter;
 
 /**
  * @author Stuart Douglas
@@ -35,7 +35,7 @@ public class SslSessionIdAttribute implements ExchangeAttribute {
         if(ssl == null || ssl.getSessionId() == null) {
             return null;
         }
-        return FlexBase64.encodeString(ssl.getSessionId(), false);
+        return HexConverter.convertToHexString(ssl.getSessionId());
     }
 
     @Override

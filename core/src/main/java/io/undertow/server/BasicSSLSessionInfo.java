@@ -19,7 +19,7 @@
 package io.undertow.server;
 
 import io.undertow.UndertowMessages;
-import io.undertow.util.FlexBase64;
+import io.undertow.util.HexConverter;
 import org.xnio.SslClientAuthMode;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -28,7 +28,6 @@ import javax.security.cert.CertificateException;
 import javax.security.cert.X509Certificate;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 
@@ -43,19 +42,21 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
     private final String cypherSuite;
     private final java.security.cert.Certificate[] peerCertificate;
     private final X509Certificate[] certificate;
+    private final Integer keySize;
 
     /**
      *
      * @param sessionId The SSL session ID
      * @param cypherSuite The cypher suite name
      * @param certificate A string representation of the client certificate
+     * @param keySize The key-size used by the cypher
      * @throws java.security.cert.CertificateException If the client cert could not be decoded
      * @throws CertificateException If the client cert could not be decoded
      */
-    public BasicSSLSessionInfo(byte[] sessionId, String cypherSuite, String certificate) throws java.security.cert.CertificateException, CertificateException {
+    public BasicSSLSessionInfo(byte[] sessionId, String cypherSuite, String certificate, Integer keySize) throws java.security.cert.CertificateException, CertificateException {
         this.sessionId = sessionId;
         this.cypherSuite = cypherSuite;
-
+        this.keySize = keySize;
         if (certificate != null) {
             java.security.cert.CertificateFactory cf = java.security.cert.CertificateFactory.getInstance("X.509");
             byte[] certificateBytes = certificate.getBytes(StandardCharsets.US_ASCII);
@@ -73,16 +74,42 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
             this.certificate = null;
         }
     }
+
     /**
      *
-     * @param sessionId The Base64 encoded SSL session ID
+     * @param sessionId The SSL session ID
+     * @param cypherSuite The cypher suite name
+     * @param certificate A string representation of the client certificate
+     * @throws java.security.cert.CertificateException If the client cert could not be decoded
+     * @throws CertificateException If the client cert could not be decoded
+     */
+    public BasicSSLSessionInfo(byte[] sessionId, String cypherSuite, String certificate) throws java.security.cert.CertificateException, CertificateException {
+        this(sessionId, cypherSuite, certificate, null);
+    }
+
+    /**
+     *
+     * @param sessionId The encoded SSL session ID
      * @param cypherSuite The cypher suite name
      * @param certificate A string representation of the client certificate
      * @throws java.security.cert.CertificateException If the client cert could not be decoded
      * @throws CertificateException If the client cert could not be decoded
      */
     public BasicSSLSessionInfo(String sessionId, String cypherSuite, String certificate) throws java.security.cert.CertificateException, CertificateException {
-        this(sessionId == null ? null : base64Decode(sessionId), cypherSuite, certificate);
+        this(sessionId == null ? null : fromHex(sessionId), cypherSuite, certificate, null);
+    }
+
+    /**
+     *
+     * @param sessionId The encoded SSL session ID
+     * @param cypherSuite The cypher suite name
+     * @param certificate A string representation of the client certificate
+     * @param keySize The key-size used by the cypher
+     * @throws java.security.cert.CertificateException If the client cert could not be decoded
+     * @throws CertificateException If the client cert could not be decoded
+     */
+    public BasicSSLSessionInfo(String sessionId, String cypherSuite, String certificate, Integer keySize) throws java.security.cert.CertificateException, CertificateException {
+        this(sessionId == null ? null : fromHex(sessionId), cypherSuite, certificate, keySize);
     }
 
     @Override
@@ -98,6 +125,15 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
     @Override
     public String getCipherSuite() {
         return cypherSuite;
+    }
+
+    @Override
+    public int getKeySize() {
+        if (keySize != null) {
+            return keySize;
+        } else {
+            return SSLSessionInfo.super.getKeySize();
+        }
     }
 
     @Override
@@ -126,18 +162,10 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
         return null;
     }
 
-    private static byte[] base64Decode(String sessionId) {
+    private static byte[] fromHex(String sessionId) {
         try {
-            ByteBuffer sessionIdBuffer = FlexBase64.decode(sessionId);
-            byte[] sessionIdData;
-            if (sessionIdBuffer.hasArray()) {
-                sessionIdData = sessionIdBuffer.array();
-            } else {
-                sessionIdData = new byte[sessionIdBuffer.remaining()];
-                sessionIdBuffer.get(sessionIdData);
-            }
-            return sessionIdData;
-        } catch (IOException e) {
+            return HexConverter.convertFromHex(sessionId);
+        } catch (Exception e) {
             //can happen if the session id is invalid
             return null;
         }
