@@ -49,11 +49,11 @@ public class ServletRequestURLAttribute implements ExchangeAttribute {
         if (src == null) {
             return RequestURLAttribute.INSTANCE.readAttribute(exchange);
         }
-        String uri = (String) src.getServletRequest().getAttribute(RequestDispatcher.ERROR_REQUEST_URI);
+        String uri = (String) src.getServletRequest().getAttribute(RequestDispatcher.FORWARD_REQUEST_URI);
         if (uri != null) {
             return uri;
         }
-        uri = (String) src.getServletRequest().getAttribute(RequestDispatcher.FORWARD_REQUEST_URI);
+        uri = (String) src.getServletRequest().getAttribute(RequestDispatcher.ERROR_REQUEST_URI);
         if (uri != null) {
             return uri;
         }
