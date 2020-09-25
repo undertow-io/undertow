@@ -66,7 +66,7 @@ public class TestResourceLoader extends ClassPathResourceManager {
 
         @Override
         public Date getLastModified() {
-            return new Date(delegate.getLastModified().getTime() + 20); //file system dates may have a millisecond part, see UNDERTOW-341
+            return delegate.getLastModified();
         }
 
         @Override
