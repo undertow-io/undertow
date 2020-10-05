@@ -338,52 +338,52 @@ public class ServletPrintWriter {
     }
 
     public void println() {
-        print('\n');
+        print("\r\n");
     }
 
     public void println(final boolean b) {
         print(b);
-        print('\n');
+        println();
     }
 
     public void println(final char c) {
         print(c);
-        print('\n');
+        println();
     }
 
     public void println(final int i) {
         print(i);
-        print('\n');
+        println();
     }
 
     public void println(final long l) {
         print(l);
-        print('\n');
+        println();
     }
 
     public void println(final float f) {
         print(f);
-        print('\n');
+        println();
     }
 
     public void println(final double d) {
         print(d);
-        print('\n');
+        println();
     }
 
     public void println(final char[] s) {
         print(s);
-        print('\n');
+        println();
     }
 
     public void println(final String s) {
         print(s);
-        print('\n');
+        println();
     }
 
     public void println(final Object obj) {
         print(obj);
-        print('\n');
+        println();
     }
 
     public void printf(final String format, final Object... args) {
