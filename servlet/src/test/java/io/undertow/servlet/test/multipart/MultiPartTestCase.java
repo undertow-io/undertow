@@ -118,22 +118,22 @@ public class MultiPartTestCase {
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("PARAMS:\n" +
-                    "parameter count: 1\n" +
-                    "parameter name count: 1\n" +
-                    "name: formValue\n" +
-                    "filename: null\n" +
-                    "content-type: null\n" +
-                    "Content-Disposition: form-data; name=\"formValue\"\n" +
-                    "size: 7\n" +
-                    "content: myValue\n" +
-                    "name: file\n" +
-                    "filename: uploadfile.txt\n" +
-                    "content-type: application/octet-stream\n" +
-                    "Content-Disposition: form-data; name=\"file\"; filename=\"uploadfile.txt\"\n" +
-                    "Content-Type: application/octet-stream\n" +
-                    "size: 13\n" +
-                    "content: file contents\n", response);
+            Assert.assertEquals("PARAMS:\r\n" +
+                    "parameter count: 1\r\n" +
+                    "parameter name count: 1\r\n" +
+                    "name: formValue\r\n" +
+                    "filename: null\r\n" +
+                    "content-type: null\r\n" +
+                    "Content-Disposition: form-data; name=\"formValue\"\r\n" +
+                    "size: 7\r\n" +
+                    "content: myValue\r\n" +
+                    "name: file\r\n" +
+                    "filename: uploadfile.txt\r\n" +
+                    "content-type: application/octet-stream\r\n" +
+                    "Content-Disposition: form-data; name=\"file\"; filename=\"uploadfile.txt\"\r\n" +
+                    "Content-Type: application/octet-stream\r\n" +
+                    "size: 13\r\n" +
+                    "content: file contents\r\n", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -155,22 +155,22 @@ public class MultiPartTestCase {
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("PARAMS:\n" +
-                    "parameter count: 1\n" +
-                    "parameter name count: 1\n" +
-                    "name: formValue\n" +
-                    "filename: null\n" +
-                    "content-type: null\n" +
-                    "Content-Disposition: form-data; name=\"formValue\"\n" +
-                    "size: 7\n" +
-                    "content: myValue\n" +
-                    "name: file\n" +
-                    "filename: uploadfile.txt\n" +
-                    "content-type: application/octet-stream\n" +
-                    "Content-Disposition: form-data; name=\"file\"; filename=\"uploadfile.txt\"\n" +
-                    "Content-Type: application/octet-stream\n" +
-                    "size: 13\n" +
-                    "content: file contents\n", response);
+            Assert.assertEquals("PARAMS:\r\n" +
+                    "parameter count: 1\r\n" +
+                    "parameter name count: 1\r\n" +
+                    "name: formValue\r\n" +
+                    "filename: null\r\n" +
+                    "content-type: null\r\n" +
+                    "Content-Disposition: form-data; name=\"formValue\"\r\n" +
+                    "size: 7\r\n" +
+                    "content: myValue\r\n" +
+                    "name: file\r\n" +
+                    "filename: uploadfile.txt\r\n" +
+                    "content-type: application/octet-stream\r\n" +
+                    "Content-Disposition: form-data; name=\"file\"; filename=\"uploadfile.txt\"\r\n" +
+                    "Content-Type: application/octet-stream\r\n" +
+                    "size: 13\r\n" +
+                    "content: file contents\r\n", response);
         } finally {
             client.getConnectionManager().shutdown();
         }

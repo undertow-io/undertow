@@ -62,7 +62,7 @@ public class MultiPartForwardTestCase {
 
         String response = sendRequest("/multipart", createUrlEncodedFormPostEntity());
 
-        Assert.assertEquals("Params:\n"
+        Assert.assertEquals("Params:\r\n"
             + "foo: bar", response);
 
     }
@@ -72,7 +72,7 @@ public class MultiPartForwardTestCase {
 
         String response = sendRequest("/forward", createUrlEncodedFormPostEntity());
 
-        Assert.assertEquals("Params:\n"
+        Assert.assertEquals("Params:\r\n"
             + "foo: bar", response);
 
     }
@@ -82,7 +82,7 @@ public class MultiPartForwardTestCase {
 
         String response = sendRequest("/multipart", createMultiPartFormPostEntity());
 
-        Assert.assertEquals("Params:\n"
+        Assert.assertEquals("Params:\r\n"
             + "foo: bar", response);
 
     }
@@ -92,7 +92,7 @@ public class MultiPartForwardTestCase {
 
         String response = sendRequest("/forward", createMultiPartFormPostEntity());
 
-        Assert.assertEquals("Params:\n"
+        Assert.assertEquals("Params:\r\n"
             + "foo: bar", response);
 
     }
