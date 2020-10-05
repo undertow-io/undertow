@@ -96,10 +96,10 @@ public class CrossContextClassLoaderTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(
-                    "Including Servlet Class Loader: IncluderClassLoader\n" +
-                            "Including Servlet Context Path: /includer\n" +
-                            "Included Servlet Class Loader: IncludedClassLoader\n" +
-                            "Including Servlet Context Path: /included\n",
+                    "Including Servlet Class Loader: IncluderClassLoader\r\n" +
+                            "Including Servlet Context Path: /includer\r\n" +
+                            "Included Servlet Class Loader: IncludedClassLoader\r\n" +
+                            "Including Servlet Context Path: /included\r\n",
                     response);
         } finally {
             client.getConnectionManager().shutdown();
