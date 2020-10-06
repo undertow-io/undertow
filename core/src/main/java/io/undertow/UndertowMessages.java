@@ -655,4 +655,7 @@ public interface UndertowMessages {
     @Message(id = 210, value = "Buffer content underflow for exchange '%s', buffer '%s'")
     IOException bufferUnderflow(HttpServerExchange exchange, ByteBuffer buf);
 
+    @Message(id = 211, value = "Failed to schedule access message. Access logger is closing.")
+    IllegalStateException failedToLogAccessOnClose();
+
 }
