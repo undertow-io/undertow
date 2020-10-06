@@ -191,7 +191,8 @@ public class AccessLogFileTestCase {
             Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v1" + System.lineSeparator(), new String(Files.readAllBytes(logFileName)));
             logReceiver.rotate();
             logReceiver.awaitWrittenForTest();
-            Assert.assertFalse(Files.exists(logFileName));
+            Assert.assertTrue(Files.exists(logFileName));
+            Assert.assertEquals(0, Files.size(logFileName));
             Path firstLogRotate = logDirectory.resolve("server." + new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + ".log");
             Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v1" + System.lineSeparator(), new String(Files.readAllBytes(firstLogRotate)));
 
@@ -206,7 +207,8 @@ public class AccessLogFileTestCase {
             Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v2" + System.lineSeparator(), new String(Files.readAllBytes(logFileName)));
             logReceiver.rotate();
             logReceiver.awaitWrittenForTest();
-            Assert.assertFalse(Files.exists(logFileName));
+            Assert.assertTrue(Files.exists(logFileName));
+            Assert.assertEquals(0, Files.size(logFileName));
             Path secondLogRotate = logDirectory.resolve("server." + new SimpleDateFormat("yyyy-MM-dd").format(new Date()) + "-1.log");
             Assert.assertEquals("Remote address " + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " Code 200 test-header v2" + System.lineSeparator(), new String(Files.readAllBytes(secondLogRotate)));
 
