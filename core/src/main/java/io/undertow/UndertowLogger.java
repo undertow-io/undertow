@@ -492,4 +492,20 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = WARN)
     @Message(id = 5108, value = "Configuration option is no longer supported: %s.")
     void configurationNotSupported(String string);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5109, value = "Access Log Worker failed to transition gracefuly.")
+    void accessLogWorkerFailureOnTransition();
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5110, value = "Access Log Worker failed to reschedule.")
+    void accessLogWorkerFailureOnReschedule();
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5111, value = "Access Log Worker did not terminate cleanly.")
+    void accessLogWorkerNoTermination();
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5112, value = "Interruption in close()")
+    void closeInterrupted(@Cause InterruptedException ie);
 }
