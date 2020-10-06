@@ -17,12 +17,12 @@
  */
 package io.undertow.server;
 
-import java.util.HashSet;
+import java.util.TreeSet;
 
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-final class OverridableHashSet<T> extends HashSet<T> {
+final class OverridableTreeSet<T> extends TreeSet<T> {
     @Override
     public boolean add(final T o) {
         // always override previous value

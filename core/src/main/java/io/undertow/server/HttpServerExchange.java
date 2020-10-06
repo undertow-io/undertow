@@ -1184,7 +1184,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public Iterable<Cookie> requestCookies() {
         if (requestCookies == null) {
-            Set<Cookie> requestCookiesParam = new OverridableHashSet<>();
+            Set<Cookie> requestCookiesParam = new OverridableTreeSet<>();
             requestCookies = new DelegatingIterable<>(requestCookiesParam);
             Cookies.parseRequestCookies(
                     getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, 200),
@@ -1234,7 +1234,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public Iterable<Cookie> responseCookies() {
         if (responseCookies == null) {
-            responseCookies = new DelegatingIterable<>(new OverridableHashSet<>());
+            responseCookies = new DelegatingIterable<>(new OverridableTreeSet<>());
         }
         return responseCookies;
     }
