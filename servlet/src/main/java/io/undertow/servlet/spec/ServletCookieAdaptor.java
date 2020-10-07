@@ -198,8 +198,8 @@ public class ServletCookieAdaptor implements Cookie {
     @Override
     public final boolean equals(final Object other) {
         if (other == this) return true;
-        if (!(other instanceof ServletCookieAdaptor)) return false;
-        final ServletCookieAdaptor o = (ServletCookieAdaptor) other;
+        if (!(other instanceof Cookie)) return false;
+        final Cookie o = (Cookie) other;
         // compare names
         if (getName() == null && o.getName() != null) return false;
         if (getName() != null && !getName().equals(o.getName())) return false;
@@ -211,6 +211,11 @@ public class ServletCookieAdaptor implements Cookie {
         if (getDomain() != null && !getDomain().equals(o.getDomain())) return false;
         // same cookie
         return true;
+    }
+
+    @Override
+    public final int compareTo(final Object other) {
+        return Cookie.super.compareTo(other);
     }
 
     @Override
