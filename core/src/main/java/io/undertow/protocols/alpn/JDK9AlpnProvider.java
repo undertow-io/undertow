@@ -43,9 +43,6 @@ public class JDK9AlpnProvider implements ALPNProvider {
     private static final String JDK8_SUPPORT_PROPERTY = "io.undertow.protocols.alpn.jdk8";
 
     static {
-        // This property must be checked outside of the privileged action as the user should explicitly provide read
-        // access to it. A value of true is the only supported value.
-        final boolean addSupportIfExists = Boolean.getBoolean(JDK8_SUPPORT_PROPERTY);
         JDK_9_ALPN_METHODS = AccessController.doPrivileged(new PrivilegedAction<JDK9ALPNMethods>() {
             @Override
             public JDK9ALPNMethods run() {
@@ -61,9 +58,12 @@ public class JDK9AlpnProvider implements ALPNProvider {
                     }
                     // There was a backport of the ALPN support to Java 8 in rev 251. If a non-JDK implementation of the
                     // SSLEngine is used these methods throw an UnsupportedOperationException by default. However the
-                    // methods would exist and could result in issues. These methods can still be used by providing the
-                    // io.undertow.protocols.alpn.jdk8=true system property and support for Java 8 known in the
-                    // SSLEngine implementation being provided.
+                    // methods would exist and could result in issues. By default it seems most JDK's have a working
+                    // implementation. However since this was introduced in a micro release we should have a way to
+                    // disable this feature. Setting the io.undertow.protocols.alpn.jdk8 to false will workaround the
+                    // possible issue where the SSLEngine does not have an implementation of these methods.
+                    final String value = System.getProperty(JDK8_SUPPORT_PROPERTY);
+                    final boolean addSupportIfExists = value == null || value.trim().isEmpty() || Boolean.parseBoolean(value);
                     if (vmVersion > 8 || addSupportIfExists) {
                         Method setApplicationProtocols = SSLParameters.class.getMethod("setApplicationProtocols", String[].class);
                         Method getApplicationProtocol = SSLEngine.class.getMethod("getApplicationProtocol");
