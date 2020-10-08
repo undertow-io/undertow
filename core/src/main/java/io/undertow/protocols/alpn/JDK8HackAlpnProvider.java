@@ -50,7 +50,7 @@ public class JDK8HackAlpnProvider implements ALPNProvider {
 
     @Override
     public int getPriority() {
-        return 200;
+        return 300;
     }
 
     @Override
