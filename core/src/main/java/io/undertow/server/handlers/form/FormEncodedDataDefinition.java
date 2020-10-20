@@ -148,9 +148,9 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                                         addPair(builder.toString(), "");
                                         builder.setLength(0);
                                         state = 0;
-                                    } else if (n == '%' || n == '+') {
+                                    } else if (n == '%' || n == '+' || n < 0) {
                                         state = 1;
-                                        builder.append((char) n);
+                                        builder.append((char) (n & 0xFF));
                                     } else {
                                         builder.append((char) n);
                                     }
@@ -166,7 +166,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                                         builder.setLength(0);
                                         state = 0;
                                     } else {
-                                        builder.append((char) n);
+                                        builder.append((char) (n & 0xFF));
                                     }
                                     break;
                                 }
@@ -175,9 +175,9 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                                         addPair(name, builder.toString());
                                         builder.setLength(0);
                                         state = 0;
-                                    } else if (n == '%' || n == '+') {
+                                    } else if (n == '%' || n == '+' || n < 0) {
                                         state = 3;
-                                        builder.append((char) n);
+                                        builder.append((char) (n & 0xFF));
                                     } else {
                                         builder.append((char) n);
                                     }
@@ -189,7 +189,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
                                         builder.setLength(0);
                                         state = 0;
                                     } else {
-                                        builder.append((char) n);
+                                        builder.append((char) (n & 0xFF));
                                     }
                                     break;
                                 }
