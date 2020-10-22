@@ -20,7 +20,7 @@ package io.undertow.jakartaee9;
 import java.io.File;
 import java.io.IOException;
 
-import org.wildfly.transformer.tool.api.ToolUtils;
+import org.wildfly.extras.transformer.TransformerFactory;
 
 import static io.undertow.jakartaee9.TransformConstants.INPUT_DIR;
 import static io.undertow.jakartaee9.TransformConstants.JAR_EXTENSION;
@@ -60,8 +60,8 @@ public class JakartaEE9Transformer {
                 final String newFileName = ArtifactNameTransformer.transformArtifactFileName(file.getName(),
                         JAR_TYPE);
                 LOGGER.transformingFile(file.getName(), newFileName);
-                ToolUtils.transformJarFile(file, OUTPUT_DIR, null);
                 final File generatedFile = new File(OUTPUT_DIR.getAbsolutePath() + File.separatorChar + file.getName());
+                TransformerFactory.getInstance().newTransformer().build().transform(file, generatedFile);
                 assert generatedFile.exists();
                 final File newGeneratedFile = new File(OUTPUT_DIR.getAbsolutePath() + File.separatorChar + newFileName);
                 if (!generatedFile.renameTo(newGeneratedFile)) {

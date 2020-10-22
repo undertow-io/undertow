@@ -68,21 +68,14 @@
         </dependency>
 
         <dependency>
-            <groupId>org.wildfly-extras</groupId>
+            <groupId>org.wildfly.extras.batavia</groupId>
             <artifactId>transformer-api</artifactId>
-            <!-- <scope>runtime</scope> -->
         </dependency>
 
         <dependency>
-            <groupId>org.wildfly-extras</groupId>
-            <artifactId>transformer-tools-api</artifactId>
-            <!-- <scope>runtime</scope> -->
-       </dependency>
-
-        <dependency>
-            <groupId>org.wildfly-extras</groupId>
-            <artifactId>asm-based-transformer</artifactId>
-            <!-- <scope>runtime</scope> -->
+            <groupId>org.wildfly.extras.batavia</groupId>
+            <artifactId>transformer-impl-eclipse</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>
