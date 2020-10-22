@@ -102,7 +102,7 @@
 
         <version.jmh>1.21</version.jmh>
 
-        <version.batavia>1.0.0.Alpha1-SNAPSHOT</version.batavia>
+        <version.org.wildfly.extras.batavia>1.0.1.Final</version.org.wildfly.extras.batavia>
     </properties>
 
     <modules>
@@ -505,24 +505,15 @@
             </dependency>
 
             <dependency>
-                <groupId>org.wildfly-extras</groupId>
+                <groupId>org.wildfly.extras.batavia</groupId>
                 <artifactId>transformer-api</artifactId>
-                <version>${version.batavia}</version>
-                <!-- <scope>runtime</scope> -->
-            </dependency>
-
-           <dependency>
-                <groupId>org.wildfly-extras</groupId>
-                <artifactId>transformer-tools-api</artifactId>
-                <version>${version.batavia}</version>
-                <!--<scope>runtime</scope> -->
+                <version>${version.org.wildfly.extras.batavia}</version>
             </dependency>
 
             <dependency>
-                <groupId>org.wildfly-extras</groupId>
-                <artifactId>asm-based-transformer</artifactId>
-                <version>${version.batavia}</version>
-                <!-- <scope>runtime</scope> -->
+                <groupId>org.wildfly.extras.batavia</groupId>
+                <artifactId>transformer-impl-eclipse</artifactId>
+                <version>${version.org.wildfly.extras.batavia}</version>
             </dependency>
 
         </dependencies>
