@@ -154,7 +154,7 @@ public class SimpleSSLTestCase {
         DefaultServer.startSSLServer();
         try (CloseableHttpClient client = HttpClients.custom().disableConnectionState()
                 .setSSLContext(DefaultServer.getClientSSLContext())
-                .setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(5000).build())
+                .setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(10000).build())
                 .setMaxConnPerRoute(1000)
                 .build()) {
             ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
@@ -178,7 +178,7 @@ public class SimpleSSLTestCase {
                     }
                 }
             };
-            for (int i = 0; i < concurrency * 300; i++) {
+            for (int i = 0; i < concurrency * 60; i++) {
                 executorService.submit(task);
             }
             executorService.shutdown();
