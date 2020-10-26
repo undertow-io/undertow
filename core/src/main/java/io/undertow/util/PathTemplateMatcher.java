@@ -21,9 +21,9 @@ package io.undertow.util;
 import io.undertow.UndertowMessages;
 
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -51,7 +51,7 @@ public class PathTemplateMatcher<T> {
 
     public PathMatchResult<T> match(final String path) {
         String normalizedPath = "".equals(path) ? "/" : path;
-        final Map<String, String> params = new HashMap<>();
+        final Map<String, String> params = new LinkedHashMap<>();
         int length = normalizedPath.length();
         final int[] lengths = this.lengths;
         for (int i = 0; i < lengths.length; ++i) {
