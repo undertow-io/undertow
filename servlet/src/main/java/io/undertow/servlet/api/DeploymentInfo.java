@@ -63,15 +63,27 @@ import io.undertow.util.ImmediateAuthenticationMechanismFactory;
  */
 public class DeploymentInfo implements Cloneable {
 
+    private static final int DEFAULT_MAJOR_VERSION;
+
+    static {
+        // UNDERTOW-1810. It is possible at runtime that the class executing this logic has been bytecode
+        // transformed to use a different variant of the Servlet API than it was compiled against,
+        // i.e. EE 9's Servlet 5 instead of EE 8's Servlet 4. Since 4 and 5 are functionally equivalent
+        // except for the package rename, support such a scenario by setting the default major spec
+        // version that is supported based on the package name of a Servlet API class.
+        Package servletPackage = ServletContextListener.class.getPackage();
+        DEFAULT_MAJOR_VERSION = servletPackage.getName().startsWith("jakarta.") ? 5 : 4;
+    }
+
     private String deploymentName;
     private String displayName;
     private String contextPath;
     private ClassLoader classLoader;
     private ResourceManager resourceManager = ResourceManager.EMPTY_RESOURCE_MANAGER;
     private ClassIntrospecter classIntrospecter = DefaultClassIntrospector.INSTANCE;
-    private int majorVersion = 4;
+    private int majorVersion = DEFAULT_MAJOR_VERSION;
     private int minorVersion = 0;
-    private int containerMajorVersion = 4;
+    private int containerMajorVersion = DEFAULT_MAJOR_VERSION;
     private int containerMinorVersion = 0;
     private Executor executor;
     private Executor asyncExecutor;
