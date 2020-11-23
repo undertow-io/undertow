@@ -694,17 +694,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     public void closeAndDrainRequest() throws IOException {
-        try {
-            if (reader != null) {
-                reader.close();
-            }
-            if (servletInputStream == null) {
-                servletInputStream = new ServletInputStreamImpl(this);
-            }
-            servletInputStream.close();
-        } finally {
-            clearAttributes();
+        if (reader != null) {
+            reader.close();
         }
+        if (servletInputStream == null) {
+            servletInputStream = new ServletInputStreamImpl(this);
+        }
+        servletInputStream.close();
     }
 
     /**
