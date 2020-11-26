@@ -125,6 +125,11 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
 
     @Override
     public void renegotiate(HttpServerExchange exchange, SslClientAuthMode sslClientAuthMode) throws IOException {
+        if ("TLSv1.3".equals(channel.getSslSession().getProtocol())) {
+            // UNDERTOW-1812: TLSv1.3 does not support renegotiation, attempting renegotiation will block
+            // the full MAX_RENEGOTIATION_WAIT timeout.
+            throw UndertowMessages.MESSAGES.renegotiationNotSupported();
+        }
         unverified = null;
         renegotiationRequiredException = null;
         if (exchange.isRequestComplete()) {
