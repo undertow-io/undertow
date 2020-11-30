@@ -97,4 +97,28 @@ public class HttpContinueConduitWrappingHandlerBufferLeakTestCase {
         persistentSocket.getInputStream().read();
     }
 
+    @Test
+    public void testEmptySSLHttpContinueNoLeak() throws IOException {
+        DefaultServer.startSSLServer();
+
+        try {
+            final Socket sslSocket = DefaultServer.getClientSSLContext().getSocketFactory().createSocket(
+                    new Socket(DefaultServer.getHostAddress("default"),
+                            DefaultServer.getHostSSLPort("default")),
+                    DefaultServer.getHostAddress("default"),
+                    DefaultServer.getHostSSLPort("default"), true);
+
+            String message = "POST /path HTTP/1.1\r\n" +
+                    "Expect: 100-continue\r\n" +
+                    "Content-Type: text/plain; charset=ISO-8859-1\r\n" +
+                    "Host: localhost:7778\r\n" +
+                    "Connection: Keep-Alive\r\n\r\nMy HTTP Request!";
+            sslSocket.getOutputStream().write(message.getBytes(StandardCharsets.UTF_8));
+            sslSocket.getOutputStream().flush();
+            sslSocket.getInputStream().read();
+        } finally {
+            DefaultServer.stopSSLServer();
+        }
+    }
+
 }
