@@ -75,10 +75,10 @@ public class HttpContinueReadHandler implements HttpHandler {
         @Override
         public void beforeCommit(HttpServerExchange exchange) {
             //we are writing the response, and have not read the request then we mark this as non-persistent
-            if (!HttpContinue.isContinueResponseSent(exchange) && !exchange.isRequestComplete()) {
+            if (!HttpContinue.isContinueResponseSent(exchange)) {
                 exchange.setPersistent(false);
                 //we also kill the request channel, because it is unusable now
-                exchange.getConnection().terminateRequestChannel(exchange);
+                Connectors.terminateRequest(exchange);
             }
         }
     }
