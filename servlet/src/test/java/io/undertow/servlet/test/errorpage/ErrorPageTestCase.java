@@ -239,8 +239,8 @@ public class ErrorPageTestCase {
                     // RequestDispatcher.ERROR_MESSAGE is null
                     Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=500"));
                 } else {
-                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION_TYPE + "=" + ServletException.class));
-                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION + "=javax.servlet.ServletException: " + exception.getName()));
+                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION_TYPE + "=" + exception));
+                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION + "=" + exception.getName()));
                     Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_MESSAGE + "=" + exception.getName()));
                     Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=500"));
                 }

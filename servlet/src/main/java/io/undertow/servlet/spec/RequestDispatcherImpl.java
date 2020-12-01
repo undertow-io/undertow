@@ -467,8 +467,13 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         requestImpl.setAttribute(ERROR_REQUEST_URI, requestImpl.getRequestURI());
         requestImpl.setAttribute(ERROR_SERVLET_NAME, servletName);
         if (exception != null) {
-            requestImpl.setAttribute(ERROR_EXCEPTION, exception);
-            requestImpl.setAttribute(ERROR_EXCEPTION_TYPE, exception.getClass());
+            if (exception instanceof ServletException && ((ServletException)exception).getRootCause() != null) {
+                requestImpl.setAttribute(ERROR_EXCEPTION, ((ServletException) exception).getRootCause());
+                requestImpl.setAttribute(ERROR_EXCEPTION_TYPE, ((ServletException) exception).getRootCause().getClass());
+            } else {
+                requestImpl.setAttribute(ERROR_EXCEPTION, exception);
+                requestImpl.setAttribute(ERROR_EXCEPTION_TYPE, exception.getClass());
+            }
         }
         requestImpl.setAttribute(ERROR_MESSAGE, message);
         requestImpl.setAttribute(ERROR_STATUS_CODE, responseImpl.getStatus());
