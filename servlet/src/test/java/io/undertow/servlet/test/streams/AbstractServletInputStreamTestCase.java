@@ -272,7 +272,7 @@ public abstract class AbstractServletInputStreamTestCase {
                     }
                     post.setEntity(new InputStreamEntity(
                             // Server should wait for events from the client
-                            new RateLimitedInputStream(new ByteArrayInputStream(messageBytes))));
+                            /*new RateLimitedInputStream(*/new ByteArrayInputStream(messageBytes)))/*)*/;
                     CloseableHttpResponse result = client.execute(post);
                     try {
                         Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
