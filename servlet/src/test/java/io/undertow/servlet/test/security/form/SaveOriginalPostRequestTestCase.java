@@ -122,7 +122,8 @@ public class SaveOriginalPostRequestTestCase {
         HttpResponse result = executePostRequest(client, "/servletContext/dumpRequest", new BasicNameValuePair("param1", "param1Value"), new BasicNameValuePair("param2", "param2Value"));
         assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
         String response = HttpClientUtils.readResponse(result);
-        assertTrue(response.contains("param1=param1Value/param2=param2Value"));
+        assertTrue(response.contains("param1=param1Value"));
+        assertTrue(response.contains("param2=param2Value"));
 
         // this request should be saved and the client redirect to the login form.
         result = executePostRequest(client, "/servletContext/secured/dumpRequest", new BasicNameValuePair("securedParam1", "securedParam1Value"), new BasicNameValuePair("securedParam2", "securedParam2Value"));
