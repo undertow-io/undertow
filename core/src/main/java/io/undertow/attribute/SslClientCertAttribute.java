@@ -24,8 +24,8 @@ import io.undertow.server.SSLSessionInfo;
 import io.undertow.util.Certificates;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.security.cert.CertificateEncodingException;
-import javax.security.cert.X509Certificate;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.Certificate;
 
 /**
  * @author Stuart Douglas
@@ -40,18 +40,16 @@ public class SslClientCertAttribute implements ExchangeAttribute {
         if(ssl == null) {
             return null;
         }
-        X509Certificate[] certificates;
+        Certificate[] certificates;
         try {
-            certificates = ssl.getPeerCertificateChain();
+            certificates = ssl.getPeerCertificates();
             if(certificates.length > 0) {
                 return Certificates.toPem(certificates[0]);
             }
             return null;
-        } catch (SSLPeerUnverifiedException e) {
-            return null;
-        } catch (CertificateEncodingException e) {
-            return null;
-        } catch (RenegotiationRequiredException e) {
+        } catch (SSLPeerUnverifiedException
+                | CertificateEncodingException
+                | RenegotiationRequiredException e) {
             return null;
         }
     }

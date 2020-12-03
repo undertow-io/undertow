@@ -24,12 +24,12 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.Channel;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.Certificate;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.security.cert.CertificateEncodingException;
-import javax.security.cert.X509Certificate;
+import java.security.cert.CertificateEncodingException;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.handlers.ResponseCodeHandler;
@@ -546,9 +546,9 @@ public final class ProxyHandler implements HttpHandler {
 
             SSLSessionInfo sslSessionInfo = exchange.getConnection().getSslSessionInfo();
             if (sslSessionInfo != null) {
-                X509Certificate[] peerCertificates;
+                Certificate[] peerCertificates;
                 try {
-                    peerCertificates = sslSessionInfo.getPeerCertificateChain();
+                    peerCertificates = sslSessionInfo.getPeerCertificates();
                     if (peerCertificates.length > 0) {
                         request.putAttachment(ProxiedRequestAttachments.SSL_CERT, Certificates.toPem(peerCertificates[0]));
                     }
