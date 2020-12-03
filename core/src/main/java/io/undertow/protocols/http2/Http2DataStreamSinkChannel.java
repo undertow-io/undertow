@@ -40,10 +40,11 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
 
     private boolean first = true;
     private final HpackEncoder encoder;
-    private ChannelListener<Http2DataStreamSinkChannel> completionListener;
+    private volatile ChannelListener<Http2DataStreamSinkChannel> completionListener;
 
     private final int frameType;
     private boolean completionListenerReady;
+    private volatile boolean completionListenerFailure; //true if the request is broken, and we should invoke the completion listener on the next user op
     private TrailersProducer trailersProducer;
 
     Http2DataStreamSinkChannel(Http2Channel channel, int streamId, int frameType) {
@@ -287,7 +288,51 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
     }
 
     @Override
+    public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        handleFailedChannel();
+        return super.write(srcs, offset, length);
+    }
+
+    private void handleFailedChannel() {
+        if(completionListenerFailure && completionListener != null) {
+            ChannelListeners.invokeChannelListener(this, completionListener);
+            completionListener = null;
+        }
+    }
+
+    @Override
+    public long write(ByteBuffer[] srcs) throws IOException {
+        handleFailedChannel();
+        return super.write(srcs);
+    }
+
+    @Override
+    public int write(ByteBuffer src) throws IOException {
+        handleFailedChannel();
+        return super.write(src);
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
+        handleFailedChannel();
+        return super.writeFinal(srcs, offset, length);
+    }
+
+    @Override
+    public long writeFinal(ByteBuffer[] srcs) throws IOException {
+        handleFailedChannel();
+        return super.writeFinal(srcs);
+    }
+
+    @Override
+    public int writeFinal(ByteBuffer src) throws IOException {
+        handleFailedChannel();
+        return super.writeFinal(src);
+    }
+
+    @Override
     public boolean flush() throws IOException {
+        handleFailedChannel();
         if(completionListenerReady && completionListener != null) {
             ChannelListeners.invokeChannelListener(this, completionListener);
             completionListener = null;
@@ -321,8 +366,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
     protected void channelForciblyClosed() throws IOException {
         super.channelForciblyClosed();
         if (completionListener != null) {
-            ChannelListeners.invokeChannelListener(this, completionListener);
-            completionListener = null;
+            completionListenerFailure = true;
         }
     }
 
