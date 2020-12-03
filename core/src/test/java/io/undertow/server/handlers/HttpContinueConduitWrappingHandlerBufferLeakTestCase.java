@@ -38,7 +38,6 @@ import io.undertow.util.StatusCodes;
  */
 @RunWith(DefaultServer.class)
 public class HttpContinueConduitWrappingHandlerBufferLeakTestCase {
-
     static Socket persistentSocket;
 
     @BeforeClass
@@ -108,11 +107,13 @@ public class HttpContinueConduitWrappingHandlerBufferLeakTestCase {
                     DefaultServer.getHostAddress("default"),
                     DefaultServer.getHostSSLPort("default"), true);
 
-            String message = "POST /path HTTP/1.1\r\n" +
+            String header = DefaultServer.isH2()?"POST /path HTTP/2.0":"POST /path HTTP/1.1";
+
+            String message = header +
                     "Expect: 100-continue\r\n" +
                     "Content-Type: text/plain; charset=ISO-8859-1\r\n" +
                     "Host: localhost:7778\r\n" +
-                    "Connection: Keep-Alive\r\n\r\nMy HTTP Request!";
+                    "Connection: Keep-Alive\r\n\r\n";
             sslSocket.getOutputStream().write(message.getBytes(StandardCharsets.UTF_8));
             sslSocket.getOutputStream().flush();
             sslSocket.getInputStream().read();
