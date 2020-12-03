@@ -204,11 +204,11 @@ public class URLUtils {
                                 bytes[pos++] = (byte) c;
                             } else {
                                 bytes[pos++] = (byte) c;
-                                if (i < numChars) {
-                                    c = s.charAt(i);
-                                }
                             }
 
+                            if (i < numChars) {
+                                c = s.charAt(i);
+                            }
                         }
                     }
 

@@ -33,16 +33,18 @@ import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import junit.textui.TestRunner;
-import org.apache.http.Header;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.message.BasicNameValuePair;
@@ -71,7 +73,8 @@ public class FormDataParserTestCase {
     @Parameterized.Parameters
     public static Collection<Object[]> handlerChains() {
         List<Object[]> ret = new ArrayList<>();
-        final FormParserFactory parserFactory = FormParserFactory.builder().build();
+        // create the encoded form parser using UTF-8 to test direct decoding
+        final FormParserFactory parserFactory = FormParserFactory.builder().withDefaultCharset("UTF-8").build();
         HttpHandler fd = new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
@@ -80,13 +83,19 @@ public class FormDataParserTestCase {
                     @Override
                     public void handleRequest(final HttpServerExchange exchange) throws Exception {
                         FormData data = exchange.getAttachment(FormDataParser.FORM_DATA);
+                        StringBuilder response = new StringBuilder();
                         Iterator<String> it = data.iterator();
                         while (it.hasNext()) {
                             String fd = it.next();
                             for (FormData.FormValue val : data.get(fd)) {
-                                exchange.getResponseHeaders().add(new HttpString("res"), fd + ":" + val.getValue());
+                                if (response.length() > 0) {
+                                    response.append("\n");
+                                }
+                                response.append(fd).append(":").append(val.getValue());
                             }
                         }
+                        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain; charset=UTF-8");
+                        exchange.getResponseSender().send(response.toString(), StandardCharsets.UTF_8);
                     }
                 });
 
@@ -103,13 +112,19 @@ public class FormDataParserTestCase {
                 final FormDataParser parser = parserFactory.createParser(exchange);
                 try {
                     FormData data = parser.parseBlocking();
+                    StringBuilder response = new StringBuilder();
                     Iterator<String> it = data.iterator();
                     while (it.hasNext()) {
                         String fd = it.next();
                         for (FormData.FormValue val : data.get(fd)) {
-                            exchange.getResponseHeaders().add(new HttpString("res"), fd + ":" + val.getValue());
+                            if (response.length() > 0) {
+                                response.append("\n");
+                            }
+                            response.append(fd).append(":").append(val.getValue());
                         }
                     }
+                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain; charset=UTF-8");
+                    exchange.getResponseSender().send(response.toString(), StandardCharsets.UTF_8);
                 } catch (IOException e) {
                     exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                 }
@@ -132,6 +147,20 @@ public class FormDataParserTestCase {
     public void testRawFormDataParsingIncorrectValue() throws Exception {
         testRawFormDataParsing(new BasicNameValuePair("name", "%"));
         testRawFormDataParsing(new BasicNameValuePair("Name%", "value"));
+    }
+
+    @Test
+    public void testUTF8FormDataParsing() throws Exception {
+        // test name with direct UTF-8 characters
+        String name = "abc\u0041\u00A9\u00E9\u0301\u0941\uD835\uDD0A%20+123";
+        String value = "test";
+        NameValuePair test = new BasicNameValuePair(name.replaceAll("%20", " ").replaceAll("\\+", " "), value);
+        runTest(Collections.singletonList(test), new ByteArrayEntity((name + "=" + value).getBytes(StandardCharsets.UTF_8), ContentType.APPLICATION_FORM_URLENCODED));
+        // test value with direct UTF-8 characters
+        name = "test";
+        value = "abc\u0041\u00A9\u00E9\u0301\u0941\uD835\uDD0A%20+123";
+        test = new BasicNameValuePair(name, value.replaceAll("%20", " ").replaceAll("\\+", " "));
+        runTest(Collections.singletonList(test), new ByteArrayEntity((name + "=" + value).getBytes(StandardCharsets.UTF_8), ContentType.APPLICATION_FORM_URLENCODED));
     }
 
     private void testRawFormDataParsing(NameValuePair wrongPair) throws Exception {
@@ -157,7 +186,7 @@ public class FormDataParserTestCase {
         runTest(data, new UrlEncodedFormEntity(data));
     }
 
-    private void runTest(List<NameValuePair> data, StringEntity entity) throws  Exception {
+    private void runTest(List<NameValuePair> data, HttpEntity entity) throws  Exception {
         DefaultServer.setRootHandler(rootHandler);
         TestHttpClient client = new TestHttpClient();
         try {
@@ -167,16 +196,16 @@ public class FormDataParserTestCase {
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             checkResult(data, result);
-            HttpClientUtils.readResponse(result);
         } finally {
             client.getConnectionManager().shutdown();
         }
     }
 
-    private void checkResult(final List<NameValuePair> data, final HttpResponse result) {
+    private void checkResult(final List<NameValuePair> data, final HttpResponse result) throws IOException {
         Map<String, String> res = new HashMap<>();
-        for(Header d : result.getHeaders("res")) {
-            String[] split = d.getValue().split(":");
+        String content = HttpClientUtils.readResponse(result);
+        for(String value : content.split("\n")) {
+            String[] split = value.split(":");
             res.put(split[0], split.length == 1 ? "" : split[1]);
         }
 
