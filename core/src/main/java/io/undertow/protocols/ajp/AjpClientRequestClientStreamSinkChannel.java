@@ -42,9 +42,9 @@ import io.undertow.client.ProxiedRequestAttachments;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.protocol.framed.SendFrameHeader;
 import io.undertow.util.Attachable;
-import io.undertow.util.FlexBase64;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
+import io.undertow.util.HexConverter;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediatePooledByteBuffer;
 
@@ -209,7 +209,7 @@ public class AjpClientRequestClientStreamSinkChannel extends AbstractAjpClientSt
                 byte[] sslSession = attachable.getAttachment(ProxiedRequestAttachments.SSL_SESSION_ID);
                 if (sslSession != null) {
                     buffer.put((byte) ATTR_SSL_SESSION);
-                    putString(buffer, FlexBase64.encodeString(sslSession, false));
+                    putString(buffer, HexConverter.convertToHexString(sslSession));
                 }
                 Integer sslKeySize = attachable.getAttachment(ProxiedRequestAttachments.SSL_KEY_SIZE);
                 if (sslKeySize != null) {

@@ -49,6 +49,9 @@ public class SSLAttributesServlet extends HttpServlet {
             if (attribute!=null){
                 pw.write(attribute[0].getSerialNumber().toString());
             }
+        } else if (req.getServletPath().equals("/cert-dn")) {
+            final X509Certificate[] attribute = (X509Certificate[]) req.getAttribute("javax.servlet.request.X509Certificate");
+            pw.write(attribute != null && attribute.length > 0? attribute[0].getSubjectDN().toString() : "null");
         }
         pw.close();
     }
