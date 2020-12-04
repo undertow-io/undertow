@@ -32,6 +32,7 @@ import io.undertow.util.HeaderMap;
 import javax.security.cert.CertificateException;
 
 import static io.undertow.util.Headers.SSL_CIPHER;
+import static io.undertow.util.Headers.SSL_CIPHER_USEKEYSIZE;
 import static io.undertow.util.Headers.SSL_CLIENT_CERT;
 import static io.undertow.util.Headers.SSL_SESSION_ID;
 
@@ -61,6 +62,7 @@ import java.util.Set;
 public class SSLHeaderHandler implements HttpHandler {
 
     public static final String HTTPS = "https";
+    private static final String NULL_VALUE = "(null)";
 
     private static final ExchangeCompletionListener CLEAR_SSL_LISTENER = new ExchangeCompletionListener() {
         @Override
@@ -82,19 +84,33 @@ public class SSLHeaderHandler implements HttpHandler {
         final String sessionId = requestHeaders.getFirst(SSL_SESSION_ID);
         final String cipher = requestHeaders.getFirst(SSL_CIPHER);
         String clientCert = requestHeaders.getFirst(SSL_CLIENT_CERT);
-        //the proxy client replaces \n with ' '
-        if (clientCert != null && clientCert.length() > 28) {
-            StringBuilder sb = new StringBuilder(clientCert.length() + 1);
-            sb.append(Certificates.BEGIN_CERT);
-            sb.append('\n');
-            sb.append(clientCert.replace(' ', '\n').substring(28, clientCert.length() - 26));//core certificate data
-            sb.append('\n');
-            sb.append(Certificates.END_CERT);
-            clientCert = sb.toString();
+        String keySizeStr = requestHeaders.getFirst(SSL_CIPHER_USEKEYSIZE);
+        Integer keySize = null;
+        if (keySizeStr != null) {
+            try {
+                keySize = Integer.parseUnsignedInt(keySizeStr);
+            } catch (NumberFormatException e) {
+                UndertowLogger.REQUEST_LOGGER.debugf("Invalid SSL_CIPHER_USEKEYSIZE header %s", keySizeStr);
+            }
         }
         if (clientCert != null || sessionId != null || cipher != null) {
+            if (clientCert != null) {
+                if (clientCert.isEmpty() || clientCert.equals(NULL_VALUE)) {
+                    // SSL is in place but client cert was not sent
+                    clientCert = null;
+                } else if (clientCert.length() > 28 + 26) {
+                    // the proxy client replaces \n with ' '
+                    StringBuilder sb = new StringBuilder(clientCert.length() + 1);
+                    sb.append(Certificates.BEGIN_CERT);
+                    sb.append('\n');
+                    sb.append(clientCert.replace(' ', '\n').substring(28, clientCert.length() - 26));//core certificate data
+                    sb.append('\n');
+                    sb.append(Certificates.END_CERT);
+                    clientCert = sb.toString();
+                }
+            }
             try {
-                SSLSessionInfo info = new BasicSSLSessionInfo(sessionId, cipher, clientCert);
+                SSLSessionInfo info = new BasicSSLSessionInfo(sessionId, cipher, clientCert, keySize);
                 exchange.setRequestScheme(HTTPS);
                 exchange.getConnection().setSslSessionInfo(info);
                 exchange.addExchangeCompleteListener(CLEAR_SSL_LISTENER);

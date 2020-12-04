@@ -37,6 +37,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
+import org.apache.http.Header;
 
 import static org.junit.Assert.assertEquals;
 
@@ -48,8 +49,7 @@ import static org.junit.Assert.assertEquals;
 @RunWith(DefaultServer.class)
 public class SSLMetaDataTestCase {
 
-    @BeforeClass
-    public static void setup() throws Exception {
+    protected static PathHandler setupPathHandler() throws Exception {
         DefaultServer.startSSLServer();
 
         final PathHandler root = new PathHandler();
@@ -58,6 +58,7 @@ public class SSLMetaDataTestCase {
         ServletInfo s = new ServletInfo("servlet", SSLAttributesServlet.class)
                 .addMapping("/id")
                 .addMapping("/cert")
+                .addMapping("/cert-dn")
                 .addMapping("/key-size")
                 .addMapping("/cipher-suite");
 
@@ -72,7 +73,12 @@ public class SSLMetaDataTestCase {
         DeploymentManager manager = container.addDeployment(info);
         manager.deploy();
         root.addPrefixPath(info.getContextPath(), manager.start());
+        return root;
+    }
 
+    @BeforeClass
+    public static void setup() throws Exception {
+        PathHandler root = setupPathHandler();
         DefaultServer.setRootHandler(root);
     }
 
@@ -83,7 +89,12 @@ public class SSLMetaDataTestCase {
 
     @Test
     public void testSessionId() throws IOException {
-        internalTest("/id");
+        String sessionId = internalTest("/id");
+        Assert.assertTrue("The session-id is an HEX byte array", sessionId.length() % 2 == 0);
+        for (int i = 0; i < sessionId.length(); i++) {
+            Character c = sessionId.charAt(i);
+            Assert.assertTrue("The session-id is an HEX byte array", (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'));
+        }
     }
 
     @Test
@@ -101,17 +112,25 @@ public class SSLMetaDataTestCase {
         internalTest("/cert");
     }
 
-    private void internalTest(final String path) throws IOException {
+    @Test
+    public void testCertDn() throws IOException {
+        String response = internalTest("/cert-dn");
+        Assert.assertEquals("CN=Test Client, OU=OU, O=Org, L=City, ST=State, C=GB", response);
+    }
+
+    protected String internalTest(final String path, Header... headers) throws IOException {
         TestHttpClient client = new TestHttpClient();
         client.setSSLContext(DefaultServer.getClientSSLContext());
 
         final String url = DefaultServer.getDefaultServerSSLAddress() + "/servletContext" + path;
         try {
             HttpGet get = new HttpGet(url);
+            get.setHeaders(headers);
             HttpResponse result = client.execute(get);
             assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertTrue(response.length() > 0);
+            return response;
         } finally {
             client.getConnectionManager().shutdown();
         }
