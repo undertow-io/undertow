@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2020 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,22 +18,38 @@
 
 package io.undertow.servlet.test.handlers;
 
-import org.junit.runner.RunWith;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.runner.RunWith;
+
+import java.io.IOException;
 
 /**
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class HttpContinueServletTestCase extends AbstractHttpContinueServletTestCase {
+public class HttpContinueSslServletTestCase extends AbstractHttpContinueServletTestCase {
 
     protected String getServerAddress() {
-        return DefaultServer.getDefaultServerURL();
+        return DefaultServer.getDefaultServerSSLAddress();
     }
 
     protected TestHttpClient getClient() {
-        return new TestHttpClient();
+        TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(DefaultServer.getClientSSLContext());
+        return client;
     }
 
+    @Before
+    public void before() throws Exception {
+        super.before();
+        DefaultServer.startSSLServer();
+    }
+
+    @After
+    public void after() throws IOException {
+        DefaultServer.stopSSLServer();
+    }
 }
