@@ -78,7 +78,11 @@ public class HttpContinueReadHandler implements HttpHandler {
             if (!HttpContinue.isContinueResponseSent(exchange)) {
                 exchange.setPersistent(false);
                 //we also kill the request channel, because it is unusable now
-                exchange.getConnection().terminateRequestChannel(exchange);
+                if (!exchange.isRequestComplete()) {
+                    exchange.getConnection().terminateRequestChannel(exchange);
+                } else {
+                    Connectors.terminateRequest(exchange);
+                }
             }
         }
     }
