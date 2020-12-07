@@ -230,8 +230,14 @@ public class PathResourceManager implements ResourceManager  {
                 log.tracef("Failed to get path resource %s from path resource manager with base %s, as the path did not exist", p, base);
                 return null;
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             UndertowLogger.REQUEST_LOGGER.debugf(e, "Invalid path %s", p);
+            return null;
+        } catch (SecurityException e) {
+            UndertowLogger.REQUEST_LOGGER.errorf(e, "Missing JSM permissions for path %s", p);
+            throw e;
+        } catch (Exception e) {
+            UndertowLogger.REQUEST_LOGGER.debugf(e, "Other issue for path %s", p);
             return null;
         }
     }
