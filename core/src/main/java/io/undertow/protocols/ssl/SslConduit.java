@@ -676,7 +676,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
      * @return true if the unwrap operation made progress, false otherwise
      * @throws SSLException
      */
-    private long doUnwrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
+    private synchronized long doUnwrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
         if(anyAreSet(state, FLAG_CLOSED)) {
             throw new ClosedChannelException();
         }
@@ -887,7 +887,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
      * @return The amount of data consumed
      * @throws IOException
      */
-    private long doWrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
+    private synchronized long doWrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
         if(anyAreSet(state, FLAG_CLOSED)) {
             throw new ClosedChannelException();
         }
@@ -896,7 +896,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
         if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ)) {
             doUnwrap(null, 0, 0);
-            if(allAreClear(state, FLAG_READ_REQUIRES_WRITE)) { //unless a wrap is immediatly required we just return
+            if(allAreClear(state, FLAG_READ_REQUIRES_WRITE)) { //unless a wrap is immediately required we just return
                 return 0;
             }
         }
@@ -1051,31 +1051,33 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         if(anyAreSet(state, FLAG_CLOSED)) {
             return;
         }
-        state |= FLAG_CLOSED | FLAG_DELEGATE_SINK_SHUTDOWN | FLAG_DELEGATE_SOURCE_SHUTDOWN | FLAG_WRITE_SHUTDOWN | FLAG_READ_SHUTDOWN;
-        notifyReadClosed();
-        notifyWriteClosed();
-        if(dataToUnwrap != null) {
-            dataToUnwrap.close();
-            dataToUnwrap = null;
-        }
-        if(unwrappedData != null) {
-            unwrappedData.close();
-            unwrappedData = null;
-        }
-        if(wrappedData != null) {
-            wrappedData.close();
-            wrappedData = null;
-        }
-        if(allAreClear(state, FLAG_ENGINE_OUTBOUND_SHUTDOWN)) {
-            engine.closeOutbound();
-        }
-        if(allAreClear(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
-            try {
-                engine.closeInbound();
-            } catch (SSLException e) {
-                UndertowLogger.REQUEST_LOGGER.ioException(e);
-            } catch (Throwable t) {
-                UndertowLogger.REQUEST_LOGGER.handleUnexpectedFailure(t);
+        synchronized (this) {
+            state |= FLAG_CLOSED | FLAG_DELEGATE_SINK_SHUTDOWN | FLAG_DELEGATE_SOURCE_SHUTDOWN | FLAG_WRITE_SHUTDOWN | FLAG_READ_SHUTDOWN;
+            notifyReadClosed();
+            notifyWriteClosed();
+            if (dataToUnwrap != null) {
+                dataToUnwrap.close();
+                dataToUnwrap = null;
+            }
+            if (unwrappedData != null) {
+                unwrappedData.close();
+                unwrappedData = null;
+            }
+            if (wrappedData != null) {
+                wrappedData.close();
+                wrappedData = null;
+            }
+            if (allAreClear(state, FLAG_ENGINE_OUTBOUND_SHUTDOWN)) {
+                engine.closeOutbound();
+            }
+            if (allAreClear(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
+                try {
+                    engine.closeInbound();
+                } catch (SSLException e) {
+                    UndertowLogger.REQUEST_LOGGER.ioException(e);
+                } catch (Throwable t) {
+                    UndertowLogger.REQUEST_LOGGER.handleUnexpectedFailure(t);
+                }
             }
         }
         IoUtils.safeClose(delegate);
