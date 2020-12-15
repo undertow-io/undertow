@@ -468,6 +468,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                     serverExchange.putAttachment(FIRST_REQUEST_ACCESS, System.currentTimeMillis());
                 }
             }
+            bumpTimeout();
         }
 
         @Override
