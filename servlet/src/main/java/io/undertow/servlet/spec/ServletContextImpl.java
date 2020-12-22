@@ -207,7 +207,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getContextPath() {
-        String contextPath = deploymentInfo.getContextPath();
+        String contextPath = deploymentInfo == null ? "/" : deploymentInfo.getContextPath();
         if (contextPath.equals("/")) {
             return "";
         }
