@@ -232,4 +232,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10062, value = "No SecurityContext available")
     ServletException noSecurityContextAvailable();
+
+    @Message(id = 10063, value = "This Context has been already destroyed")
+    IllegalStateException nullDeploymentInfo();
 }
