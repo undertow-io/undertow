@@ -131,6 +131,7 @@ public class ServletContextImpl implements ServletContext {
     private volatile ThreadSetupHandler.Action<Void, ReadListener> onAllDataReadTask;
     private volatile ThreadSetupHandler.Action<Void, ThreadSetupHandler.Action<Void, Object>> invokeActionTask;
     private volatile int defaultSessionTimeout;
+    private static final String CONTEXT_ERROR_MESSAGE = "This Context has been already destroyed";
 
     public ServletContextImpl(final ServletContainer servletContainer, final Deployment deployment) {
         this.servletContainer = servletContainer;
@@ -207,11 +208,15 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getContextPath() {
-        String contextPath = deploymentInfo.getContextPath();
-        if (contextPath.equals("/")) {
-            return "";
+        if(deploymentInfo != null) {
+            String contextPath = deploymentInfo.getContextPath();
+            if (contextPath.equals("/")) {
+                return "";
+            }
+            return contextPath;
+        }else {
+            throw new IllegalStateException(CONTEXT_ERROR_MESSAGE);
         }
-        return contextPath;
     }
 
     @Override
@@ -225,22 +230,38 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public int getMajorVersion() {
-        return deploymentInfo.getContainerMajorVersion();
+        if(deploymentInfo != null){
+            return deploymentInfo.getContainerMajorVersion();
+        }else {
+            throw new IllegalStateException(CONTEXT_ERROR_MESSAGE);
+        }
     }
 
     @Override
     public int getMinorVersion() {
-        return deploymentInfo.getContainerMinorVersion();
+        if(deploymentInfo != null){
+            return deploymentInfo.getContainerMinorVersion();
+        }else {
+            throw new IllegalStateException(CONTEXT_ERROR_MESSAGE);
+        }
     }
 
     @Override
     public int getEffectiveMajorVersion() {
-        return deploymentInfo.getMajorVersion();
+        if(deploymentInfo != null){
+            return deploymentInfo.getMajorVersion();
+        }else {
+            throw new IllegalStateException(CONTEXT_ERROR_MESSAGE);
+        }
     }
 
     @Override
     public int getEffectiveMinorVersion() {
-        return deploymentInfo.getMinorVersion();
+        if(deploymentInfo != null){
+            return deploymentInfo.getMinorVersion();
+        }else {
+            throw new IllegalStateException(CONTEXT_ERROR_MESSAGE);
+        }
     }
 
     @Override
@@ -260,7 +281,12 @@ public class ServletContextImpl implements ServletContext {
     public Set<String> getResourcePaths(final String path) {
         final Resource resource;
         try {
-            resource = deploymentInfo.getResourceManager().getResource(path);
+            if(deploymentInfo != null){
+                resource = deploymentInfo.getResourceManager().getResource(path);
+            }else {
+                throw new IllegalStateException(CONTEXT_ERROR_MESSAGE);
+            }
+
         } catch (IOException e) {
             return null;
         }
@@ -294,7 +320,11 @@ public class ServletContextImpl implements ServletContext {
         }
         Resource resource = null;
         try {
-            resource = deploymentInfo.getResourceManager().getResource(path);
+            if(deploymentInfo != null){
+                resource = deploymentInfo.getResourceManager().getResource(path);
+            }else {
+                throw new IllegalStateException(CONTEXT_ERROR_MESSAGE);
+            }
         } catch (IOException e) {
             return null;
         }
@@ -308,7 +338,11 @@ public class ServletContextImpl implements ServletContext {
     public InputStream getResourceAsStream(final String path) {
         Resource resource = null;
         try {
-            resource = deploymentInfo.getResourceManager().getResource(path);
+            if(deploymentInfo != null){
+                resource = deploymentInfo.getResourceManager().getResource(path);
+            }else {
+                throw new IllegalStateException(CONTEXT_ERROR_MESSAGE);
+            }
         } catch (IOException e) {
             return null;
         }
@@ -414,7 +448,11 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getServerInfo() {
-        return deploymentInfo.getServerName() + " - " + Version.getVersionString();
+        if(deploymentInfo != null){
+            return deploymentInfo.getServerName() + " - " + Version.getVersionString();
+        }else {
+            throw new IllegalStateException(CONTEXT_ERROR_MESSAGE);
+        }
     }
 
     @Override
