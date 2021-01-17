@@ -1,5 +1,6 @@
 package io.undertow.servlet.test.spec;
 
+import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -7,16 +8,15 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.junit.Before;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import jakarta.servlet.ServletException;
 
 import java.io.IOException;
-
-import static io.undertow.servlet.Servlets.servlet;
 
 /**
  * @author Stuart Douglas
@@ -25,15 +25,20 @@ import static io.undertow.servlet.Servlets.servlet;
 public class UnavailableServletTestCase {
 
 
-    @BeforeClass
-    public static void setup() throws ServletException {
+    @Before
+    public void setup() throws ServletException {
         DeploymentUtils.setupServlet(
-                servlet("p", UnavailableServlet.class)
+                new ServletInfo("p", UnavailableServlet.class)
                         .addInitParam(UnavailableServlet.PERMANENT, "1")
                         .addMapping("/p"),
-                servlet("t", UnavailableServlet.class)
+                new ServletInfo("t", UnavailableServlet.class)
                         .addMapping("/t"));
 
+    }
+
+    @After
+    public void teardown() {
+        UnavailableServlet.reset();
     }
 
     @Test
