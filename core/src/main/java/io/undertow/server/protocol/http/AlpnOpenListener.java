@@ -70,6 +70,12 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
      * HTTP/2 required cipher. Not strictly part of ALPN but it can live here for now till we have a better solution.
      */
     public static final String REQUIRED_CIPHER = "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
+    /**
+     * Names of ciphers in IBM JVM are prefixed with `SSL` instead of `TLS`, see e.g.:
+     * https://www.ibm.com/support/knowledgecenter/SSFKSJ_9.0.0/com.ibm.mq.dev.doc/q113210_.htm.
+     * Thus let's have IBM alternative for the REQUIRED_CIPHER variable too.
+     */
+    public static final String IBM_REQUIRED_CIPHER = "SSL_ECDHE_RSA_WITH_AES_128_GCM_SHA256";
     private static final Set<String> REQUIRED_PROTOCOLS = Collections.unmodifiableSet(
             new HashSet<>(Arrays.asList("TLSv1.2","TLSv1.3")));
 
@@ -325,7 +331,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
 
         String[] ciphers = engine.getEnabledCipherSuites();
         for (String i : ciphers) {
-            if (i.equals(REQUIRED_CIPHER)) {
+            if (i.equals(REQUIRED_CIPHER) || i.equals(IBM_REQUIRED_CIPHER)) {
                 return true;
             }
         }
