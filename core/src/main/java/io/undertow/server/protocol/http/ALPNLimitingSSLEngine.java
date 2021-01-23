@@ -31,7 +31,7 @@ import javax.net.ssl.SSLSession;
 /**
  * SSLEngine that will limit the cipher selection to HTTP/2 suitable protocols if the client is offering h2 as an option.
  * <p>
- * In theory this is not a perfect solution to the HTTP/2 cipher strength issue, but in practice it should be sufficent
+ * In theory this is not a perfect solution to the HTTP/2 cipher strength issue, but in practice it should be sufficient
  * as any RFC compliant implementation should be able to negotiate TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
  *
  * @author Stuart Douglas
