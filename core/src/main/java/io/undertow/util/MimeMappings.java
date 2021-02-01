@@ -120,12 +120,10 @@ public class MimeMappings {
         defaultMappings.put("mpeg", "video/mpeg");
         defaultMappings.put("mpg", "video/mpeg");
         defaultMappings.put("mpe", "video/mpeg");
-        
         defaultMappings.put("mp4", "video/mp4");
         defaultMappings.put("webm", "video/webm");
         defaultMappings.put("flac", "audio/flac");
         defaultMappings.put("weba", "audio/webm");
-        
         defaultMappings.put("qt", "video/quicktime");
         defaultMappings.put("mov", "video/quicktime");
         defaultMappings.put("avi", "video/x-msvideo");
@@ -134,7 +132,6 @@ public class MimeMappings {
         defaultMappings.put("wrl", "x-world/x-vrml");
         defaultMappings.put("mpv2", "video/mpeg2");
         defaultMappings.put("jnlp", "application/x-java-jnlp-file");
-
         defaultMappings.put("eot", "application/vnd.ms-fontobject");
         defaultMappings.put("woff", "application/font-woff");
         defaultMappings.put("woff2", "application/font-woff2");
