@@ -229,4 +229,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10061, value = "Invalid method for push request %s")
     IllegalArgumentException invalidMethodForPushRequest(String method);
+
+    @Message(id = 10062, value = "No SecurityContext available")
+    ServletException noSecurityContextAvailable();
 }
