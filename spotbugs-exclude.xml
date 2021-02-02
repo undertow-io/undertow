@@ -300,4 +300,12 @@
         <Class name="io.undertow.servlet.spec.HttpServletResponseImpl"/>
         <Method name="addCookie"/>
     </Match>
+    <!-- UNDERTOW-1839: we don't want to increase contention to synchronize all blocks that access the fields:
+         engine, invokingReadListenerHandshake, readListenerInvocationCount. The less contention the better,
+         the goal of the new synchronized blocks is to prevent writing to buffers that are being released
+         by another thread -->
+    <Match>
+        <Bug pattern="IS2_INCONSISTENT_SYNC"/>
+        <Class name="io.undertow.protocols.ssl.SslConduit"/>
+    </Match>
 </FindBugsFilter>
