@@ -201,6 +201,10 @@ public abstract class HttpRequestParser {
         }
     }
 
+    public static boolean isTargetCharacterAllowed(char c) {
+        return ALLOWED_TARGET_CHARACTER[c];
+    }
+
     public HttpRequestParser(OptionMap options) {
         maxParameters = options.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS);
         maxHeaders = options.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS);
