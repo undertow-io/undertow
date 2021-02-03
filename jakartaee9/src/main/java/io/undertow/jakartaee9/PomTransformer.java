@@ -104,8 +104,12 @@ class PomTransformer {
         final String transformedPomFileName = transformArtifactFileName(pomFileName,
                 POM_TYPE);
         final File transformedPomFile = new File(outputDir, transformedPomFileName);
-        if (!transformedPomFile.createNewFile())
-            throw LOGGER.cannotCreateOutputFile(transformedPomFile.getAbsolutePath());
+        if (!transformedPomFile.createNewFile()) {
+            // if there's already a pom file, the file is from a previous build, delete it and create a new one
+            if (!transformedPomFile.delete() || !transformedPomFile.createNewFile()) {
+                throw LOGGER.cannotCreateOutputFile(transformedPomFile.getAbsolutePath());
+            }
+        }
 
         LOGGER.transformingFile(pomFileName, transformedPomFileName);
 
