@@ -612,17 +612,29 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     final void flushComplete() throws IOException {
         synchronized (lock) {
             try {
+                boolean resetReadyForFlush = true;
                 bufferFull = false;
                 int remaining = header.getRemainingInBuffer();
                 boolean finalFrame = finalFrameQueued;
                 boolean channelClosed = finalFrame && remaining == 0 && !header.isAnotherFrameRequired();
                 if (remaining > 0) {
+                    // We still have a body, but since we just flushed, we transfer it to the write buffer.
+                    // This works as long as you call write() again or if finalFrame is true
+                    //TODO: this code may not work if the channel has frame level compression and flow control
+                    //we don't have an implementation that needs this yet so it is ok for now
                     body.getBuffer().limit(body.getBuffer().limit() + remaining);
+                    body.getBuffer().compact();
+                    writeBuffer = body;
+                    body = null;
+                    state &= ~STATE_PRE_WRITE_CALLED;
                     if (finalFrame) {
-                        //we clear the final frame flag, as it could not actually be written out
-                        //note that we don't attempt to requeue, as whatever stopped it from being written will likely still
-                        //be an issue
+                        // we clear the final frame flag, as it could not actually be written out
                         this.finalFrameQueued = false;
+                        // setting readyForFlush will prevent the final frame to be requeued by write listener, so mark
+                        // it as false; and do not reset it to false later on
+                        // (queueFinalFrame() will set readyForFlush to true and will do so iff readyForFlush is false)
+                        resetReadyForFlush = readyForFlush = false;
+                        queueFinalFrame();
                     }
                 } else if (header.isAnotherFrameRequired()) {
                     this.finalFrameQueued = false;
@@ -643,17 +655,6 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                         body = null;
                         state &= ~STATE_PRE_WRITE_CALLED;
                     }
-                } else if (body != null) {
-                    // We still have a body, but since we just flushed, we transfer it to the write buffer.
-                    // This works as long as you call write() again
-
-                    //TODO: this code may not work if the channel has frame level compression and flow control
-                    //we don't have an implementation that needs this yet so it is ok for now
-
-                    body.getBuffer().compact();
-                    writeBuffer = body;
-                    body = null;
-                    state &= ~STATE_PRE_WRITE_CALLED;
                 }
 
                 if (header.getByteBuffer() != null) {
@@ -661,7 +662,10 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 }
                 header = null;
 
-                readyForFlush = false;
+                if (resetReadyForFlush) {
+                    readyForFlush = false;
+                }
+
                 if (isWriteResumed() && !channelClosed) {
                     wakeupWrites();
                 } else if (isWriteResumed()) {
