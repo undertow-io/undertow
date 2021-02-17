@@ -331,23 +331,35 @@ public class ServletPathMatches {
                     ServletHandler pathServlet = targetServletMatch.handler;
                     String pathMatch = targetServletMatch.matchedPath;
 
-                    boolean defaultServletMatch = targetServletMatch.defaultServlet;
-                    if (defaultServletMatch && extensionServlets.containsKey(entry.getKey())) {
+                    final boolean defaultServletMatch;
+                    final String servletMatchPattern;
+                    final MappingMatch mappingMatch;
+                    if (targetServletMatch.defaultServlet) {
+                        // Path matches always take precedence over extension matches, however the default servlet is matched
+                        // at a lower priority, after extension matches. The "/*" pattern is applied implicitly onto the
+                        // default servlet. If there's an extension match in addition to a non-default servlet path match,
+                        // the servlet path match is higher priority. However if the path match is the default servlets
+                        // default catch-all path, the extension match is a higher priority.
+                        ServletHandler extensionServletHandler = extensionServlets.get(entry.getKey());
+                        if (extensionServletHandler != null) {
+                            defaultServletMatch = false;
+                            pathServlet = extensionServletHandler;
+                            servletMatchPattern = "*." + entry.getKey();
+                            mappingMatch = MappingMatch.EXTENSION;
+                        } else {
+                            defaultServletMatch = true;
+                            servletMatchPattern = "/";
+                            mappingMatch = MappingMatch.DEFAULT;
+                        }
+                    } else {
                         defaultServletMatch = false;
-                        pathServlet = extensionServlets.get(entry.getKey());
+                        servletMatchPattern = path;
+                        mappingMatch = MappingMatch.PATH;
                     }
                     HttpHandler handler = pathServlet;
                     if (!entry.getValue().isEmpty()) {
                         handler = new FilterHandler(entry.getValue(), deploymentInfo.isAllowNonStandardWrappers(), handler);
                     }
-                    // Path matches always take precedence over extension matches, however the default servlet is matched
-                    // at a lower priority, after extension matches. The "/*" pattern is applied implicitly onto the
-                    // default servlet. If there's an extension match in addition to a non-default servlet path match,
-                    // the servlet path match is higher priority. However if the path match is the default servlets
-                    // default catch-all path, the extension match is a higher priority.
-                    boolean isDefaultServletFallback = targetServletMatch.defaultServlet && "/*".equals(path);
-                    String servletMatchPattern = defaultServletMatch ? "/" : (isDefaultServletFallback ? "*." + entry.getKey() : path);
-                    MappingMatch mappingMatch = defaultServletMatch ? MappingMatch.DEFAULT : (isDefaultServletFallback ? MappingMatch.EXTENSION : MappingMatch.PATH);
                     builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, pathServlet.getManagedServlet(), entry.getValue(), pathMatch, deploymentInfo, defaultServletMatch, mappingMatch, servletMatchPattern));
                 }
             } else if (path.isEmpty()) {
