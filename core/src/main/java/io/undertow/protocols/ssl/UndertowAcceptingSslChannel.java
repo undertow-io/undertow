@@ -208,7 +208,7 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
     }
 
     protected UndertowSslConnection accept(StreamConnection tcpServer, SSLEngine sslEngine) throws IOException {
-        return new UndertowSslConnection(tcpServer, sslEngine, applicationBufferPool);
+        return new UndertowSslConnection(tcpServer, sslEngine, applicationBufferPool, ssl.getDelegatedTaskExecutor());
     }
 
     public ChannelListener.Setter<? extends AcceptingChannel<SslConnection>> getCloseSetter() {

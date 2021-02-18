@@ -54,6 +54,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -88,6 +89,7 @@ public final class Undertow {
 
     private ByteBufferPool byteBufferPool;
     private XnioWorker worker;
+    private Executor sslEngineDelegatedTaskExecutor;
     private List<AcceptingChannel<? extends StreamConnection>> channels;
     private Xnio xnio;
 
@@ -100,6 +102,7 @@ public final class Undertow {
         this.listeners.addAll(builder.listeners);
         this.rootHandler = builder.handler;
         this.worker = builder.worker;
+        this.sslEngineDelegatedTaskExecutor = builder.sslEngineDelegatedTaskExecutor;
         this.internalWorker = builder.worker == null;
         this.workerOptions = builder.workerOptions.getMap();
         this.socketOptions = builder.socketOptions.getMap();
@@ -213,14 +216,18 @@ public final class Undertow {
 
                         UndertowXnioSsl xnioSsl;
                         if (listener.sslContext != null) {
-                            xnioSsl = new UndertowXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), listener.sslContext);
+                            xnioSsl = new UndertowXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), listener.sslContext, sslEngineDelegatedTaskExecutor);
                         } else {
                             OptionMap.Builder builder = OptionMap.builder()
                                     .addAll(socketOptionsWithOverrides);
                             if (!socketOptionsWithOverrides.contains(Options.SSL_PROTOCOL)) {
                                 builder.set(Options.SSL_PROTOCOL, "TLSv1.2");
                             }
-                            xnioSsl = new UndertowXnioSsl(xnio, OptionMap.create(Options.USE_DIRECT_BUFFERS, true), JsseSslUtils.createSSLContext(listener.keyManagers, listener.trustManagers, new SecureRandom(), builder.getMap()));
+                            xnioSsl = new UndertowXnioSsl(
+                                    xnio,
+                                    OptionMap.create(Options.USE_DIRECT_BUFFERS, true),
+                                    JsseSslUtils.createSSLContext(listener.keyManagers, listener.trustManagers, new SecureRandom(), builder.getMap()),
+                                    sslEngineDelegatedTaskExecutor);
                         }
 
                         AcceptingChannel<? extends StreamConnection> sslServer;
@@ -420,6 +427,7 @@ public final class Undertow {
         private final List<ListenerConfig> listeners = new ArrayList<>();
         private HttpHandler handler;
         private XnioWorker worker;
+        private Executor sslEngineDelegatedTaskExecutor;
         private ByteBufferPool byteBufferPool;
 
         private final OptionMap.Builder workerOptions = OptionMap.builder();
@@ -568,6 +576,11 @@ public final class Undertow {
          */
         public <T> Builder setWorker(XnioWorker worker) {
             this.worker = worker;
+            return this;
+        }
+
+        public Builder setSslEngineDelegatedTaskExecutor(Executor sslEngineDelegatedTaskExecutor) {
+            this.sslEngineDelegatedTaskExecutor = sslEngineDelegatedTaskExecutor;
             return this;
         }
 
