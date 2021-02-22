@@ -145,8 +145,10 @@ public final class StoredResponseStreamSinkConduit extends AbstractStreamSinkCon
 
     @Override
     public void terminateWrites() throws IOException {
-        exchange.putAttachment(RESPONSE, outputStream.toByteArray());
-        outputStream = null;
+        if (outputStream != null) {
+            exchange.putAttachment(RESPONSE, outputStream.toByteArray());
+            outputStream = null;
+        }
         super.terminateWrites();
     }
 }
