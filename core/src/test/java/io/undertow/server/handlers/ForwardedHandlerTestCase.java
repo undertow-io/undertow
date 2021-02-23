@@ -35,6 +35,7 @@ public class ForwardedHandlerTestCase {
 
     @BeforeClass
     public static void setup() {
+        final boolean DEFAULT_CHANGE_LOCAL_ADDR_PORT = Boolean.TRUE;
         DefaultServer.setRootHandler(new ForwardedHandler(new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -44,7 +45,7 @@ public class ForwardedHandlerTestCase {
                                 + "|" + toJreNormalizedString(exchange.getDestinationAddress())
                                 + "|" + toJreNormalizedString(exchange.getSourceAddress()));
             }
-        }));
+        }, DEFAULT_CHANGE_LOCAL_ADDR_PORT));
     }
 
     private static String toJreNormalizedString(InetSocketAddress address) {
@@ -147,6 +148,7 @@ public class ForwardedHandlerTestCase {
         Assert.assertEquals( "foo.com", res[1]);
         Assert.assertEquals( "foo.com:80", res[2]);
         Assert.assertEquals( "/9.9.9.9:2343", res[3]);
+
     }
 
     private static String[] run(String ... headers) throws IOException {
