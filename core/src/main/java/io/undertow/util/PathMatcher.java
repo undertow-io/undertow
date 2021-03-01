@@ -112,7 +112,7 @@ public class PathMatcher<T> {
      * Adds a path prefix and a handler for that path. If the path does not start
      * with a / then one will be prepended.
      * <p>
-     * The match is done on a prefix bases, so registering /foo will also match /bar. Exact
+     * The match is done on a prefix bases, so registering /foo will also match /foo/bar. Exact
      * path matches are taken into account first.
      * <p>
      * If / is specified as the path then it will replace the default handler.
