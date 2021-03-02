@@ -23,6 +23,7 @@ import io.undertow.util.HttpString;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.WeakHashMap;
 
 /**
  * Utility class for retrieving exchange attributes
@@ -31,9 +32,23 @@ import java.util.Collections;
  */
 public class ExchangeAttributes {
 
+    private static final WeakHashMap<ClassLoader, ExchangeAttributeParser> exchangeAttributesParserPerClassLoader = new WeakHashMap<>();
+
     public static ExchangeAttributeParser parser(final ClassLoader classLoader) {
-         return new ExchangeAttributeParser(classLoader, Collections.<ExchangeAttributeWrapper>emptyList());
+        if (exchangeAttributesParserPerClassLoader.containsKey(classLoader)) {
+            final ExchangeAttributeParser parser = exchangeAttributesParserPerClassLoader.get(classLoader);
+            if (parser != null) {
+                return parser;
+            }
+        }
+        final ExchangeAttributeParser parser = new ExchangeAttributeParser(classLoader, Collections.<ExchangeAttributeWrapper>emptyList());
+        synchronized (exchangeAttributesParserPerClassLoader) {
+            exchangeAttributesParserPerClassLoader.put(classLoader, parser);
+        }
+        return parser;
     }
+
+    // AQUI adicionar uma lista por classloader
 
     public static ExchangeAttributeParser parser(final ClassLoader classLoader, ExchangeAttributeWrapper ... wrappers) {
         return new ExchangeAttributeParser(classLoader, Arrays.asList(wrappers));

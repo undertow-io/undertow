@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.WeakHashMap;
 
 /**
  * Parser for the undertow-handlers.conf file.
@@ -119,6 +120,8 @@ public class PredicatedHandlersParser {
             throw error(contents, node.getToken().getPosition(), "unexpected token " + node.getToken());
         }
     }
+
+    // TODO should we add a map per predicate handler per class loader?
 
     private static PredicatedHandler handlePredicateOperatorNode(String contents, PredicateOperatorNode node, Map<String, PredicateBuilder> predicateBuilders, Map<String, HandlerBuilder> handlerBuilders, ExchangeAttributeParser parser) {
         Predicate predicate = handlePredicateNode(contents, node.getLeft(), predicateBuilders, parser);
@@ -289,7 +292,15 @@ public class PredicatedHandlersParser {
         return token.getToken();
     }
 
+    private static final WeakHashMap<ClassLoader, Map<String, PredicateBuilder>> predicateBuildersPerClassLoader = new WeakHashMap<>();
+
     private static Map<String, PredicateBuilder> loadPredicateBuilders(final ClassLoader classLoader) {
+        if (predicateBuildersPerClassLoader.containsKey(classLoader)) {
+            Map<String, PredicateBuilder> predicatedBuilders = predicateBuildersPerClassLoader.get(classLoader);
+            if (predicatedBuilders != null) {
+                return predicatedBuilders;
+            }
+        }
         ServiceLoader<PredicateBuilder> loader = ServiceLoader.load(PredicateBuilder.class, classLoader);
         final Map<String, PredicateBuilder> ret = new HashMap<>();
         for (PredicateBuilder builder : loader) {
@@ -301,7 +312,11 @@ public class PredicatedHandlersParser {
                 ret.put(builder.name(), builder);
             }
         }
-        return ret;
+        final Map<String, PredicateBuilder> predicateBuilders = Collections.unmodifiableMap(ret);
+        synchronized (predicateBuildersPerClassLoader) {
+            predicateBuildersPerClassLoader.put(classLoader, predicateBuilders);
+        }
+        return predicateBuilders;
     }
 
     private static Map<String, HandlerBuilder> loadHandlerBuilders(final ClassLoader classLoader) {
