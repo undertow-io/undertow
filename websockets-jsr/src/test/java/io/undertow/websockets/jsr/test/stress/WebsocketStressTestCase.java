@@ -29,21 +29,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.servlet.ServletException;
 import javax.websocket.CloseReason;
 import javax.websocket.ContainerProvider;
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
 import javax.websocket.MessageHandler;
-import javax.websocket.SendHandler;
-import javax.websocket.SendResult;
 import javax.websocket.Session;
 import javax.websocket.WebSocketContainer;
 
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import io.undertow.Handlers;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -54,6 +49,13 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -65,12 +67,14 @@ public class WebsocketStressTestCase {
     public static final int NUM_THREADS = 100;
     public static final int NUM_REQUESTS = 1000;
     private static ServerWebSocketContainer deployment;
+    private static DeploymentManager deploymentManager;
 
-    private static WebSocketContainer defaultContainer = ContainerProvider.getWebSocketContainer();
+    private static WebSocketContainer defaultContainer;
     static ExecutorService executor;
 
     @BeforeClass
     public static void setup() throws Exception {
+        defaultContainer = ContainerProvider.getWebSocketContainer();
         executor = Executors.newFixedThreadPool(NUM_THREADS);
 
         final ServletContainer container = ServletContainer.Factory.newInstance();
@@ -86,25 +90,24 @@ public class WebsocketStressTestCase {
                                 .setWorker(DefaultServer.getWorker())
                                 .addEndpoint(StressEndpoint.class)
                                 .setDispatchToWorkerThread(true)
-                                .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
-                                    @Override
-                                    public void ready(ServerWebSocketContainer container) {
-                                        deployment = container;
-                                    }
-                                })
+                                .addListener(containerReady -> deployment = containerReady)
                 )
                 .setDeploymentName("servletContext.war");
 
 
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
+        deploymentManager = container.addDeployment(builder);
+        deploymentManager.deploy();
 
-        DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/ws", manager.start()));
+        DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/ws", deploymentManager.start()));
     }
 
     @AfterClass
-    public static void after() {
+    public static void after() throws ServletException {
         StressEndpoint.MESSAGES.clear();
+        if (deploymentManager != null) {
+            deploymentManager.stop();
+            deploymentManager.undeploy();
+        }
         deployment = null;
         executor.shutdownNow();
         executor = null;
@@ -132,33 +135,29 @@ public class WebsocketStressTestCase {
                 }
             }, null, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/stress"));
             final int thread = i;
-            executor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        executor.submit(new SendRunnable(session, thread, executor));
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
+            executor.submit(() -> {
+                try {
+                    executor.submit(new SendRunnable(session, thread, executor));
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
             });
 
         }
         for (CountDownLatch future : latches) {
-            future.await(40, TimeUnit.SECONDS);
+            assertTrue(future.await(40, TimeUnit.SECONDS));
         }
         for (int t = 0; t < NUM_THREADS; ++t) {
             for (int i = 0; i < NUM_REQUESTS; ++i) {
                 String msg = "t-" + t + "-m-" + i;
-                Assert.assertTrue(msg, StressEndpoint.MESSAGES.remove(msg));
+                assertTrue(msg, StressEndpoint.MESSAGES.remove(msg));
             }
         }
-        Assert.assertEquals(0, StressEndpoint.MESSAGES.size());
+        assertEquals(0, StressEndpoint.MESSAGES.size());
     }
 
     @Test
     public void websocketFragmentationStressTestCase() throws Exception {
-
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
         final CountDownLatch done = new CountDownLatch(1);
 
@@ -168,7 +167,6 @@ public class WebsocketStressTestCase {
             sb.append(i);
         }
         String toSend = sb.toString();
-
         final Session session = defaultContainer.connectToServer(new Endpoint() {
             @Override
             public void onOpen(Session session, EndpointConfig config) {
@@ -206,8 +204,8 @@ public class WebsocketStressTestCase {
             stream.flush();
         }
         stream.close();
-        done.await(40, TimeUnit.SECONDS);
-        Assert.assertEquals(toSend, new String(out.toByteArray()));
+        assertTrue(done.await(40, TimeUnit.SECONDS));
+        assertEquals(toSend, new String(out.toByteArray()));
 
     }
 
@@ -225,27 +223,21 @@ public class WebsocketStressTestCase {
 
         @Override
         public void run() {
-            session.getAsyncRemote().sendText("t-" + thread + "-m-" + count.get(), new SendHandler() {
-                @Override
-                public void onResult(SendResult result) {
-                    if (!result.isOK()) {
-                        try {
-                            result.getException().printStackTrace();
-                            session.close();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
+            session.getAsyncRemote().sendText("t-" + thread + "-m-" + count.get(), result -> {
+                if (!result.isOK()) {
+                    try {
+                        result.getException().printStackTrace();
+                        session.close();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
-                    if (count.incrementAndGet() != NUM_REQUESTS) {
-                        executor.submit(SendRunnable.this);
-                    } else {
-                        executor.submit(new Runnable() {
-                            @Override
-                            public void run() {
-                                session.getAsyncRemote().sendText("close");
-                            }
-                        });
-                    }
+                }
+                if (count.incrementAndGet() != NUM_REQUESTS) {
+                    executor.submit(SendRunnable.this);
+                } else {
+                    executor.submit(() -> {
+                        session.getAsyncRemote().sendText("close");
+                    });
                 }
             });
         }
