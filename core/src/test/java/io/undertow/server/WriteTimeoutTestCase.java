@@ -35,22 +35,33 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.ChannelListener;
+import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.WriteTimeoutException;
 
 /**
- * Tests read timeout with a client that is slow to read the response
+ * Tests write timeout with a client that is slow to read the response
  *
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
 @HttpOneOnly
-@Ignore("This test fails intermittently")
+@Ignore("UNDERTOW-1859 this test freezes") //FIXME
 public class WriteTimeoutTestCase {
 
     private volatile Exception exception;
     private static final CountDownLatch errorLatch = new CountDownLatch(1);
+
+    @DefaultServer.BeforeServerStarts
+    public static void setup() {
+        DefaultServer.setServerOptions(OptionMap.builder().set(Options.WRITE_TIMEOUT, 10).getMap());
+    }
+
+    @DefaultServer.AfterServerStops
+    public static void cleanup() {
+        DefaultServer.setServerOptions(OptionMap.EMPTY);
+    }
 
     @Test
     public void testWriteTimeout() throws IOException, InterruptedException {
