@@ -43,7 +43,7 @@ import java.security.GeneralSecurityException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Stuart Douglas
@@ -158,11 +158,11 @@ public class SimpleSSLTestCase {
                 .setMaxConnPerRoute(1000)
                 .build()) {
             ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
-            AtomicBoolean failed = new AtomicBoolean();
+            AtomicReference<Throwable> failed = new AtomicReference<>();
             Runnable task = new Runnable() {
                 @Override
                 public void run() {
-                    if (failed.get()) {
+                    if (failed.get() != null) {
                         return;
                     }
                     try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerSSLAddress()))) {
@@ -171,7 +171,7 @@ public class SimpleSSLTestCase {
                         Assert.assertEquals("https", header[0].getValue());
                         EntityUtils.consumeQuietly(result.getEntity());
                     } catch (Throwable t) {
-                        if (failed.compareAndSet(false, true)) {
+                        if (failed.compareAndSet(null, t)) {
                             t.printStackTrace();
                             executorService.shutdownNow();
                         }
@@ -182,8 +182,11 @@ public class SimpleSSLTestCase {
                 executorService.submit(task);
             }
             executorService.shutdown();
-            Assert.assertTrue(executorService.awaitTermination(70, TimeUnit.SECONDS));
-            Assert.assertFalse(failed.get());
+            boolean result = executorService.awaitTermination(70, TimeUnit.SECONDS);
+            if (failed.get() != null) {
+                throw new RuntimeException(failed.get());
+            }
+            Assert.assertTrue(result);
         } finally {
             DefaultServer.stopSSLServer();
         }

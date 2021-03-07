@@ -20,12 +20,11 @@ package io.undertow.server;
 
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.protocol.http.HttpServerConnection;
-
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Options;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.SslClientAuthMode;
 import org.xnio.channels.Channels;
 import org.xnio.channels.SslChannel;
@@ -74,10 +73,10 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
 
     @Override
     public Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException, RenegotiationRequiredException {
-        if(unverified != null) {
+        if (unverified != null) {
             throw unverified;
         }
-        if(renegotiationRequiredException != null) {
+        if (renegotiationRequiredException != null) {
             throw renegotiationRequiredException;
         }
         try {
@@ -99,10 +98,10 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
 
     @Override
     public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException, RenegotiationRequiredException {
-        if(unverified != null) {
+        if (unverified != null) {
             throw unverified;
         }
-        if(renegotiationRequiredException != null) {
+        if (renegotiationRequiredException != null) {
             throw renegotiationRequiredException;
         }
         try {
@@ -169,38 +168,38 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
         boolean overflow = false;
         try {
             int res;
-            for(;;) {
+            for (; ; ) {
                 final ByteBuffer buf = pooled.getBuffer();
                 res = Channels.readBlocking(requestChannel, buf);
                 if (!buf.hasRemaining()) {
                     buf.flip();
-                    if(allowedBuffers == usedBuffers) {
+                    if (allowedBuffers == usedBuffers) {
                         overflow = true;
                         break;
                     } else {
                         pooled = exchange.getConnection().getByteBufferPool().allocate();
                         poolArray[usedBuffers++] = pooled;
                     }
-                } else if(res == -1) {
+                } else if (res == -1) {
                     buf.flip();
                     break;
                 }
             }
             free = false;
             Connectors.ungetRequestBytes(exchange, poolArray);
-            if(overflow) {
+            if (overflow) {
                 throw new SSLPeerUnverifiedException("Cannot renegotiate");
             }
             renegotiateNoRequest(exchange, newAuthMode);
         } finally {
             if (free) {
-                for(PooledByteBuffer buf : poolArray) {
-                    if(buf != null) {
+                for (PooledByteBuffer buf : poolArray) {
+                    if (buf != null) {
                         buf.close();
                     }
                 }
             }
-            if(requestResetRequired) {
+            if (requestResetRequired) {
                 exchange.requestChannel = null;
             }
         }
@@ -211,13 +210,17 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
         try {
             SslClientAuthMode sslClientAuthMode = channel.getOption(Options.SSL_CLIENT_AUTH_MODE);
             if (sslClientAuthMode == SslClientAuthMode.NOT_REQUESTED) {
+                boolean oldReadsResumed = serverConnection.getSourceChannel().isReadResumed();
+                serverConnection.getSourceChannel().suspendReads();
                 SslHandshakeWaiter waiter = new SslHandshakeWaiter();
                 channel.getHandshakeSetter().set(waiter);
                 //we use requested, to place nicely with other auth modes
                 channel.setOption(Options.SSL_CLIENT_AUTH_MODE, newAuthMode);
                 channel.getSslSession().invalidate();
                 channel.startHandshake();
-                serverConnection.getOriginalSinkConduit().flush();
+                while (!serverConnection.getOriginalSinkConduit().flush()) {
+                    serverConnection.getOriginalSinkConduit().awaitWritable();
+                }
                 ByteBuffer buff = ByteBuffer.wrap(new byte[1]);
                 long end = System.currentTimeMillis() + MAX_RENEGOTIATION_WAIT;
                 while (!waiter.isDone() && serverConnection.isOpen() && System.currentTimeMillis() < end) {
@@ -225,18 +228,24 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
                     if (read != 0) {
                         throw new SSLPeerUnverifiedException("");
                     }
+                    while (!serverConnection.getOriginalSinkConduit().flush()) {
+                        serverConnection.getOriginalSinkConduit().awaitWritable();
+                    }
                     if (!waiter.isDone()) {
                         serverConnection.getSourceChannel().awaitReadable(end - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
                     }
                 }
-                if(!waiter.isDone()) {
-                    if(serverConnection.isOpen()) {
+                if (!waiter.isDone()) {
+                    if (serverConnection.isOpen()) {
                         IoUtils.safeClose(serverConnection);
                         throw UndertowMessages.MESSAGES.rengotiationTimedOut();
                     } else {
                         IoUtils.safeClose(serverConnection);
                         throw UndertowMessages.MESSAGES.rengotiationFailed();
                     }
+                }
+                if (oldReadsResumed) {
+                    serverConnection.getSourceChannel().resumeReads();
                 }
             }
         } finally {

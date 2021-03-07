@@ -145,58 +145,73 @@ public class PathResource implements RangeAwareResource {
 
         class ServerTask extends BaseFileTask implements IoCallback {
 
-            private PooledByteBuffer pooled;
+            volatile PooledByteBuffer pooled;
+            volatile long remaining;
+            volatile boolean done;
 
-            long remaining = end - start + 1;
+            ServerTask() {
+                if (range) {
+                    remaining = end - start + 1;
+                } else {
+                    remaining = exchange.getResponseContentLength();
+                }
+            }
 
             @Override
             public void run() {
-                if(range && remaining == 0) {
-                    //we are done
-                    if (pooled != null) {
-                        pooled.close();
-                        pooled = null;
-                    }
-                    IoUtils.safeClose(fileChannel);
-                    callback.onComplete(exchange, sender);
-                    return;
-                }
-                if (fileChannel == null) {
-                    if (!openFile()) {
+                try {
+                    if (done) {
                         return;
                     }
-                    pooled = exchange.getConnection().getByteBufferPool().allocate();
-                }
-                if (pooled != null) {
-                    ByteBuffer buffer = pooled.getBuffer();
-                    try {
-                        buffer.clear();
-                        int res = fileChannel.read(buffer);
-                        if (res == -1) {
-                            //we are done
-                            pooled.close();
-                            IoUtils.safeClose(fileChannel);
-                            callback.onComplete(exchange, sender);
+                    if (fileChannel == null) {
+                        if (!openFile()) {
                             return;
                         }
-                        buffer.flip();
-                        if(range) {
-                            if(buffer.remaining() > remaining) {
-                                buffer.limit((int) (buffer.position() + remaining));
-                            }
-                            remaining -= buffer.remaining();
-                        }
-                        sender.send(buffer, this);
-                    } catch (IOException e) {
-                        onException(exchange, sender, e);
+                        pooled = exchange.getConnection().getByteBufferPool().allocate();
                     }
+                    if (pooled != null) {
+                        ByteBuffer buffer = pooled.getBuffer();
+                        try {
+                            buffer.clear();
+                            int res = fileChannel.read(buffer);
+                            if (res == -1) {
+                                //we are done
+                                pooled.close();
+                                pooled = null;
+                                IoUtils.safeClose(fileChannel);
+                                done = true;
+                                callback.onComplete(exchange, sender);
+                                return;
+                            }
+                            buffer.flip();
+                            if (remaining > 0) {
+                                if (buffer.remaining() > remaining) {
+                                    buffer.limit((int) (buffer.position() + remaining));
+                                }
+                                remaining -= buffer.remaining();
+                            }
+                            sender.send(buffer, this);
+                        } catch (IOException e) {
+                            onException(exchange, sender, e);
+                        }
+                    }
+                } catch (Exception e) {
+                    onException(exchange, sender, new IOException(e));
                 }
 
             }
 
             @Override
             public void onComplete(final HttpServerExchange exchange, final Sender sender) {
-                if (exchange.isInIoThread()) {
+                if (remaining == 0) {
+                    if (pooled != null) {
+                        pooled.close();
+                        pooled = null;
+                    }
+                    IoUtils.safeClose(fileChannel);
+                    done = true;
+                    callback.onComplete(exchange, sender);
+                } else if (exchange.isInIoThread()) {
                     exchange.dispatch(this);
                 } else {
                     run();
@@ -209,6 +224,7 @@ public class PathResource implements RangeAwareResource {
                 if (pooled != null) {
                     pooled.close();
                     pooled = null;
+                    done = true;
                 }
                 IoUtils.safeClose(fileChannel);
                 if (!exchange.isResponseStarted()) {
