@@ -21,24 +21,25 @@ package io.undertow.server;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.net.SocketException;
 import java.nio.channels.Channel;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StringWriteChannelListener;
-import io.undertow.testutils.TestHttpClient;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.AbstractHttpEntity;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
+import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.channels.ReadTimeoutException;
 import org.xnio.channels.StreamSinkChannel;
@@ -49,51 +50,47 @@ import org.xnio.channels.StreamSourceChannel;
  * Tests read timeout with a slow request
  *
  * @author Stuart Douglas
+ * @author Flavia Rainone
  */
 @RunWith(DefaultServer.class)
 @HttpOneOnly
-@Ignore
 public class ReadTimeoutTestCase {
 
     private volatile Exception exception;
-    private static final CountDownLatch errorLatch = new CountDownLatch(1);
+
+    @DefaultServer.BeforeServerStarts
+    public static void beforeClass() {
+        DefaultServer.setServerOptions(OptionMap.create(Options.READ_TIMEOUT, 10));
+    }
+
+    @DefaultServer.AfterServerStops
+    public static void afterClass() {
+        DefaultServer.setServerOptions(OptionMap.EMPTY);
+    }
 
     @Test
-    public void testReadTimeout() throws IOException, InterruptedException {
-        DefaultServer.setRootHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+    public void testReadTimeout() throws InterruptedException, IOException {
+        final CountDownLatch errorLatch = new CountDownLatch(1);
+        DefaultServer.setRootHandler((final HttpServerExchange exchange) -> {
                 final StreamSinkChannel response = exchange.getResponseChannel();
                 final StreamSourceChannel request = exchange.getRequestChannel();
-                try {
-                    request.setOption(Options.READ_TIMEOUT, 100);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
 
-                request.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE, new ChannelListener<Channel>() {
-                            @Override
-                            public void handleEvent(final Channel channel) {
+                request.getReadSetter().set(ChannelListeners.drainListener(Long.MAX_VALUE, (final Channel channel) -> {
                                 new StringWriteChannelListener("COMPLETED") {
                                     @Override
                                     protected void writeDone(final StreamSinkChannel channel) {
                                         exchange.endExchange();
                                     }
                                 }.setup(response);
-                            }
-                        }, new ChannelExceptionHandler<StreamSourceChannel>() {
-                            @Override
-                            public void handleException(final StreamSourceChannel channel, final IOException e) {
+                        }, (final StreamSourceChannel channel, final IOException e) -> {
+                                e.printStackTrace();
                                 exchange.endExchange();
                                 exception = e;
                                 errorLatch.countDown();
-                            }
                         }
                 ));
                 request.wakeupReads();
-
-            }
-        });
+            });
 
         final TestHttpClient client = new TestHttpClient();
         try {
@@ -101,7 +98,7 @@ public class ReadTimeoutTestCase {
             post.setEntity(new AbstractHttpEntity() {
 
                 @Override
-                public InputStream getContent() throws IOException, IllegalStateException {
+                public InputStream getContent() throws IllegalStateException {
                     return null;
                 }
 
@@ -134,18 +131,40 @@ public class ReadTimeoutTestCase {
                 }
             });
             post.addHeader(Headers.CONNECTION_STRING, "close");
+            boolean socketFailure = false;
             try {
                 client.execute(post);
-            } catch (IOException e) {
-
+            } catch (SocketException e) {
+                Assert.assertTrue(e.getMessage(), e.getMessage().contains("Broken pipe")
+                        || e.getMessage().contains("connection abort"));
+                socketFailure = true;
             }
+            Assert.assertTrue("Test sent request without any exception", socketFailure);
             if (errorLatch.await(5, TimeUnit.SECONDS)) {
-                Assert.assertEquals(ReadTimeoutException.class, exception.getClass());
-            } else {
-                Assert.fail("Read did not time out");
+                Assert.assertTrue(getExceptionDescription(exception), exception instanceof ReadTimeoutException ||
+                        (DefaultServer.isProxy() && exception instanceof IOException));
+                if (exception.getSuppressed() != null && exception.getSuppressed().length > 0) {
+                    for (Throwable supressed : exception.getSuppressed()) {
+                        Assert.assertEquals(getExceptionDescription(supressed), ReadTimeoutException.class, exception.getClass());
+                    }
+                }
+            } else if (!DefaultServer.isProxy()) {
+                // ignore if proxy, because when we're on proxy, we might not be able to see the exception
+                Assert.fail("Did not get ReadTimeoutException");
             }
         } finally {
             client.getConnectionManager().shutdown();
+        }
+    }
+
+    // TODO move this to an utility class
+    private String getExceptionDescription(Throwable exception) {
+        try (StringWriter sw = new StringWriter();
+             PrintWriter pw = new PrintWriter(sw)) {
+            exception.printStackTrace(pw);
+            return pw.toString();
+        } catch (IOException ioe) {
+            throw new IllegalStateException(ioe);
         }
     }
 }
