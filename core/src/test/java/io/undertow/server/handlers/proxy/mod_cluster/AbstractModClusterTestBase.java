@@ -74,22 +74,23 @@ public abstract class AbstractModClusterTestBase {
     protected static MCMPTestClient modClusterClient;
 
 
-    protected static final int port;
-    protected static final String hostName;
+    protected static int port;
+    protected static String hostName;
 
     private static ModCluster modCluster;
-    private static final XnioSsl xnioSsl;
+    private static XnioSsl xnioSsl;
     private static final UndertowClient undertowClient = UndertowClient.getInstance();
     private static final String COUNT = "count";
 
-    static {
+    protected List<NodeTestConfig> nodes;
+
+    @BeforeClass
+    public static final void beforeClass() {
         port = getHostPort("default");
         hostName = getHostAddress("default");
 
         xnioSsl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, getClientSSLContext());
     }
-
-    protected List<NodeTestConfig> nodes;
 
     /**
      * Dynamically change the worker nodes protocol based on the test parameters

@@ -68,6 +68,7 @@ import io.undertow.websockets.utils.WebSocketTestClient;
 public class AnnotatedEndpointTest {
 
     private static ServerWebSocketContainer deployment;
+    private static DeploymentManager deploymentManager;
 
     @BeforeClass
     public static void setup() throws Exception {
@@ -94,12 +95,7 @@ public class AnnotatedEndpointTest {
                                 .addEndpoint(RootContextEndpoint.class)
                                 .addEndpoint(ThreadSafetyEndpoint.class)
                                 .addEndpoint(RequestUriEndpoint.class)
-                                .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
-                                    @Override
-                                    public void ready(ServerWebSocketContainer container) {
-                                        deployment = container;
-                                    }
-                                })
+                                .addListener(readyContainer -> deployment = readyContainer)
                                 .addEndpoint(ServerEndpointConfig.Builder.create(
                                         AnnotatedAddedProgrammaticallyEndpoint.class,
                                         AnnotatedAddedProgrammaticallyEndpoint.PATH)
@@ -110,22 +106,28 @@ public class AnnotatedEndpointTest {
                 .setDeploymentName("servletContext.war");
 
 
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
+        deploymentManager = container.addDeployment(builder);
+        deploymentManager.deploy();
 
-
-        DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/ws", manager.start()));
+        DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/ws", deploymentManager.start()));
     }
 
     @AfterClass
-    public static void after() {
-        deployment = null;
+    public static void after() throws ServletException {
+        if (deployment != null) {
+            deployment.close();
+            deployment = null;
+        }
+        if (deploymentManager != null) {
+            deploymentManager.stop();
+            deploymentManager.undeploy();
+        }
     }
 
     @Test
     public void testStringOnMessage() throws Exception {
         final byte[] payload = "hello".getBytes();
-        final FutureResult latch = new FutureResult();
+        final FutureResult<?> latch = new FutureResult<>();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/chat/Stuart"));
         client.connect();
@@ -137,7 +139,7 @@ public class AnnotatedEndpointTest {
     @Test
     public void testStringOnMessageAddedProgramatically() throws Exception {
         final byte[] payload = "foo".getBytes();
-        final FutureResult latch = new FutureResult();
+        final FutureResult<?> latch = new FutureResult<>();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/programmatic"));
         client.connect();
@@ -161,7 +163,7 @@ public class AnnotatedEndpointTest {
     @Test
     public void testWebSocketInRootContext() throws Exception {
         final byte[] payload = "hello".getBytes();
-        final FutureResult latch = new FutureResult();
+        final FutureResult<?> latch = new FutureResult<>();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws"));
         client.connect();
@@ -288,7 +290,7 @@ public class AnnotatedEndpointTest {
     @Test
     public void testImplicitIntegerConversion() throws Exception {
         final byte[] payload = "12".getBytes();
-        final FutureResult latch = new FutureResult();
+        final FutureResult<?> latch = new FutureResult<>();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/increment/2"));
         client.connect();
@@ -301,7 +303,7 @@ public class AnnotatedEndpointTest {
     @Test
     public void testEncodingAndDecodingText() throws Exception {
         final byte[] payload = "hello".getBytes();
-        final FutureResult latch = new FutureResult();
+        final FutureResult<?> latch = new FutureResult<>();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/encoding/Stuart"));
         client.connect();
@@ -312,7 +314,7 @@ public class AnnotatedEndpointTest {
     @Test
     public void testEncodingAndDecodingBinary() throws Exception {
         final byte[] payload = "hello".getBytes();
-        final FutureResult latch = new FutureResult();
+        final FutureResult<?> latch = new FutureResult<>();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/encoding/Stuart"));
         client.connect();
@@ -324,7 +326,7 @@ public class AnnotatedEndpointTest {
     @Test
     public void testEncodingWithGenericSuperclass() throws Exception {
         final byte[] payload = "hello".getBytes();
-        final FutureResult latch = new FutureResult();
+        final FutureResult<?> latch = new FutureResult<>();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/encodingGenerics/Stuart"));
         client.connect();
@@ -336,7 +338,7 @@ public class AnnotatedEndpointTest {
     @Test
     public void testRequestUri() throws Exception {
         final byte[] payload = "hello".getBytes();
-        final FutureResult latch = new FutureResult();
+        final FutureResult<?> latch = new FutureResult<>();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/request?a=b"));
         client.connect();
@@ -349,9 +351,7 @@ public class AnnotatedEndpointTest {
     @HttpsIgnore("The SSL engine closes when it receives the first FIN, and as a result the web socket close frame can't be properly echoed over the proxy when the server initates the close")
     public void testTimeoutCloseReason() throws Exception {
         TimeoutEndpoint.reset();
-
-        Session session = deployment.connectToServer(DoNothingEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/timeout"));
-
+        deployment.connectToServer(DoNothingEndpoint.class, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/timeout"));
         Assert.assertEquals(CloseReason.CloseCodes.CLOSED_ABNORMALLY, TimeoutEndpoint.getReason().getCloseCode());
     }
 
@@ -392,7 +392,7 @@ public class AnnotatedEndpointTest {
 
     public static final class RedirectServlet extends HttpServlet{
         @Override
-        protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
             resp.sendRedirect("/ws/chat/Stuart");
         }
     }

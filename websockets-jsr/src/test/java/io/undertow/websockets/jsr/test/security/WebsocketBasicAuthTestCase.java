@@ -18,29 +18,16 @@
 
 package io.undertow.websockets.jsr.test.security;
 
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.servlet.Servlets;
-import io.undertow.servlet.api.AuthMethodConfig;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.api.DeploymentManager;
-import io.undertow.servlet.api.LoginConfig;
-import io.undertow.servlet.api.SecurityConstraint;
-import io.undertow.servlet.api.SecurityInfo;
-import io.undertow.servlet.api.ServletContainer;
-import io.undertow.servlet.api.WebResourceCollection;
-import io.undertow.servlet.test.SimpleServletTestCase;
-import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
-import io.undertow.servlet.test.util.TestClassIntrospector;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.util.FlexBase64;
-import io.undertow.websockets.jsr.ServerWebSocketContainer;
-import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
-import io.undertow.websockets.jsr.test.annotated.ClientConfigurator;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import java.io.IOException;
+import java.net.URI;
+import java.security.Principal;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
@@ -60,19 +47,35 @@ import javax.websocket.MessageHandler;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
-import java.io.IOException;
-import java.net.URI;
-import java.security.Principal;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
+
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.servlet.Servlets;
+import io.undertow.servlet.api.AuthMethodConfig;
+import io.undertow.servlet.api.DeploymentInfo;
+import io.undertow.servlet.api.DeploymentManager;
+import io.undertow.servlet.api.LoginConfig;
+import io.undertow.servlet.api.SecurityConstraint;
+import io.undertow.servlet.api.SecurityInfo;
+import io.undertow.servlet.api.ServletContainer;
+import io.undertow.servlet.api.WebResourceCollection;
+import io.undertow.servlet.test.SimpleServletTestCase;
+import io.undertow.servlet.test.security.constraint.ServletIdentityManager;
+import io.undertow.servlet.test.util.TestClassIntrospector;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.util.FlexBase64;
+import io.undertow.websockets.jsr.ServerWebSocketContainer;
+import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
+import io.undertow.websockets.jsr.test.annotated.ClientConfigurator;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import static io.undertow.util.Headers.AUTHORIZATION;
 import static io.undertow.util.Headers.BASIC;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * @author Stuart Douglas
@@ -83,6 +86,7 @@ public class WebsocketBasicAuthTestCase {
     private static final String REALM_NAME = "Servlet_Realm";
 
     private static ServerWebSocketContainer deployment;
+    private static DeploymentManager deploymentManager;
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -114,12 +118,7 @@ public class WebsocketBasicAuthTestCase {
                                 .setBuffers(DefaultServer.getBufferPool())
                                 .setWorker(DefaultServer.getWorker())
                                 .addEndpoint(SecuredEndpoint.class)
-                                .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
-                                    @Override
-                                    public void ready(ServerWebSocketContainer container) {
-                                        deployment = container;
-                                    }
-                                })
+                                .addListener(containerReady -> deployment = containerReady)
                 );
 
         builder.addSecurityConstraint(new SecurityConstraint()
@@ -128,11 +127,21 @@ public class WebsocketBasicAuthTestCase {
                 .addRoleAllowed("role1")
                 .setEmptyRoleSemantic(SecurityInfo.EmptyRoleSemantic.DENY));
 
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
-        path.addPrefixPath(builder.getContextPath(), manager.start());
+        deploymentManager = container.addDeployment(builder);
+        deploymentManager.deploy();
+        path.addPrefixPath(builder.getContextPath(), deploymentManager.start());
 
         DefaultServer.setRootHandler(path);
+    }
+
+    @AfterClass
+    public static void cleanup() throws ServletException {
+        if (deployment != null)
+            deployment.close();
+        if (deploymentManager != null) {
+            deploymentManager.stop();
+            deploymentManager.undeploy();
+        }
     }
 
     @Test
@@ -145,9 +154,9 @@ public class WebsocketBasicAuthTestCase {
             }
         }).build();
         ContainerProvider.getWebSocketContainer().connectToServer(endpoint, clientEndpointConfig, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/servletContext/secured"));
-        Assert.assertEquals("user1", endpoint.getResponses().poll(15, TimeUnit.SECONDS));
+        assertEquals("user1", endpoint.getResponses().poll(15, TimeUnit.SECONDS));
         endpoint.session.close();
-        endpoint.closeLatch.await(10, TimeUnit.SECONDS);
+        assertTrue(endpoint.closeLatch.await(10, TimeUnit.SECONDS));
     }
 
     @Test
@@ -155,9 +164,9 @@ public class WebsocketBasicAuthTestCase {
         ProgramaticClientEndpoint endpoint = new ProgramaticClientEndpoint();
         ClientEndpointConfig clientEndpointConfig = ClientEndpointConfig.Builder.create().build();
         ContainerProvider.getWebSocketContainer().connectToServer(endpoint, clientEndpointConfig, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/servletContext/wrapper"));
-        Assert.assertEquals("wrapped", endpoint.getResponses().poll(15, TimeUnit.SECONDS));
+        assertEquals("wrapped", endpoint.getResponses().poll(15, TimeUnit.SECONDS));
         endpoint.session.close();
-        endpoint.closeLatch.await(10, TimeUnit.SECONDS);
+        assertTrue(endpoint.closeLatch.await(10, TimeUnit.SECONDS));
     }
 
     public static class ProgramaticClientEndpoint extends Endpoint {
@@ -203,8 +212,7 @@ public class WebsocketBasicAuthTestCase {
     public static class WrapperFilter implements Filter {
 
         @Override
-        public void init(FilterConfig filterConfig) throws ServletException {
-
+        public void init(FilterConfig filterConfig) {
         }
 
         @Override
@@ -212,12 +220,7 @@ public class WebsocketBasicAuthTestCase {
             filterChain.doFilter(new HttpServletRequestWrapper((HttpServletRequest) servletRequest) {
                 @Override
                 public Principal getUserPrincipal() {
-                    return new Principal() {
-                        @Override
-                        public String getName() {
-                            return "wrapped";
-                        }
-                    };
+                    return () -> "wrapped";
                 }
             }, servletResponse);
         }

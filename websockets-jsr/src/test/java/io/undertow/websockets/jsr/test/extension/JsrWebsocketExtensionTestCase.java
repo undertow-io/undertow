@@ -18,6 +18,17 @@
 
 package io.undertow.websockets.jsr.test.extension;
 
+import java.net.URI;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.servlet.ServletException;
+
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
@@ -43,21 +54,14 @@ import io.undertow.websockets.extensions.PerMessageDeflateHandshake;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import io.undertow.websockets.jsr.test.BinaryEndpointTest;
 import io.undertow.websockets.jsr.test.autobahn.AutobahnAnnotatedEndpoint;
-import org.junit.Assert;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  *
@@ -71,6 +75,8 @@ public class JsrWebsocketExtensionTestCase {
 
     public static final int MSG_COUNT = 1000;
     private static volatile DebugExtensionsHeaderHandler debug;
+    private static DeploymentManager deploymentManager;
+
     @BeforeClass
     public static void setup() throws Exception {
 
@@ -91,12 +97,19 @@ public class JsrWebsocketExtensionTestCase {
                 .setDeploymentName("servletContext.war");
 
 
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
+        deploymentManager = container.addDeployment(builder);
+        deploymentManager.deploy();
 
-
-        debug = new DebugExtensionsHeaderHandler(manager.start());
+        debug = new DebugExtensionsHeaderHandler(deploymentManager.start());
         DefaultServer.setRootHandler(debug);
+    }
+
+    @AfterClass
+    public static void cleanup() throws ServletException {
+        if (deploymentManager != null) {
+            deploymentManager.stop();
+            deploymentManager.undeploy();
+        }
     }
 
     @Test
@@ -116,14 +129,14 @@ public class JsrWebsocketExtensionTestCase {
 
         clientChannel.getReceiveSetter().set(new AbstractReceiveListener() {
             @Override
-            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) throws IOException {
+            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message)  {
                 String data = message.getData();
                 // WebSocketLogger.ROOT_LOGGER.info("onFullTextMessage() - Client - Received: " + data.getBytes().length + " bytes.");
                 resultQueue.addLast(data);
             }
 
             @Override
-            protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+            protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
                 message.getData().close();
                 WebSocketLogger.ROOT_LOGGER.info("onFullCloseMessage");
             }
@@ -151,7 +164,7 @@ public class JsrWebsocketExtensionTestCase {
 
             WebSockets.sendTextBlocking(message, clientChannel);
             String res = resultQueue.poll(10, TimeUnit.SECONDS);
-            Assert.assertEquals(message, res);
+            assertEquals(message, res);
         }
 
         clientChannel.sendClose();
@@ -178,7 +191,7 @@ public class JsrWebsocketExtensionTestCase {
 
         clientChannel.getReceiveSetter().set(new AbstractReceiveListener() {
             @Override
-            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) throws IOException {
+            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) {
                 String data = message.getData();
                 WebSocketLogger.ROOT_LOGGER.info("onFullTextMessage - Client - Received: " + data.getBytes().length + " bytes . Data: " + data);
                 result.set(data);
@@ -186,7 +199,7 @@ public class JsrWebsocketExtensionTestCase {
             }
 
             @Override
-            protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+            protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
                 message.getData().close();
                 WebSocketLogger.ROOT_LOGGER.info("onFullCloseMessage");
             }
@@ -205,10 +218,10 @@ public class JsrWebsocketExtensionTestCase {
         StreamSinkFrameChannel sendChannel = clientChannel.send(WebSocketFrameType.TEXT);
         new StringWriteChannelListener("Hello, World!").setup(sendChannel);
 
-        latch.await(10, TimeUnit.SECONDS);
-        Assert.assertEquals("Hello, World!", result.get());
+        assertTrue(latch.await(10, TimeUnit.SECONDS));
+        assertEquals("Hello, World!", result.get());
         clientChannel.sendClose();
 
-        Assert.assertEquals(SEC_WEBSOCKET_EXTENSIONS_EXPECTED, debug.getResponseExtensions().toString());
+        assertEquals(SEC_WEBSOCKET_EXTENSIONS_EXPECTED, debug.getResponseExtensions().toString());
     }
 }

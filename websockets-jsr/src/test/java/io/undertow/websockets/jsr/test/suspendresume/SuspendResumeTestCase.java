@@ -18,6 +18,14 @@
 
 package io.undertow.websockets.jsr.test.suspendresume;
 
+import java.io.IOException;
+import java.net.URI;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import javax.servlet.ServletException;
+
 import io.undertow.Handlers;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -37,21 +45,14 @@ import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
 import io.undertow.websockets.jsr.test.TestMessagesReceivedInOrder;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
 import org.xnio.http.UpgradeFailedException;
-
-import javax.servlet.ServletException;
-import java.io.IOException;
-import java.net.URI;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Stuart Douglas
@@ -61,10 +62,10 @@ import java.util.concurrent.atomic.AtomicReference;
 public class SuspendResumeTestCase {
 
     private static volatile ServerWebSocketContainer serverContainer;
+    private static DeploymentManager deploymentManager;
 
     @BeforeClass
-    public static void setup() throws ServletException {
-
+    public static void setUp() {
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
         DeploymentInfo builder = new DeploymentInfo()
@@ -76,24 +77,31 @@ public class SuspendResumeTestCase {
                         new WebSocketDeploymentInfo()
                                 .setBuffers(DefaultServer.getBufferPool())
                                 .setWorker(DefaultServer.getWorker())
-                                .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
-                                    @Override
-                                    public void ready(ServerWebSocketContainer c) {
-                                        serverContainer = c;
-                                    }
-                                })
+                                .addListener(c -> serverContainer = c)
                                 .addEndpoint(SuspendResumeEndpoint.class)
                 )
                 .setDeploymentName("servletContext.war");
 
 
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
+
+        deploymentManager = container.addDeployment(builder);
+        deploymentManager.deploy();
 
 
-        DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/", manager.start()));
+        try {
+            DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/", deploymentManager.start()));
+        } catch (ServletException e) {
+            e.printStackTrace();
+        }
     }
 
+    @AfterClass
+    public static void cleanUp() throws ServletException {
+        if (deploymentManager != null) {
+            deploymentManager.stop();
+            deploymentManager.undeploy();
+        }
+    }
 
     @Test
     public void testConnectionWaitsForMessageEnd() throws Exception {
@@ -103,7 +111,7 @@ public class SuspendResumeTestCase {
                 .connect().get();
         channel.getReceiveSetter().set(new AbstractReceiveListener() {
             @Override
-            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage msg) throws IOException {
+            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage msg) {
                 message.set(msg.getData());
                 done.countDown();
             }
@@ -116,7 +124,7 @@ public class SuspendResumeTestCase {
             }
 
             @Override
-            protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+            protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
                 message.getData().free();
                 done.countDown();
             }
@@ -140,25 +148,22 @@ public class SuspendResumeTestCase {
         final AtomicReference<String> message = new AtomicReference<>();
         WebSocketChannel channel = WebSocketClient.connectionBuilder(DefaultServer.getWorker(), DefaultServer.getBufferPool(), new URI(DefaultServer.getDefaultServerURL() + "/"))
                 .connect().get();
-        channel.getReceiveSetter().set(new ChannelListener<WebSocketChannel>() {
-            @Override
-            public void handleEvent(WebSocketChannel channel) {
-                try {
-                    StreamSourceFrameChannel res = channel.receive();
-                    if(res == null) {
-                        return;
-                    }
-                    if (res.getType() == WebSocketFrameType.CLOSE) {
-                        message.set("closed");
-                        done.countDown();
-                    }
-                    Channels.drain(res, Long.MAX_VALUE);
-                } catch (IOException e) {
-                    if(message.get() == null) {
-                        e.printStackTrace();
-                        message.set("error");
-                        done.countDown();
-                    }
+        channel.getReceiveSetter().set(receivingChannel -> {
+            try {
+                StreamSourceFrameChannel res = receivingChannel.receive();
+                if(res == null) {
+                    return;
+                }
+                if (res.getType() == WebSocketFrameType.CLOSE) {
+                    message.set("closed");
+                    done.countDown();
+                }
+                Channels.drain(res, Long.MAX_VALUE);
+            } catch (IOException e) {
+                if(message.get() == null) {
+                    e.printStackTrace();
+                    message.set("error");
+                    done.countDown();
                 }
             }
         });
@@ -173,7 +178,6 @@ public class SuspendResumeTestCase {
             serverContainer.resume();
         }
     }
-
 
     @Test
     public void testRejectWhenSuspended() throws Exception {

@@ -36,6 +36,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.servlet.ServletException;
 import javax.websocket.CloseReason;
 import javax.websocket.Session;
 import java.io.IOException;
@@ -49,6 +50,7 @@ import java.net.URI;
 public class ClientEndpointReconnectTestCase {
 
     private static ServerWebSocketContainer deployment;
+    private static DeploymentManager deploymentManager;
     private static volatile boolean failed = false;
 
     @BeforeClass
@@ -67,12 +69,7 @@ public class ClientEndpointReconnectTestCase {
                                 .setWorker(DefaultServer.getWorkerSupplier())
                                 .addEndpoint(DisconnectServerEndpoint.class)
                                 .addEndpoint(AnnotatedClientReconnectEndpoint.class)
-                                .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
-                                    @Override
-                                    public void ready(ServerWebSocketContainer container) {
-                                        deployment = container;
-                                    }
-                                }).setReconnectHandler(new WebSocketReconnectHandler() {
+                                .addListener(containerReady -> deployment = containerReady).setReconnectHandler(new WebSocketReconnectHandler() {
                             @Override
                             public long disconnected(CloseReason closeReason, URI connectionUri, Session session, int disconnectCount) {
                                 if (disconnectCount < 3) {
@@ -90,15 +87,19 @@ public class ClientEndpointReconnectTestCase {
                         })
                 )
                 .setDeploymentName("servletContext.war");
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
+        deploymentManager = container.addDeployment(builder);
+        deploymentManager.deploy();
 
-        DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/ws", manager.start()));
+        DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/ws", deploymentManager.start()));
     }
 
     @AfterClass
-    public static void after() {
+    public static void after() throws ServletException {
         deployment = null;
+        if (deploymentManager != null) {
+            deploymentManager.stop();
+            deploymentManager.undeploy();
+        }
     }
 
     @Test
