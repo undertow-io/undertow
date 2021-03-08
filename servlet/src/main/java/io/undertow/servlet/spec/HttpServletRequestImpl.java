@@ -250,15 +250,18 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 break;
             case PATH:
                 matchValue = match.getRemaining();
-                if(matchValue.startsWith("/")) {
+                if (matchValue == null) {
+                    matchValue = "";
+                } else if (matchValue.startsWith("/")) {
                     matchValue = matchValue.substring(1);
                 }
                 break;
             case EXTENSION:
-                matchValue = match.getMatched().substring(0, match.getMatched().length() - match.getMatchString().length() + 1);
-                if(matchValue.startsWith("/")) {
-                    matchValue = matchValue.substring(1);
-                }
+                String matched = match.getMatched();
+                String matchString = match.getMatchString();
+                int startIndex = matched.startsWith("/") ? 1 : 0;
+                int endIndex = matched.length() - matchString.length() + 1;
+                matchValue = matched.substring(startIndex, endIndex);
                 break;
             default:
                 matchValue = match.getRemaining();

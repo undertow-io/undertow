@@ -79,19 +79,15 @@ class ServletPathMatchesData {
             }
         }
         //this should never happen
-        //as the default servlet is aways registered under /*
+        //as the default servlet is always registered under /*
         throw UndertowMessages.MESSAGES.servletPathMatchFailed();
     }
 
     private ServletPathMatch handleMatch(final String path, final PathMatch match, final int extensionPos) {
-        if (match.extensionMatches.isEmpty()) {
+        if (extensionPos == -1 || match.extensionMatches.isEmpty()) {
             return new ServletPathMatch(match.defaultHandler, path, match.requireWelcomeFileMatch);
         }
-        if (extensionPos == -1) {
-            return new ServletPathMatch(match.defaultHandler, path, match.requireWelcomeFileMatch);
-        }
-        final String ext;
-        ext = path.substring(extensionPos + 1, path.length());
+        final String ext = path.substring(extensionPos + 1);
         ServletChain handler = match.extensionMatches.get(ext);
         if (handler != null) {
             return new ServletPathMatch(handler, path, handler.getManagedServlet().getServletInfo().isRequireWelcomeFileMapping());
