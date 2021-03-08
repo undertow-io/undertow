@@ -357,7 +357,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             stopServer();
             statement = new RunBefores(statement, beforeServerStarts, null);
         }
-        final List<FrameworkMethod> afterServerStops = testClass.getAnnotatedMethods(BeforeServerStarts.class);
+        final List<FrameworkMethod> afterServerStops = testClass.getAnnotatedMethods(AfterServerStops.class);
         if (!afterServerStops.isEmpty()) {
             defaultServerStatement.stopTheServerWhenDone();
             statement = new RunAfters(statement, afterServerStops, null);
