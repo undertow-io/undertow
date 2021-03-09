@@ -24,6 +24,7 @@ import static io.undertow.servlet.handlers.ServletPathMatch.Type.REWRITE;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,10 +34,14 @@ import java.util.Set;
 import javax.servlet.DispatcherType;
 import javax.servlet.http.MappingMatch;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.cache.LRUCache;
+import io.undertow.server.handlers.resource.CachingResourceManager;
 import io.undertow.server.handlers.resource.Resource;
+import io.undertow.server.handlers.resource.ResourceChangeEvent;
+import io.undertow.server.handlers.resource.ResourceChangeListener;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
@@ -64,12 +69,48 @@ public class ServletPathMatches {
 
     private volatile ServletPathMatchesData data;
 
-    private final LRUCache<String, ServletPathMatch> pathMatchCache = new LRUCache<>(1000, -1, true); //TODO: configurable
+    // cache for fixed data matches (no welcome files involved)
+    private final LRUCache<String, ServletPathMatch> pathMatchCacheFixed;
+
+    // cache for resource matches that can change
+    private final LRUCache<String, ServletPathMatch> pathMatchCacheResources;
 
     public ServletPathMatches(final Deployment deployment) {
         this.deployment = deployment;
         this.welcomePages = deployment.getDeploymentInfo().getWelcomePages().toArray(new String[deployment.getDeploymentInfo().getWelcomePages().size()]);
         this.resourceManager = deployment.getDeploymentInfo().getResourceManager();
+        this.pathMatchCacheFixed = new LRUCache<>(1000, -1, true);
+        this.pathMatchCacheResources = new LRUCache<>(1000,
+                resourceManager instanceof CachingResourceManager? ((CachingResourceManager) resourceManager).getMaxAge() : -1, true);
+        // add change listener for welcome pages
+        if (this.resourceManager.isResourceChangeListenerSupported()) {
+            try {
+                this.resourceManager.registerResourceChangeListener(new ResourceChangeListener() {
+
+                    @Override
+                    public void handleChanges(Collection<ResourceChangeEvent> changes) {
+                        for (ResourceChangeEvent change : changes) {
+                            // only check added or removed resources that can change welcome files
+                            if (change.getType() != ResourceChangeEvent.Type.MODIFIED) {
+                                String path = "/" + change.getResource();
+                                // remove direct match and directory match
+                                pathMatchCacheResources.remove(path);
+                                pathMatchCacheResources.remove(path + "/");
+                                // check welcome pages
+                                for (String welcomePage: welcomePages) {
+                                    if (path.endsWith("/" + welcomePage)) {
+                                        String pathToUpdate = path.substring(0, path.length() - welcomePage.length());
+                                        pathMatchCacheResources.remove(pathToUpdate);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                UndertowLogger.ROOT_LOGGER.couldNotRegisterChangeListener(e);
+            }
+        }
     }
 
     public void initData(){
@@ -81,13 +122,17 @@ public class ServletPathMatches {
     }
 
     public ServletPathMatch getServletHandlerByPath(final String path) {
-        ServletPathMatch existing = pathMatchCache.get(path);
+        ServletPathMatch existing = pathMatchCacheFixed.get(path);
+        if (existing == null) {
+            existing = pathMatchCacheResources.get(path);
+        }
         if(existing != null) {
             return existing;
         }
+
         ServletPathMatch match = getData().getServletHandlerByPath(path);
         if (!match.isRequiredWelcomeFileMatch()) {
-            pathMatchCache.add(path, match);
+            pathMatchCacheFixed.add(path, match);
             return match;
         }
         try {
@@ -95,7 +140,7 @@ public class ServletPathMatches {
             String remaining = match.getRemaining() == null ? match.getMatched() : match.getRemaining();
             Resource resource = resourceManager.getResource(remaining);
             if (resource == null || !resource.isDirectory()) {
-                pathMatchCache.add(path, match);
+                pathMatchCacheResources.add(path, match);
                 return match;
             }
 
@@ -105,19 +150,19 @@ public class ServletPathMatches {
             ServletPathMatch welcomePage = findWelcomeFile(pathWithTrailingSlash, !pathEndsWithSlash);
 
             if (welcomePage != null) {
-                pathMatchCache.add(path, welcomePage);
+                pathMatchCacheResources.add(path, welcomePage);
                 return welcomePage;
             } else {
                 welcomePage = findWelcomeServlet(pathWithTrailingSlash, !pathEndsWithSlash);
                 if (welcomePage != null) {
-                    pathMatchCache.add(path, welcomePage);
+                    pathMatchCacheResources.add(path, welcomePage);
                     return welcomePage;
                 } else if(pathEndsWithSlash) {
-                    pathMatchCache.add(path, match);
+                    pathMatchCacheResources.add(path, match);
                     return match;
                 } else {
                     ServletPathMatch redirect = new ServletPathMatch(match.getServletChain(), match.getMatched(), match.getRemaining(), REDIRECT, "/");
-                    pathMatchCache.add(path, redirect);
+                    pathMatchCacheResources.add(path, redirect);
                     return redirect;
                 }
             }
@@ -130,7 +175,8 @@ public class ServletPathMatches {
 
     public void invalidate() {
         this.data = null;
-        this.pathMatchCache.clear();
+        this.pathMatchCacheResources.clear();
+        this.pathMatchCacheFixed.clear();
     }
 
     private ServletPathMatchesData getData() {
