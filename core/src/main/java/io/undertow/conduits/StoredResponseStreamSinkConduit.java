@@ -73,6 +73,9 @@ public final class StoredResponseStreamSinkConduit extends AbstractStreamSinkCon
 
     @Override
     public int write(ByteBuffer src) throws IOException {
+        if(this.outputStream == null) {
+            return -1;
+        }
         int start = src.position();
         int ret = super.write(src);
         for (int i = start; i < start + ret; ++i) {
@@ -83,6 +86,9 @@ public final class StoredResponseStreamSinkConduit extends AbstractStreamSinkCon
 
     @Override
     public long write(ByteBuffer[] srcs, int offs, int len) throws IOException {
+        if(this.outputStream == null) {
+            return -1;
+        }
         int[] starts = new int[len];
         for (int i = 0; i < len; ++i) {
             starts[i] = srcs[i + offs].position();
@@ -104,6 +110,9 @@ public final class StoredResponseStreamSinkConduit extends AbstractStreamSinkCon
 
     @Override
     public int writeFinal(ByteBuffer src) throws IOException {
+        if(this.outputStream == null) {
+            return -1;
+        }
         int start = src.position();
         int ret = super.writeFinal(src);
         for (int i = start; i < start + ret; ++i) {
@@ -118,6 +127,9 @@ public final class StoredResponseStreamSinkConduit extends AbstractStreamSinkCon
 
     @Override
     public long writeFinal(ByteBuffer[] srcs, int offs, int len) throws IOException {
+        if(this.outputStream == null) {
+            return -1;
+        }
         int[] starts = new int[len];
         long toWrite = 0;
         for (int i = 0; i < len; ++i) {
@@ -145,6 +157,9 @@ public final class StoredResponseStreamSinkConduit extends AbstractStreamSinkCon
 
     @Override
     public void terminateWrites() throws IOException {
+        if(this.outputStream == null) {
+            return;
+        }
         exchange.putAttachment(RESPONSE, outputStream.toByteArray());
         outputStream = null;
         super.terminateWrites();
