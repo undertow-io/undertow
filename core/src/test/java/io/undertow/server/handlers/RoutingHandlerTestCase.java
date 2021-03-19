@@ -143,6 +143,17 @@ public class RoutingHandlerTestCase {
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         exchange.getResponseSender().send("GET /");
                     }
+                }).add(Methods.GET, "scoop/{scoop}", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send("SCOOP GET");
+                    }
+                })
+                .add(Methods.POST, "scoop/{scoop}", new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseSender().send("SCOOP POST");
+                    }
                 })
                 .addAll(commonHandler)
                 .addAll(convienceHandler);
@@ -230,6 +241,16 @@ public class RoutingHandlerTestCase {
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("GET /", HttpClientUtils.readResponse(result));
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix + "/scoop/scoop");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("SCOOP GET", HttpClientUtils.readResponse(result));
+
+            post = new HttpPost(DefaultServer.getDefaultServerURL() + prefix + "/scoop/scoop");
+            result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("SCOOP POST", HttpClientUtils.readResponse(result));
         } finally {
             client.getConnectionManager().shutdown();
         }
