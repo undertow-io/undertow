@@ -53,4 +53,8 @@ public class Http2PushPromiseStreamSinkChannel extends Http2DataStreamSinkChanne
         return bytes;
     }
 
+    public int getPushedStreamId() {
+       return pushedStreamId;
+    }
+
 }
