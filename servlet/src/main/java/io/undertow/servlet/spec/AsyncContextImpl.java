@@ -61,7 +61,6 @@ import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.handlers.ServletDebugPageHandler;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
-import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
@@ -179,7 +178,8 @@ public class AsyncContextImpl implements AsyncContext {
                 //this should never happen
                 throw UndertowServletMessages.MESSAGES.couldNotFindContextToDispatchTo(requestImpl.getOriginalContextPath());
             }
-            String toDispatch = CanonicalPathUtils.canonicalize(requestImpl.getOriginalRequestURI()).substring(requestImpl.getOriginalContextPath().length());
+            //UNDERTOW-1591 use original, decoded value to dispatch, this should match: ServletInitialHandler.handleRequest
+            String toDispatch = requestImpl.getExchange().getRelativePath();
             String qs = requestImpl.getOriginalQueryString();
             if (qs != null && !qs.isEmpty()) {
                 toDispatch = toDispatch + "?" + qs;
