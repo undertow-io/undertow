@@ -987,7 +987,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public RequestDispatcher getRequestDispatcher(final String path) {
         String realPath;
         if (path.startsWith("/")) {
-            realPath = path;
+            realPath = CanonicalPathUtils.canonicalize(path);
         } else {
             String current = exchange.getRelativePath();
             int lastSlash = current.lastIndexOf("/");
