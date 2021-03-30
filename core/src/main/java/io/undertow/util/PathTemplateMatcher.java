@@ -51,6 +51,8 @@ public class PathTemplateMatcher<T> {
 
     public PathMatchResult<T> match(final String path) {
         String normalizedPath = "".equals(path) ? "/" : path;
+        if(!normalizedPath.startsWith("/"))
+            normalizedPath = "/"+ normalizedPath;
         final Map<String, String> params = new HashMap<>();
         int length = normalizedPath.length();
         final int[] lengths = this.lengths;
