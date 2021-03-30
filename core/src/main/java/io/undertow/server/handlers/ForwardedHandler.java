@@ -31,13 +31,19 @@ public class ForwardedHandler implements HttpHandler {
     public static final String HOST = "host";
     public static final String PROTO = "proto";
     private static final String UNKNOWN = "unknown";
-
-
+    private static final boolean DEFAULT_CHANGE_LOCAL_ADDR_PORT = Boolean.getBoolean("io.undertow.forwarded.change-local-addr-port");
+    private static final String CHANGE_LOCAL_ADDR_PORT = "change-local-addr-port";
+    private final boolean isChangeLocalAddrPort;
     private final HttpHandler next;
 
     public ForwardedHandler(HttpHandler next) {
-        this.next = next;
+        this(next, DEFAULT_CHANGE_LOCAL_ADDR_PORT);
     }
+    public ForwardedHandler(HttpHandler next, boolean isChangeLocalAddrPort) {
+        this.next = next;
+        this.isChangeLocalAddrPort = isChangeLocalAddrPort;
+    }
+
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -54,11 +60,13 @@ public class ForwardedHandler implements HttpHandler {
 
             if (host != null) {
                 exchange.getRequestHeaders().put(Headers.HOST, host);
-                exchange.setDestinationAddress(InetSocketAddress.createUnresolved(exchange.getHostName(), exchange.getHostPort()));
+                if (isChangeLocalAddrPort) {
+                    exchange.setDestinationAddress(InetSocketAddress.createUnresolved(exchange.getHostName(), exchange.getHostPort()));
+                }
             } else if (by != null) {
                 //we only use 'by' if the host is null
                 InetSocketAddress destAddress = parseAddress(by);
-                if (destAddress != null) {
+                if (destAddress != null && isChangeLocalAddrPort) {
                     exchange.setDestinationAddress(destAddress);
                 }
             }
@@ -242,12 +250,6 @@ public class ForwardedHandler implements HttpHandler {
         START_OF_NAME, EQUALS_SIGN, START_OF_VALUE, LAST_QUOTE, END_OF_VALUE;
     }
 
-    public static final HandlerWrapper WRAPPER = new HandlerWrapper() {
-        @Override
-        public HttpHandler wrap(HttpHandler handler) {
-            return new ForwardedHandler(handler);
-        }
-    };
 
 
     public static class Builder implements HandlerBuilder {
@@ -259,7 +261,9 @@ public class ForwardedHandler implements HttpHandler {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            return Collections.emptyMap();
+            Map<String, Class<?>> params = new HashMap<>();
+            params.put(CHANGE_LOCAL_ADDR_PORT, boolean.class);
+            return params;
         }
 
         @Override
@@ -269,12 +273,26 @@ public class ForwardedHandler implements HttpHandler {
 
         @Override
         public String defaultParameter() {
-            return null;
+            return CHANGE_LOCAL_ADDR_PORT;
         }
 
         @Override
         public HandlerWrapper build(Map<String, Object> config) {
-            return WRAPPER;
+            Boolean isChangeLocalAddrPort = (Boolean) config.get(CHANGE_LOCAL_ADDR_PORT);
+            return new Wrapper(isChangeLocalAddrPort == null ? DEFAULT_CHANGE_LOCAL_ADDR_PORT : isChangeLocalAddrPort);
+        }
+    }
+    private static class Wrapper implements HandlerWrapper {
+
+        private final boolean isChangeLocalAddrPort;
+
+        private Wrapper(boolean isChangeLocalAddrPort) {
+            this.isChangeLocalAddrPort = isChangeLocalAddrPort;
+        }
+
+        @Override
+        public HttpHandler wrap(HttpHandler handler) {
+            return new ForwardedHandler(handler, isChangeLocalAddrPort);
         }
     }
 }
