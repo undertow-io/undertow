@@ -28,6 +28,7 @@ import io.undertow.util.NetworkUtils;
 
 import java.net.InetSocketAddress;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -48,8 +49,19 @@ public class ProxyPeerAddressHandler implements HttpHandler {
 
     private final HttpHandler next;
 
+    private static final boolean DEFAULT_CHANGE_LOCAL_ADDR_PORT = Boolean.getBoolean("io.undertow.forwarded.change-local-addr-port");
+
+    private static final String CHANGE_LOCAL_ADDR_PORT  = "change-local-addr-port";
+
+    private final boolean isChangeLocalAddrPort;
+
     public ProxyPeerAddressHandler(HttpHandler next) {
+        this(next, DEFAULT_CHANGE_LOCAL_ADDR_PORT);
+    }
+
+    public ProxyPeerAddressHandler(HttpHandler next, boolean isChangeLocalAddrPort) {
         this.next = next;
+        this.isChangeLocalAddrPort = isChangeLocalAddrPort;
     }
 
     @Override
@@ -110,7 +122,9 @@ public class ProxyPeerAddressHandler implements HttpHandler {
                 }
             }
             exchange.getRequestHeaders().put(Headers.HOST, hostHeader);
-            exchange.setDestinationAddress(InetSocketAddress.createUnresolved(value, port));
+            if (isChangeLocalAddrPort) {
+                exchange.setDestinationAddress(InetSocketAddress.createUnresolved(value, port));
+            }
         }
         next.handleRequest(exchange);
     }
@@ -142,7 +156,9 @@ public class ProxyPeerAddressHandler implements HttpHandler {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            return Collections.emptyMap();
+            Map<String, Class<?>> params = new HashMap<>();
+            params.put(CHANGE_LOCAL_ADDR_PORT, boolean.class);
+            return params;
         }
 
         @Override
@@ -152,20 +168,27 @@ public class ProxyPeerAddressHandler implements HttpHandler {
 
         @Override
         public String defaultParameter() {
-            return null;
+            return CHANGE_LOCAL_ADDR_PORT;
         }
 
         @Override
         public HandlerWrapper build(Map<String, Object> config) {
-            return new Wrapper();
+            Boolean isChangeLocalAddrPort = (Boolean) config.get(CHANGE_LOCAL_ADDR_PORT);
+            return new Wrapper(isChangeLocalAddrPort == null ? DEFAULT_CHANGE_LOCAL_ADDR_PORT : isChangeLocalAddrPort);
         }
 
     }
 
     private static class Wrapper implements HandlerWrapper {
+        private final boolean isChangeLocalAddrPort;
+
+        private Wrapper(boolean isChangeLocalAddrPort) {
+            this.isChangeLocalAddrPort = isChangeLocalAddrPort;
+        }
+
         @Override
         public HttpHandler wrap(HttpHandler handler) {
-            return new ProxyPeerAddressHandler(handler);
+            return new ProxyPeerAddressHandler(handler, isChangeLocalAddrPort);
         }
     }
 }
