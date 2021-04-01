@@ -43,8 +43,7 @@ public final class DirectByteBufferDeallocator {
         } else {
             try {
                 tmpUnsafe = getUnsafe();
-                tmpCleanerClean = tmpUnsafe.getClass().getDeclaredMethod("invokeCleaner", ByteBuffer.class);
-                tmpCleanerClean.setAccessible(true);
+                tmpCleanerClean = getDeclaredMethod(tmpUnsafe, "invokeCleaner", ByteBuffer.class);
                 supported = true;
             } catch (Throwable t) {
                 UndertowLogger.ROOT_LOGGER.directBufferDeallocatorInitializationFailed(t);
@@ -127,4 +126,25 @@ public final class DirectByteBufferDeallocator {
         }
     }
 
+    private static Method getDeclaredMethod(Unsafe tmpUnsafe, String methodName, Class<?>... parameterTypes) {
+        if (System.getSecurityManager() != null) {
+            return AccessController.doPrivileged(new PrivilegedAction<Method>() {
+                @Override
+                public Method run() {
+                    return getDeclaredMethod0(tmpUnsafe, methodName, parameterTypes);
+                }
+            });
+        }
+        return getDeclaredMethod0(tmpUnsafe, methodName, parameterTypes);
+    }
+
+    private static Method getDeclaredMethod0(Unsafe tmpUnsafe, String methodName, Class<?>... parameterTypes) {
+        try {
+            Method method = tmpUnsafe.getClass().getDeclaredMethod(methodName, parameterTypes);
+            method.setAccessible(true);
+            return method;
+        } catch (Throwable t) {
+            throw new RuntimeException("JDK did not allow accessing method", t);
+        }
+    }
 }
