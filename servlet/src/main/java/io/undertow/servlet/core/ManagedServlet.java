@@ -232,9 +232,19 @@ public class ManagedServlet implements Lifecycle {
 
     /**
      * This value determines max multipart message size
+     * @deprecated
+     * @see #getMaxMultipartRequestSize()
      * @return
      */
     public long getMaxRequestSize() {
+        return maxMultipartRequestSize;
+    }
+
+    /**
+     * This value determines max multipart message size
+     * @return
+     */
+    public long getMaxMultipartRequestSize() {
         return maxMultipartRequestSize;
     }
 
