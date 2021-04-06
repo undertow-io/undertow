@@ -60,7 +60,7 @@ public class ManagedServlet implements Lifecycle {
     private final InstanceStrategy instanceStrategy;
     private volatile boolean permanentlyUnavailable = false;
 
-    private long maxRequestSize;
+    private long maxMultipartRequestSize;
     private FormParserFactory formParserFactory;
     private MultipartConfigElement multipartConfig;
 
@@ -92,9 +92,9 @@ public class ManagedServlet implements Lifecycle {
             //todo: fileSizeThreshold
             MultipartConfigElement config = multipartConfig;
             if (config.getMaxRequestSize() != -1) {
-                maxRequestSize = config.getMaxRequestSize();
+                maxMultipartRequestSize = config.getMaxRequestSize();
             } else {
-                maxRequestSize = -1;
+                maxMultipartRequestSize = -1;
             }
             final Path tempDir;
             if(config.getLocation() == null || config.getLocation().isEmpty()) {
@@ -127,7 +127,7 @@ public class ManagedServlet implements Lifecycle {
         } else {
             //no multipart config we don't allow multipart requests
             formParserFactory = FormParserFactory.builder(false).addParser(formDataParser).build();
-            maxRequestSize = -1;
+            maxMultipartRequestSize = -1;
         }
     }
 
@@ -235,8 +235,12 @@ public class ManagedServlet implements Lifecycle {
         return servletInfo;
     }
 
+    /**
+     * This value determines max multipart message size
+     * @return
+     */
     public long getMaxRequestSize() {
-        return maxRequestSize;
+        return maxMultipartRequestSize;
     }
 
     public FormParserFactory getFormParserFactory() {
