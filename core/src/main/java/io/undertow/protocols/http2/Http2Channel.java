@@ -160,6 +160,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     private int streamIdCounter;
     private int lastGoodStreamId;
+    private int lastAssignedStreamOtherSide;
 
     private final HpackDecoder decoder;
     private final HpackEncoder encoder;
@@ -401,7 +402,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                         }
                     }
                 } else {
-                    if(frameParser.streamId < lastGoodStreamId) {
+                    if(frameParser.streamId < getLastAssignedStreamOtherSide()) {
                         sendGoAway(ERROR_PROTOCOL_ERROR);
                         frameData.close();
                         return null;
@@ -415,7 +416,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 Http2HeadersParser parser = (Http2HeadersParser) frameParser.parser;
 
                 channel = new Http2StreamSourceChannel(this, frameData, frameHeaderData.getFrameLength(), parser.getHeaderMap(), frameParser.streamId);
-                lastGoodStreamId = Math.max(lastGoodStreamId, frameParser.streamId);
+
+                updateStreamIdsCountersInHeaders(frameParser.streamId);
 
                 StreamHolder holder = currentStreams.get(frameParser.streamId);
                 if(holder == null) {
@@ -817,7 +819,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         if(UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_IO_LOGGER.tracef(new ClosedChannelException(), "Sending goaway on channel %s", this);
         }
-        Http2GoAwayStreamSinkChannel goAway = new Http2GoAwayStreamSinkChannel(this, status, lastGoodStreamId);
+        Http2GoAwayStreamSinkChannel goAway = new Http2GoAwayStreamSinkChannel(this, status, getLastGoodStreamId());
         try {
             goAway.shutdownWrites();
             if (!goAway.flush()) {
@@ -895,6 +897,63 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         currentStreams.put(streamId, new StreamHolder(http2SynStreamStreamSinkChannel));
 
         return http2SynStreamStreamSinkChannel;
+    }
+
+    /**
+     * Adds a received pushed stream into the current streams for a client. The
+     * stream is added into the currentStream and lastAssignedStreamOtherSide is incremented.
+     *
+     * @param pushedStreamId The pushed stream returned by the server
+     * @return true if pushedStreamId can be added, false if invalid
+     * @throws IOException General error like not being a client or odd stream id
+     */
+    public synchronized boolean addPushPromiseStream(int pushedStreamId) throws IOException {
+        if (!isClient() || pushedStreamId % 2 != 0) {
+            throw UndertowMessages.MESSAGES.pushPromiseCanOnlyBeCreatedByServer();
+        }
+        if (!isOpen()) {
+            throw UndertowMessages.MESSAGES.channelIsClosed();
+        }
+        if (!isIdle(pushedStreamId)) {
+            UndertowLogger.REQUEST_IO_LOGGER.debugf("Non idle streamId %d received from the server as a pushed stream.", pushedStreamId);
+            return false;
+        }
+        StreamHolder holder = new StreamHolder((Http2HeadersStreamSinkChannel) null);
+        holder.sinkClosed = true;
+        lastAssignedStreamOtherSide = Math.max(lastAssignedStreamOtherSide, pushedStreamId);
+        currentStreams.put(pushedStreamId, holder);
+        return true;
+    }
+
+    private synchronized int getLastAssignedStreamOtherSide() {
+        return lastAssignedStreamOtherSide;
+    }
+
+    private synchronized int getLastGoodStreamId() {
+        return lastGoodStreamId;
+    }
+
+    /**
+     * Updates the lastGoodStreamId (last request ID to send in goaway frames),
+     * and lastAssignedStreamOtherSide (the last received streamId from the other
+     * side to check if it's idle). The lastAssignedStreamOtherSide in a server
+     * is the same as lastGoodStreamId but in a client push promises can be
+     * received and check for idle is different.
+     *
+     * @param streamNo The received streamId for the client or the server
+     */
+    private synchronized void updateStreamIdsCountersInHeaders(int streamNo) {
+        if (streamNo % 2 != 0) {
+            // the last good stream is always the last client ID sent by the client or received by the server
+            lastGoodStreamId = Math.max(lastGoodStreamId, streamNo);
+            if (!isClient()) {
+                 // server received client request ID => update the last assigned for the server
+                 lastAssignedStreamOtherSide = lastGoodStreamId;
+            }
+        } else if (isClient()) {
+            // client received push promise => update the last assigned for the client
+            lastAssignedStreamOtherSide = Math.max(lastAssignedStreamOtherSide, streamNo);
+        }
     }
 
     public synchronized Http2HeadersStreamSinkChannel sendPushPromise(int associatedStreamId, HeaderMap requestHeaders, HeaderMap responseHeaders) throws IOException {
@@ -1082,7 +1141,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
      *
      * @return
      */
-    public Http2HeadersStreamSinkChannel createInitialUpgradeResponseStream() {
+    public synchronized Http2HeadersStreamSinkChannel createInitialUpgradeResponseStream() {
         if (lastGoodStreamId != 0) {
             throw new IllegalStateException();
         }
@@ -1157,9 +1216,11 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     private synchronized boolean isIdle(int streamNo) {
         if(streamNo % 2 == streamIdCounter % 2) {
+            // our side is controlled by us in the generated streamIdCounter
             return streamNo >= streamIdCounter;
         } else {
-            return streamNo > lastGoodStreamId;
+            // the other side should increase lastAssignedStreamOtherSide all the time
+            return streamNo > lastAssignedStreamOtherSide;
         }
     }
 
