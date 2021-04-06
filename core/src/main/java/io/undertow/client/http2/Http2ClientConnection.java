@@ -465,9 +465,14 @@ public class Http2ClientConnection implements ClientConnection {
                         Http2ClientExchange newExchange = new Http2ClientExchange(Http2ClientConnection.this, null, cr);
 
                         if(!request.getPushCallback().handlePush(request, newExchange)) {
+                            // if no push handler just reset the stream
                             channel.sendRstStream(stream.getPushedStreamId(), Http2Channel.ERROR_REFUSED_STREAM);
                             IoUtils.safeClose(stream);
+                        } else if (!http2Channel.addPushPromiseStream(stream.getPushedStreamId())) {
+                            // if invalid stream id send connection error of type PROTOCOL_ERROR as spec
+                            channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
                         } else {
+                            // add the pushed stream to current exchanges
                             currentExchanges.put(stream.getPushedStreamId(), newExchange);
                         }
                     }
