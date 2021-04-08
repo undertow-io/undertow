@@ -474,7 +474,16 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             servletRequestContext.getOriginalResponse().setIgnoredFlushPerformed(true);
             return;
         }
-        flushInternal();
+        try {
+            flushInternal();
+        } catch (IOException ioe) {
+            final HttpServletRequestImpl request = this.servletRequestContext.getOriginalRequest();
+            if (request.isAsyncStarted() || request.getDispatcherType() == DispatcherType.ASYNC) {
+                servletRequestContext.getExchange().unDispatch();
+                servletRequestContext.getOriginalRequest().getAsyncContextInternal().handleError(ioe);
+                throw ioe;
+            }
+        }
     }
 
     /**
