@@ -18,6 +18,9 @@
 
 package io.undertow.server.handlers;
 
+import static org.wildfly.common.Assert.checkNotNullParam;
+import static org.wildfly.common.Assert.checkNotNullParamWithNullPointerException;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.ConduitWrapper;
@@ -37,7 +40,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.time.Duration;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -215,20 +217,18 @@ public final class BlockingReadTimeoutHandler implements HttpHandler {
         private Builder() {}
 
         public Builder readTimeout(Duration readTimeout) {
-            this.readTimeout = Objects.requireNonNull(readTimeout, "A read timeout is required");
+            this.readTimeout = checkNotNullParamWithNullPointerException("readTimeout", readTimeout);
             return this;
         }
 
         public Builder nextHandler(HttpHandler nextHandler) {
-            this.nextHandler = Objects.requireNonNull(nextHandler, "HttpHandler is required");
+            this.nextHandler = checkNotNullParamWithNullPointerException("nextHandler", nextHandler);
             return this;
         }
 
         public HttpHandler build() {
-            HttpHandler next = Objects.requireNonNull(nextHandler, "HttpHandler is required");
-            if (readTimeout == null) {
-                throw new IllegalArgumentException("A read timeout is required");
-            }
+            HttpHandler next = checkNotNullParamWithNullPointerException("nextHandler", nextHandler);
+            checkNotNullParam("readTimeout", readTimeout);
             if (readTimeout.isZero() || readTimeout.isNegative()) {
                 throw new IllegalArgumentException("Read timeout must be positive: " + readTimeout);
             }
