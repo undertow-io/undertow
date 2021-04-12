@@ -65,10 +65,10 @@ public class SessionContainer {
                 return;
             }
             waiterCount++;
-            long end = System.currentTimeMillis() + timeout;
+            long cur,end = System.currentTimeMillis() + timeout;
             try {
-                while (System.currentTimeMillis() < end && !openSessions.isEmpty()) {
-                    wait(end - System.currentTimeMillis());
+                while ((cur=System.currentTimeMillis()) < end && !openSessions.isEmpty()) {
+                    wait(end - cur);
                 }
             } catch (InterruptedException e) {
                 //ignore
