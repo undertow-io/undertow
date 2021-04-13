@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
@@ -262,7 +263,7 @@ public final class FormData implements Iterable<String> {
         public void write(Path target) throws IOException {
             if (file != null) {
                 try {
-                    Files.move(file, target);
+                    Files.move(file, target, StandardCopyOption.REPLACE_EXISTING);
                     return;
                 } catch (IOException e) {
                     // ignore and let the Files.copy, outside
@@ -270,7 +271,7 @@ public final class FormData implements Iterable<String> {
                 }
             }
             try (InputStream is = getInputStream()) {
-                Files.copy(is, target);
+                Files.copy(is, target, StandardCopyOption.REPLACE_EXISTING);
             }
         }
     }
