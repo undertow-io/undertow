@@ -198,7 +198,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             if (location.startsWith("/")) {
                 realPath = location;
             } else {
-                String current = exchange.getRelativePath();
+                //Match AsyncContext.dispatch, could use 'exchange.getResolvedPath().length()' instead of servlet context
+                String current = exchange.getRequestURI().substring(getServletContext().getContextPath().length());
                 int lastSlash = current.lastIndexOf("/");
                 if (lastSlash != -1) {
                     current = current.substring(0, lastSlash + 1);
