@@ -83,6 +83,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
     private final int bufferSize;
     private final int maxParameters;
     private final boolean recordRequestStartTime;
+    private final boolean allowUnescapedCharactersInUrl;
 
 
 
@@ -111,6 +112,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         } else {
             this.encoding = null;
         }
+        this.allowUnescapedCharactersInUrl = undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
     }
 
     @Override
@@ -331,7 +333,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         // verify content of request pseudo-headers. Each header should only have a single value.
         if (headers.contains(PATH)) {
             for (byte b: headers.get(PATH).getFirst().getBytes(ISO_8859_1)) {
-                if (!HttpRequestParser.isTargetCharacterAllowed((char)b)){
+                if (!allowUnescapedCharactersInUrl && !HttpRequestParser.isTargetCharacterAllowed((char)b)){
                     return false;
                 }
             }
