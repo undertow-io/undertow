@@ -71,6 +71,11 @@ import io.undertow.util.WorkerUtils;
  */
 public class AsyncContextImpl implements AsyncContext {
 
+    /**
+     * Defauly asynchronous context timeout( miliseconds ).
+     */
+    public static final long DEFAULT_ASYNC_CONTEXT_TIMEOUT = 30000;
+
     private final List<BoundAsyncListener> asyncListeners = new CopyOnWriteArrayList<>();
 
     private final HttpServerExchange exchange;
@@ -83,8 +88,7 @@ public class AsyncContextImpl implements AsyncContext {
     private AsyncContextImpl previousAsyncContext; //the previous async context
 
 
-    //todo: make default configurable
-    private volatile long timeout = 30000;
+    private volatile long timeout = -1;
 
     private volatile XnioExecutor.Key timeoutKey;
 
@@ -112,6 +116,12 @@ public class AsyncContextImpl implements AsyncContext {
                 initialRequestDone();
             }
         });
+        //If its chain and non default value is set, use it
+        if(previousAsyncContext!=null && previousAsyncContext.getTimeout() != servletRequestContext.getDeployment().getDeploymentInfo().getDefaultAsyncConextTimeout()) {
+            this.timeout = previousAsyncContext.getTimeout();
+        } else {
+            this.timeout = servletRequestContext.getDeployment().getDeploymentInfo().getDefaultAsyncConextTimeout();
+        }
     }
 
     public void updateTimeout() {
