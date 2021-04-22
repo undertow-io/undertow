@@ -1108,7 +1108,24 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + " peer " + channel.getPeerAddress() + " local " + channel.getLocalAddress() + "[ " + (receiver == null ? "No Receiver" : receiver.toString()) + " " + pendingFrames.toString() + " -- " + heldFrames.toString() + " -- " + newFrames.toString() + "]";
+        final StringBuilder stringBuilder = new StringBuilder(150);
+        stringBuilder.append(getClass().getSimpleName())
+        .append(" peer ")
+        .append(channel.getPeerAddress())
+        .append(" local ")
+        .append(channel.getLocalAddress())
+        .append("[ ");
+        synchronized (this) {
+            stringBuilder.append((receiver == null ? "No Receiver" : receiver.toString()))
+            .append(" ")
+            .append(pendingFrames.toString())
+            .append(" -- ")
+            .append(heldFrames.toString())
+            .append(" -- ")
+            .append(newFrames.toString());
+        }
+
+        return stringBuilder.toString();
     }
 
     protected StreamConnection getUnderlyingConnection() {
