@@ -41,6 +41,8 @@ import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -154,6 +156,21 @@ public class DispatcherForwardTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("Name!forwarded", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testNameBasedForwardOutServletContext() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
+            get.setHeader("forward", "../forward");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("dispatcher was null!"));
         } finally {
             client.getConnectionManager().shutdown();
         }
