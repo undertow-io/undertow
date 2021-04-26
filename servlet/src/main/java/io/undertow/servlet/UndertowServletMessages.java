@@ -232,4 +232,7 @@ public interface UndertowServletMessages {
 
     @Message(id = 10062, value = "No SecurityContext available")
     ServletException noSecurityContextAvailable();
+
+    @Message(id = 10063, value = "Path %s must start with a / to get the request dispatcher")
+    IllegalArgumentException pathMustStartWithSlashForRequestDispatcher(String path);
 }
