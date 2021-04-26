@@ -33,17 +33,21 @@ public class CanonicalPathUtils {
 
 
     public static String canonicalize(final String path) {
+        return canonicalize(path, false);
+    }
+
+    public static String canonicalize(final String path, final boolean nullAllowed) {
         int state = START;
         for (int i = path.length() - 1; i >= 0; --i) {
             final char c = path.charAt(i);
             switch (c) {
                 case '/':
                     if (state == FIRST_SLASH) {
-                        return realCanonicalize(path, i + 1, FIRST_SLASH);
+                        return realCanonicalize(path, i + 1, FIRST_SLASH, nullAllowed);
                     } else if (state == ONE_DOT) {
-                        return realCanonicalize(path, i + 2, FIRST_SLASH);
+                        return realCanonicalize(path, i + 2, FIRST_SLASH, nullAllowed);
                     } else if (state == TWO_DOT) {
-                        return realCanonicalize(path, i + 3, FIRST_SLASH);
+                        return realCanonicalize(path, i + 3, FIRST_SLASH, nullAllowed);
                     }
                     state = FIRST_SLASH;
                     break;
@@ -59,11 +63,11 @@ public class CanonicalPathUtils {
                 case '\\':
                     if(!DONT_CANONICALIZE_BACKSLASH) {
                         if (state == FIRST_BACKSLASH) {
-                            return realCanonicalize(path, i + 1, FIRST_BACKSLASH);
+                            return realCanonicalize(path, i + 1, FIRST_BACKSLASH, nullAllowed);
                         } else if (state == ONE_DOT) {
-                            return realCanonicalize(path, i + 2, FIRST_BACKSLASH);
+                            return realCanonicalize(path, i + 2, FIRST_BACKSLASH, nullAllowed);
                         } else if (state == TWO_DOT) {
-                            return realCanonicalize(path, i + 3, FIRST_BACKSLASH);
+                            return realCanonicalize(path, i + 3, FIRST_BACKSLASH, nullAllowed);
                         }
                         state = FIRST_BACKSLASH;
                         break;
@@ -85,7 +89,7 @@ public class CanonicalPathUtils {
     static final int FIRST_BACKSLASH = 4;
 
 
-    private static String realCanonicalize(final String path, final int lastDot, final int initialState) {
+    private static String realCanonicalize(final String path, final int lastDot, final int initialState, final boolean nullAllowed) {
         int state = initialState;
         int eatCount = 0;
         int tokenEnd = path.length();
@@ -169,6 +173,10 @@ public class CanonicalPathUtils {
                     }
                 }
             }
+        }
+        if (eatCount > 0 && nullAllowed) {
+            // the relative path is outside the context and null allowed
+            return null;
         }
         final StringBuilder result = new StringBuilder();
         if (tokenEnd != 0) {
