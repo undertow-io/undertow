@@ -27,6 +27,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -293,8 +294,15 @@ public class URLResource implements Resource, RangeAwareResource {
             } catch (URISyntaxException e) {
                 return null;
             }
+        } else {
+            //deffer to Paths/FS --> ServiceLoader for java.nio.file.spi.FileSystemProvider
+            //NOTE: FS has to be installed: java.nio.file.FileSystems#newFileSystem
+            try {
+                return Paths.get(url.toURI());
+            } catch(FileSystemNotFoundException|IllegalArgumentException|URISyntaxException e) {
+                return null;
+            }
         }
-        return null;
     }
 
     @Override
