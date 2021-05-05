@@ -96,7 +96,7 @@ public class NetworkUtils {
                 data[i * 2 + partOffset + 1] = (byte) (num);
             }
         }
-        if (parts.length < 8 && !seenEmpty) {
+        if ((parts.length < 8 && !addressString.endsWith("::")) && !seenEmpty) {
             //address was too small
             throw UndertowMessages.MESSAGES.invalidIpAddress(addressString);
         }
