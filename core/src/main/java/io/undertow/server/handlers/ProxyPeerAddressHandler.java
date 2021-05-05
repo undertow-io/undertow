@@ -70,9 +70,9 @@ public class ProxyPeerAddressHandler implements HttpHandler {
         if (forwardedFor != null) {
             String remoteClient = mostRecent(forwardedFor);
             //we have no way of knowing the port
-            if(IP4_EXACT.matcher(forwardedFor).matches()) {
+            if(IP4_EXACT.matcher(remoteClient).matches()) {
                 exchange.setSourceAddress(new InetSocketAddress(NetworkUtils.parseIpv4Address(remoteClient), 0));
-            } else if(IP6_EXACT.matcher(forwardedFor).matches()) {
+            } else if(IP6_EXACT.matcher(remoteClient).matches()) {
                 exchange.setSourceAddress(new InetSocketAddress(NetworkUtils.parseIpv6Address(remoteClient), 0));
             } else {
                 exchange.setSourceAddress(InetSocketAddress.createUnresolved(remoteClient, 0));
