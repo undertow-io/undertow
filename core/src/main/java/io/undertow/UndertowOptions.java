@@ -460,6 +460,20 @@ public class UndertowOptions {
      */
     public static final Option<Integer> WEB_SOCKETS_WRITE_TIMEOUT = Option.simple(Options.class, "WEB_SOCKETS_WRITE_TIMEOUT", Integer.class);
 
+    /**
+     * Specify if matrix parameters without ID should be allowed or not. If set to 'true' '/test;param1,param2/next-path-segment' will be acceptable.
+     * (spec compliant '/test;PARAM_ID=param1,param2/next-path-segment')
+     *
+     * If this is not specified it will be the same as {@link #DEFAULT_ALLOW_ID_LESS_MATRIX_PARAMETERS}.
+     */
+    public static final Option<Boolean> ALLOW_ID_LESS_MATRIX_PARAMETERS = Option.simple(UndertowOptions.class, "ALLOW_ID_LESS_MATRIX_PARAMETERS", Boolean.class);
+
+    /**
+     * Default value of allow ID-less matrix parameters - false. We should comply with spec.
+     */
+    public static final boolean DEFAULT_ALLOW_ID_LESS_MATRIX_PARAMETERS = false;
+
+
     private UndertowOptions() {
 
     }
