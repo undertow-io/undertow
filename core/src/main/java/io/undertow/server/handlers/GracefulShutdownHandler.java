@@ -19,13 +19,20 @@
 package io.undertow.server.handlers;
 
 import io.undertow.UndertowMessages;
+import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.protocol.http2.Http2ServerConnection;
 import io.undertow.util.StatusCodes;
 
+import org.xnio.ChannelListener;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.function.LongUnaryOperator;
 
@@ -67,6 +74,8 @@ public class GracefulShutdownHandler implements HttpHandler {
     private static final AtomicLongFieldUpdater<GracefulShutdownHandler> stateUpdater =
             AtomicLongFieldUpdater.newUpdater(GracefulShutdownHandler.class, "state");
 
+    private final Set<Http2Channel> http2Channels = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
     private final HttpHandler next;
 
     public GracefulShutdownHandler(HttpHandler next) {
@@ -83,9 +92,29 @@ public class GracefulShutdownHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
+        if (exchange.getConnection() instanceof Http2ServerConnection) {
+            // Track Http2 channels to be able to perform the shutdown procedure
+            // defined in RFC9113 using GOAWAY frames.
+            Http2Channel channel = ((Http2ServerConnection) exchange.getConnection()).getChannel();
+
+            if (http2Channels.add(channel)) {
+                stateUpdater.updateAndGet(this, incrementActive);
+
+                // A new channel added to our set, make sure its removed when it is closed.
+                channel.addCloseTask(new ChannelListener<Http2Channel>() {
+                        @Override
+                        public void handleEvent(Http2Channel c) {
+                            http2Channels.remove(c);
+                            decrementActiveAndCheckShutdownComplete();
+                        }
+                    });
+            }
+
+        }
+
         long snapshot = stateUpdater.updateAndGet(this, incrementActive);
         if (isShutdown(snapshot)) {
-            decrementRequests();
+            decrementActiveAndCheckShutdownComplete();
             exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
             exchange.endExchange();
             return;
@@ -98,7 +127,7 @@ public class GracefulShutdownHandler implements HttpHandler {
     public void shutdown() {
         //the request count is never zero when shutdown is set to true
         stateUpdater.updateAndGet(this, incrementActiveAndShutdown);
-        decrementRequests();
+        decrementActiveAndCheckShutdownComplete();
     }
 
     public void start() {
@@ -178,7 +207,7 @@ public class GracefulShutdownHandler implements HttpHandler {
         }
     }
 
-    private void decrementRequests() {
+    private void decrementActiveAndCheckShutdownComplete() {
         long snapshot = stateUpdater.updateAndGet(this, decrementActive);
         // Shutdown has completed when the activeCount portion is zero, and shutdown is set.
         if (snapshot == SHUTDOWN_MASK) {
@@ -191,7 +220,7 @@ public class GracefulShutdownHandler implements HttpHandler {
         @Override
         public void exchangeEvent(HttpServerExchange exchange, NextListener nextListener) {
             try {
-                decrementRequests();
+                decrementActiveAndCheckShutdownComplete();
             } finally {
                 nextListener.proceed();
             }
