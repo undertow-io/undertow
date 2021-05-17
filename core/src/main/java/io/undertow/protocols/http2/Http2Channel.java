@@ -202,6 +202,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private int streamIdCounter;
     private int lastGoodStreamId;
     private int lastAssignedStreamOtherSide;
+    private int lastStreamIdInGoAway = Integer.MAX_VALUE;
 
     private final HpackDecoder decoder;
     private final HpackEncoder encoder;
@@ -497,6 +498,12 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     }
                     if(frameParser.streamId % 2 == (isClient() ? 1 : 0)) {
                         sendGoAway(ERROR_PROTOCOL_ERROR);
+                        frameData.close();
+                        return null;
+                    }
+                    if(frameParser.streamId > getLastStreamIdInGoAway()) {
+                        // RFC9113 6.8 - After sending a GOAWAY frame, the sender can discard frames for streams
+                        // initiated by the receiver with identifiers higher than the identified last stream.
                         frameData.close();
                         return null;
                     }
@@ -1031,8 +1038,14 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         return lastAssignedStreamOtherSide;
     }
 
+    // Return last received stream ID which is to be used when sending a GOAWAY.
     private synchronized int getLastGoodStreamId() {
+        lastStreamIdInGoAway = lastGoodStreamId; // Keep last used Id
         return lastGoodStreamId;
+    }
+
+    private synchronized int getLastStreamIdInGoAway() {
+        return lastStreamIdInGoAway;
     }
 
     /**
