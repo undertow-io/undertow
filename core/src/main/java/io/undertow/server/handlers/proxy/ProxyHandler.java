@@ -371,6 +371,7 @@ public final class ProxyHandler implements HttpHandler {
         }
 
         void cancel(final HttpServerExchange exchange) {
+            //NOTE: this method is called only in context of timeouts.
             final ProxyConnection connectionAttachment = exchange.getAttachment(CONNECTION);
             if (connectionAttachment != null) {
                 ClientConnection clientConnection = connectionAttachment.getConnection();
@@ -382,7 +383,7 @@ public final class ProxyHandler implements HttpHandler {
             if (exchange.isResponseStarted()) {
                 IoUtils.safeClose(exchange.getConnection());
             } else {
-                exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
+                exchange.setStatusCode(StatusCodes.GATEWAY_TIME_OUT);
                 exchange.endExchange();
             }
         }
