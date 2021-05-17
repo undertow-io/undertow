@@ -169,6 +169,7 @@ public abstract class HttpRequestParser {
     private final String charset;
     private final int maxCachedHeaderSize;
     private final boolean allowUnescapedCharactersInUrl;
+    private final boolean allowIDLessMatrixParams;
 
     private static final boolean[] ALLOWED_TARGET_CHARACTER = new boolean[256];
 
@@ -215,6 +216,7 @@ public abstract class HttpRequestParser {
         charset = options.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
         maxCachedHeaderSize = options.get(UndertowOptions.MAX_CACHED_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_CACHED_HEADER_SIZE);
         this.allowUnescapedCharactersInUrl = options.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
+        this.allowIDLessMatrixParams = options.get(UndertowOptions.ALLOW_ID_LESS_MATRIX_PARAMETERS, UndertowOptions.DEFAULT_ALLOW_ID_LESS_MATRIX_PARAMETERS);
     }
 
     public static final HttpRequestParser instance(final OptionMap options) {
@@ -641,7 +643,7 @@ public abstract class HttpRequestParser {
                 if (decode && (next == '+' || next == '%' || next > 127)) {
                     urlDecodeRequired = true;
                 }
-                if (next == '=' && param == null) {
+                if ((next == '=' || (next == ',' && this.allowIDLessMatrixParams)) && param == null) {
                     param = decode(stringBuilder.substring(pos), urlDecodeRequired, state, true, true);
                     urlDecodeRequired = false;
                     pos = stringBuilder.length() + 1;
@@ -667,11 +669,11 @@ public abstract class HttpRequestParser {
         state.nextQueryParam = param;
     }
 
-    private void handleParsedParam(String previouslyParsedParam, String parsedParam, HttpServerExchange exchange, boolean urlDecodeRequired, ParseState state) throws BadRequestException {
-        if (previouslyParsedParam == null) {
-            exchange.addPathParam(decode(parsedParam, urlDecodeRequired, state, true, true), "");
+    private void handleParsedParam(String paramName, String parameterValue, HttpServerExchange exchange, boolean urlDecodeRequired, ParseState state) throws BadRequestException {
+        if (paramName == null) {
+            exchange.addPathParam(decode(parameterValue, urlDecodeRequired, state, true, true), "");
         } else {  // path param already parsed so parse and add the value
-            exchange.addPathParam(previouslyParsedParam, decode(parsedParam, urlDecodeRequired, state, true, true));
+            exchange.addPathParam(paramName, decode(parameterValue, urlDecodeRequired, state, true, true));
         }
     }
 
