@@ -917,7 +917,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         if(UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_IO_LOGGER.tracef(new ClosedChannelException(), "Sending goaway on channel %s", this);
         }
-        Http2GoAwayStreamSinkChannel goAway = new Http2GoAwayStreamSinkChannel(this, status, getLastGoodStreamId());
+        Http2GoAwayStreamSinkChannel goAway = new Http2GoAwayStreamSinkChannel(this, status, getLastGoodStreamId(), true);
         try {
             goAway.shutdownWrites();
             if (!goAway.flush()) {
