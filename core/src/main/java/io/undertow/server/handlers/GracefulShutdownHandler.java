@@ -92,7 +92,11 @@ public class GracefulShutdownHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
+        boolean rejectDuringShutdown = true;
+
         if (exchange.getConnection() instanceof Http2ServerConnection) {
+            rejectDuringShutdown = false;
+
             // Track Http2 channels to be able to perform the shutdown procedure
             // defined in RFC9113 using GOAWAY frames.
             Http2Channel channel = ((Http2ServerConnection) exchange.getConnection()).getChannel();
@@ -113,18 +117,29 @@ public class GracefulShutdownHandler implements HttpHandler {
         }
 
         long snapshot = stateUpdater.updateAndGet(this, incrementActive);
-        if (isShutdown(snapshot)) {
+        if (isShutdown(snapshot) && rejectDuringShutdown) {
             decrementActiveAndCheckShutdownComplete();
             exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
             exchange.endExchange();
             return;
         }
+
         exchange.addExchangeCompleteListener(listener);
         next.handleRequest(exchange);
     }
 
 
     public void shutdown() {
+        // Initiate a graceful shutdown of each HTTP/2 connection
+        for(Http2Channel channel : http2Channels) {
+            channel.getIoThread().execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        channel.initiateGracefulShutdown();
+                    }
+                });
+        }
+
         //the request count is never zero when shutdown is set to true
         stateUpdater.updateAndGet(this, incrementActiveAndShutdown);
         decrementActiveAndCheckShutdownComplete();
