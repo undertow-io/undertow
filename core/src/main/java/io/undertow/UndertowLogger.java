@@ -39,6 +39,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.util.Date;
 import java.util.List;
 
@@ -423,4 +424,16 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = DEBUG)
     @Message(id = 5092, value = "Failed to free direct buffer")
     void directBufferDeallocationFailed(@Cause Throwable t);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5096, value = "Authentication failed for digest header %s in %s")
+    void authenticationFailedFor(final String header, final HttpServerExchange exchange, final @Cause Exception e);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5097, value = "Failed to obtain subject for %s")
+    void failedToObtainSubject(final HttpServerExchange exchange, final @Cause GeneralSecurityException e);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5098, value = "GSSAPI negotiation failed for %s")
+    void failedToNegotiateAtGSSAPI(final HttpServerExchange exchange, final @Cause Throwable e);
 }
