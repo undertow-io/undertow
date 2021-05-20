@@ -101,8 +101,8 @@ public interface UndertowServletMessages {
     @Message(id = 10018, value = "Async not started")
     IllegalStateException asyncNotStarted();
 
-    @Message(id = 10019, value = "Response already commited")
-    IllegalStateException responseAlreadyCommited();
+    @Message(id = 10019, value = "Response already committed")
+    IllegalStateException responseAlreadyCommitted();
 
     @Message(id = 10020, value = "Content has been written")
     IllegalStateException contentHasBeenWritten();

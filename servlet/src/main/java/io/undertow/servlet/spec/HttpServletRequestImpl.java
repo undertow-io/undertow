@@ -460,7 +460,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public boolean authenticate(final HttpServletResponse response) throws IOException, ServletException {
         if (response.isCommitted()) {
-            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommitted();
         }
 
         SecurityContext sc = exchange.getSecurityContext();
