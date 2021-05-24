@@ -576,9 +576,9 @@ public final class HttpServerExchange extends AbstractAttachable {
     public HttpServerExchange setQueryString(final String queryString) {
         // Clean leading ?
         if( queryString.length() > 0 && queryString.charAt(0) == '?' ) {
-            this.queryString = queryString.substring(1);
+                this.queryString = queryString.substring(1);
             } else {
-            this.queryString = queryString;
+                this.queryString = queryString;
             }
         return this;
     }
