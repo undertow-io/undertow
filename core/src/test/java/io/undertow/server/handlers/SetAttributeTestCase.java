@@ -93,7 +93,7 @@ public class SetAttributeTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("URI: /relative/foo relative: /foo QS:?bar=a&woz=b bar: a woz: b", response);
+            Assert.assertEquals("URI: /relative/foo relative: /foo QS:bar=a&woz=b bar: a woz: b", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somePath/foo/a/b");
             result = client.execute(get);
