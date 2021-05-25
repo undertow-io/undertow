@@ -338,7 +338,18 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public RequestDispatcher getRequestDispatcher(final String path) {
-        return new RequestDispatcherImpl(path, this);
+        if (path == null) {
+            return null;
+        }
+        if (!path.startsWith("/")) {
+            throw UndertowServletMessages.MESSAGES.pathMustStartWithSlashForRequestDispatcher(path);
+        }
+        final String realPath = CanonicalPathUtils.canonicalize(path);
+        if (realPath == null) {
+            // path is outside the servlet context, return null per spec
+            return null;
+        }
+        return new RequestDispatcherImpl(realPath, this);
     }
 
     @Override
