@@ -109,11 +109,6 @@ import static io.undertow.servlet.core.ApplicationListeners.ListenerState.PROGRA
  */
 public class ServletContextImpl implements ServletContext {
 
-    /**
-     * System property to revert to previous behavior and not return null request dispatcher when out of servlet context
-     */
-    static final boolean REQUEST_DISPATCHER_NULL_ALLOWED = !Boolean.getBoolean("io.undertow.REQUEST_DISPATCHER_NULL_DISALLOWED");
-
     private final ServletContainer servletContainer;
     private final Deployment deployment;
     private volatile DeploymentInfo deploymentInfo;
@@ -349,7 +344,7 @@ public class ServletContextImpl implements ServletContext {
         if (!path.startsWith("/")) {
             throw UndertowServletMessages.MESSAGES.pathMustStartWithSlashForRequestDispatcher(path);
         }
-        final String realPath = CanonicalPathUtils.canonicalize(path, REQUEST_DISPATCHER_NULL_ALLOWED);
+        final String realPath = CanonicalPathUtils.canonicalize(path);
         if (realPath == null) {
             // path is outside the servlet context, return null per spec
             return null;
