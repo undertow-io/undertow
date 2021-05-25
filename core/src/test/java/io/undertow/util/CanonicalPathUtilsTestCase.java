@@ -63,11 +63,9 @@ public class CanonicalPathUtilsTestCase {
         Assert.assertEquals("/b", CanonicalPathUtils.canonicalize("/a/c/../../b"));
 
         // out of servlet context
-        Assert.assertNull(CanonicalPathUtils.canonicalize("/a/../..", true));
-        Assert.assertNull(CanonicalPathUtils.canonicalize("/a/../../foo", true));
-        Assert.assertNull(CanonicalPathUtils.canonicalize("/../../a/b/bar", true));
-        Assert.assertEquals("/", CanonicalPathUtils.canonicalize("/a/../.."));
-        Assert.assertEquals("/foo", CanonicalPathUtils.canonicalize("/a/../../foo"));
+        Assert.assertNull(CanonicalPathUtils.canonicalize("/a/../.."));
+        Assert.assertNull(CanonicalPathUtils.canonicalize("/a/../../foo"));
+        Assert.assertNull(CanonicalPathUtils.canonicalize("/../../a/b/bar"));
 
         //preserve (single) trailing /
         Assert.assertEquals("/a/", CanonicalPathUtils.canonicalize("/a/"));
@@ -108,11 +106,9 @@ public class CanonicalPathUtilsTestCase {
         Assert.assertEquals("\\b", CanonicalPathUtils.canonicalize("\\a\\c\\..\\..\\b"));
 
          // out of servlet context
-        Assert.assertNull(CanonicalPathUtils.canonicalize("\\a\\..\\..", true));
-        Assert.assertNull(CanonicalPathUtils.canonicalize("\\a\\..\\..\\foo", true));
-        Assert.assertNull(CanonicalPathUtils.canonicalize("\\..\\..\\a\\b\\bar", true));
-        Assert.assertEquals("/", CanonicalPathUtils.canonicalize("\\a\\..\\.."));
-        Assert.assertEquals("\\foo", CanonicalPathUtils.canonicalize("\\a\\..\\..\\foo"));
+        Assert.assertNull(CanonicalPathUtils.canonicalize("\\a\\..\\.."));
+        Assert.assertNull(CanonicalPathUtils.canonicalize("\\a\\..\\..\\foo"));
+        Assert.assertNull(CanonicalPathUtils.canonicalize("\\..\\..\\a\\b\\bar"));
 
         //preserve (single) trailing \
         Assert.assertEquals("\\a\\", CanonicalPathUtils.canonicalize("\\a\\"));
