@@ -344,7 +344,7 @@ public class ServletContextImpl implements ServletContext {
         if (!path.startsWith("/")) {
             throw UndertowServletMessages.MESSAGES.pathMustStartWithSlashForRequestDispatcher(path);
         }
-        final String realPath = CanonicalPathUtils.canonicalize(path);
+        final String realPath = CanonicalPathUtils.canonicalize(path, true);
         if (realPath == null) {
             // path is outside the servlet context, return null per spec
             return null;
