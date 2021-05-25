@@ -62,15 +62,8 @@ public class PartImpl implements Part {
         if (formValue.isFileItem()) {
             return formValue.getFileItem().getInputStream();
         } else {
-            String charset;
-            if (formValue.getCharset() != null) {
-                charset = formValue.getCharset();
-            } else if (servletRequest.getCharacterEncoding() != null) {
-                charset = servletRequest.getCharacterEncoding();
-            } else {
-                charset = servletContext.getDeployment().getDefaultRequestCharset().name();
-            }
-
+            String requestedCharset = servletRequest.getCharacterEncoding();
+            String charset = requestedCharset != null ? requestedCharset : servletContext.getDeployment().getDefaultRequestCharset().name();
             return new ByteArrayInputStream(formValue.getValue().getBytes(charset));
         }
     }
@@ -95,8 +88,6 @@ public class PartImpl implements Part {
         try {
             if (formValue.isFileItem()) {
                 return formValue.getFileItem().getFileSize();
-            } else if (formValue.getCharset() != null) {
-                return formValue.getValue().getBytes(formValue.getCharset()).length;
             } else {
                 return formValue.getValue().length();
             }
