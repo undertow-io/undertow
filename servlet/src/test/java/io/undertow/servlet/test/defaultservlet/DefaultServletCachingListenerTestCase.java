@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2021 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,17 +55,20 @@ import org.junit.runner.RunWith;
 import org.xnio.BufferAllocator;
 
 /**
- * @author Stuart Douglas
+ * <p>Same test case than DefaultServletCachingTestCase but enabling the
+ * resource change listeners to detect changes in the file system.</p>
+ *
+ * @author rmartinc
  */
 @RunWith(DefaultServer.class)
-public class DefaultServletCachingTestCase {
+public class DefaultServletCachingListenerTestCase {
 
     private static final int MAX_FILE_SIZE = 20;
-    private static final int METADATA_MAX_AGE = 2000;
+    private static final int METADATA_MAX_AGE = 1000;
     public static final String DIR_NAME = "cacheTest";
 
-    static Path tmpDir;
-    static DirectBufferCache dataCache = new DirectBufferCache(1000, 10, 1000 * 10 * 1000, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, METADATA_MAX_AGE);
+    private static Path tmpDir;
+    private static DirectBufferCache dataCache = new DirectBufferCache(1000, 10, 1000 * 10 * 1000, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, METADATA_MAX_AGE);
 
     @Before
     public void before() {
@@ -88,7 +91,8 @@ public class DefaultServletCachingTestCase {
                 .setContextPath("/servletContext")
                 .addWelcomePage("index.html")
                 .setDeploymentName("servletContext.war")
-                .setResourceManager(new CachingResourceManager(100, MAX_FILE_SIZE, dataCache, new PathResourceManager(tmpDir, 10485760, false, false, false), METADATA_MAX_AGE));
+                // PathResourceManager enables the resource change listeners in this test and max-age is infinite/-1
+                .setResourceManager(new CachingResourceManager(100, MAX_FILE_SIZE, dataCache, new PathResourceManager(tmpDir, 10485760, false, false, true), -1));
 
         builder.addServlet(new ServletInfo("DefaultTestServlet", PathTestServlet.class)
                 .addMapping("/path/default"))
@@ -119,10 +123,6 @@ public class DefaultServletCachingTestCase {
 
             Path f = tmpDir.resolve(fileName);
             Files.write(f, "hello".getBytes());
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
             Thread.sleep(METADATA_MAX_AGE);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
@@ -152,18 +152,12 @@ public class DefaultServletCachingTestCase {
             }
             Files.write(f, "hello world".getBytes());
 
+            Thread.sleep(METADATA_MAX_AGE);
+
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("hello", response);
-
-            Thread.sleep(METADATA_MAX_AGE);
-
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("hello world", response);
 
         } finally {
@@ -187,25 +181,18 @@ public class DefaultServletCachingTestCase {
             }
             Files.write(f, "hello world".getBytes());
 
+            Thread.sleep(METADATA_MAX_AGE);
+
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("FILTER_TEXT hello", response);
-
-            Thread.sleep(METADATA_MAX_AGE);
-
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("FILTER_TEXT hello world", response);
 
         } finally {
             client.getConnectionManager().shutdown();
         }
     }
-
 
     @Test
     public void testRangeRequest() throws IOException {
@@ -226,11 +213,6 @@ public class DefaultServletCachingTestCase {
         }
     }
 
-    /**
-     * Regression test for UNDERTOW-1444.
-     *
-     * Tested file is bigger then {@value #MAX_FILE_SIZE} bytes.
-     */
     @Test
     public void testRangeRequestFileNotInCache() throws IOException {
         TestHttpClient client = new TestHttpClient();
@@ -268,15 +250,6 @@ public class DefaultServletCachingTestCase {
             Path f = tmpDir.resolve(fileName);
             Files.write(f, content.getBytes());
 
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-
             Thread.sleep(METADATA_MAX_AGE);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
@@ -289,15 +262,6 @@ public class DefaultServletCachingTestCase {
             Assert.assertEquals(content, HttpClientUtils.readResponse(result));
 
             Files.delete(f);
-
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(content, HttpClientUtils.readResponse(result));
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(content, HttpClientUtils.readResponse(result));
 
             Thread.sleep(METADATA_MAX_AGE);
 
@@ -313,5 +277,4 @@ public class DefaultServletCachingTestCase {
             client.getConnectionManager().shutdown();
         }
     }
-
 }
