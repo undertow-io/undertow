@@ -41,7 +41,11 @@ public class ForwardServlet extends HttpServlet {
         } else {
             dispatcher = req.getRequestDispatcher(req.getHeader("forward"));
         }
-        dispatcher.forward(req, resp);
+        if (dispatcher != null) {
+            dispatcher.forward(req, resp);
+        } else {
+            resp.sendError(500, "dispatcher was null!");
+        }
     }
 
     @Override
