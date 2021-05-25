@@ -41,7 +41,6 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
@@ -985,18 +984,21 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public RequestDispatcher getRequestDispatcher(final String path) {
+        if (path == null) {
+            return null;
+        }
         String realPath;
         if (path.startsWith("/")) {
-            realPath = CanonicalPathUtils.canonicalize(path);
+            realPath = path;
         } else {
             String current = exchange.getRelativePath();
             int lastSlash = current.lastIndexOf("/");
             if (lastSlash != -1) {
                 current = current.substring(0, lastSlash + 1);
             }
-            realPath = CanonicalPathUtils.canonicalize(current + path);
+            realPath = current + path;
         }
-        return new RequestDispatcherImpl(realPath, servletContext);
+        return servletContext.getRequestDispatcher(realPath);
     }
 
     @Override

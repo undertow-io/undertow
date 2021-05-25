@@ -170,6 +170,10 @@ public class CanonicalPathUtils {
                 }
             }
         }
+        if (eatCount > 0) {
+            // the relative path is outside the context
+            return null;
+        }
         final StringBuilder result = new StringBuilder();
         if (tokenEnd != 0) {
             result.append(path.substring(0, tokenEnd));
