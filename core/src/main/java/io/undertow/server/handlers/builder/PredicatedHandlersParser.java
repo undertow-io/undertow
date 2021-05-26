@@ -136,6 +136,9 @@ public class PredicatedHandlersParser {
         } else if(node instanceof BlockNode) {
             List<PredicatedHandler> handlers = handleBlockNode(contents, (BlockNode) node, predicateBuilders, handlerBuilders, parser);
             return  new PredicatesHandler.Wrapper(handlers, false);
+        } else if(node instanceof PredicateOperatorNode) {
+            List<PredicatedHandler> handlers = Collections.singletonList(handlePredicateOperatorNode(contents, (PredicateOperatorNode)node, predicateBuilders, handlerBuilders, parser));
+            return  new PredicatesHandler.Wrapper(handlers, false);
         } else {
             throw error(contents, node.getToken().getPosition(), "unexpected token " + node.getToken());
         }
