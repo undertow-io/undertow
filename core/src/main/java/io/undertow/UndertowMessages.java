@@ -630,4 +630,7 @@ public interface UndertowMessages {
 
     @Message(id = 202, value = "Failed to initialize path manager for '%s' path.")
     RuntimeException failedToInitializePathManager(String path, @Cause IOException ioe);
+
+    @Message(id = 203, value = "Invalid ACL entry")
+    IllegalArgumentException invalidACLAddress(@Cause Exception e);
 }
