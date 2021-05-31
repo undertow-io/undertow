@@ -610,4 +610,8 @@ public interface UndertowMessages {
 
     @Message(id = 196, value = "Session with id %s already exists")
     IllegalStateException sessionWithIdAlreadyExists(String sessionID);
+
+    @Message(id = 199, value = "Invalid ACL entry")
+    IllegalArgumentException invalidACLAddress(@Cause Exception e);
+
 }

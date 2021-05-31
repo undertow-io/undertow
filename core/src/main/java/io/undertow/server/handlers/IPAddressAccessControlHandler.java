@@ -18,6 +18,9 @@
 
 package io.undertow.server.handlers;
 
+
+
+import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -37,6 +40,7 @@ import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.HandlerBuilder;
+import io.undertow.util.NetworkUtils;
 import io.undertow.util.StatusCodes;
 import org.xnio.Bits;
 
@@ -50,7 +54,7 @@ public class IPAddressAccessControlHandler implements HttpHandler {
     /**
      * Standard IP address
      */
-    private static final Pattern IP4_EXACT = Pattern.compile("(?:\\d{1,3}\\.){3}\\d{1,3}");
+    private static final Pattern IP4_EXACT = Pattern.compile(NetworkUtils.IP4_EXACT);
 
     /**
      * Standard IP address, with some octets replaced by a '*'
@@ -65,7 +69,7 @@ public class IPAddressAccessControlHandler implements HttpHandler {
     /**
      * Standard full IPv6 address
      */
-    private static final Pattern IP6_EXACT = Pattern.compile("(?:[a-zA-Z0-9]{1,4}:){7}[a-zA-Z0-9]{1,4}");
+    private static final Pattern IP6_EXACT = Pattern.compile(NetworkUtils.IP6_EXACT);
 
     /**
      * Standard full IPv6 address, with some parts replaced by a '*'
@@ -158,7 +162,7 @@ public class IPAddressAccessControlHandler implements HttpHandler {
      * a.b.* = Wildcard IPv4 Address
      * a:b:* = Wildcard IPv6 Address
      * a.b.c.0/24 = Classless wildcard IPv4 address
-     * a:b:c:d:e:f:g:0/120 = Classless wildcard IPv4 address
+     * a:b:c:d:e:f:g:0/120 = Classless wildcard IPv6 address
      *
      * @param peer The peer to add to the ACL
      */
@@ -176,7 +180,7 @@ public class IPAddressAccessControlHandler implements HttpHandler {
      * a.b.* = Wildcard IPv4 Address
      * a:b:* = Wildcard IPv6 Address
      * a.b.c.0/24 = Classless wildcard IPv4 address
-     * a:b:c:d:e:f:g:0/120 = Classless wildcard IPv4 address
+     * a:b:c:d:e:f:g:0/120 = Classless wildcard IPv6 address
      *
      * @param peer The peer to add to the ACL
      */
@@ -288,15 +292,13 @@ public class IPAddressAccessControlHandler implements HttpHandler {
     }
 
     private void addIpV6ExactMatch(final String peer, final boolean deny) {
-        byte[] bytes = new byte[16];
-        String[] parts = peer.split("\\:");
-        assert parts.length == 8;
-        for (int i = 0; i < 8; ++i) {
-            int val = Integer.parseInt(parts[i], 16);
-            bytes[i * 2] = (byte) (val >> 8);
-            bytes[i * 2 + 1] = (byte) (val & 0xFF);
+        byte[] bytes;
+        try {
+            bytes = NetworkUtils.parseIpv6AddressToBytes(peer);
+            ipv6acl.add(new ExactIpV6PeerMatch(deny, peer, bytes));
+        } catch (IOException e) {
+            throw UndertowMessages.MESSAGES.invalidACLAddress(e);
         }
-        ipv6acl.add(new ExactIpV6PeerMatch(deny, peer, bytes));
     }
 
     private void addIpV4ExactMatch(final String peer, final boolean deny) {
