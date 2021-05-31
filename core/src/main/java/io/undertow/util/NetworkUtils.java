@@ -26,8 +26,33 @@ import java.net.InetAddress;
 
 /**
  * @author Stuart Douglas
+ * @author baranowb
  */
 public class NetworkUtils {
+
+    public static final String IP4_EXACT = "(?:\\d{1,3}\\.){3}\\d{1,3}";
+
+    /**
+     * IPV6 match. ?: - unnamed groups are used for performance reasons.
+     * Requirements:
+     * - match full or partial IPV6 ( sliding '::')
+     * - match end to start - ^$ to ensure it does not match part of some random (\d:){n,m}
+     * - IPv4-Embedded IPv6 Address
+     *
+     * NO:
+     * - IPv4 mapped/translated into IPv6
+     *
+     * ^(?:([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}                 - full address
+     * |(?:([0-9a-fA-F]{1,4}:)){1,7}:                               - last compressed
+     * |(?:([0-9a-fA-F]{1,4}:)){1,6}:[0-9a-fA-F]{1,4}               - second to last
+     * |(?:([0-9a-fA-F]{1,4}:)){1,5}(?:(:[0-9a-fA-F]{1,4})){1,2}    - etc
+     * |(?:([0-9a-fA-F]{1,4}:)){1,4}(?:(:[0-9a-fA-F]{1,4})){1,3}
+     * |(?:([0-9a-fA-F]{1,4}:)){1,3}(?:(:[0-9a-fA-F]{1,4})){1,4}
+     * |(?:([0-9a-fA-F]{1,4}:)){1,2}(?:(:[0-9a-fA-F]{1,4})){1,5}
+     * |(?:([0-9a-fA-F])){1,4}:(?:((?:(:[0-9a-fA-F]{1,4})){1,6}))
+     * |:(?:((:[0-9a-fA-F]{1,4}){1,7}|:)))$                         - all the way compressed
+     */
+    public static final String IP6_EXACT = "^(?:([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|(?:([0-9a-fA-F]{1,4}:)){1,7}:|(?:([0-9a-fA-F]{1,4}:)){1,6}:[0-9a-fA-F]{1,4}|(?:([0-9a-fA-F]{1,4}:)){1,5}(?:(:[0-9a-fA-F]{1,4})){1,2}|(?:([0-9a-fA-F]{1,4}:)){1,4}(?:(:[0-9a-fA-F]{1,4})){1,3}|(?:([0-9a-fA-F]{1,4}:)){1,3}(?:(:[0-9a-fA-F]{1,4})){1,4}|(?:([0-9a-fA-F]{1,4}:)){1,2}(?:(:[0-9a-fA-F]{1,4})){1,5}|(?:([0-9a-fA-F])){1,4}:(?:((?:(:[0-9a-fA-F]{1,4})){1,6}))|:(?:((:[0-9a-fA-F]{1,4}){1,7}|:)))$";
 
     public static String formatPossibleIpv6Address(String address) {
         if (address == null) {
@@ -61,7 +86,11 @@ public class NetworkUtils {
 
     }
 
-    public static InetAddress parseIpv6Address(String addressString) throws IOException {
+    public static InetAddress parseIpv6Address(final String addressString) throws IOException {
+        return InetAddress.getByAddress(parseIpv6AddressToBytes(addressString));
+    }
+
+    public static byte[] parseIpv6AddressToBytes(final String addressString) throws IOException {
         boolean startsWithColon = addressString.startsWith(":");
         if (startsWithColon && !addressString.startsWith("::")) {
             throw UndertowMessages.MESSAGES.invalidIpAddress(addressString);
@@ -100,7 +129,7 @@ public class NetworkUtils {
             //address was too small
             throw UndertowMessages.MESSAGES.invalidIpAddress(addressString);
         }
-        return InetAddress.getByAddress(data);
+        return data;
     }
 
     public static String toObfuscatedString(InetAddress address) {

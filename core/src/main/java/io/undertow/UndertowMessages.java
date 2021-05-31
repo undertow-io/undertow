@@ -623,4 +623,20 @@ public interface UndertowMessages {
 
     @Message(id = 199, value = "Read timed out after %s milliseconds.")
     ReadTimeoutException readTimedOut(long timeoutMilliseconds);
+
+    // place holder for unmerged features in maintenance branch
+    @Message(id = 200, value = "Failed to replace hash output stream ")
+    SSLException failedToReplaceHashOutputStream(@Cause Exception e);
+
+    // place holder for unmerged features in maintenance branch
+    @Message(id = 201, value = "Failed to replace hash output stream ")
+    RuntimeException failedToReplaceHashOutputStreamOnWrite(@Cause Exception e);
+
+    // place holder for unmerged features in maintenance branch
+    @Message(id = 202, value = "Failed to initialize path manager for '%s' path.")
+    RuntimeException failedToInitializePathManager(String path, @Cause IOException ioe);
+
+    @Message(id = 203, value = "Invalid ACL entry")
+    IllegalArgumentException invalidACLAddress(@Cause Exception e);
+
 }

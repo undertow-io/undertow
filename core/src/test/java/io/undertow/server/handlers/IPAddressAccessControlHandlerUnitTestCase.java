@@ -49,7 +49,7 @@ public class IPAddressAccessControlHandlerUnitTestCase {
     public void testIPv6ExactMatch() throws UnknownHostException {
         IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler()
                 .setDefaultAllow(false)
-                .addAllow("FE45:00:00:000:0:AAA:FFFF:0045");
+                .addAllow("FE45::AAA:FFFF:45");
         Assert.assertTrue(handler.isAllowed(InetAddress.getByName("FE45:0:0:0:0:AAA:FFFF:45")));
         Assert.assertFalse(handler.isAllowed(InetAddress.getByName("127.0.0.2")));
         Assert.assertFalse(handler.isAllowed(InetAddress.getByName("FE45:0:0:0:0:AAA:FFFF:46")));
@@ -70,8 +70,8 @@ public class IPAddressAccessControlHandlerUnitTestCase {
     public void testIPv6PrefixMatch() throws UnknownHostException {
         IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler()
                 .setDefaultAllow(true)
-                .addAllow("FE45:00:00:000:0:AAA:FFFF:0045")
-                .addDeny("FE45:00:00:000:0:AAA:FFFF:*");
+                .addAllow("FE45::AAA:FFFF:45")
+                .addDeny("FE45:0:0:0:0:AAA:FFFF:*");
         Assert.assertTrue(handler.isAllowed(InetAddress.getByName("FE45:0:0:0:0:AAA:FFFF:45")));
         Assert.assertTrue(handler.isAllowed(InetAddress.getByName("127.0.0.2")));
         Assert.assertFalse(handler.isAllowed(InetAddress.getByName("FE45:0:0:0:0:AAA:FFFF:46")));
@@ -103,15 +103,15 @@ public class IPAddressAccessControlHandlerUnitTestCase {
     public void testIPv6SlashMatch() throws UnknownHostException {
         IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler()
                 .setDefaultAllow(true)
-                .addAllow("FE45:00:00:000:0:AAA:FFFF:0045")
-                .addAllow("FE45:00:00:000:0:AAA:FFFF:01F4/127")
-                .addDeny("FE45:00:00:000:0:AAA:FFFF:0/112");
+                .addAllow("FE45::AAA:FFFF:45")
+                .addAllow("FE45:0:0:0:0:AAA:FFFF:01F4/127")
+                .addDeny("FE45:0:0:0:0:AAA:FFFF:0/112");
         runIpv6SlashMAtchTest(handler);
     }
 
     @Test
     public void testParsedHandler() throws UnknownHostException {
-        IPAddressAccessControlHandler handler = (IPAddressAccessControlHandler) HandlerParser.parse("ip-access-control[default-allow=true, acl={'FE45:00:00:000:0:AAA:FFFF:0045 allow', 'FE45:00:00:000:0:AAA:FFFF:01F4/127 allow', 'FE45:00:00:000:0:AAA:FFFF:0/112 deny'}]", getClass().getClassLoader()).wrap(ResponseCodeHandler.HANDLE_404);
+        IPAddressAccessControlHandler handler = (IPAddressAccessControlHandler) HandlerParser.parse("ip-access-control[default-allow=true, acl={'FE45:0:0:0:0:AAA:FFFF:45 allow', 'FE45:0:0:0:0:AAA:FFFF:01F4/127 allow', 'FE45:00:00:000:0:AAA:FFFF:0/112 deny'}]", getClass().getClassLoader()).wrap(ResponseCodeHandler.HANDLE_404);
 
         runIpv6SlashMAtchTest(handler);
     }
