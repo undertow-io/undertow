@@ -232,7 +232,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public HttpServletMapping getHttpServletMapping() {
         ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         ServletPathMatch match = src.getOriginalServletPathMatch();
-        if(getDispatcherType() == DispatcherType.FORWARD) {
+        final DispatcherType dispatcherType = getDispatcherType();
+        //UNDERTOW-1899 - ERROR is essentially forward operation
+        if(dispatcherType == DispatcherType.FORWARD || dispatcherType == DispatcherType.ERROR) {
             match = src.getServletPathMatch();
         }
         String matchValue;
