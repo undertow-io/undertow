@@ -25,6 +25,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLContext;
+import javax.servlet.ServletException;
 import javax.websocket.ClientEndpointConfig;
 import javax.websocket.CloseReason;
 import javax.websocket.ContainerProvider;
@@ -49,6 +50,8 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 
+import static org.junit.Assert.assertTrue;
+
 /**
  * @author Andrej Golovnin
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -58,6 +61,7 @@ import org.junit.runner.RunWith;
 public class BinaryEndpointTest {
 
     private static ServerWebSocketContainer deployment;
+    private static DeploymentManager deploymentManager;
 
     private static byte[] bytes;
 
@@ -78,27 +82,29 @@ public class BinaryEndpointTest {
                         new WebSocketDeploymentInfo()
                                 .setBuffers(DefaultServer.getBufferPool())
                                 .setWorker(DefaultServer.getWorkerSupplier())
-                                .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
-                                    @Override
-                                    public void ready(ServerWebSocketContainer container) {
-                                        deployment = container;
-                                    }
-                                })
+                                .addListener(serverContainer -> deployment = serverContainer)
                 )
                 .setDeploymentName("servletContext.war");
 
 
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
+        deploymentManager = container.addDeployment(builder);
+        deploymentManager.deploy();
 
 
-        DefaultServer.setRootHandler(new RequestDumpingHandler(manager.start()));
+        DefaultServer.setRootHandler(new RequestDumpingHandler(deploymentManager.start()));
         DefaultServer.startSSLServer();
     }
 
     @AfterClass
-    public static void after() throws IOException {
-        deployment = null;
+    public static void after() throws IOException, ServletException {
+        if (deployment != null) {
+            deployment.close();
+            deployment = null;
+        }
+        if (deploymentManager != null) {
+            deploymentManager.stop();
+            deploymentManager.undeploy();
+        }
         DefaultServer.stopSSLServer();
     }
 
@@ -112,8 +118,7 @@ public class BinaryEndpointTest {
         ContainerProvider.getWebSocketContainer().connectToServer(endpoint, clientEndpointConfig, new URI("wss://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostSSLPort("default") + "/partial"));
         Assert.assertArrayEquals(bytes, endpoint.getResponses().poll(15, TimeUnit.SECONDS));
         endpoint.session.close();
-        endpoint.closeLatch.await(10, TimeUnit.SECONDS);
-
+        assertTrue(endpoint.closeLatch.await(10, TimeUnit.SECONDS));
     }
 
     public static class ProgramaticClientEndpoint extends Endpoint {

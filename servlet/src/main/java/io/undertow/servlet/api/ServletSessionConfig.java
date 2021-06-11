@@ -39,7 +39,7 @@ public class ServletSessionConfig {
     private String domain;
     private boolean secure;
     private boolean httpOnly;
-    private int maxAge;
+    private int maxAge = -1;
     private String comment;
 
     public String getName() {

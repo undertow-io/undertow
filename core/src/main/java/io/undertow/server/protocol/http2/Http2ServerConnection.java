@@ -399,7 +399,10 @@ public class Http2ServerConnection extends ServerConnection {
 
     @Override
     public boolean isPushSupported() {
-        return channel.isPushEnabled() && !exchange.getRequestHeaders().contains(Headers.X_DISABLE_PUSH);
+        return channel.isPushEnabled()
+                && !exchange.getRequestHeaders().contains(Headers.X_DISABLE_PUSH)
+                // push is not supported for already pushed streams, just for peer-initiated (odd) ids
+                && responseChannel.getStreamId() % 2 != 0;
     }
 
     @Override

@@ -25,6 +25,8 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLEngine;
@@ -132,6 +134,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     private final UndertowSslConnection connection;
     private final StreamConnection delegate;
+    private final Executor delegatedTaskExecutor;
     private SSLEngine engine;
     private final StreamSinkConduit sink;
     private final StreamSourceConduit source;
@@ -196,13 +199,14 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
     };
 
-    SslConduit(UndertowSslConnection connection, StreamConnection delegate, SSLEngine engine, ByteBufferPool bufferPool, Runnable handshakeCallback) {
+    SslConduit(UndertowSslConnection connection, StreamConnection delegate, SSLEngine engine, Executor delegatedTaskExecutor, ByteBufferPool bufferPool, Runnable handshakeCallback) {
         this.connection = connection;
         this.delegate = delegate;
         this.handshakeCallback = handshakeCallback;
         this.sink = delegate.getSinkChannel().getConduit();
         this.source = delegate.getSourceChannel().getConduit();
         this.engine = engine;
+        this.delegatedTaskExecutor = delegatedTaskExecutor;
         this.bufferPool = bufferPool;
         delegate.getSourceChannel().getConduit().setReadReadyHandler(readReadyHandler = new SslReadReadyHandler(null));
         delegate.getSinkChannel().getConduit().setWriteReadyHandler(writeReadyHandler = new SslWriteReadyHandler(null));
@@ -596,6 +600,10 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         return delegate.getWorker();
     }
 
+    private Executor getDelegatedTaskExecutor() {
+        return delegatedTaskExecutor == null ? getWorker() : delegatedTaskExecutor;
+    }
+
     void notifyWriteClosed() {
         if(anyAreSet(state, FLAG_WRITE_CLOSED)) {
             return;
@@ -676,7 +684,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
      * @return true if the unwrap operation made progress, false otherwise
      * @throws SSLException
      */
-    private long doUnwrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
+    private synchronized long doUnwrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
         if(anyAreSet(state, FLAG_CLOSED)) {
             throw new ClosedChannelException();
         }
@@ -887,7 +895,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
      * @return The amount of data consumed
      * @throws IOException
      */
-    private long doWrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
+    private synchronized long doWrap(ByteBuffer[] userBuffers, int off, int len) throws IOException {
         if(anyAreSet(state, FLAG_CLOSED)) {
             throw new ClosedChannelException();
         }
@@ -896,7 +904,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
         if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ)) {
             doUnwrap(null, 0, 0);
-            if(allAreClear(state, FLAG_READ_REQUIRES_WRITE)) { //unless a wrap is immediatly required we just return
+            if(allAreClear(state, FLAG_READ_REQUIRES_WRITE)) { //unless a wrap is immediately required we just return
                 return 0;
             }
         }
@@ -1051,42 +1059,44 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         if(anyAreSet(state, FLAG_CLOSED)) {
             return;
         }
-        state |= FLAG_CLOSED | FLAG_DELEGATE_SINK_SHUTDOWN | FLAG_DELEGATE_SOURCE_SHUTDOWN | FLAG_WRITE_SHUTDOWN | FLAG_READ_SHUTDOWN;
-        notifyReadClosed();
-        notifyWriteClosed();
-        if(dataToUnwrap != null) {
-            dataToUnwrap.close();
-            dataToUnwrap = null;
-        }
-        if(unwrappedData != null) {
-            unwrappedData.close();
-            unwrappedData = null;
-        }
-        if(wrappedData != null) {
-            wrappedData.close();
-            wrappedData = null;
-        }
-        if(allAreClear(state, FLAG_ENGINE_OUTBOUND_SHUTDOWN)) {
-            engine.closeOutbound();
-        }
-        if(allAreClear(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
-            try {
-                engine.closeInbound();
-            } catch (SSLException e) {
-                UndertowLogger.REQUEST_LOGGER.ioException(e);
-            } catch (Throwable t) {
-                UndertowLogger.REQUEST_LOGGER.handleUnexpectedFailure(t);
+        synchronized (this) {
+            state |= FLAG_CLOSED | FLAG_DELEGATE_SINK_SHUTDOWN | FLAG_DELEGATE_SOURCE_SHUTDOWN | FLAG_WRITE_SHUTDOWN | FLAG_READ_SHUTDOWN;
+            notifyReadClosed();
+            notifyWriteClosed();
+            if (dataToUnwrap != null) {
+                dataToUnwrap.close();
+                dataToUnwrap = null;
+            }
+            if (unwrappedData != null) {
+                unwrappedData.close();
+                unwrappedData = null;
+            }
+            if (wrappedData != null) {
+                wrappedData.close();
+                wrappedData = null;
+            }
+            if (allAreClear(state, FLAG_ENGINE_OUTBOUND_SHUTDOWN)) {
+                engine.closeOutbound();
+            }
+            if (allAreClear(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
+                try {
+                    engine.closeInbound();
+                } catch (SSLException e) {
+                    UndertowLogger.REQUEST_LOGGER.ioException(e);
+                } catch (Throwable t) {
+                    UndertowLogger.REQUEST_LOGGER.handleUnexpectedFailure(t);
+                }
             }
         }
         IoUtils.safeClose(delegate);
     }
 
     /**
-     * Execute all the tasks in the worker
+     * Execute all the delegated tasks on an executor which allows blocking, the worker executor by default.
      *
      * Once they are complete we notify any waiting threads and wakeup reads/writes as appropriate
      */
-    private void runTasks() {
+    private void runTasks() throws IOException {
         //don't run anything in the IO thread till the tasks are done
         delegate.getSinkChannel().suspendWrites();
         delegate.getSourceChannel().suspendReads();
@@ -1100,7 +1110,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         synchronized (this) {
             outstandingTasks += tasks.size();
             for (final Runnable task : tasks) {
-                getWorker().execute(new Runnable() {
+                Runnable wrappedTask = new Runnable() {
                     @Override
                     public void run() {
                         try {
@@ -1135,10 +1145,43 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                                 }
                             }
                         }
-
                     }
-                });
+                };
+                try {
+                    getDelegatedTaskExecutor().execute(wrappedTask);
+                } catch (RejectedExecutionException e) {
+                    UndertowLogger.REQUEST_IO_LOGGER.sslEngineDelegatedTaskRejected(e);
+                    IoUtils.safeClose(connection);
+                    throw DelegatedTaskRejectedClosedChannelException.INSTANCE;
+                }
             }
+        }
+    }
+
+    /**
+     * A specialized {@link ClosedChannelException} which does not provide a stack trace. Tasks may be rejected
+     * when the server is overloaded, so it's important not to create more work than necessary.
+     */
+    private static final class DelegatedTaskRejectedClosedChannelException extends ClosedChannelException {
+
+        private static final DelegatedTaskRejectedClosedChannelException INSTANCE =
+                new DelegatedTaskRejectedClosedChannelException();
+
+        @Override
+        public Throwable fillInStackTrace() {
+            // Avoid the most expensive part of exception creation.
+            return this;
+        }
+
+        // Ignore mutations
+        @Override
+        public Throwable initCause(Throwable ignored) {
+            return this;
+        }
+
+        @Override
+        public void setStackTrace(StackTraceElement[] ignored) {
+            // no-op
         }
     }
 

@@ -75,8 +75,10 @@ public final class StoredResponseStreamSinkConduit extends AbstractStreamSinkCon
     public int write(ByteBuffer src) throws IOException {
         int start = src.position();
         int ret = super.write(src);
-        for (int i = start; i < start + ret; ++i) {
-            outputStream.write(src.get(i));
+        if (outputStream != null) {
+            for (int i = start; i < start + ret; ++i) {
+                outputStream.write(src.get(i));
+            }
         }
         return ret;
     }
@@ -90,13 +92,15 @@ public final class StoredResponseStreamSinkConduit extends AbstractStreamSinkCon
         long ret = super.write(srcs, offs, len);
         long rem = ret;
 
-        for (int i = 0; i < len; ++i) {
-            ByteBuffer buf = srcs[i + offs];
-            int pos = starts[i];
-            while (rem > 0 && pos < buf.position()) {
-                outputStream.write(buf.get(pos));
-                pos++;
-                rem--;
+        if (outputStream != null) {
+            for (int i = 0; i < len; ++i) {
+                ByteBuffer buf = srcs[i + offs];
+                int pos = starts[i];
+                while (rem > 0 && pos < buf.position()) {
+                    outputStream.write(buf.get(pos));
+                    pos++;
+                    rem--;
+                }
             }
         }
         return ret;
@@ -106,12 +110,14 @@ public final class StoredResponseStreamSinkConduit extends AbstractStreamSinkCon
     public int writeFinal(ByteBuffer src) throws IOException {
         int start = src.position();
         int ret = super.writeFinal(src);
-        for (int i = start; i < start + ret; ++i) {
-            outputStream.write(src.get(i));
-        }
-        if (!src.hasRemaining()) {
-            exchange.putAttachment(RESPONSE, outputStream.toByteArray());
-            outputStream = null;
+        if (outputStream != null) {
+            for (int i = start; i < start + ret; ++i) {
+                outputStream.write(src.get(i));
+            }
+            if (!src.hasRemaining()) {
+                exchange.putAttachment(RESPONSE, outputStream.toByteArray());
+                outputStream = null;
+            }
         }
         return ret;
     }
@@ -127,26 +133,30 @@ public final class StoredResponseStreamSinkConduit extends AbstractStreamSinkCon
         long ret = super.write(srcs, offs, len);
         long rem = ret;
 
-        for (int i = 0; i < len; ++i) {
-            ByteBuffer buf = srcs[i + offs];
-            int pos = starts[i];
-            while (rem > 0 && pos < buf.position()) {
-                outputStream.write(buf.get(pos));
-                pos++;
-                rem--;
+        if (outputStream != null) {
+            for (int i = 0; i < len; ++i) {
+                ByteBuffer buf = srcs[i + offs];
+                int pos = starts[i];
+                while (rem > 0 && pos < buf.position()) {
+                    outputStream.write(buf.get(pos));
+                    pos++;
+                    rem--;
+                }
             }
-        }
-        if (toWrite == ret) {
-            exchange.putAttachment(RESPONSE, outputStream.toByteArray());
-            outputStream = null;
+            if (toWrite == ret) {
+                exchange.putAttachment(RESPONSE, outputStream.toByteArray());
+                outputStream = null;
+            }
         }
         return ret;
     }
 
     @Override
     public void terminateWrites() throws IOException {
-        exchange.putAttachment(RESPONSE, outputStream.toByteArray());
-        outputStream = null;
+        if (outputStream != null) {
+            exchange.putAttachment(RESPONSE, outputStream.toByteArray());
+            outputStream = null;
+        }
         super.terminateWrites();
     }
 }

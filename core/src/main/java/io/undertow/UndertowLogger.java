@@ -43,6 +43,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.RejectedExecutionException;
 
 import static org.jboss.logging.Logger.Level.DEBUG;
 import static org.jboss.logging.Logger.Level.ERROR;
@@ -434,4 +435,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = DEBUG)
     @Message(id = 5094, value = "Blocking write timed out")
     void blockingWriteTimedOut(@Cause WriteTimeoutException rte);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5095, value = "SSLEngine delegated task was rejected")
+    void sslEngineDelegatedTaskRejected(@Cause RejectedExecutionException ree);
 }

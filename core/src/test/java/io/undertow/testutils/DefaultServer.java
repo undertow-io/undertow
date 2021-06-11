@@ -18,12 +18,12 @@
 
 package io.undertow.testutils;
 
-import static io.undertow.server.handlers.ResponseCodeHandler.HANDLE_404;
-import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
-import static org.xnio.SslClientAuthMode.REQUESTED;
-
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -33,6 +33,8 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -42,30 +44,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-
-import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.runner.Description;
-import org.junit.runner.Result;
-import org.junit.runner.notification.Failure;
-import org.junit.runner.notification.RunListener;
-import org.junit.runner.notification.RunNotifier;
-import org.junit.runners.BlockJUnit4ClassRunner;
-import org.junit.runners.model.FrameworkMethod;
-import org.junit.runners.model.InitializationError;
-import org.junit.runners.model.Statement;
-import org.wildfly.openssl.OpenSSLProvider;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import org.xnio.Sequence;
-import org.xnio.StreamConnection;
-import org.xnio.Xnio;
-import org.xnio.XnioWorker;
-import org.xnio.channels.AcceptingChannel;
-import org.xnio.ssl.XnioSsl;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
@@ -95,14 +73,89 @@ import io.undertow.util.Headers;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.SingleByteStreamSinkConduit;
 import io.undertow.util.SingleByteStreamSourceConduit;
+import org.junit.Assume;
+import org.junit.Ignore;
+import org.junit.internal.runners.statements.RunAfters;
+import org.junit.internal.runners.statements.RunBefores;
+import org.junit.runner.Description;
+import org.junit.runner.notification.Failure;
+import org.junit.runner.notification.RunListener;
+import org.junit.runner.notification.RunNotifier;
+import org.junit.runners.BlockJUnit4ClassRunner;
+import org.junit.runners.model.FrameworkMethod;
+import org.junit.runners.model.InitializationError;
+import org.junit.runners.model.Statement;
+import org.junit.runners.model.TestClass;
+import org.wildfly.openssl.OpenSSLProvider;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.Sequence;
+import org.xnio.StreamConnection;
+import org.xnio.Xnio;
+import org.xnio.XnioWorker;
+import org.xnio.channels.AcceptingChannel;
+import org.xnio.ssl.XnioSsl;
+
+import static io.undertow.server.handlers.ResponseCodeHandler.HANDLE_404;
+import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
+import static org.xnio.SslClientAuthMode.REQUESTED;
 
 /**
  * A class that starts a server before the test suite. By swapping out the root handler
  * tests can test various server functionality without continually starting and stopping the server.
- *
+ * <p>
+ * This runner adds two Annotations for specifying invocation points: {@link DefaultServer.BeforeServerStarts}
+ * and {@link DefaultServer.AfterServerStops}.
+ * </p><p>When any of those annotated methods are defined in the test class, tests are run in the following order:</p>
+ * <li>{@link DefaultServer.BeforeServerStarts @BeforeServerStarts} static methods are invoked</li>
+ * <li>the server is {@link #startServer() started}, before any test method is invoked</li>
+ * <li>{@code @BeforeClass} methods are invoked, meaning subclasses can rely on getter methods
+ * returning values that were initialized in the previous step</li>
+ * <li>all test methods are invoked, with @Before and @After methods being invoked before and after them as in
+ * any normal JUnit test case</li>
+ * <li>{@code @AfterClass} methods are invoked, so subclasses can still read values initialized when the server
+ * started via getter methods in this class</li>
+ * <li>server is finally {@link #stopServer() stopped}</li>
+ * <li>{@link DefaultServer.AfterServerStops @AfterServerStops} methods are invoked</li>
+ * </p>
+ * <p>{@code @ClassRule}s are applied to the whole block above, meaning that the {@code Statement} passed to the
+ * corresponding {@code TestRule} contains the steps as described in the above list.</p>
+ *<p>
+ * If no {@link DefaultServer.BeforeServerStarts @BeforeServerStarts}/{@link DefaultServer.AfterServerStops @AfterServerStops}
+ * methods are specified, all methods in the test case are guaranteed to run in the context of a running {@code DefaultServer}.
+ * Notice, however, that in this particular case the server might not be started just before a test case is run,
+ * and will not be shutdown when the same test case is finished. The reason for this is that this runner prevents the
+ * extra cost of starting and stopping the server several times when doing a test run if that step is not needed.
+ * Usually, this runner will start the server only once for a whole test run. For the same reason, the server will be
+ * stopped only after all test classes in the test run have finished. The only exception is when there is a test case that
+ * contains a {@link DefaultServer.BeforeServerStarts @BeforeServerStarts} method. In that case, the server started by
+ * previous test cases will be stopped before anything so that the {@code @BeforeServerStarts} method sticks to the
+ * contract and can be run before the server starts. Likewise, the server is stopped before invoking {@code @AfterServerStops}
+ * methods. Before proceeding to running the next test cases in the test run, this runner will restart the server once
+ * more, but it will refrain from doing so again for the following test cases, unless it faces anoter test with the
+ * {@code @BeforeServerStarts}/{@code @AfterServerStops} methods.
+ * </p>
  * @author Stuart Douglas
+ * @author Flavia Rainone
  */
 public class DefaultServer extends BlockJUnit4ClassRunner {
+
+    /**
+     * Static methods marked with this annotation will be invoked before the server is started.
+     */
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    public @interface BeforeServerStarts {}
+
+    /**
+     * Static methods marked with this annotation will be invoked after the server is stopped.
+     */
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.METHOD)
+    public @interface AfterServerStops {}
 
     private static final Throwable OPENSSL_FAILURE;
 
@@ -123,8 +176,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     public static final int BUFFER_SIZE = Integer.getInteger("test.bufferSize", 1024 * 16 - 20);
     public static final DebuggingSlicePool SSL_BUFFER_POOL = new DebuggingSlicePool(new DefaultByteBufferPool(true, 17 * 1024));
 
-    private static boolean first = true;
     private static OptionMap serverOptions;
+    private static OptionMap.Builder serverOptionMapBuilder = OptionMap.builder();
     private static OpenListener openListener;
     private static ChannelListener acceptListener;
     private static OpenListener proxyOpenListener;
@@ -134,7 +187,6 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static AcceptingChannel<? extends StreamConnection> proxyServer;
     private static AcceptingChannel<? extends StreamConnection> sslServer;
     private static SSLContext clientSslContext;
-    private static Xnio xnio;
 
     private static final String SERVER_KEY_STORE = "server.keystore";
     private static final String SERVER_TRUST_STORE = "server.truststore";
@@ -160,6 +212,26 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     private static LoadBalancingProxyClient loadBalancingProxyClient;
 
+    /** A link to the {@link #startServer()} method using JUnit framework method API. */
+    private static final List<FrameworkMethod> startServerMethod;
+    /** A link to the {@link #stopServer()}  method using JUnit framework method API. */
+    private static final List<FrameworkMethod> stopServerMethod;
+
+    static {
+        startServerMethod = new ArrayList<>(1);
+        try {
+            startServerMethod.add(new FrameworkMethod(DefaultServer.class.getDeclaredMethod("startServer")));
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+        stopServerMethod = new ArrayList<>(1);
+        try {
+            stopServerMethod.add(new FrameworkMethod(DefaultServer.class.getDeclaredMethod("stopServer")));
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static KeyStore loadKeyStore(final String name) throws IOException {
         final InputStream stream = DefaultServer.class.getClassLoader().getResourceAsStream(name);
         if (stream == null) {
@@ -182,7 +254,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     private static SSLContext createSSLContext(final KeyStore keyStore, final KeyStore trustStore, String protocol, boolean client) throws IOException {
-        KeyManager[] keyManagers;
+        final KeyManager[] keyManagers;
         try {
             KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
             keyManagerFactory.init(keyStore, STORE_PASSWORD);
@@ -191,7 +263,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             throw new IOException("Unable to initialise KeyManager[]", e);
         }
 
-        TrustManager[] trustManagers = null;
+        final TrustManager[] trustManagers;
         try {
             TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
             trustManagerFactory.init(trustStore);
@@ -200,7 +272,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             throw new IOException("Unable to initialise TrustManager[]", e);
         }
 
-        SSLContext sslContext;
+        final SSLContext sslContext;
         try {
             if (openssl && !client) {
                 sslContext = SSLContext.getInstance("openssl.TLS");
@@ -243,6 +315,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         super(klass);
     }
 
+    @SuppressWarnings("deprecation")
     public static void setupProxyHandlerForSSL(ProxyHandler proxyHandler) {
         proxyHandler.addRequestHeader(Headers.SSL_CLIENT_CERT, "%{SSL_CLIENT_CERT}", DefaultServer.class.getClassLoader());
         proxyHandler.addRequestHeader(Headers.SSL_CIPHER, "%{SSL_CIPHER}", DefaultServer.class.getClassLoader());
@@ -254,12 +327,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     public static Supplier<XnioWorker> getWorkerSupplier() {
-        return new Supplier<XnioWorker>() {
-            @Override
-            public XnioWorker get() {
-                return getWorker();
-            }
-        };
+        return DefaultServer::getWorker;
     }
 
     @Override
@@ -267,8 +335,47 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         return super.getDescription();
     }
 
+    /**
+     * Returns a {@link Statement} that runs the test methods from within a
+     * {@link RunDefaultServer} statement. If any {@link BeforeServerStarts @BeforeServerStarts}
+     * methods are found in the test class, server is stopped if it is already running, and the
+     * returned statement will invoke those methods before {@code RunDefaultServer} statement.
+     * In the same way, if {@link AfterServerStops @AfterServerStops} methods are found in the
+     * test class, the returned statement will cause the server to stop after this test case runs,
+     * and will cause those methods to be invoked after that.
+     */
+    protected Statement classBlock(final RunNotifier notifier) {
+        return createClassStatement(getTestClass(), notifier, super.classBlock(notifier));
+    }
+
+    private static Statement createClassStatement(final TestClass testClass, final RunNotifier notifier, Statement classBlock) {
+        final RunDefaultServer defaultServerStatement = new RunDefaultServer(classBlock, notifier);
+        Statement statement = defaultServerStatement;
+        final List<FrameworkMethod> beforeServerStarts = testClass.getAnnotatedMethods(BeforeServerStarts.class);
+        if (!beforeServerStarts.isEmpty()) {
+            // stopServer that might be already up of we're running the full test suite instead of a single test case
+            stopServer();
+            statement = new RunBefores(statement, beforeServerStarts, null);
+        }
+        final List<FrameworkMethod> afterServerStops = testClass.getAnnotatedMethods(AfterServerStops.class);
+        if (!afterServerStops.isEmpty()) {
+            defaultServerStatement.stopTheServerWhenDone();
+            statement = new RunAfters(statement, afterServerStops, null);
+        }
+        return statement;
+    }
+
+    public static AcceptingChannel<? extends StreamConnection> getProxyServer() {
+        return proxyServer;
+    }
+
     @Override
     public void run(final RunNotifier notifier) {
+        addRunNotifierListener(notifier);
+        super.run(notifier);
+    }
+
+    private static void addRunNotifierListener(final RunNotifier notifier) {
         notifier.addListener(new RunListener() {
             @Override
             public void testStarted(Description description) throws Exception {
@@ -297,149 +404,164 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 }
                 super.testFinished(description);
             }
-        });
-        runInternal(notifier);
-        super.run(notifier);
+       });
     }
 
-    private static void runInternal(final RunNotifier notifier) {
+    /**
+     * Starts the server if it is not up, and initiates the static fields in this class. This method is invoked
+     * automatically once before your tests are triggered when using {@code DefaultServer} as a {@code Runner}.
+     * After this method executes, getter methods can be invoked safely.
+     * <p>
+     * To perform an action in your test before the server starts, such as {@link #setServerOptions(OptionMap)},
+     * use {@link BeforeServerStarts @BeforeServerStarts} methods. To perform an action precisely after the server
+     * starts and before the test method runs, use {@code @BeforeClass} or {@code @Before} methods.
+     */
+    public static boolean startServer() {
         if (openssl && OPENSSL_FAILURE != null) {
             throw new RuntimeException(OPENSSL_FAILURE);
         }
-        if (first) {
-            first = false;
-            xnio = Xnio.getInstance("nio", DefaultServer.class.getClassLoader());
-            try {
-                worker = xnio.createWorker(OptionMap.builder()
-                        .set(Options.WORKER_IO_THREADS, 8)
-                        .set(Options.CONNECTION_HIGH_WATER, 1000000)
-                        .set(Options.CONNECTION_LOW_WATER, 1000000)
-                        .set(Options.WORKER_TASK_CORE_THREADS, 30)
-                        .set(Options.WORKER_TASK_MAX_THREADS, 30)
-                        .set(Options.TCP_NODELAY, true)
-                        .set(Options.CORK, true)
-                        .getMap());
+        if (server != null) {
+            return false;
+        }
+        Xnio xnio = Xnio.getInstance("nio", DefaultServer.class.getClassLoader());
+        try {
+            worker = xnio.createWorker(
+                    OptionMap.builder().set(Options.WORKER_IO_THREADS, 8).set(Options.CONNECTION_HIGH_WATER, 1000000).set(Options.CONNECTION_LOW_WATER, 1000000).set(Options.WORKER_TASK_CORE_THREADS, 30).set(Options.WORKER_TASK_MAX_THREADS, 30).set(Options.TCP_NODELAY, true).set(Options.CORK, true).getMap());
 
-                serverOptions = OptionMap.builder()
-                        .set(Options.TCP_NODELAY, true)
-                        .set(Options.BACKLOG, 1000)
-                        .set(Options.REUSE_ADDRESSES, true)
-                        .set(Options.BALANCING_TOKENS, 1)
-                        .set(Options.BALANCING_CONNECTIONS, 2)
-                        .getMap();
-                final SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE), false);
-                UndertowXnioSsl ssl = new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, SSL_BUFFER_POOL, serverContext);
-                if (ajp) {
-                    openListener = new AjpOpenListener(pool);
-                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
-                    if (apache) {
-                        int port = 8888;
-                        server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), port), acceptListener, serverOptions);
-                    } else {
-                        server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
-
-                        proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
-                        proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
-                        proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                        proxyOpenListener.setRootHandler(new ProxyHandler(loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("ajp", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 120000, HANDLE_404));
-                        proxyServer.resumeAccepts();
-
-                    }
-                } else if (h2 && isAlpnEnabled()) {
-                    openListener = new Http2OpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_PADDING_SIZE, 10));
-                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(new AlpnOpenListener(pool).addProtocol(Http2OpenListener.HTTP2, (io.undertow.server.DelegateOpenListener) openListener, 10)));
-
-                    SSLContext clientContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE), true);
-                    server = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
-                    server.resumeAccepts();
+            serverOptions = serverOptionMapBuilder.set(Options.TCP_NODELAY, true).set(Options.BACKLOG, 1000).set(Options.REUSE_ADDRESSES, true).set(Options.BALANCING_TOKENS, 1).set(Options.BALANCING_CONNECTIONS, 2).getMap();
+            final SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE), false);
+            UndertowXnioSsl ssl = new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, SSL_BUFFER_POOL, serverContext);
+            if (ajp) {
+                openListener = new AjpOpenListener(pool);
+                acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
+                if (apache) {
+                    int port = 8888;
+                    server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), port), acceptListener, serverOptions);
+                } else {
+                    server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
 
                     proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                    ProxyHandler proxyHandler = new ProxyHandler(loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("h2", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new UndertowXnioSsl(xnio, OptionMap.EMPTY, SSL_BUFFER_POOL, clientContext), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)), 120000, HANDLE_404);
-                    setupProxyHandlerForSSL(proxyHandler);
-                    proxyOpenListener.setRootHandler(proxyHandler);
+                    proxyOpenListener.setRootHandler(new ProxyHandler(loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("ajp", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 120000, HANDLE_404));
                     proxyServer.resumeAccepts();
+                }
+            } else if (h2 && isAlpnEnabled()) {
+                openListener = new Http2OpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_PADDING_SIZE, 10));
+                acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(new AlpnOpenListener(pool).addProtocol(Http2OpenListener.HTTP2, (io.undertow.server.DelegateOpenListener) openListener, 10)));
 
+                SSLContext clientContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE), true);
+                server = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
+                server.resumeAccepts();
 
-                } else if (h2c || h2cUpgrade) {
-                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_PADDING_SIZE, 10));
-                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
+                proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
+                proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
+                proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
+                ProxyHandler proxyHandler = new ProxyHandler(loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER)
+                        .addHost(new URI("h2", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new UndertowXnioSsl(xnio, OptionMap.EMPTY, SSL_BUFFER_POOL, clientContext), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)), 120000, HANDLE_404);
+                setupProxyHandlerForSSL(proxyHandler);
+                proxyOpenListener.setRootHandler(proxyHandler);
+                proxyServer.resumeAccepts();
+            } else if (h2c || h2cUpgrade) {
+                openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_PADDING_SIZE, 10));
+                acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
 
+                InetSocketAddress targetAddress = new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT) + PROXY_OFFSET);
+                server = worker.createStreamConnectionServer(targetAddress, acceptListener, serverOptions);
+
+                proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
+                proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
+                proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
+                ProxyHandler proxyHandler = new ProxyHandler(loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER)
+                        .addHost(new URI(h2cUpgrade ? "http" : "h2c-prior", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, null, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)), 30000, HANDLE_404);
+                setupProxyHandlerForSSL(proxyHandler);
+                proxyOpenListener.setRootHandler(proxyHandler);
+                proxyServer.resumeAccepts();
+
+            } else if (https) {
+                XnioSsl clientSsl = new UndertowXnioSsl(xnio, OptionMap.EMPTY, SSL_BUFFER_POOL, createClientSslContext());
+                openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
+                acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
+                server = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
+                server.getAcceptSetter().set(acceptListener);
+                server.resumeAccepts();
+
+                proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
+                proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
+                proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
+                ProxyHandler proxyHandler = new ProxyHandler(loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("https", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), clientSsl), 30000,
+                        HANDLE_404);
+                setupProxyHandlerForSSL(proxyHandler);
+                proxyOpenListener.setRootHandler(proxyHandler);
+                proxyServer.resumeAccepts();
+
+            } else {
+                if (h2) {
+                    UndertowLogger.ROOT_LOGGER.error("HTTP2 selected but Netty ALPN was not on the boot class path");
+                }
+                openListener = new HttpOpenListener(pool, OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).set(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, true).set(UndertowOptions.REQUIRE_HOST_HTTP11, true).getMap());
+                acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
+                if (!proxy) {
+                    server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, serverOptions);
+                } else {
                     InetSocketAddress targetAddress = new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT) + PROXY_OFFSET);
                     server = worker.createStreamConnectionServer(targetAddress, acceptListener, serverOptions);
 
                     proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                    ProxyHandler proxyHandler = new ProxyHandler(loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI(h2cUpgrade ? "http" : "h2c-prior", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, null, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)), 30000, HANDLE_404);
+                    ProxyHandler proxyHandler = new ProxyHandler(loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000,
+                            HANDLE_404);
                     setupProxyHandlerForSSL(proxyHandler);
                     proxyOpenListener.setRootHandler(proxyHandler);
                     proxyServer.resumeAccepts();
-
-                } else if (https) {
-
-                    XnioSsl clientSsl = new UndertowXnioSsl(xnio, OptionMap.EMPTY, SSL_BUFFER_POOL, createClientSslContext());
-                    openListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
-                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
-                    server = ssl.createSslConnectionServer(worker, new InetSocketAddress(getHostAddress("default"), 7777 + PROXY_OFFSET), acceptListener, serverOptions);
-                    server.getAcceptSetter().set(acceptListener);
-                    server.resumeAccepts();
-
-                    proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
-                    proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
-                    proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                    ProxyHandler proxyHandler = new ProxyHandler(loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("https", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), clientSsl), 30000, HANDLE_404);
-                    setupProxyHandlerForSSL(proxyHandler);
-                    proxyOpenListener.setRootHandler(proxyHandler);
-                    proxyServer.resumeAccepts();
-
-
-                } else {
-                    if (h2) {
-                        UndertowLogger.ROOT_LOGGER.error("HTTP2 selected but Netty ALPN was not on the boot class path");
-                    }
-                    openListener = new HttpOpenListener(pool, OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).set(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, true).set(UndertowOptions.REQUIRE_HOST_HTTP11, true).getMap());
-                    acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
-                    if (!proxy) {
-                        server = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), acceptListener, serverOptions);
-                    } else {
-                        InetSocketAddress targetAddress = new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT) + PROXY_OFFSET);
-                        server = worker.createStreamConnectionServer(targetAddress, acceptListener, serverOptions);
-
-                        proxyOpenListener = new HttpOpenListener(pool, OptionMap.create(UndertowOptions.BUFFER_PIPELINED_DATA, true));
-                        proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
-                        proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
-                        ProxyHandler proxyHandler = new ProxyHandler(loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER).addHost(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null)), 30000, HANDLE_404);
-                        setupProxyHandlerForSSL(proxyHandler);
-                        proxyOpenListener.setRootHandler(proxyHandler);
-                        proxyServer.resumeAccepts();
-                    }
-
                 }
-                if (h2cUpgrade) {
-                    openListener.setRootHandler(new Http2UpgradeHandler(rootHandler));
-                } else {
-                    openListener.setRootHandler(rootHandler);
-                }
-                server.resumeAccepts();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
             }
-            notifier.addListener(new RunListener() {
-                @Override
-                public void testRunFinished(final Result result) throws Exception {
-                    server.close();
-                    stopSSLServer();
-                    worker.shutdownNow();
-                    if (!worker.awaitTermination(10, TimeUnit.SECONDS)) {
-                        throw new IllegalStateException("Worker failed to shutdown within ten seconds");
-                    }
-                }
-            });
+            if (h2cUpgrade) {
+                openListener.setRootHandler(new Http2UpgradeHandler(rootHandler));
+            } else {
+                openListener.setRootHandler(rootHandler);
+            }
+            server.resumeAccepts();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+        return true;
     }
 
+    /**
+     * Stops the server and resets the fields. This method is invoked automatically after all method tests have
+     * run when using {@code DefaultServer} as a {@code Runner}. After this method executes, getter methods will
+     * return {@code null}.
+     * <p>
+     * To do any after test cleanup before server actually stops, use either {@code @After} or {@code @AfterClass}
+     * methods. To perform an action after the server stops, use {@link AfterServerStops @AfterServerStops} methods.
+     */
+    public static final void stopServer() {
+        try {
+            if (server != null) {
+                server.close();
+            }
+            stopSSLServer();
+            if (worker != null) {
+                worker.shutdownNow();
+                if (!worker.awaitTermination(10, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Worker failed to shutdown within ten seconds");
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            worker = null;
+            serverOptions = null;
+            openListener = null;
+            acceptListener = null;
+            server = null;
+            proxyOpenListener = null;
+            proxyAcceptListener = null;
+            proxyServer = null;
+        }
+    }
 
     @Override
     protected Description describeChild(FrameworkMethod method) {
@@ -467,13 +589,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         if (!single) {
             return listener;
         }
-        return new ChannelListener<StreamConnection>() {
-            @Override
-            public void handleEvent(StreamConnection channel) {
-                channel.getSinkChannel().setConduit(new SingleByteStreamSinkConduit(channel.getSinkChannel().getConduit(), 10000));
-                channel.getSourceChannel().setConduit(new SingleByteStreamSourceConduit(channel.getSourceChannel().getConduit(), 10000));
-                listener.handleEvent(channel);
-            }
+        return (StreamConnection channel) -> {
+            channel.getSinkChannel().setConduit(new SingleByteStreamSinkConduit(channel.getSinkChannel().getConduit(), 10000));
+            channel.getSourceChannel().setConduit(new SingleByteStreamSourceConduit(channel.getSourceChannel().getConduit(), 10000));
+            listener.handleEvent(channel);
         };
     }
 
@@ -713,9 +832,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             sslServer = null;
         }
         clientSslContext = null;
-        if(proxyOpenListener != null) {
+        if (proxyOpenListener != null) {
             proxyOpenListener.closeConnections();
-        } else {
+        } else if (openListener != null) {
             openListener.closeConnections();
         }
         //some environments seem to need a small delay to re-bind the socket
@@ -761,20 +880,30 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         if (h2c) {
             builder.set(UndertowOptions.ENABLE_HTTP2, true);
         }
-        openListener.setUndertowOptions(builder.getMap());
-        openListener.closeConnections();
-        if(proxyOpenListener != null) {
-            proxyOpenListener.closeConnections();
+        if (openListener != null) {
+            openListener.setUndertowOptions(builder.getMap());
+            openListener.closeConnections();
+            if (proxyOpenListener != null) {
+                proxyOpenListener.closeConnections();
+            }
+            if (loadBalancingProxyClient != null) {
+                loadBalancingProxyClient.closeCurrentConnections();
+            }
         }
-        if (loadBalancingProxyClient != null) {
-            loadBalancingProxyClient.closeCurrentConnections();
-        }
+    }
+
+    public static void setServerOptions(final OptionMap options) {
+        serverOptionMapBuilder = OptionMap.builder().addAll(options);
     }
 
     public static XnioWorker getWorker() {
         return worker;
     }
 
+    /**
+     * Runner that works in the same way as {@link DefaultServer} with added support to
+     * parameterized tests.
+     */
     public static class Parameterized extends org.junit.runners.Parameterized {
 
         public Parameterized(Class<?> klass) throws Throwable {
@@ -783,8 +912,12 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
         @Override
         public void run(final RunNotifier notifier) {
-            runInternal(notifier);
+            addRunNotifierListener(notifier);
             super.run(notifier);
+        }
+
+        @Override protected Statement classBlock(RunNotifier notifier) {
+            return createClassStatement(getTestClass(), notifier, super.classBlock(notifier));
         }
     }
 

@@ -34,12 +34,12 @@ public class GetMappingServlet extends HttpServlet {
         response.getWriter()
                 .append("Mapping match:")
                 .append(mapping.getMappingMatch().name())
-                .append("\n")
-                .append("Match value:")
+                .append("\nMatch value:")
                 .append(mapping.getMatchValue())
-                .append("\n")
-                .append("Pattern:")
-                .append(mapping.getPattern());
+                .append("\nPattern:")
+                .append(mapping.getPattern())
+                .append("\nServlet:")
+                .append(mapping.getServletName());
     }
 
 }

@@ -205,9 +205,16 @@ public class ServletContextImpl implements ServletContext {
         });
     }
 
+    private DeploymentInfo getDeploymentInfo() {
+        final DeploymentInfo deploymentInfo = this.deploymentInfo;
+        if (deploymentInfo == null)
+            throw UndertowServletLogger.ROOT_LOGGER.contextDestroyed();
+        return deploymentInfo;
+    }
+
     @Override
     public String getContextPath() {
-        String contextPath = deploymentInfo.getContextPath();
+        String contextPath = getDeploymentInfo().getContextPath();
         if (contextPath.equals("/")) {
             return "";
         }
@@ -225,22 +232,22 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public int getMajorVersion() {
-        return deploymentInfo.getContainerMajorVersion();
+        return getDeploymentInfo().getContainerMajorVersion();
     }
 
     @Override
     public int getMinorVersion() {
-        return deploymentInfo.getContainerMinorVersion();
+        return getDeploymentInfo().getContainerMinorVersion();
     }
 
     @Override
     public int getEffectiveMajorVersion() {
-        return deploymentInfo.getMajorVersion();
+        return getDeploymentInfo().getMajorVersion();
     }
 
     @Override
     public int getEffectiveMinorVersion() {
-        return deploymentInfo.getMinorVersion();
+        return getDeploymentInfo().getMinorVersion();
     }
 
     @Override
@@ -260,7 +267,7 @@ public class ServletContextImpl implements ServletContext {
     public Set<String> getResourcePaths(final String path) {
         final Resource resource;
         try {
-            resource = deploymentInfo.getResourceManager().getResource(path);
+            resource = getDeploymentInfo().getResourceManager().getResource(path);
         } catch (IOException e) {
             return null;
         }
@@ -294,7 +301,7 @@ public class ServletContextImpl implements ServletContext {
         }
         Resource resource = null;
         try {
-            resource = deploymentInfo.getResourceManager().getResource(path);
+            resource = getDeploymentInfo().getResourceManager().getResource(path);
         } catch (IOException e) {
             return null;
         }
@@ -308,7 +315,7 @@ public class ServletContextImpl implements ServletContext {
     public InputStream getResourceAsStream(final String path) {
         Resource resource = null;
         try {
-            resource = deploymentInfo.getResourceManager().getResource(path);
+            resource = getDeploymentInfo().getResourceManager().getResource(path);
         } catch (IOException e) {
             return null;
         }
@@ -331,7 +338,18 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public RequestDispatcher getRequestDispatcher(final String path) {
-        return new RequestDispatcherImpl(path, this);
+        if (path == null) {
+            return null;
+        }
+        if (!path.startsWith("/")) {
+            throw UndertowServletMessages.MESSAGES.pathMustStartWithSlashForRequestDispatcher(path);
+        }
+        final String realPath = CanonicalPathUtils.canonicalize(path, true);
+        if (realPath == null) {
+            // path is outside the servlet context, return null per spec
+            return null;
+        }
+        return new RequestDispatcherImpl(realPath, this);
     }
 
     @Override
@@ -379,6 +397,7 @@ public class ServletContextImpl implements ServletContext {
         if (path == null) {
             return null;
         }
+        final DeploymentInfo deploymentInfo = getDeploymentInfo();
         String canonicalPath = CanonicalPathUtils.canonicalize(path);
         Resource resource;
         try {
@@ -414,7 +433,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getServerInfo() {
-        return deploymentInfo.getServerName() + " - " + Version.getVersionString();
+        return getDeploymentInfo().getServerName() + " - " + Version.getVersionString();
     }
 
     @Override
@@ -422,12 +441,12 @@ public class ServletContextImpl implements ServletContext {
         if (name == null) {
             throw UndertowServletMessages.MESSAGES.nullName();
         }
-        return deploymentInfo.getInitParameters().get(name);
+        return getDeploymentInfo().getInitParameters().get(name);
     }
 
     @Override
     public Enumeration<String> getInitParameterNames() {
-        return new IteratorEnumeration<>(deploymentInfo.getInitParameters().keySet().iterator());
+        return new IteratorEnumeration<>(getDeploymentInfo().getInitParameters().keySet().iterator());
     }
 
     @Override
@@ -435,10 +454,10 @@ public class ServletContextImpl implements ServletContext {
         if(name == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNullNPE("name");
         }
-        if (deploymentInfo.getInitParameters().containsKey(name)) {
+        if (getDeploymentInfo().getInitParameters().containsKey(name)) {
             return false;
         }
-        deploymentInfo.addInitParameter(name, value);
+        getDeploymentInfo().addInitParameter(name, value);
         return true;
     }
 
@@ -487,7 +506,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getServletContextName() {
-        return deploymentInfo.getDisplayName();
+        return getDeploymentInfo().getDisplayName();
     }
 
     @Override
@@ -500,6 +519,7 @@ public class ServletContextImpl implements ServletContext {
         ensureNotInitialized();
         ensureServletNameNotNull(servletName);
         try {
+            final DeploymentInfo deploymentInfo = getDeploymentInfo();
             if (deploymentInfo.getServlets().containsKey(servletName)) {
                 return null;
             }
@@ -508,7 +528,7 @@ public class ServletContextImpl implements ServletContext {
             for(HandlerWrapper i : wrappers) {
                 servlet.addHandlerChainWrapper(i);
             }
-            readServletAnnotations(servlet);
+            readServletAnnotations(servlet, deploymentInfo);
             deploymentInfo.addServlet(servlet);
             ServletHandler handler = deployment.getServlets().addServlet(servlet);
             return new ServletRegistrationImpl(servlet, handler.getManagedServlet(), deployment);
@@ -524,11 +544,12 @@ public class ServletContextImpl implements ServletContext {
         ensureNotProgramaticListener();
         ensureNotInitialized();
         ensureServletNameNotNull(servletName);
+        final DeploymentInfo deploymentInfo = getDeploymentInfo();
         if (deploymentInfo.getServlets().containsKey(servletName)) {
             return null;
         }
         ServletInfo s = new ServletInfo(servletName, servlet.getClass(), new ImmediateInstanceFactory<>(servlet));
-        readServletAnnotations(s);
+        readServletAnnotations(s, deploymentInfo);
         deploymentInfo.addServlet(s);
         ServletHandler handler = deployment.getServlets().addServlet(s);
         return new ServletRegistrationImpl(s, handler.getManagedServlet(), deployment);
@@ -539,12 +560,13 @@ public class ServletContextImpl implements ServletContext {
         ensureNotProgramaticListener();
         ensureNotInitialized();
         ensureServletNameNotNull(servletName);
+        final DeploymentInfo deploymentInfo = getDeploymentInfo();
         if (deploymentInfo.getServlets().containsKey(servletName)) {
             return null;
         }
         try {
             ServletInfo servlet = new ServletInfo(servletName, servletClass, deploymentInfo.getClassIntrospecter().createInstanceFactory(servletClass));
-            readServletAnnotations(servlet);
+            readServletAnnotations(servlet, deploymentInfo);
             deploymentInfo.addServlet(servlet);
             ServletHandler handler = deployment.getServlets().addServlet(servlet);
             return new ServletRegistrationImpl(servlet, handler.getManagedServlet(), deployment);
@@ -563,7 +585,7 @@ public class ServletContextImpl implements ServletContext {
     public <T extends Servlet> T createServlet(final Class<T> clazz) throws ServletException {
         ensureNotProgramaticListener();
         try {
-            return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
+            return getDeploymentInfo().getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
         } catch (Exception e) {
             throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
         }
@@ -593,6 +615,7 @@ public class ServletContextImpl implements ServletContext {
     public FilterRegistration.Dynamic addFilter(final String filterName, final String className) {
         ensureNotProgramaticListener();
         ensureNotInitialized();
+        final DeploymentInfo deploymentInfo = getDeploymentInfo();
         if (deploymentInfo.getFilters().containsKey(filterName)) {
             return null;
         }
@@ -613,7 +636,7 @@ public class ServletContextImpl implements ServletContext {
     public FilterRegistration.Dynamic addFilter(final String filterName, final Filter filter) {
         ensureNotProgramaticListener();
         ensureNotInitialized();
-
+        final DeploymentInfo deploymentInfo = getDeploymentInfo();
         if (deploymentInfo.getFilters().containsKey(filterName)) {
             return null;
         }
@@ -628,6 +651,7 @@ public class ServletContextImpl implements ServletContext {
     public FilterRegistration.Dynamic addFilter(final String filterName, final Class<? extends Filter> filterClass) {
         ensureNotProgramaticListener();
         ensureNotInitialized();
+        final DeploymentInfo deploymentInfo = getDeploymentInfo();
         if (deploymentInfo.getFilters().containsKey(filterName)) {
             return null;
         }
@@ -645,7 +669,7 @@ public class ServletContextImpl implements ServletContext {
     public <T extends Filter> T createFilter(final Class<T> clazz) throws ServletException {
         ensureNotProgramaticListener();
         try {
-            return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
+            return getDeploymentInfo().getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
         } catch (Exception e) {
             throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
         }
@@ -654,7 +678,7 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public FilterRegistration getFilterRegistration(final String filterName) {
         ensureNotProgramaticListener();
-        final FilterInfo filterInfo = deploymentInfo.getFilters().get(filterName);
+        final FilterInfo filterInfo = getDeploymentInfo().getFilters().get(filterName);
         if (filterInfo == null) {
             return null;
         }
@@ -665,7 +689,7 @@ public class ServletContextImpl implements ServletContext {
     public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
         ensureNotProgramaticListener();
         final Map<String, FilterRegistration> ret = new HashMap<>();
-        for (Map.Entry<String, FilterInfo> entry : deploymentInfo.getFilters().entrySet()) {
+        for (Map.Entry<String, FilterInfo> entry : getDeploymentInfo().getFilters().entrySet()) {
             ret.put(entry.getKey(), new FilterRegistrationImpl(entry.getValue(), deployment, this));
         }
         return ret;
@@ -703,7 +727,7 @@ public class ServletContextImpl implements ServletContext {
     @Override
     public void addListener(final String className) {
         try {
-            Class<? extends EventListener> clazz = (Class<? extends EventListener>) deploymentInfo.getClassLoader().loadClass(className);
+            Class<? extends EventListener> clazz = (Class<? extends EventListener>) getDeploymentInfo().getClassLoader().loadClass(className);
             addListener(clazz);
         } catch (ClassNotFoundException e) {
             throw new IllegalArgumentException(e);
@@ -719,7 +743,7 @@ public class ServletContextImpl implements ServletContext {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
         }
         ListenerInfo listener = new ListenerInfo(t.getClass(), new ImmediateInstanceFactory<EventListener>(t));
-        deploymentInfo.addListener(listener);
+        getDeploymentInfo().addListener(listener);
         deployment.getApplicationListeners().addListener(new ManagedListener(listener, true));
     }
 
@@ -731,6 +755,7 @@ public class ServletContextImpl implements ServletContext {
                 && ServletContextListener.class.isAssignableFrom(listenerClass)) {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
         }
+        final DeploymentInfo deploymentInfo = getDeploymentInfo();
         InstanceFactory<? extends EventListener> factory = null;
         try {
             factory = deploymentInfo.getClassIntrospecter().createInstanceFactory(listenerClass);
@@ -749,7 +774,7 @@ public class ServletContextImpl implements ServletContext {
             throw UndertowServletMessages.MESSAGES.listenerMustImplementListenerClass(clazz);
         }
         try {
-            return deploymentInfo.getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
+            return getDeploymentInfo().getClassIntrospecter().createInstanceFactory(clazz).createInstance().getInstance();
         } catch (Exception e) {
             throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(clazz.getName(), e);
         }
@@ -757,12 +782,12 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public JspConfigDescriptor getJspConfigDescriptor() {
-        return deploymentInfo.getJspConfigDescriptor();
+        return getDeploymentInfo().getJspConfigDescriptor();
     }
 
     @Override
     public ClassLoader getClassLoader() {
-        return deploymentInfo.getClassLoader();
+        return getDeploymentInfo().getClassLoader();
     }
 
     @Override
@@ -796,6 +821,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public String getRequestCharacterEncoding() {
+        final DeploymentInfo deploymentInfo = getDeploymentInfo();
         String enconding = deploymentInfo.getDefaultRequestEncoding();
         if(enconding != null) {
             return enconding;
@@ -807,11 +833,12 @@ public class ServletContextImpl implements ServletContext {
     public void setRequestCharacterEncoding(String encoding) {
         ensureNotInitialized();
         ensureNotProgramaticListener();
-        deploymentInfo.setDefaultRequestEncoding(encoding);
+        getDeploymentInfo().setDefaultRequestEncoding(encoding);
     }
 
     @Override
     public String getResponseCharacterEncoding() {
+        final DeploymentInfo deploymentInfo = getDeploymentInfo();
         String enconding = deploymentInfo.getDefaultResponseEncoding();
         if(enconding != null) {
             return enconding;
@@ -823,7 +850,7 @@ public class ServletContextImpl implements ServletContext {
     public void setResponseCharacterEncoding(String encoding) {
         ensureNotInitialized();
         ensureNotProgramaticListener();
-        deploymentInfo.setDefaultResponseEncoding(encoding);
+        getDeploymentInfo().setDefaultResponseEncoding(encoding);
     }
 
     @Override
@@ -909,7 +936,7 @@ public class ServletContextImpl implements ServletContext {
                         exchange.putAttachment(sessionAttachmentKey, httpSession);
                     }
                 } else if (existing != null) {
-                    if(deploymentInfo.isCheckOtherSessionManagers()) {
+                    if(getDeploymentInfo().isCheckOtherSessionManagers()) {
                         boolean found = false;
                         for (String deploymentName : deployment.getServletContainer().listDeployments()) {
                             DeploymentManager deployment = this.deployment.getServletContainer().getDeployment(deploymentName);
@@ -990,7 +1017,7 @@ public class ServletContextImpl implements ServletContext {
         deploymentInfo = null;
     }
 
-    private void readServletAnnotations(ServletInfo servlet) {
+    private void readServletAnnotations(ServletInfo servlet, DeploymentInfo deploymentInfo) {
         if (System.getSecurityManager() == null) {
             new ReadServletAnnotationsTask(servlet, deploymentInfo).run();
         } else {

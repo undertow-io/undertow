@@ -28,7 +28,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
-import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
@@ -56,14 +55,10 @@ public class Http2EndExchangeTestCase {
 
 
     private static final Logger log = Logger.getLogger(Http2EndExchangeTestCase.class);
-    private static final String message = "Hello World!";
-    public static final String MESSAGE = "/message";
-    public static final String POST = "/post";
+    private static final String MESSAGE = "/message";
 
     private static final OptionMap DEFAULT_OPTIONS;
     private static URI ADDRESS;
-
-    private static final AttachmentKey<String> RESPONSE_BODY = AttachmentKey.create(String.class);
 
     static {
         final OptionMap.Builder builder = OptionMap.builder()
@@ -92,7 +87,8 @@ public class Http2EndExchangeTestCase {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
                         if (!exchange.getProtocol().equals(Protocols.HTTP_2_0)) {
-                            throw new RuntimeException("Not HTTP/2");
+                            testResult.completeExceptionally(new RuntimeException("Not HTTP/2 request"));
+                            return;
                         }
                         requestStartedLatch.countDown();
                         log.debug("Received Request");
@@ -187,10 +183,6 @@ public class Http2EndExchangeTestCase {
     }
 
     static UndertowClient createClient() {
-        return createClient(OptionMap.EMPTY);
-    }
-
-    static UndertowClient createClient(final OptionMap options) {
         return UndertowClient.getInstance();
     }
 }
