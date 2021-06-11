@@ -108,7 +108,7 @@ public class PathHandler implements HttpHandler {
      * Adds a path prefix and a handler for that path. If the path does not start
      * with a / then one will be prepended.
      * <p>
-     * The match is done on a prefix bases, so registering /foo will also match /bar. Exact
+     * The match is done on a prefix bases, so registering /foo will also match /foo/bar. Exact
      * path matches are taken into account first.
      * <p>
      * If / is specified as the path then it will replace the default handler.
@@ -129,7 +129,7 @@ public class PathHandler implements HttpHandler {
      * <p>
      * The match is done on a prefix bases, so registering /foo will also match /foo/bar.
      * Though exact path matches are taken into account before prefix path matches. So
-     * if an exact path match exists it's  handler will be triggered.
+     * if an exact path match exists its handler will be triggered.
      * <p>
      * If / is specified as the path then it will replace the default handler.
      *

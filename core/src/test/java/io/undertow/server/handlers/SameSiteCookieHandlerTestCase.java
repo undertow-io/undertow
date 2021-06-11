@@ -36,7 +36,9 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FileUtils;
 import io.undertow.util.StatusCodes;
+import org.junit.runner.RunWith;
 
+@RunWith(DefaultServer.class)
 public class SameSiteCookieHandlerTestCase {
 
     @Test

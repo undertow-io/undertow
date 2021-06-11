@@ -335,7 +335,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     }
 
     /**
-     * receive method, returns null if no frame is ready. Otherwise returns a
+     * Receive method, returns null if no frame is ready. Otherwise returns a
      * channel that can be used to read the frame contents.
      * <p>
      * Calling this method can also have the side effect of making additional data available to
@@ -948,7 +948,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 if (listener == null) {
                     listener = DRAIN_LISTENER;
                 }
-                UndertowLogger.REQUEST_IO_LOGGER.tracef("Invoking receive listener", receiver);
+                UndertowLogger.REQUEST_IO_LOGGER.tracef("Invoking receive listener: %s - receiver: %s", listener, receiver);
                 ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, listener);
             }
             final boolean partialRead;

@@ -17,6 +17,13 @@
  */
 package io.undertow.websockets.jsr.test.autobahn;
 
+import java.net.InetSocketAddress;
+
+import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+
+import org.jboss.logging.Logger;
+
 import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -27,7 +34,6 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.websockets.extensions.PerMessageDeflateHandshake;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
-import org.jboss.logging.Logger;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.OptionMap;
@@ -36,9 +42,6 @@ import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
-
-import javax.servlet.DispatcherType;
-import java.net.InetSocketAddress;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -56,6 +59,7 @@ public class AnnotatedAutobahnServer implements Runnable {
     public void run() {
 
         Xnio xnio = Xnio.getInstance();
+        DeploymentManager deploymentManager = null;
         try {
 
             XnioWorker worker = xnio.createWorker(OptionMap.builder()
@@ -70,7 +74,6 @@ public class AnnotatedAutobahnServer implements Runnable {
                     .getMap());
 
             OptionMap serverOptions = OptionMap.builder()
-                    .set(Options.WORKER_ACCEPT_THREADS, 4)
                     .set(Options.TCP_NODELAY, true)
                     .set(Options.REUSE_ADDRESSES, true)
                     .getMap();
@@ -99,16 +102,24 @@ public class AnnotatedAutobahnServer implements Runnable {
                     .addFilter(new FilterInfo("filter", JsrWebSocketFilter.class))
                     .addFilterUrlMapping("filter", "/*", DispatcherType.REQUEST);
 
-            DeploymentManager manager = container.addDeployment(builder);
-            manager.deploy();
+            deploymentManager = container.addDeployment(builder);
+            deploymentManager.deploy();
 
 
-            openListener.setRootHandler(manager.start());
+            openListener.setRootHandler(deploymentManager.start());
         } catch (Exception e) {
             log.error("failed to start server", e);
+        } finally {
+            if (deploymentManager != null) {
+                deploymentManager.undeploy();
+                try {
+                    deploymentManager.stop();
+                } catch (ServletException e) {
+                    throw new RuntimeException(e);
+                }
+            }
         }
     }
-
 
     public static void main(String[] args) {
         new AnnotatedAutobahnServer(7777).run();

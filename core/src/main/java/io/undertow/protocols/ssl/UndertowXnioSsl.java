@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SNIHostName;
@@ -78,6 +79,7 @@ public class UndertowXnioSsl extends XnioSsl {
     private static final ByteBufferPool DEFAULT_BUFFER_POOL = new DefaultByteBufferPool(true, 17 * 1024, -1, 12);
 
     private final ByteBufferPool bufferPool;
+    private final Executor delegatedTaskExecutor;
     private volatile SSLContext sslContext;
 
     /**
@@ -95,12 +97,23 @@ public class UndertowXnioSsl extends XnioSsl {
 
     /**
      * Construct a new instance.
-     *  @param xnio the XNIO instance to associate with
+     * @param xnio the XNIO instance to associate with
      * @param optionMap the options for this provider
      * @param sslContext the SSL context to use for this instance
      */
     public UndertowXnioSsl(final Xnio xnio, final OptionMap optionMap, final SSLContext sslContext) {
         this(xnio, optionMap, DEFAULT_BUFFER_POOL, sslContext);
+    }
+
+    /**
+     * Construct a new instance.
+     * @param xnio the XNIO instance to associate with
+     * @param optionMap the options for this provider
+     * @param sslContext the SSL context to use for this instance
+     * @param delegatedTaskExecutor Executor instance used to run {@link SSLEngine#getDelegatedTask() delegated tasks}.
+     */
+    public UndertowXnioSsl(final Xnio xnio, final OptionMap optionMap, final SSLContext sslContext, final Executor delegatedTaskExecutor) {
+        this(xnio, optionMap, DEFAULT_BUFFER_POOL, sslContext, delegatedTaskExecutor);
     }
 
     /**
@@ -125,9 +138,22 @@ public class UndertowXnioSsl extends XnioSsl {
      * @param sslContext the SSL context to use for this instance
      */
     public UndertowXnioSsl(final Xnio xnio, final OptionMap optionMap, ByteBufferPool bufferPool, final SSLContext sslContext) {
+        this(xnio, optionMap, bufferPool, sslContext, null);
+    }
+
+    /**
+     * Construct a new instance.
+     *  @param xnio the XNIO instance to associate with
+     * @param optionMap the options for this provider
+     * @param bufferPool
+     * @param sslContext the SSL context to use for this instance
+     * @param delegatedTaskExecutor Executor instance used to run {@link SSLEngine#getDelegatedTask() delegated tasks}.
+     */
+    public UndertowXnioSsl(final Xnio xnio, final OptionMap optionMap, ByteBufferPool bufferPool, final SSLContext sslContext, final Executor delegatedTaskExecutor) {
         super(xnio, sslContext, optionMap);
         this.bufferPool = bufferPool;
         this.sslContext = sslContext;
+        this.delegatedTaskExecutor = delegatedTaskExecutor;
     }
 
     /**
@@ -138,6 +164,15 @@ public class UndertowXnioSsl extends XnioSsl {
     @SuppressWarnings("unused")
     public SSLContext getSslContext() {
         return sslContext;
+    }
+
+    /**
+     * Get the {@link Executor} used to run delegated tasks or {@code null} if no executor is configured.
+     *
+     * @return the delegated task executor or null
+     */
+    Executor getDelegatedTaskExecutor() {
+        return delegatedTaskExecutor;
     }
 
     /**
@@ -200,11 +235,11 @@ public class UndertowXnioSsl extends XnioSsl {
     }
 
     public SslConnection wrapExistingConnection(StreamConnection connection, OptionMap optionMap) {
-        return new UndertowSslConnection(connection, createSSLEngine(sslContext, optionMap, (InetSocketAddress) connection.getPeerAddress(), true), bufferPool);
+        return new UndertowSslConnection(connection, createSSLEngine(sslContext, optionMap, (InetSocketAddress) connection.getPeerAddress(), true), bufferPool, delegatedTaskExecutor);
     }
 
     public SslConnection wrapExistingConnection(StreamConnection connection, OptionMap optionMap, boolean clientMode) {
-        return new UndertowSslConnection(connection, createSSLEngine(sslContext, optionMap, (InetSocketAddress) connection.getPeerAddress(), clientMode), bufferPool);
+        return new UndertowSslConnection(connection, createSSLEngine(sslContext, optionMap, (InetSocketAddress) connection.getPeerAddress(), clientMode), bufferPool, delegatedTaskExecutor);
     }
 
     public SslConnection wrapExistingConnection(StreamConnection connection, OptionMap optionMap, URI destinationURI) {
@@ -214,7 +249,7 @@ public class UndertowXnioSsl extends XnioSsl {
             sslParameters.setServerNames(Collections.singletonList(new SNIHostName(destinationURI.getHost())));
             sslEngine.setSSLParameters(sslParameters);
         }
-        return new UndertowSslConnection(connection, sslEngine, bufferPool);
+        return new UndertowSslConnection(connection, sslEngine, bufferPool, delegatedTaskExecutor);
     }
 
     private InetSocketAddress getPeerAddress(URI destinationURI) {
@@ -447,7 +482,7 @@ public class UndertowXnioSsl extends XnioSsl {
 
                 sslEngine.setSSLParameters(params);
 
-                final SslConnection wrappedConnection = new UndertowSslConnection(connection, sslEngine, bufferPool);
+                final SslConnection wrappedConnection = new UndertowSslConnection(connection, sslEngine, bufferPool, delegatedTaskExecutor);
                 if (!futureResult.setResult(wrappedConnection)) {
                     IoUtils.safeClose(connection);
                 } else {

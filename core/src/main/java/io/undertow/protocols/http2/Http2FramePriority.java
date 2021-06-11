@@ -47,7 +47,7 @@ class Http2FramePriority implements FramePriority<Http2Channel, AbstractHttp2Str
         if ((newFrame.getChannel().isClient() && newFrame instanceof Http2HeadersStreamSinkChannel) ||
                 newFrame instanceof Http2PushPromiseStreamSinkChannel) {
             if (newFrame instanceof Http2PushPromiseStreamSinkChannel) {
-                int streamId = ((Http2PushPromiseStreamSinkChannel) newFrame).getStreamId();
+                int streamId = ((Http2PushPromiseStreamSinkChannel) newFrame).getPushedStreamId();
                 if (streamId > nextId) {
                     return false;
                 } else if (streamId == nextId) {
@@ -90,15 +90,13 @@ class Http2FramePriority implements FramePriority<Http2Channel, AbstractHttp2Str
     @Override
     public void frameAdded(AbstractHttp2StreamSinkChannel addedFrame, List<AbstractHttp2StreamSinkChannel> pendingFrames, Deque<AbstractHttp2StreamSinkChannel> holdFrames) {
         Iterator<AbstractHttp2StreamSinkChannel> it = holdFrames.iterator();
-
         while (it.hasNext()) {
             AbstractHttp2StreamSinkChannel pending = it.next();
             boolean incrementNextId = false;
-
             if ((pending.getChannel().isClient() && pending instanceof Http2HeadersStreamSinkChannel) ||
                     pending instanceof Http2PushPromiseStreamSinkChannel) {
                 if (pending instanceof Http2PushPromiseStreamSinkChannel) {
-                    int streamId = ((Http2PushPromiseStreamSinkChannel) pending).getStreamId();
+                    int streamId = ((Http2PushPromiseStreamSinkChannel) pending).getPushedStreamId();
                     if (streamId > nextId) {
                         continue;
                     } else if (streamId == nextId) {

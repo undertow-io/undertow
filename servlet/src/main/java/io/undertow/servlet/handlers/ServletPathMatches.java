@@ -24,6 +24,7 @@ import static io.undertow.servlet.handlers.ServletPathMatch.Type.REWRITE;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,10 +34,14 @@ import java.util.Set;
 import javax.servlet.DispatcherType;
 import javax.servlet.http.MappingMatch;
 
+import io.undertow.UndertowLogger;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.cache.LRUCache;
+import io.undertow.server.handlers.resource.CachingResourceManager;
 import io.undertow.server.handlers.resource.Resource;
+import io.undertow.server.handlers.resource.ResourceChangeEvent;
+import io.undertow.server.handlers.resource.ResourceChangeListener;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.Deployment;
@@ -64,12 +69,48 @@ public class ServletPathMatches {
 
     private volatile ServletPathMatchesData data;
 
-    private final LRUCache<String, ServletPathMatch> pathMatchCache = new LRUCache<>(1000, -1, true); //TODO: configurable
+    // cache for fixed data matches (no welcome files involved)
+    private final LRUCache<String, ServletPathMatch> pathMatchCacheFixed;
+
+    // cache for resource matches that can change
+    private final LRUCache<String, ServletPathMatch> pathMatchCacheResources;
 
     public ServletPathMatches(final Deployment deployment) {
         this.deployment = deployment;
         this.welcomePages = deployment.getDeploymentInfo().getWelcomePages().toArray(new String[deployment.getDeploymentInfo().getWelcomePages().size()]);
         this.resourceManager = deployment.getDeploymentInfo().getResourceManager();
+        this.pathMatchCacheFixed = new LRUCache<>(1000, -1, true);
+        this.pathMatchCacheResources = new LRUCache<>(1000,
+                resourceManager instanceof CachingResourceManager? ((CachingResourceManager) resourceManager).getMaxAge() : -1, true);
+        // add change listener for welcome pages
+        if (this.resourceManager.isResourceChangeListenerSupported()) {
+            try {
+                this.resourceManager.registerResourceChangeListener(new ResourceChangeListener() {
+
+                    @Override
+                    public void handleChanges(Collection<ResourceChangeEvent> changes) {
+                        for (ResourceChangeEvent change : changes) {
+                            // only check added or removed resources that can change welcome files
+                            if (change.getType() != ResourceChangeEvent.Type.MODIFIED) {
+                                String path = "/" + change.getResource();
+                                // remove direct match and directory match
+                                pathMatchCacheResources.remove(path);
+                                pathMatchCacheResources.remove(path + "/");
+                                // check welcome pages
+                                for (String welcomePage: welcomePages) {
+                                    if (path.endsWith("/" + welcomePage)) {
+                                        String pathToUpdate = path.substring(0, path.length() - welcomePage.length());
+                                        pathMatchCacheResources.remove(pathToUpdate);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                UndertowLogger.ROOT_LOGGER.couldNotRegisterChangeListener(e);
+            }
+        }
     }
 
     public void initData(){
@@ -81,13 +122,17 @@ public class ServletPathMatches {
     }
 
     public ServletPathMatch getServletHandlerByPath(final String path) {
-        ServletPathMatch existing = pathMatchCache.get(path);
+        ServletPathMatch existing = pathMatchCacheFixed.get(path);
+        if (existing == null) {
+            existing = pathMatchCacheResources.get(path);
+        }
         if(existing != null) {
             return existing;
         }
+
         ServletPathMatch match = getData().getServletHandlerByPath(path);
         if (!match.isRequiredWelcomeFileMatch()) {
-            pathMatchCache.add(path, match);
+            pathMatchCacheFixed.add(path, match);
             return match;
         }
         try {
@@ -95,7 +140,7 @@ public class ServletPathMatches {
             String remaining = match.getRemaining() == null ? match.getMatched() : match.getRemaining();
             Resource resource = resourceManager.getResource(remaining);
             if (resource == null || !resource.isDirectory()) {
-                pathMatchCache.add(path, match);
+                pathMatchCacheResources.add(path, match);
                 return match;
             }
 
@@ -105,19 +150,19 @@ public class ServletPathMatches {
             ServletPathMatch welcomePage = findWelcomeFile(pathWithTrailingSlash, !pathEndsWithSlash);
 
             if (welcomePage != null) {
-                pathMatchCache.add(path, welcomePage);
+                pathMatchCacheResources.add(path, welcomePage);
                 return welcomePage;
             } else {
                 welcomePage = findWelcomeServlet(pathWithTrailingSlash, !pathEndsWithSlash);
                 if (welcomePage != null) {
-                    pathMatchCache.add(path, welcomePage);
+                    pathMatchCacheResources.add(path, welcomePage);
                     return welcomePage;
                 } else if(pathEndsWithSlash) {
-                    pathMatchCache.add(path, match);
+                    pathMatchCacheResources.add(path, match);
                     return match;
                 } else {
                     ServletPathMatch redirect = new ServletPathMatch(match.getServletChain(), match.getMatched(), match.getRemaining(), REDIRECT, "/");
-                    pathMatchCache.add(path, redirect);
+                    pathMatchCacheResources.add(path, redirect);
                     return redirect;
                 }
             }
@@ -130,7 +175,8 @@ public class ServletPathMatches {
 
     public void invalidate() {
         this.data = null;
-        this.pathMatchCache.clear();
+        this.pathMatchCacheResources.clear();
+        this.pathMatchCacheFixed.clear();
     }
 
     private ServletPathMatchesData getData() {
@@ -229,7 +275,7 @@ public class ServletPathMatches {
         //now loop through all servlets.
         for (Map.Entry<String, ServletHandler> entry : servlets.getServletHandlers().entrySet()) {
             final ServletHandler handler = entry.getValue();
-            //add the servlet to the approprite path maps
+            //add the servlet to the appropriate path maps
             for (String path : handler.getManagedServlet().getServletInfo().getMappings()) {
                 if (path.equals("/")) {
                     //the default servlet
@@ -281,7 +327,7 @@ public class ServletPathMatches {
 
             final Map<DispatcherType, List<ManagedFilter>> noExtension = new EnumMap<>(DispatcherType.class);
             final Map<String, Map<DispatcherType, List<ManagedFilter>>> extension = new HashMap<>();
-            //initalize the extension map. This contains all the filers in the noExtension map, plus
+            //initialize the extension map. This contains all the filers in the noExtension map, plus
             //any filters that match the extension key
             for (String ext : extensionMatches) {
                 extension.put(ext, new EnumMap<DispatcherType, List<ManagedFilter>>(DispatcherType.class));
@@ -331,16 +377,36 @@ public class ServletPathMatches {
                     ServletHandler pathServlet = targetServletMatch.handler;
                     String pathMatch = targetServletMatch.matchedPath;
 
-                    boolean defaultServletMatch = targetServletMatch.defaultServlet;
-                    if (defaultServletMatch && extensionServlets.containsKey(entry.getKey())) {
+                    final boolean defaultServletMatch;
+                    final String servletMatchPattern;
+                    final MappingMatch mappingMatch;
+                    if (targetServletMatch.defaultServlet) {
+                        // Path matches always take precedence over extension matches, however the default servlet is matched
+                        // at a lower priority, after extension matches. The "/*" pattern is applied implicitly onto the
+                        // default servlet. If there's an extension match in addition to a non-default servlet path match,
+                        // the servlet path match is higher priority. However if the path match is the default servlets
+                        // default catch-all path, the extension match is a higher priority.
+                        ServletHandler extensionServletHandler = extensionServlets.get(entry.getKey());
+                        if (extensionServletHandler != null) {
+                            defaultServletMatch = false;
+                            pathServlet = extensionServletHandler;
+                            servletMatchPattern = "*." + entry.getKey();
+                            mappingMatch = MappingMatch.EXTENSION;
+                        } else {
+                            defaultServletMatch = true;
+                            servletMatchPattern = "/";
+                            mappingMatch = MappingMatch.DEFAULT;
+                        }
+                    } else {
                         defaultServletMatch = false;
-                        pathServlet = extensionServlets.get(entry.getKey());
+                        servletMatchPattern = path;
+                        mappingMatch = MappingMatch.PATH;
                     }
                     HttpHandler handler = pathServlet;
                     if (!entry.getValue().isEmpty()) {
                         handler = new FilterHandler(entry.getValue(), deploymentInfo.isAllowNonStandardWrappers(), handler);
                     }
-                    builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, pathServlet.getManagedServlet(), entry.getValue(), pathMatch, deploymentInfo, defaultServletMatch, defaultServletMatch ? MappingMatch.DEFAULT : MappingMatch.EXTENSION, defaultServletMatch ? "/" : "*." + entry.getKey()));
+                    builder.addExtensionMatch(prefix, entry.getKey(), servletChain(handler, pathServlet.getManagedServlet(), entry.getValue(), pathMatch, deploymentInfo, defaultServletMatch, mappingMatch, servletMatchPattern));
                 }
             } else if (path.isEmpty()) {
                 //the context root match

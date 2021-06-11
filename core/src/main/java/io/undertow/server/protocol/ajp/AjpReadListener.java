@@ -55,7 +55,10 @@ import static org.xnio.IoUtils.safeClose;
 
 final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
 
-    private static final byte[] CPONG = {'A', 'B', 0, 1, 9}; //CPONG response data
+    private static final byte[] CPONG = {'A', 'B', 0, 1, 9};
+    private static final byte[] SEND_HEADERS_INTERNAL_SERVER_ERROR_MSG = {'A', 'B', 0, 8, 4, (byte)((500 >> 8) & 0xFF) , (byte)(500 & 0xFF), 0, 0, '\0', 0, 0};
+    private static final byte[] SEND_HEADERS_BAD_REQUEST_MSG = {'A', 'B', 0, 8, 4, (byte)((400 >> 8) & 0xFF) , (byte)(400 & 0xFF), 0, 0, '\0', 0, 0};
+    private static final byte[] END_RESPONSE = {'A', 'B', 0, 2, 5, 1};
 
     private final AjpServerConnection connection;
     private final String scheme;
@@ -119,13 +122,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             do {
                 if (existing == null) {
                     buffer.clear();
-                    try {
-                        res = channel.read(buffer);
-                    } catch (IOException e) {
-                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                        safeClose(connection);
-                        return;
-                    }
+                    res = channel.read(buffer);
                 } else {
                     res = buffer.remaining();
                 }
@@ -141,17 +138,10 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                     return;
                 }
                 if (res == -1) {
-                    try {
-                        channel.shutdownReads();
-                        final StreamSinkChannel responseChannel = connection.getChannel().getSinkChannel();
-                        responseChannel.shutdownWrites();
-                        safeClose(connection);
-                    } catch (IOException e) {
-                        UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                        // fuck it, it's all ruined
-                        safeClose(connection);
-                        return;
-                    }
+                    channel.shutdownReads();
+                    final StreamSinkChannel responseChannel = connection.getChannel().getSinkChannel();
+                    responseChannel.shutdownWrites();
+                    safeClose(connection);
                     return;
                 }
                 bytesRead = true;
@@ -216,64 +206,85 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             //we need to set the write ready handler. This allows the response conduit to wrap it
             responseConduit.setWriteReadyHandler(writeReadyHandler);
 
-            try {
-                connection.setSSLSessionInfo(state.createSslSessionInfo());
-                httpServerExchange.setSourceAddress(state.createPeerAddress());
-                httpServerExchange.setDestinationAddress(state.createDestinationAddress());
-                if(scheme != null) {
-                    httpServerExchange.setRequestScheme(scheme);
-                }
-                if(state.attributes != null) {
-                    httpServerExchange.putAttachment(HttpServerExchange.REQUEST_ATTRIBUTES, state.attributes);
-                }
-                AjpRequestParseState oldState = state;
-                state = null;
-                this.httpServerExchange = null;
-                httpServerExchange.setPersistent(true);
+            connection.setSSLSessionInfo(state.createSslSessionInfo());
+            httpServerExchange.setSourceAddress(state.createPeerAddress());
+            httpServerExchange.setDestinationAddress(state.createDestinationAddress());
+            if(scheme != null) {
+                httpServerExchange.setRequestScheme(scheme);
+            }
+            if(state.attributes != null) {
+                httpServerExchange.putAttachment(HttpServerExchange.REQUEST_ATTRIBUTES, state.attributes);
+            }
+            AjpRequestParseState oldState = state;
+            state = null;
+            this.httpServerExchange = null;
+            httpServerExchange.setPersistent(true);
 
-                if(recordRequestStartTime) {
-                    Connectors.setRequestStartTime(httpServerExchange);
-                }
-                connection.setCurrentExchange(httpServerExchange);
-                if(connectorStatistics != null) {
-                    connectorStatistics.setup(httpServerExchange);
-                }
-                if(!Connectors.areRequestHeadersValid(httpServerExchange.getRequestHeaders())) {
-                    oldState.badRequest = true;
-                    UndertowLogger.REQUEST_IO_LOGGER.debugf("Invalid AJP request from %s, request contained invalid headers", connection.getPeerAddress());
-                }
+            if(recordRequestStartTime) {
+                Connectors.setRequestStartTime(httpServerExchange);
+            }
+            connection.setCurrentExchange(httpServerExchange);
+            if(connectorStatistics != null) {
+                connectorStatistics.setup(httpServerExchange);
+            }
+            if(!Connectors.areRequestHeadersValid(httpServerExchange.getRequestHeaders())) {
+                oldState.badRequest = true;
+                UndertowLogger.REQUEST_IO_LOGGER.debugf("Invalid AJP request from %s, request contained invalid headers", connection.getPeerAddress());
+            }
 
-                if(oldState.badRequest) {
-                    httpServerExchange.setStatusCode(StatusCodes.BAD_REQUEST);
-                    httpServerExchange.endExchange();
-                    safeClose(connection);
-                } else {
-                    Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
-                }
-
-            } catch (Throwable t) {
-                //TODO: we should attempt to return a 500 status code in this situation
-                UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
+            if(oldState.badRequest) {
+                httpServerExchange.setStatusCode(StatusCodes.BAD_REQUEST);
+                httpServerExchange.endExchange();
+                handleBadRequest();
                 safeClose(connection);
+            } else {
+                Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
             }
         } catch (BadRequestException e) {
             UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
-            httpServerExchange.setStatusCode(StatusCodes.BAD_REQUEST);
-            httpServerExchange.endExchange();
+            handleBadRequest();
             safeClose(connection);
-        } catch (Exception e) {
-            UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(e);
+        } catch (IOException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+            handleInternalServerError();
+            safeClose(connection);
+        } catch (Throwable t) {
+            UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
+            handleInternalServerError();
             safeClose(connection);
         } finally {
             if (free) pooled.close();
         }
     }
 
+    private void handleInternalServerError() {
+        sendMessages(SEND_HEADERS_INTERNAL_SERVER_ERROR_MSG, END_RESPONSE);
+    }
+
+    private void handleBadRequest() {
+        sendMessages(SEND_HEADERS_BAD_REQUEST_MSG, END_RESPONSE);
+    }
+
     private void handleCPing() {
+        sendMessages(CPONG);
+    }
+
+    private void sendMessages(final byte[]... rawMessages) {
         state = new AjpRequestParseState();
         final StreamConnection underlyingChannel = connection.getChannel();
         underlyingChannel.getSourceChannel().suspendReads();
-        final ByteBuffer buffer = ByteBuffer.wrap(CPONG);
+        // detect buffer size
+        int bufferSize = 0;
+        for (int i = 0; i < rawMessages.length; i++) {
+            bufferSize += rawMessages[i].length;
+        }
+        // fill in buffer
+        final ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
+        for (int i = 0; i < rawMessages.length; i++) {
+            buffer.put(rawMessages[i]);
+        }
+        buffer.flip();
+        // send buffer content
         int res;
         try {
             do {

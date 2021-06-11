@@ -28,7 +28,7 @@
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-parent</artifactId>
-    <version>2.2.4.Final-SNAPSHOT</version>
+    <version>2.2.9.Final-SNAPSHOT</version>
 
     <name>Undertow</name>
     <description>Undertow</description>
@@ -77,6 +77,7 @@
         <!-- TODO remove this dependency once xnio upgrades to latest jboss threads -->
         <version.org.jboss.threads>3.1.0.Final</version.org.jboss.threads>
         <version.org.wildfly.common>1.5.4.Final</version.org.wildfly.common>
+        <version.org.wildfly.client-config>1.0.1.Final</version.org.wildfly.client-config>
 
         <!-- jacoco -->
         <version.org.jacoco>0.7.9</version.org.jacoco>
@@ -99,9 +100,11 @@
         <!-- Non-default maven plugin versions and configuration -->
         <version.org.wildfly.openssl>1.0.4.Final</version.org.wildfly.openssl>
         <version.checkstyle>7.1</version.checkstyle>
+        <version.bundle.plugin>5.1.1</version.bundle.plugin>
 
         <version.jmh>1.21</version.jmh>
 
+        <version.org.wildfly.extras.batavia>1.0.4.Final</version.org.wildfly.extras.batavia>
     </properties>
 
     <modules>
@@ -111,6 +114,7 @@
         <module>examples</module>
         <module>websockets-jsr</module>
         <module>benchmarks</module>
+        <module>jakartaee9</module>
     </modules>
 
     <build>
@@ -264,6 +268,11 @@
                             </pluginExecutions>
                         </lifecycleMappingMetadata>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.felix</groupId>
+                    <artifactId>maven-bundle-plugin</artifactId>
+                    <version>${version.bundle.plugin}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -502,6 +511,18 @@
                 <scope>provided</scope>
             </dependency>
 
+            <dependency>
+                <groupId>org.wildfly.extras.batavia</groupId>
+                <artifactId>transformer-api</artifactId>
+                <version>${version.org.wildfly.extras.batavia}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.wildfly.extras.batavia</groupId>
+                <artifactId>transformer-impl-eclipse</artifactId>
+                <version>${version.org.wildfly.extras.batavia}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -636,6 +657,18 @@
             <properties>
                 <test.categories>NOT io.undertow.testutils.category.UnitTest</test.categories>
             </properties>
+        </profile>
+
+        <profile>
+            <id>osgi</id>
+            <activation>
+                <property>
+                    <name>osgi</name>
+                </property>
+            </activation>
+            <modules>
+                <module>karaf</module>
+            </modules>
         </profile>
     </profiles>
 

@@ -28,6 +28,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.FlexBase64;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -56,14 +57,16 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.Assert.assertTrue;
+
 @RunWith(DefaultServer.class)
 @HttpOneOnly
 public class TestMessagesReceivedInOrder {
 
-    private static int MESSAGES = 1000;
-
+    private static final int MESSAGES = 1000;
 
     private static final List<Throwable> stacks = new CopyOnWriteArrayList<>();
+    private static DeploymentManager deploymentManager;
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -84,11 +87,18 @@ public class TestMessagesReceivedInOrder {
                 .setDeploymentName("servletContext.war");
 
 
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
+        deploymentManager = container.addDeployment(builder);
+        deploymentManager.deploy();
 
+        DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/", deploymentManager.start()));
+    }
 
-        DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/", manager.start()));
+    @AfterClass
+    public static void cleanup() throws ServletException {
+        if (deploymentManager != null) {
+            deploymentManager.stop();
+            deploymentManager.undeploy();
+        }
     }
 
     @Test
@@ -134,12 +144,12 @@ public class TestMessagesReceivedInOrder {
                                              done.countDown();
 
                                          } catch (Throwable t) {
-                                             System.out.println(t);
+                                             t.printStackTrace();
                                          }
                                      }
                                  }, clientEndpointConfig, new URI(DefaultServer.getDefaultServerURL() + "/webSocket")
                 );
-        done.await(30, TimeUnit.SECONDS);
+        assertTrue(done.await(30, TimeUnit.SECONDS));
         if(error.get() != null) {
             Assert.fail(error.get());
         }

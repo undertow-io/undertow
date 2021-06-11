@@ -28,6 +28,7 @@ import io.undertow.websockets.extensions.PerMessageDeflateHandshake;
 import io.undertow.websockets.jsr.JsrWebSocketFilter;
 import io.undertow.websockets.jsr.ServerEndpointConfigImpl;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
+import org.junit.AfterClass;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.OptionMap;
@@ -38,6 +39,8 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 
 import javax.servlet.DispatcherType;
+import javax.servlet.ServletException;
+
 import java.net.InetSocketAddress;
 
 /**
@@ -45,6 +48,7 @@ import java.net.InetSocketAddress;
  */
 public class ProgramaticAutobahnServer implements Runnable {
 
+    private static DeploymentManager deploymentManager;
     private final int port;
 
     public ProgramaticAutobahnServer(final int port) {
@@ -94,16 +98,23 @@ public class ProgramaticAutobahnServer implements Runnable {
                                             .addExtension(new PerMessageDeflateHandshake())
                             );
 
-            DeploymentManager manager = container.addDeployment(builder);
-            manager.deploy();
+            deploymentManager = container.addDeployment(builder);
+            deploymentManager.deploy();
 
 
-            openListener.setRootHandler(manager.start());
+            openListener.setRootHandler(deploymentManager.start());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
+    @AfterClass
+    public static void cleanup() throws ServletException {
+        if (deploymentManager != null) {
+            deploymentManager.stop();
+            deploymentManager.undeploy();
+        }
+    }
 
     public static void main(String[] args) {
         new ProgramaticAutobahnServer(7777).run();

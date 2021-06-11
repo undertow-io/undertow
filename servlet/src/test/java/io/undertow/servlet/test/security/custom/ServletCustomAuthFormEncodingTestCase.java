@@ -78,11 +78,15 @@ public class ServletCustomAuthFormEncodingTestCase {
                 .addAuthenticationMechanism("FORM", CustomEncodingAuthenticationMechanism.FACTORY);
 
         DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
+        CustomEncodingAuthenticationMechanism authenticationMechanism;
+        try {
+            manager.deploy();
 
-        CustomEncodingAuthenticationMechanism authenticationMechanism = getCustomeAuth(manager);
-        assertEquals("ISO-8859-1", authenticationMechanism.charset);
-        manager.undeploy();
+            authenticationMechanism = getCustomeAuth(manager);
+            assertEquals("ISO-8859-1", authenticationMechanism.charset);
+        } finally {
+            manager.undeploy();
+        }
 
         builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -96,11 +100,14 @@ public class ServletCustomAuthFormEncodingTestCase {
                 .addAuthenticationMechanism("FORM", CustomEncodingAuthenticationMechanism.FACTORY);
 
         manager = container.addDeployment(builder);
-        manager.deploy();
+        try {
+            manager.deploy();
 
-        authenticationMechanism = getCustomeAuth(manager);
-        assertEquals("UTF-8", authenticationMechanism.charset);
-        manager.undeploy();
+            authenticationMechanism = getCustomeAuth(manager);
+            assertEquals("UTF-8", authenticationMechanism.charset);
+        } finally {
+            manager.undeploy();
+        }
         builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
                 .setContextPath("/servletContext")
@@ -113,11 +120,14 @@ public class ServletCustomAuthFormEncodingTestCase {
                 .addAuthenticationMechanism("FORM", CustomEncodingAuthenticationMechanism.FACTORY);
 
         manager = container.addDeployment(builder);
-        manager.deploy();
+        try {
+            manager.deploy();
 
-        authenticationMechanism = getCustomeAuth(manager);
-        assertEquals("UTF-8", authenticationMechanism.charset);
-        manager.undeploy();
+            authenticationMechanism = getCustomeAuth(manager);
+            assertEquals("UTF-8", authenticationMechanism.charset);
+        } finally {
+            manager.undeploy();
+        }
     }
 
     private CustomEncodingAuthenticationMechanism getCustomeAuth(DeploymentManager manager) {
