@@ -26,6 +26,7 @@ import io.undertow.security.impl.ClientCertAuthenticationMechanism;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
+import io.undertow.testutils.TLSv13Ignore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
@@ -54,6 +55,7 @@ import static org.xnio.SslClientAuthMode.NOT_REQUESTED;
  */
 @RunWith(DefaultServer.class)
 @ProxyIgnore
+@TLSv13Ignore("UNDERTOW-1812: TLSv1.3 does not support renegotiation")
 public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
 
     private static SSLContext clientSSLContext;

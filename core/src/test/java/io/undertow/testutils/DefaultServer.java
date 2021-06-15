@@ -24,6 +24,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.annotation.Annotation;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -204,6 +205,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final boolean dump = Boolean.getBoolean("test.dump");
     private static final boolean single = Boolean.getBoolean("test.single");
     private static final boolean openssl = Boolean.getBoolean("test.openssl");
+    private static final boolean tlsv13 = Boolean.getBoolean("test.tlsv13");
     private static final int runs = Integer.getInteger("test.runs", 1);
 
     private static final DelegatingHandler rootHandler = new DelegatingHandler();
@@ -250,7 +252,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     }
 
     private static SSLContext createSSLContext(final KeyStore keyStore, final KeyStore trustStore, boolean client) throws IOException {
-        return createSSLContext(keyStore, trustStore, "TLSv1.2", client);
+        return createSSLContext(keyStore, trustStore, "TLS", client);
     }
 
     private static SSLContext createSSLContext(final KeyStore keyStore, final KeyStore trustStore, String protocol, boolean client) throws IOException {
@@ -610,11 +612,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         }
         if (h2 || h2c || ajp || h2cUpgrade) {
             //h2c-upgrade we still allow HTTP1
-            HttpOneOnly httpOneOnly = method.getAnnotation(HttpOneOnly.class);
-            if (httpOneOnly == null) {
-                httpOneOnly = method.getMethod().getDeclaringClass().getAnnotation(HttpOneOnly.class);
-            }
-            if (httpOneOnly != null) {
+            if (hasAnnotation(method, HttpOneOnly.class)) {
                 notifier.fireTestIgnored(describeChild(method));
                 return;
             }
@@ -622,23 +620,16 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 assumeAlpnEnabled();
             }
         }
-        if (https) {
-            HttpsIgnore httpsIgnore = method.getAnnotation(HttpsIgnore.class);
-            if (httpsIgnore == null) {
-                httpsIgnore = method.getMethod().getDeclaringClass().getAnnotation(HttpsIgnore.class);
-            }
-            if (httpsIgnore != null) {
-                notifier.fireTestIgnored(describeChild(method));
-                return;
-            }
+        if (https && hasAnnotation(method, HttpsIgnore.class)) {
+            notifier.fireTestIgnored(describeChild(method));
         }
-        if (isProxy()) {
-            if (method.getAnnotation(ProxyIgnore.class) != null ||
-                    method.getMethod().getDeclaringClass().isAnnotationPresent(ProxyIgnore.class) ||
-                    getTestClass().getJavaClass().isAnnotationPresent(ProxyIgnore.class)) {
-                notifier.fireTestIgnored(describeChild(method));
-                return;
-            }
+        if (isProxy() && hasAnnotation(method, ProxyIgnore.class)) {
+            notifier.fireTestIgnored(describeChild(method));
+            return;
+        }
+        if (isTLSv13() && hasAnnotation(method, TLSv13Ignore.class)) {
+            notifier.fireTestIgnored(describeChild(method));
+            return;
         }
         try {
             if (runs > 1) {
@@ -653,6 +644,12 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         } finally {
             TestHttpClient.afterTest();
         }
+    }
+
+    private boolean hasAnnotation(FrameworkMethod method, Class<? extends Annotation> annotation) {
+        return method.getAnnotation(annotation) != null ||
+                method.getMethod().getDeclaringClass().isAnnotationPresent(annotation) ||
+                getTestClass().getJavaClass().isAnnotationPresent(annotation);
     }
 
     @Override
@@ -728,11 +725,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         SSLContext serverContext = getServerSslContext();
         getClientSSLContext();
 
-        startSSLServer(serverContext, OptionMap.create(SSL_CLIENT_AUTH_MODE, REQUESTED, Options.SSL_ENABLED_PROTOCOLS, Sequence.of("TLSv1.2")));
+        startSSLServer(serverContext, OptionMap.create(SSL_CLIENT_AUTH_MODE, REQUESTED));
     }
 
     public static SSLContext createClientSslContext() {
-        return createClientSslContext("TLSv1.2");
+        return createClientSslContext("TLS");
     }
 
     public static SSLContext createClientSslContext(String protocol) {
@@ -808,7 +805,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         if (isApacheTest()) {
             return;
         }
-        OptionMap combined = OptionMap.builder().addAll(serverOptions).addAll(options)
+        OptionMap combined = OptionMap.builder()
+                .addAll(serverOptions)
+                .set(Options.SSL_ENABLED_PROTOCOLS, Sequence.of(tlsv13 ? "TLSv1.3" : "TLSv1.2"))
+                .addAll(options)
                 .set(Options.USE_DIRECT_BUFFERS, true)
                 .getMap();
 
@@ -939,6 +939,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     public static boolean isH2upgrade() {
         return h2cUpgrade;
+    }
+
+    public static boolean isTLSv13() {
+        return tlsv13;
     }
 
     /**

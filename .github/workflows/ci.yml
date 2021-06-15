@@ -42,7 +42,7 @@ jobs:
         name: surefire-reports-build
         path: '**/surefire-reports/*.txt'
   test-matrix:
-    name: JDK ${{ matrix.jdk }} - ${{ matrix.module }} - ${{ matrix.os }}
+    name: JDK ${{ matrix.jdk }} - ${{ matrix.ipv6 }} - ${{ matrix.module }} ${{ matrix.proxy }} ${{ matrix.tlsv13 }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     needs: build-all
     strategy:
@@ -50,7 +50,27 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         module: [core, servlet, websockets-jsr]
+        proxy: ['-Pproxy', '']
+        ipv6: ['-Dtest.ipv6=true', '']
         jdk: [8, 11]
+        tlsv13: ['-Dtest.tlsv13=true', '']
+        exclude:
+          - ipv6: '-Dtest.ipv6=true'
+            os: 'windows-latest'
+          - proxy: ''
+            os: 'windows-latest'
+          - ipv6: '-Dtest.ipv6=true'
+            jdk: 8
+          - proxy: ''
+            ipv6: ''
+          - tlsv13: '-Dtest.tlsv13=true'
+            os: 'windows-latest'
+          - tlsv13: '-Dtest.tlsv13=true'
+            jdk: 8
+          - tlsv13: '-Dtest.tlsv13=true'
+            ipv6: '-Dtest.ipv6=true'
+          - tlsv13: '-Dtest.tlsv13=true'
+            proxy: ''
     steps:
     - name: Update hosts - linux
       if: matrix.os == 'ubuntu-latest'
@@ -86,53 +106,9 @@ jobs:
       with:
         java-version: ${{ matrix.jdk }}
     - name: Run Tests
-      run: mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }}
+      run: mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} ${{ matrix.ipv6 }} ${{ matrix.tlsv13 }}
     - uses: actions/upload-artifact@v2
       if: failure()
       with:
-        name: surefire-reports-${{ matrix.jdk }}-${{ matrix.module }}-${{ matrix.os }}
-        path: '**/surefire-reports/*.txt'
-  test-matrix-ipv6:
-    name: JDK ${{ matrix.jdk }} - ipv6 - ${{ matrix.module }} ${{ matrix.proxy }} - ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    needs: build-all
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        module: [core, servlet, websockets-jsr]
-        proxy: ['-Pproxy', '']
-        jdk: [11]
-    steps:
-    - name: Update hosts - linux
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo bash -c "echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' > /etc/hosts"
-        sudo bash -c "echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> /etc/hosts"
-        sudo sysctl -w fs.file-max=2097152
-    - uses: n1hility/cancel-previous-runs@v2
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-    - name: Host information
-      run: |
-       hostname || true
-    - uses: actions/checkout@v2
-    - name: Download Maven Repo
-      uses: actions/download-artifact@v1
-      with:
-        name: maven-repo
-        path: .
-    - name: Extract Maven Repo
-      shell: bash
-      run: tar -xzf maven-repo.tgz -C ~
-    - name: Set up JDK ${{ matrix.java }}
-      uses: joschi/setup-jdk@v2
-      with:
-        java-version: ${{ matrix.jdk }}
-    - name: Run Tests
-      run: mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
-    - uses: actions/upload-artifact@v2
-      if: failure()
-      with:
-        name: surefire-reports-${{ matrix.jdk }}-ipv6-${{ matrix.module }}${{ matrix.proxy }}-${{ matrix.os }}
+        name: surefire-reports-${{ matrix.jdk }}${{ matrix.ipv6 }}${{ matrix.tlsv13 }}-${{ matrix.module }}${{ matrix.proxy }}-${{ matrix.os }}
         path: '**/surefire-reports/*.txt'
