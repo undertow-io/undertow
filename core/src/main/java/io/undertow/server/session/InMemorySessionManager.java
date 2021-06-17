@@ -163,18 +163,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         }
         String sessionID = config.findSessionId(serverExchange);
         if (sessionID == null) {
-            int count = 0;
-            while (sessionID == null) {
-                sessionID = sessionIdGenerator.createSessionId();
-                if (sessions.containsKey(sessionID)) {
-                    sessionID = null;
-                }
-                if (count++ == 100) {
-                    //this should never happen
-                    //but we guard against pathalogical session id generators to prevent an infinite loop
-                    throw UndertowMessages.MESSAGES.couldNotGenerateUniqueSessionId();
-                }
-            }
+            sessionID = generateSessionID(100);
         } else {
             if (sessions.containsKey(sessionID)) {
                 throw UndertowMessages.MESSAGES.sessionWithIdAlreadyExists(sessionID);
@@ -344,6 +333,22 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         return startTime;
     }
 
+    private String generateSessionID(final int limit) {
+        String sessionID = null;
+        int count = 0;
+        while (sessionID == null) {
+            sessionID = sessionIdGenerator.createSessionId();
+            if (sessions.containsKey(sessionID)) {
+                sessionID = null;
+            }
+            if (count++ == limit) {
+                //this should never happen
+                //but we guard against pathalogical session id generators to prevent an infinite loop
+                throw UndertowMessages.MESSAGES.couldNotGenerateUniqueSessionId();
+            }
+        }
+        return sessionID;
+    }
 
     /**
      * session implementation for the in memory session manager
@@ -612,7 +617,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public String changeSessionId(final HttpServerExchange exchange, final SessionConfig config) {
             final String oldId = sessionId;
-            String newId = sessionManager.sessionIdGenerator.createSessionId();
+            String newId = sessionManager.generateSessionID(500);
             this.sessionId = newId;
             if(!invalid) {
                 sessionManager.sessions.put(newId, this);
