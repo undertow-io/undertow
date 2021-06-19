@@ -217,12 +217,15 @@ public final class HttpServerExchange extends AbstractAttachable {
      * The default value for this is determined by the {@link io.undertow.UndertowOptions#MAX_ENTITY_SIZE} option. A value
      * of 0 indicates that this is unbounded.
      * <p>
+     * In case of multipart handling, this will default to {@link io.undertow.UndertowOptions#MULTIPART_MAX_ENTITY_SIZE}
+     * <p>
      * If this entity size is exceeded the request channel will be forcibly closed.
      * <p>
      * TODO: integrate this with HTTP 100-continue responses, to make it possible to send a 417 rather than just forcibly
      * closing the channel.
      *
      * @see io.undertow.UndertowOptions#MAX_ENTITY_SIZE
+     * @see io.undertow.UndertowOptions#MULTIPART_MAX_ENTITY_SIZE
      */
     private long maxEntitySize;
 
