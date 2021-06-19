@@ -39,6 +39,7 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
@@ -154,7 +155,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
         final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), request, response, info);
         //set the max request size if applicable
-        if (info.getServletChain().getManagedServlet().getMaxRequestSize() > 0) {
+        if (info.getServletChain().getManagedServlet().getMaxRequestSize() > 0 && isMultiPartExchange(exchange)) {
             exchange.setMaxEntitySize(info.getServletChain().getManagedServlet().getMaxRequestSize());
         }
         exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
@@ -224,7 +225,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         servletRequestContext.setServletRequest(request);
         servletRequestContext.setServletResponse(response);
         //set the max request size if applicable
-        if (info.getServletChain().getManagedServlet().getMaxRequestSize() > 0) {
+        if (info.getServletChain().getManagedServlet().getMaxRequestSize() > 0 && isMultiPartExchange(exchange)) {
             exchange.setMaxEntitySize(info.getServletChain().getManagedServlet().getMaxRequestSize());
         }
         exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
@@ -239,6 +240,16 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
                 throw (RuntimeException) e;
             }
             throw new ServletException(e);
+        }
+    }
+
+    private boolean isMultiPartExchange(final HttpServerExchange exhange) {
+        //NOTE: should this include Range response?
+        final HeaderValues contentTypeHeaders = exhange.getRequestHeaders().get("Content-Type");
+        if(contentTypeHeaders != null && contentTypeHeaders.size() >0) {
+            return contentTypeHeaders.getFirst().startsWith("multipart");
+        } else {
+            return false;
         }
     }
 
