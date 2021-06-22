@@ -145,6 +145,9 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                 while (sessions.size() >= maxSize && !evictionQueue.isEmpty()) {
 
                     String key = evictionQueue.poll();
+                    if(key == null) {
+                        break;
+                    }
                     UndertowLogger.REQUEST_LOGGER.debugf("Removing session %s as max size has been hit", key);
                     SessionImpl toRemove = sessions.get(key);
                     if (toRemove != null) {
@@ -161,39 +164,49 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         if (config == null) {
             throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
         }
-        String sessionID = config.findSessionId(serverExchange);
-        if (sessionID == null) {
-            int count = 0;
-            while (sessionID == null) {
-                sessionID = sessionIdGenerator.createSessionId();
-                if (sessions.containsKey(sessionID)) {
-                    sessionID = null;
-                }
-                if (count++ == 100) {
-                    //this should never happen
-                    //but we guard against pathalogical session id generators to prevent an infinite loop
-                    throw UndertowMessages.MESSAGES.couldNotGenerateUniqueSessionId();
-                }
-            }
-        } else {
-            if (sessions.containsKey(sessionID)) {
-                throw UndertowMessages.MESSAGES.sessionWithIdAlreadyExists(sessionID);
-            }
-        }
-        Object evictionToken;
-        if (evictionQueue != null) {
-            evictionToken = evictionQueue.offerLastAndReturnToken(sessionID);
-        } else {
-            evictionToken = null;
-        }
-        final SessionImpl session = new SessionImpl(this, sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker(), evictionToken, defaultSessionTimeout);
 
-        UndertowLogger.SESSION_LOGGER.debugf("Created session with id %s for exchange %s", sessionID, serverExchange);
-        sessions.put(sessionID, session);
-        config.setSessionId(serverExchange, session.getId());
+        String sessionID = config.findSessionId(serverExchange);
+        boolean idRequested = false;
+        if (sessionID == null) {
+            sessionID = sessionIdGenerator.createSessionId();
+        } else {
+            idRequested = true;
+        }
+        SessionImpl session;
+        synchronized(this.sessions) {
+            if(this.sessions.containsKey(sessionID)) {
+                if(idRequested) {
+                    throw UndertowMessages.MESSAGES.sessionWithIdAlreadyExists(sessionID);
+                } else {
+                    int count = 0;
+                    sessionID = null;
+                    while (sessionID == null) {
+                        sessionID = sessionIdGenerator.createSessionId();
+                        if (sessions.containsKey(sessionID)) {
+                            sessionID = null;
+                        }
+                        if (count++ == 100) {
+                            //this should 'never' happen
+                            //but we guard against pathalogical session id generators to prevent an infinite loop
+                            throw UndertowMessages.MESSAGES.couldNotGenerateUniqueSessionId();
+                        }
+                    }
+                }
+            }
+            Object evictionToken;
+            if (evictionQueue != null) {
+                evictionToken = evictionQueue.offerLastAndReturnToken(sessionID);
+            } else {
+                evictionToken = null;
+            }
+            session = new SessionImpl(this, sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker(), evictionToken, defaultSessionTimeout);
+            sessions.put(sessionID, session);
+            config.setSessionId(serverExchange, session.getId());
+            serverExchange.putAttachment(NEW_SESSION, session);
+        }
         session.bumpTimeout();
+        UndertowLogger.SESSION_LOGGER.debugf("Created session with id %s for exchange %s", sessionID, serverExchange);
         sessionListeners.sessionCreated(session, serverExchange);
-        serverExchange.putAttachment(NEW_SESSION, session);
 
         if(statisticsEnabled) {
             createdSessionCount.incrementAndGet();
@@ -620,13 +633,16 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public String changeSessionId(final HttpServerExchange exchange, final SessionConfig config) {
             final String oldId = sessionId;
-            String newId = sessionManager.sessionIdGenerator.createSessionId();
-            this.sessionId = newId;
-            if(!invalid) {
-                sessionManager.sessions.put(newId, this);
-                config.setSessionId(exchange, this.getId());
+            String newId = null;
+            synchronized(sessionManager.sessions) {
+                newId = sessionManager.sessionIdGenerator.createSessionId();
+                this.sessionId = newId;
+                if(!invalid) {
+                    sessionManager.sessions.put(newId, this);
+                    config.setSessionId(exchange, this.getId());
+                }
+                sessionManager.sessions.remove(oldId);
             }
-            sessionManager.sessions.remove(oldId);
             sessionManager.sessionListeners.sessionIdChanged(this, oldId);
             UndertowLogger.SESSION_LOGGER.debugf("Changing session id %s to %s", oldId, newId);
 
