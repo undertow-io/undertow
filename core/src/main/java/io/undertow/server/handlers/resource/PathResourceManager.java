@@ -186,6 +186,9 @@ public class PathResourceManager implements ResourceManager  {
     }
 
     public Resource getResource(final String p) {
+        if( p == null ) {
+            return null;
+        }
         String path;
         //base always ends with a /
         if (p.startsWith("/")) {
