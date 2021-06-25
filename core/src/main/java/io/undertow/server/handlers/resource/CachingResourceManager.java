@@ -77,6 +77,9 @@ public class CachingResourceManager implements ResourceManager {
 
     @Override
     public CachedResource getResource(final String p) throws IOException {
+        if( p == null ) {
+            return null;
+        }
         final String path;
         //base always ends with a /
         if (p.startsWith("/")) {
