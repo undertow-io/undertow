@@ -671,5 +671,10 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             cancelTask = null;
         }
 
+        @Override
+        public boolean isInvalid() {
+            return this.invalid;
+        }
+
     }
 }
