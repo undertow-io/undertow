@@ -413,7 +413,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             this.worker = worker;
             this.evictionToken = evictionToken;
             creationTime = lastAccessed = System.currentTimeMillis();
-            this.maxInactiveInterval = maxInactiveInterval;
+            this.setMaxInactiveInterval(maxInactiveInterval);
         }
 
         synchronized void bumpTimeout() {
@@ -421,9 +421,9 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                 return;
             }
 
-            final int maxInactiveInterval = getMaxInactiveInterval();
+            final long maxInactiveInterval = getMaxInactiveIntervalMilis();
             if (maxInactiveInterval > 0) {
-                long newExpireTime = System.currentTimeMillis() + (maxInactiveInterval * 1000L);
+                long newExpireTime = System.currentTimeMillis() + maxInactiveInterval;
                 if(timerCancelKey != null && (newExpireTime < expireTime)) {
                     // We have to re-schedule as the new maxInactiveInterval is lower than the old one
                     if (!timerCancelKey.remove()) {
@@ -437,7 +437,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                     //+1, to make sure that the time has actually expired
                     //we don't re-schedule every time, as it is expensive
                     //instead when it expires we check if the timeout has been bumped, and if so we re-schedule
-                    timerCancelKey = executor.executeAfter(cancelTask, (maxInactiveInterval * 1000L) + 1L, TimeUnit.MILLISECONDS);
+                    timerCancelKey = executor.executeAfter(cancelTask, maxInactiveInterval + 1L, TimeUnit.MILLISECONDS);
                 }
             } else {
                 expireTime = -1;
@@ -502,7 +502,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                 throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
             UndertowLogger.SESSION_LOGGER.debugf("Setting max inactive interval for %s to %s", sessionId, interval);
-            maxInactiveInterval = interval;
+            this.maxInactiveInterval = interval;
         }
 
         @Override
@@ -511,6 +511,13 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                 throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
             }
             return maxInactiveInterval;
+        }
+
+        private long getMaxInactiveIntervalMilis() {
+            if (invalid) {
+                throw UndertowMessages.MESSAGES.sessionIsInvalid(sessionId);
+            }
+            return this.maxInactiveInterval*1000L;
         }
 
         @Override
