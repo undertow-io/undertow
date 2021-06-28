@@ -35,41 +35,41 @@ public class NetworkUtilsAddressParsingTestCase {
         Assert.assertEquals("/127.0.0.1", res.toString());
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV4AddressWithLeadingZero() throws IOException {
         NetworkUtils.parseIpv4Address("01.123.255.2");
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV4AddressToSmall() throws IOException {
         NetworkUtils.parseIpv4Address("01.123.255");
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV4AddressToLarge() throws IOException {
         NetworkUtils.parseIpv4Address("01.123.255.1.1");
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV4AddressMultipleDots() throws IOException {
         NetworkUtils.parseIpv4Address("1..255.2");
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV4AddressMultipleDots2() throws IOException {
         NetworkUtils.parseIpv4Address("1..3.255.2");
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV4Hostname() throws IOException {
         NetworkUtils.parseIpv4Address("localhost");
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV4Hostname2() throws IOException {
         NetworkUtils.parseIpv4Address("ff");
     }
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV4AddressStartsWithDot() throws IOException {
         NetworkUtils.parseIpv4Address(".1.123.255.2");
     }
@@ -133,36 +133,41 @@ public class NetworkUtilsAddressParsingTestCase {
     }
 
     @Test(expected = IOException.class)
+    public void testIpV6AddressWithLeadingZero() throws IOException {
+        NetworkUtils.parseIpv6Address("2001:1db8:100:03:6:ff00:42:8329");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV6AddressToSmall() throws IOException {
         NetworkUtils.parseIpv6Address("2001:1db8:3:6:ff00:42:8329");
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV6AddressToLarge() throws IOException {
         NetworkUtils.parseIpv6Address("2001:1db8:100:3:6:7:ff00:42:8329");
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV6AddressMultipleColons() throws IOException {
         NetworkUtils.parseIpv6Address("2001:1db8:100::3:6:ff00:42:8329");
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV6AddressMultipleColons2() throws IOException {
         NetworkUtils.parseIpv6Address("2001::100::329");
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV6Hostname() throws IOException {
         NetworkUtils.parseIpv6Address("localhost");
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV6Hostname2() throws IOException {
         NetworkUtils.parseIpv6Address("ff");
     }
 
-    @Test(expected = IOException.class)
+    @Test(expected = IllegalArgumentException.class)
     public void testIpV6AddressStartsWithColon() throws IOException {
         NetworkUtils.parseIpv6Address(":2001:1db8:100:3:6:ff00:42:8329");
     }
