@@ -26,6 +26,11 @@ import org.xnio.Option;
 public class UndertowOptions {
 
     /**
+     * The maximum timeout to wait on awaitWritable in milisseconds when not specified.
+     */
+    public static final int DEFAULT_WRITE_TIMEOUT = 600000;
+
+    /**
      * The maximum size in bytes of a http request header.
      */
     public static final Option<Integer> MAX_HEADER_SIZE = Option.simple(UndertowOptions.class, "MAX_HEADER_SIZE", Integer.class);
