@@ -962,10 +962,18 @@ public class ServletContextImpl implements ServletContext {
                     }
                 }
 
-                if (httpSession == null) {
-                    final Session newSession = sessionManager.createSession(exchange, c);
-                    httpSession = SecurityActions.forSession(newSession, this, true);
-                    exchange.putAttachment(sessionAttachmentKey, httpSession);
+                try {
+                    if (httpSession == null) {
+                        final Session newSession = sessionManager.createSession(exchange, c);
+                        httpSession = SecurityActions.forSession(newSession, this, true);
+                        exchange.putAttachment(sessionAttachmentKey, httpSession);
+                    }
+                } catch (IllegalStateException e) {
+                    session = sessionManager.getSession(exchange, c);
+                    if (session != null) {
+                        httpSession = SecurityActions.forSession(session, this, false);
+                        exchange.putAttachment(sessionAttachmentKey, httpSession);
+                    }
                 }
             }
         }
