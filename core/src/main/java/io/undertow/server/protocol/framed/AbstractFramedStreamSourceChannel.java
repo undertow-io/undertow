@@ -122,21 +122,31 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
             return 0;
         }
         try {
+            final PooledByteBuffer localData = data;
             if (frameDataRemaining == 0 && anyAreSet(state, STATE_LAST_FRAME)) {
                 synchronized (lock) {
                     state |= STATE_RETURNED_MINUS_ONE;
                     return -1;
                 }
-            } else if (data != null) {
-                int old = data.getBuffer().limit();
+            } else if (localData != null) {
                 try {
-                    if (count < data.getBuffer().remaining()) {
-                        data.getBuffer().limit((int) (data.getBuffer().position() + count));
+                    final int old = localData.getBuffer().limit();
+                    try {
+                        if (count < localData.getBuffer().remaining()) {
+                            localData.getBuffer().limit((int) (localData.getBuffer().position() + count));
+                        }
+                        return target.write(localData.getBuffer(), position);
+                    } finally {
+                        localData.getBuffer().limit(old);
+                        decrementFrameDataRemaining();
                     }
-                    return target.write(data.getBuffer(), position);
-                } finally {
-                    data.getBuffer().limit(old);
-                    decrementFrameDataRemaining();
+                } catch (IllegalStateException e) {
+                    // NPE should be covered. ISE in case of closed buffer
+                    if (anyAreSet(state, STATE_DONE | STATE_CLOSED | STATE_STREAM_BROKEN)) {
+                        return -1;
+                    } else {
+                        throw e;
+                    }
                 }
             }
             return 0;
@@ -146,7 +156,8 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     }
 
     private void decrementFrameDataRemaining() {
-        if(!data.getBuffer().hasRemaining()) {
+        final PooledByteBuffer localData = data;
+        if(localData != null && !localData.getBuffer().hasRemaining()) {
             frameDataRemaining -= currentDataOriginalSize;
         }
     }
@@ -162,36 +173,44 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
             return 0;
         }
         try {
+            final PooledByteBuffer localData = data;
             if (frameDataRemaining == 0 && anyAreSet(state, STATE_LAST_FRAME)) {
                 synchronized (lock) {
                     state |= STATE_RETURNED_MINUS_ONE;
                     return -1;
                 }
-            } else if (data != null && data.getBuffer().hasRemaining()) {
-                int old = data.getBuffer().limit();
+            } else if (localData != null && localData.getBuffer().hasRemaining()) {
+                int old = localData.getBuffer().limit();
                 try {
-                    if (count < data.getBuffer().remaining()) {
-                        data.getBuffer().limit((int) (data.getBuffer().position() + count));
+                    if (count < localData.getBuffer().remaining()) {
+                        localData.getBuffer().limit((int) (localData.getBuffer().position() + count));
                     }
-                    int written = streamSinkChannel.write(data.getBuffer());
-                    if(data.getBuffer().hasRemaining()) {
+                    int written = streamSinkChannel.write(localData.getBuffer());
+                    if(localData.getBuffer().hasRemaining()) {
                         //we can still add more data
                         //stick it it throughbuffer, otherwise transfer code will continue to attempt to use this method
                         throughBuffer.clear();
-                        Buffers.copy(throughBuffer, data.getBuffer());
+                        Buffers.copy(throughBuffer, localData.getBuffer());
                         throughBuffer.flip();
                     } else {
                         throughBuffer.position(throughBuffer.limit());
                     }
                     return written;
                 } finally {
-                    data.getBuffer().limit(old);
+                    localData.getBuffer().limit(old);
                     decrementFrameDataRemaining();
                 }
             } else {
                 throughBuffer.position(throughBuffer.limit());
             }
             return 0;
+        } catch (IllegalStateException e) {
+            // NPE should be covered. ISE in case of closed buffer
+            if (anyAreSet(state, STATE_DONE | STATE_CLOSED | STATE_STREAM_BROKEN)) {
+                return -1;
+            } else {
+                throw e;
+            }
         } finally {
             exitRead();
         }
@@ -589,29 +608,29 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
     }
 
     private void exitRead() throws IOException {
-        if (data != null && !data.getBuffer().hasRemaining()) {
-            data.close();
-            data = null;
-        }
-        if (frameDataRemaining == 0) {
-            try {
-                synchronized (lock) {
+        synchronized (lock) {
+            if (data != null && !data.getBuffer().hasRemaining()) {
+                data.close();
+                data = null;
+            }
+            if (frameDataRemaining == 0) {
+                try {
                     readFrameCount++;
                     if (pendingFrameData.isEmpty()) {
                         if (anyAreSet(state, STATE_RETURNED_MINUS_ONE)) {
                             state |= STATE_DONE;
                             complete();
                             close();
-                        } else if(anyAreSet(state, STATE_LAST_FRAME)) {
+                        } else if (anyAreSet(state, STATE_LAST_FRAME)) {
                             state |= STATE_WAITNG_MINUS_ONE;
                         } else {
                             waitingForFrame = true;
                         }
                     }
-                }
-            } finally {
-                if (pendingFrameData.isEmpty()) {
-                    framedChannel.notifyFrameReadComplete(this);
+                } finally {
+                    if (pendingFrameData.isEmpty()) {
+                        framedChannel.notifyFrameReadComplete(this);
+                    }
                 }
             }
         }
