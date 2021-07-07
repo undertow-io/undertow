@@ -73,6 +73,7 @@ public class HttpClientTestCase {
 
     private static final String message = "Hello World!";
     public static final String MESSAGE = "/message";
+    public static final String READTIMEOUT = "/readtimeout";
     public static final String POST = "/post";
     private static XnioWorker worker;
 
@@ -113,6 +114,20 @@ public class HttpClientTestCase {
         .addExactPath(MESSAGE, new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
+                sendMessage(exchange);
+            }
+        })
+        .addExactPath(READTIMEOUT, new HttpHandler() {
+            @Override
+            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                try {
+                    //READ_TIMEOUT set as 600ms on the client side
+                    //On the server side intentionally sleep 2000ms
+                    //to make READ_TIMEOUT happening at client side
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 sendMessage(exchange);
             }
         })
@@ -310,6 +325,40 @@ public class HttpClientTestCase {
         }
 
     }
+    @Test
+    public void testReadTimeout() throws Exception {
+        //
+        final UndertowClient client = createClient();
+
+        final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch = new CountDownLatch(1);
+        OptionMap.Builder builder = OptionMap.builder();
+        builder.set(Options.READ_TIMEOUT, 600);
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), builder.getMap()).get();
+        final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(READTIMEOUT);
+        request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+        connection.sendRequest(request, createClientCallback(responses, latch));
+        try {
+            connection.getIoThread().execute(new Runnable() {
+                @Override
+                public void run() {
+                    for (int i = 0; i < 1; i++) {
+                        final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(READTIMEOUT);
+                        request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+                        connection.sendRequest(request, createClientCallback(responses, latch));
+                    }
+                }
+
+            });
+
+            latch.await(10, TimeUnit.SECONDS);
+
+            Assert.assertEquals(0, responses.size());//expected no response since READ_TIMEOUT happens
+        } finally {
+            IoUtils.safeClose(connection);
+        }
+    }
+
 
     private ClientCallback<ClientExchange> createClientCallback(final List<ClientResponse> responses, final CountDownLatch latch) {
         return new ClientCallback<ClientExchange>() {
