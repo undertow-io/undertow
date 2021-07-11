@@ -28,6 +28,7 @@ import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionConfig;
+import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.AuthorizationManager;
 import io.undertow.servlet.api.Deployment;
@@ -375,6 +376,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         HttpSessionImpl session = servletContext.getSession(originalServletContext, exchange, false);
         if (session == null) {
             throw UndertowServletMessages.MESSAGES.noSession();
+        }
+        if (this.exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletResponse().isCommitted()) {
+            if (!this.servletContext.getDeployment().getDeploymentInfo().isOrphanSessionAllowed()) {
+                throw UndertowServletMessages.MESSAGES.sessionIdChangeAfterResponseCommittedNotAllowed();
+            }
+            UndertowServletLogger.REQUEST_LOGGER.sessionIdChangeAfterResponseCommitted();
         }
         String oldId = session.getId();
         Session underlyingSession;
