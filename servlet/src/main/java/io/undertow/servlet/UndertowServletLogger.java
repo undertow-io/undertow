@@ -135,4 +135,12 @@ public interface UndertowServletLogger extends BasicLogger {
 
     @Message(id = 15023, value = "This Context has been already destroyed")
     IllegalStateException contextDestroyed();
+
+    @LogMessage(level = WARN)
+    @Message(id = 15024, value = "Servlet container configured to permit session creation after response was committed. This can result in a memory leak if session has no timeout.")
+    void sessionCreationAfterResponseCommitted();
+
+    @LogMessage(level = WARN)
+    @Message(id = 15025, value = "Servlet container configured to permit session identifier changes after response was committed. This can result in a memory leak if session has no timeout.")
+    void sessionIdChangeAfterResponseCommitted();
 }
