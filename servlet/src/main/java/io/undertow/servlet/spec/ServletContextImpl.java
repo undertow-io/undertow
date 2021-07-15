@@ -885,7 +885,7 @@ public class ServletContextImpl implements ServletContext {
                     if (!this.deployment.getDeploymentInfo().isOrphanSessionAllowed()) {
                         throw UndertowServletMessages.MESSAGES.sessionCreationAfterResponseCommittedNotAllowed();
                     }
-                    UndertowServletLogger.REQUEST_LOGGER.sessionCreationAfterResponseCommitted();
+                    UndertowServletLogger.REQUEST_LOGGER.debug("Servlet container configured to permit session creation after response was committed. This can result in a memory leak if session has no timeout.");
                 }
 
                 String existing = c.findSessionId(exchange);

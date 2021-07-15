@@ -381,7 +381,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             if (!this.servletContext.getDeployment().getDeploymentInfo().isOrphanSessionAllowed()) {
                 throw UndertowServletMessages.MESSAGES.sessionIdChangeAfterResponseCommittedNotAllowed();
             }
-            UndertowServletLogger.REQUEST_LOGGER.sessionIdChangeAfterResponseCommitted();
+            UndertowServletLogger.REQUEST_LOGGER.debug("Servlet container configured to permit session identifier changes after response was committed. This can result in a memory leak if session has no timeout.");
         }
         String oldId = session.getId();
         Session underlyingSession;
