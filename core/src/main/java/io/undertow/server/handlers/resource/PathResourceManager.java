@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -133,7 +134,16 @@ public class PathResourceManager implements ResourceManager  {
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("base");
         }
         this.fileSystem = builder.base.getFileSystem();
-        String basePath = builder.base.normalize().toAbsolutePath().toString();
+        String basePath = null;
+        try {
+            if(builder.followLinks) {
+                basePath = builder.base.normalize().toRealPath().toString();
+            } else {
+                basePath = builder.base.normalize().toRealPath(LinkOption.NOFOLLOW_LINKS).toString();
+            }
+        } catch (IOException e) {
+            throw UndertowMessages.MESSAGES.failedToInitializePathManager(builder.base.toString(), e);
+        }
         if (!basePath.endsWith(fileSystem.getSeparator())) {
             basePath = basePath + fileSystem.getSeparator();
         }
