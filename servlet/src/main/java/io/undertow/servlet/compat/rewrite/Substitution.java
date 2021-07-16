@@ -229,7 +229,7 @@ public class Substitution {
             }
         }
 
-        this.elements = (SubstitutionElement[]) elements.toArray(new SubstitutionElement[0]);
+        this.elements = elements.toArray(new SubstitutionElement[0]);
 
     }
 

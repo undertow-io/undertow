@@ -41,7 +41,6 @@ import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
-import io.undertow.servlet.api.ThreadSetupAction;
 import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.handlers.ServletChain;
@@ -120,7 +119,6 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             return;
         }
 
-        ThreadSetupAction.Handle handle = null;
         ServletContextImpl oldServletContext = null;
         HttpSessionImpl oldSession = null;
         if (servletRequestContext.getCurrentServletContext() != this.servletContext) {

@@ -469,10 +469,6 @@ public class SimpleNonceManager implements SessionNonceManager {
             this(nonce, -1, -1);
         }
 
-        private Nonce(final String nonce, final long timeStamp) {
-            this(nonce, timeStamp, -1);
-        }
-
         private Nonce(final String nonce, final long timeStamp, final int initialNC) {
             this(nonce, timeStamp, initialNC, null);
         }

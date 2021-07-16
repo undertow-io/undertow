@@ -197,7 +197,7 @@ public class Http2DataStreamSinkChannel extends Http2StreamSinkChannel implement
                 currentBuffer.put((byte) ((Http2Channel.HEADERS_FLAG_END_STREAM & 0xFF) | (dataPaddingBytes > 0 ? Http2Channel.DATA_FLAG_PADDED : 0))); //flags
             } else {
                 requiresTrailers = true;
-                currentBuffer.put((byte) ((dataPaddingBytes > 0 ? Http2Channel.DATA_FLAG_PADDED : 0))); //flags
+                currentBuffer.put((byte) (dataPaddingBytes > 0 ? Http2Channel.DATA_FLAG_PADDED : 0)); //flags
             }
             Http2ProtocolUtils.putInt(currentBuffer, getStreamId());
             if (dataPaddingBytes > 0) {

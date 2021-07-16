@@ -450,9 +450,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     frameData.close();
                     return null;
                 }
-//                if(priorityTree != null) {
-//                    priorityTree.registerStream(frameParser.streamId, parser.getDependentStreamId(), parser.getWeight(), parser.isExclusive());
-//                }
                 break;
             }
             case FRAME_TYPE_RST_STREAM: {
@@ -527,13 +524,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     return null;
                 }
                 frameData.close();
-//                if(priorityTree == null) {
-//                    //we don't care, because we are the client side
-//                    //so this situation should never happen
-//                    return null;
-//                }
-//                priorityTree.priorityFrame(frameParser.streamId, parser.getStreamDependency(), parser.getWeight(), parser.isExclusive());
-//                //we don't return priority notifications, they are handled internally
+                //we don't return priority notifications, they are handled internally
                 return null;
             }
             default: {
@@ -672,7 +663,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         for (Http2Setting setting : settings) {
             if (setting.getId() == Http2Setting.SETTINGS_INITIAL_WINDOW_SIZE) {
                 synchronized (flowControlLock) {
-                    int old = initialSendWindowSize;
                     if (setting.getValue() > Integer.MAX_VALUE) {
                         sendGoAway(ERROR_FLOW_CONTROL_ERROR);
                         return false;

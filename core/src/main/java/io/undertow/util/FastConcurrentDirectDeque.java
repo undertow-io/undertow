@@ -431,11 +431,6 @@ public class FastConcurrentDirectDeque<E>
      * Unlinks non-null node x.
      */
     void unlink(Node<E> x) {
-        // assert x != null;
-        // assert x.item == null;
-        // assert x != PREV_TERMINATOR;
-        // assert x != NEXT_TERMINATOR;
-
         final Node<E> prev = x.prev;
         final Node<E> next = x.next;
         if (prev == null) {
@@ -542,9 +537,6 @@ public class FastConcurrentDirectDeque<E>
      * Unlinks non-null first node.
      */
     private void unlinkFirst(Node<E> first, Node<E> next) {
-        // assert first != null;
-        // assert next != null;
-        // assert first.item == null;
         for (Node<E> o = null, p = next, q;;) {
             if (p.item != null || (q = p.next) == null) {
                 if (o != null && p.prev != p && first.casNext(next, p)) {
@@ -576,9 +568,6 @@ public class FastConcurrentDirectDeque<E>
      * Unlinks non-null last node.
      */
     private void unlinkLast(Node<E> last, Node<E> prev) {
-        // assert last != null;
-        // assert prev != null;
-        // assert last.item == null;
         for (Node<E> o = null, p = prev, q;;) {
             if (p.item != null || (q = p.prev) == null) {
                 if (o != null && p.next != p && last.casPrev(prev, p)) {
@@ -670,9 +659,6 @@ public class FastConcurrentDirectDeque<E>
         whileActive:
         do {
             Node<E> prev = x.prev;
-            // assert prev != null;
-            // assert x != NEXT_TERMINATOR;
-            // assert x != PREV_TERMINATOR;
             Node<E> p = prev;
             findActive:
             for (;;) {
@@ -701,9 +687,6 @@ public class FastConcurrentDirectDeque<E>
         whileActive:
         do {
             Node<E> next = x.next;
-            // assert next != null;
-            // assert x != NEXT_TERMINATOR;
-            // assert x != PREV_TERMINATOR;
             Node<E> p = next;
             findActive:
             for (;;) {

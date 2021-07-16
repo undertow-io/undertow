@@ -134,7 +134,6 @@ class AjpResponseParser {
                 StringHolder result = parseString(buf, false);
                 if (result.readComplete) {
                     reasonPhrase = result.value;
-                    //exchange.setRequestURI(result.value);
                 } else {
                     this.state = READING_REASON_PHRASE;
                     return;
