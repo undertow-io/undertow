@@ -36,6 +36,7 @@ import io.undertow.util.Sessions;
 import io.undertow.util.StatusCodes;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 import static io.undertow.UndertowMessages.MESSAGES;
 
@@ -107,6 +108,8 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
 
+        Throwable original = null;
+        AuthenticationMechanismOutcome retValue = null;
         try {
             final FormData data = parser.parseBlocking();
             final FormData.FormValue jUsername = data.getFirst("j_username");
@@ -129,16 +132,35 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
                 } else {
                     securityContext.authenticationFailed(MESSAGES.authenticationFailed(userName), name);
                 }
+            } catch (Throwable t) {
+                original = t;
             } finally {
-                if (outcome == AuthenticationMechanismOutcome.AUTHENTICATED) {
-                    handleRedirectBack(exchange);
-                    exchange.endExchange();
+                try {
+                    if (outcome == AuthenticationMechanismOutcome.AUTHENTICATED) {
+                        handleRedirectBack(exchange);
+                        exchange.endExchange();
+                    }
+                    retValue = outcome != null ? outcome : AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
+                } catch (Throwable t) {
+                    if (original != null) {
+                        original.addSuppressed(t);
+                    } else {
+                        original = t;
+                    }
                 }
-                return outcome != null ? outcome : AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            original = new UncheckedIOException(e);
         }
+        if (original != null) {
+            if (original instanceof RuntimeException) {
+                throw (RuntimeException) original;
+            }
+            if (original instanceof Error) {
+                throw (Error) original;
+            }
+        }
+        return retValue;
     }
 
     protected void handleRedirectBack(final HttpServerExchange exchange) {
