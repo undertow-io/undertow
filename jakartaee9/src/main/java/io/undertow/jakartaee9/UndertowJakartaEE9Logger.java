@@ -67,4 +67,7 @@ interface UndertowJakartaEE9Logger extends BasicLogger {
 
     @Message(id = 4, value = "Creation of file %s failed")
     RuntimeException cannotCreateOutputFile(String outputFile);
+
+    @Message(id = 5, value = "Input dir does not exist: %s")
+    IllegalStateException inputDirDoesNotExist(String inputDirPath);
 }
