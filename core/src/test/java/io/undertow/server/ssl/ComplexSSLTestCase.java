@@ -45,6 +45,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -107,6 +108,7 @@ public class ComplexSSLTestCase {
     }
 
     @Test
+    @Ignore // FIXME UNDERTOW-1918
     public void testSslLotsOfData() throws IOException, GeneralSecurityException, URISyntaxException {
 
         DefaultServer.setRootHandler(new HttpHandler() {
