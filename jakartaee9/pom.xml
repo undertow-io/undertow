@@ -99,7 +99,7 @@
                 <executions>
                     <execution>
                         <id>copy</id>
-                        <phase>compile</phase>
+                        <phase>package</phase>
                         <goals>
                             <goal>copy</goal>
                         </goals>
