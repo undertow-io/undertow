@@ -79,6 +79,9 @@ class PomTransformer {
     PomTransformer(File inputDir, File outputDir) {
         this.inputDir = inputDir;
         this.outputDir = outputDir;
+        if (!inputDir.exists()) {
+            throw LOGGER.inputDirDoesNotExist(inputDir.getAbsolutePath());
+        }
     }
 
     void transformPoms() throws IOException {

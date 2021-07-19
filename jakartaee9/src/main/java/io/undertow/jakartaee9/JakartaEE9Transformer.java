@@ -65,7 +65,7 @@ public class JakartaEE9Transformer {
                 assert generatedFile.exists();
                 final File newGeneratedFile = new File(OUTPUT_DIR.getAbsolutePath() + File.separatorChar + newFileName);
                 if (!generatedFile.renameTo(newGeneratedFile)) {
-                    throw LOGGER.renamingFileFalied(generatedFile.getAbsolutePath(), newGeneratedFile.getAbsolutePath());
+                    throw LOGGER.renamingFileFailed(generatedFile.getAbsolutePath(), newGeneratedFile.getAbsolutePath());
                 }
             }
         }

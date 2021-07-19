@@ -60,11 +60,14 @@ interface UndertowJakartaEE9Logger extends BasicLogger {
     IllegalStateException inputFilesNotFoundInDir(String inputDir);
 
     @Message(id = 2, value = "Renaming of file %s to %s failed")
-    RuntimeException renamingFileFalied(String originalName, String newName);
+    RuntimeException renamingFileFailed(String originalName, String newName);
 
     @Message(id = 3, value = "Creation of output dir %s failed")
     RuntimeException cannotCreateOutputDir(String outputDir);
 
     @Message(id = 4, value = "Creation of file %s failed")
     RuntimeException cannotCreateOutputFile(String outputFile);
+
+    @Message(id = 5, value = "Input dir does not exist: %s")
+    IllegalStateException inputDirDoesNotExist(String inputDirPath);
 }
