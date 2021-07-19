@@ -22,6 +22,7 @@ import io.undertow.UndertowOptions;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.ProxyIgnore;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -54,6 +55,7 @@ public class ParseTimeoutTestCase {
         clientInputStream = client.getInputStream();
     }
 
+    @After
     public void after() throws Exception {
         IoUtils.safeClose(client);
         DefaultServer.setUndertowOptions(OptionMap.EMPTY);
