@@ -26,6 +26,8 @@ jobs:
       uses: joschi/setup-jdk@v2
       with:
         java-version: 8
+    - name: Print Version
+      run: mvn -v
     - name: Build
       run: mvn -U -B -fae -DskipTests -Dfindbugs clean install
     - name: Tar Maven Repo
@@ -40,7 +42,7 @@ jobs:
       if: failure()
       with:
         name: surefire-reports-build
-        path: '**/surefire-reports/*.txt'
+        path: '**/surefire*-reports/*.txt'
   test-matrix:
     name: JDK ${{ matrix.jdk }} - ${{ matrix.module }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -85,13 +87,15 @@ jobs:
       uses: joschi/setup-jdk@v2
       with:
         java-version: ${{ matrix.jdk }}
+    - name: Print Version
+      run: mvn -v
     - name: Run Tests
       run: mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }}
     - uses: actions/upload-artifact@v2
       if: failure()
       with:
         name: surefire-reports-${{ matrix.jdk }}-${{ matrix.module }}-${{ matrix.os }}
-        path: '**/surefire-reports/*.txt'
+        path: '**/surefire*-reports/*.txt'
   test-matrix-ipv6:
     name: JDK ${{ matrix.jdk }} - ipv6 - ${{ matrix.module }} ${{ matrix.proxy }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -129,10 +133,12 @@ jobs:
       uses: joschi/setup-jdk@v2
       with:
         java-version: ${{ matrix.jdk }}
+    - name: Print Version
+      run: mvn -v
     - name: Run Tests
       run: mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
     - uses: actions/upload-artifact@v2
       if: failure()
       with:
         name: surefire-reports-${{ matrix.jdk }}-ipv6-${{ matrix.module }}${{ matrix.proxy }}-${{ matrix.os }}
-        path: '**/surefire-reports/*.txt'
+        path: '**/surefire*-reports/*.txt'
