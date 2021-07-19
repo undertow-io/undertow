@@ -44,6 +44,7 @@ import static org.xnio.Bits.longBitMask;
  * closed.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author Flavia Rainone
  */
 /*
  * Implementation notes
@@ -121,13 +122,15 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
             return -1L;
         }
         long res = 0L;
+        Throwable transferError = null;
         try {
             return res = next.transferTo(position, min(count, val & MASK_COUNT), target);
         } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(exchange.getConnection());
+            transferError = e;
             throw e;
         } finally {
-            exitRead(res);
+            exitRead(res, transferError);
         }
     }
 
@@ -144,13 +147,15 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
             return -1;
         }
         long res = 0L;
+        Throwable transferError = null;
         try {
             return res = next.transferTo(min(count, val & MASK_COUNT), throughBuffer, target);
         } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(exchange.getConnection());
+            transferError = e;
             throw e;
         } finally {
-            exitRead(res + throughBuffer.remaining());
+            exitRead(res + throughBuffer.remaining(), transferError);
         }
     }
 
@@ -187,6 +192,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
             return -1;
         }
         long res = 0L;
+        Throwable readError = null;
         try {
             if ((val & MASK_COUNT) == 0L) {
                 return -1L;
@@ -214,9 +220,10 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
             return res = next.read(dsts, offset, length);
         } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(exchange.getConnection());
+            readError = e;
             throw e;
         } finally {
-            exitRead(res);
+            exitRead(res, readError);
         }
     }
 
@@ -235,6 +242,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
         }
         int res = 0;
         final long remaining = val & MASK_COUNT;
+        Throwable readError = null;
         try {
             final int lim = dst.limit();
             final int pos = dst.position();
@@ -250,9 +258,10 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
             }
         } catch (IOException | RuntimeException | Error e) {
             IoUtils.safeClose(exchange.getConnection());
+            readError = e;
             throw e;
         }  finally {
-            exitRead(res);
+            exitRead(res, readError);
         }
     }
 
@@ -328,14 +337,22 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
      * Exit a read method.
      *
      * @param consumed the number of bytes consumed by this call (may be 0)
+     * @param readError IOException, RuntimeException or Error thrown during read operation
+     * @throws IOException if this conduit has not finished reading all the bytes. In this case,
+     * if {@code readError} is not {@code null}, it is added as a suppressed throwable of
+     * this exception
      */
-    private void exitRead(long consumed) throws IOException {
+    private void exitRead(long consumed, Throwable readError) throws IOException {
         long oldVal = state;
         if(consumed == -1) {
             if (anyAreSet(oldVal, MASK_COUNT)) {
                 invokeFinishListener();
                 state &= ~MASK_COUNT;
-                throw UndertowMessages.MESSAGES.couldNotReadContentLengthData();
+                final IOException couldNotReadAll = UndertowMessages.MESSAGES.couldNotReadContentLengthData();
+                if (readError != null) {
+                    couldNotReadAll.addSuppressed(readError);
+                }
+                throw couldNotReadAll;
             }
             return;
         }
