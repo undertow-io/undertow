@@ -1,6 +1,5 @@
 package io.undertow.servlet.test.spec;
 
-import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -18,6 +17,8 @@ import jakarta.servlet.ServletException;
 
 import java.io.IOException;
 
+import static io.undertow.servlet.Servlets.servlet;
+
 /**
  * @author Stuart Douglas
  */
@@ -28,10 +29,10 @@ public class UnavailableServletTestCase {
     @Before
     public void setup() throws ServletException {
         DeploymentUtils.setupServlet(
-                new ServletInfo("p", UnavailableServlet.class)
+                servlet("p", UnavailableServlet.class)
                         .addInitParam(UnavailableServlet.PERMANENT, "1")
                         .addMapping("/p"),
-                new ServletInfo("t", UnavailableServlet.class)
+                servlet("t", UnavailableServlet.class)
                         .addMapping("/t"));
 
     }
