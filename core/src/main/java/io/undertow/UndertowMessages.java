@@ -618,4 +618,7 @@ public interface UndertowMessages {
 
     @Message(id = 198, value = "Blocking write timed out after %s nanoseconds.")
     WriteTimeoutException blockingWriteTimedOut(long timeoutNanoseconds);
+
+    @Message(id = 199, value = "Read timed out after %s milliseconds.")
+    ReadTimeoutException readTimedOut(long timeoutMilliseconds);
 }
