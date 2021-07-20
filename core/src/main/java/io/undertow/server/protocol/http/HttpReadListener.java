@@ -200,6 +200,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             if(parseTimeoutUpdater != null) {
                 parseTimeoutUpdater.requestStarted();
             }
+            connection.getOriginalSourceConduit().suspendReads();
 
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http");
