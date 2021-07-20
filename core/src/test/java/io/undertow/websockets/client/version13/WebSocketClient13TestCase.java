@@ -150,9 +150,18 @@ public class WebSocketClient13TestCase {
 
     @Test
     public void testTextMessageWss() throws Exception {
+        testTextMessageSecure("wss://");
+    }
+
+    @Test
+    public void testTextMessageHttps() throws Exception {
+        testTextMessageSecure("https://");
+    }
+
+    public void testTextMessageSecure(final String urlProtocol) throws Exception {
 
         UndertowXnioSsl ssl = new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, DefaultServer.getClientSSLContext());
-        final WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(worker, DefaultServer.getBufferPool(), new URI("wss://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostSSLPort("default")))
+        final WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(worker, DefaultServer.getBufferPool(), new URI(urlProtocol + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostSSLPort("default")))
                 .setSsl(ssl);
         IoFuture<WebSocketChannel> future = connectionBuilder.connect();
         future.await(4, TimeUnit.SECONDS);
