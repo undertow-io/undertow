@@ -33,6 +33,7 @@ import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 
 import javax.net.ssl.SSLContext;
+import javax.servlet.ServletException;
 import javax.websocket.ClientEndpointConfig;
 import javax.websocket.CloseReason;
 import javax.websocket.ContainerProvider;
@@ -46,6 +47,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.assertTrue;
+
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
@@ -54,6 +57,7 @@ import java.util.concurrent.TimeUnit;
 public class ProgramaticLazyEndpointTest {
 
     private static ServerWebSocketContainer deployment;
+    private static DeploymentManager deploymentManager;
 
     @BeforeClass
     public static void setup() throws Exception {
@@ -69,27 +73,28 @@ public class ProgramaticLazyEndpointTest {
                         new WebSocketDeploymentInfo()
                                 .setBuffers(DefaultServer.getBufferPool())
                                 .setWorker(DefaultServer.getWorker())
-                                .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
-                                    @Override
-                                    public void ready(ServerWebSocketContainer container) {
-                                        deployment = container;
-                                    }
-                                })
+                                .addListener(container1 -> deployment = container1)
                 )
                 .setDeploymentName("servletContext.war");
 
 
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
+        deploymentManager = container.addDeployment(builder);
+        deploymentManager.deploy();
 
-
-        DefaultServer.setRootHandler(manager.start());
+        DefaultServer.setRootHandler(deploymentManager.start());
         DefaultServer.startSSLServer();
     }
 
     @AfterClass
-    public static void after() throws IOException {
-        deployment = null;
+    public static void after() throws IOException, ServletException {
+        if (deployment != null) {
+            deployment.close();
+            deployment = null;
+        }
+        if (deploymentManager != null) {
+            deploymentManager.stop();
+            deploymentManager.undeploy();
+        }
         DefaultServer.stopSSLServer();
     }
 
@@ -103,7 +108,7 @@ public class ProgramaticLazyEndpointTest {
         ContainerProvider.getWebSocketContainer().connectToServer(endpoint, clientEndpointConfig, new URI("wss://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostSSLPort("default") + "/foo"));
         Assert.assertEquals("Hello Stuart", endpoint.getResponses().poll(15, TimeUnit.SECONDS));
         endpoint.session.close();
-        endpoint.closeLatch.await(10, TimeUnit.SECONDS);
+        assertTrue(endpoint.closeLatch.await(10, TimeUnit.SECONDS));
     }
 
     public static class ProgramaticClientEndpoint extends Endpoint {

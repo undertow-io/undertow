@@ -42,6 +42,8 @@ import org.xnio.FutureResult;
 
 import java.net.URI;
 
+import javax.servlet.ServletException;
+
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
  */
@@ -50,6 +52,7 @@ import java.net.URI;
 public class DynamicEndpointTest {
 
     private static ServerWebSocketContainer deployment;
+    private static DeploymentManager deploymentManager;
 
     @BeforeClass
     public static void setup() throws Exception {
@@ -67,32 +70,33 @@ public class DynamicEndpointTest {
                         new WebSocketDeploymentInfo()
                                 .setBuffers(DefaultServer.getBufferPool())
                                 .setWorker(DefaultServer.getWorkerSupplier())
-                                .addListener(new WebSocketDeploymentInfo.ContainerReadyListener() {
-                                    @Override
-                                    public void ready(ServerWebSocketContainer container) {
-                                        deployment = container;
-                                    }
-                                })
+                                .addListener(containerReady -> deployment = containerReady)
                 )
                 .setDeploymentName("servletContext.war");
 
 
-        DeploymentManager manager = container.addDeployment(builder);
-        manager.deploy();
+        deploymentManager = container.addDeployment(builder);
+        deploymentManager.deploy();
 
-
-        DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/ws", manager.start()));
+        DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/ws", deploymentManager.start()));
     }
 
     @AfterClass
-    public static void after() {
-        deployment = null;
+    public static void after() throws ServletException {
+        if (deployment != null) {
+            deployment.close();
+            deployment = null;
+        }
+        if (deploymentManager != null) {
+            deploymentManager.stop();
+            deploymentManager.undeploy();
+        }
     }
 
     @Test
     public void testDynamicAnnotatedEndpoint() throws Exception {
         final byte[] payload = "hello".getBytes();
-        final FutureResult latch = new FutureResult();
+        final FutureResult<?> latch = new FutureResult<>();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/dynamicEchoEndpoint?annotated=true"));
         client.connect();
@@ -105,7 +109,7 @@ public class DynamicEndpointTest {
     @Test
     public void testDynamicProgramaticEndpoint() throws Exception {
         final byte[] payload = "hello".getBytes();
-        final FutureResult latch = new FutureResult();
+        final FutureResult<?> latch = new FutureResult<>();
 
         WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/dynamicEchoEndpoint"));
         client.connect();
