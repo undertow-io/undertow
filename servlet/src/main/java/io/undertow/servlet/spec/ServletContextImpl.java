@@ -296,7 +296,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public URL getResource(final String path) throws MalformedURLException {
-        if (!path.startsWith("/")) {
+        if (path == null || !path.startsWith("/")) {
             throw UndertowServletMessages.MESSAGES.pathMustStartWithSlash(path);
         }
         Resource resource = null;
