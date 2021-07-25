@@ -388,7 +388,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                         buffer.clear();
                     }
                     buffer.put((byte) 10); // LF
-                    if(valueIterator.hasNext()) {
+                    if(valueIterator != null && valueIterator.hasNext()) {
                         state = STATE_HDR_NAME;
                         break;
                     } else if (nameIterator.hasNext()) {
