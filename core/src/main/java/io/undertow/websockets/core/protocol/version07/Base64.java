@@ -17,6 +17,8 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
+import static org.xnio.IoUtils.safeClose;
+
 import io.undertow.UndertowLogger;
 
 import java.nio.charset.StandardCharsets;
@@ -612,22 +614,10 @@ class Base64 {
             throw e;
         } // end catch
         finally {
-            try {
-                oos.close();
-            } catch (Exception e) {
-            }
-            try {
-                gzos.close();
-            } catch (Exception e) {
-            }
-            try {
-                b64os.close();
-            } catch (Exception e) {
-            }
-            try {
-                baos.close();
-            } catch (Exception e) {
-            }
+            safeClose(oos);
+            safeClose(gzos);
+            safeClose(b64os);
+            safeClose(baos);
         } // end finally
 
         // Return value according to relevant encoding.
@@ -842,18 +832,9 @@ class Base64 {
                 throw e;
             } // end catch
             finally {
-                try {
-                    gzos.close();
-                } catch (Exception e) {
-                }
-                try {
-                    b64os.close();
-                } catch (Exception e) {
-                }
-                try {
-                    baos.close();
-                } catch (Exception e) {
-                }
+                safeClose(gzos);
+                safeClose(b64os);
+                safeClose(baos);
             } // end finally
 
             return baos.toByteArray();
@@ -1166,18 +1147,9 @@ class Base64 {
                     // Just return originally-decoded bytes
                 } // end catch
                 finally {
-                    try {
-                        baos.close();
-                    } catch (Exception e) {
-                    }
-                    try {
-                        gzis.close();
-                    } catch (Exception e) {
-                    }
-                    try {
-                        bais.close();
-                    } catch (Exception e) {
-                    }
+                    safeClose(baos);
+                    safeClose(gzis);
+                    safeClose(bais);
                 } // end finally
 
             } // end if: gzipped
@@ -1257,14 +1229,8 @@ class Base64 {
             throw e; // Catch and throw in order to execute finally{}
         } // end catch
         finally {
-            try {
-                bais.close();
-            } catch (Exception e) {
-            }
-            try {
-                ois.close();
-            } catch (Exception e) {
-            }
+            safeClose(bais);
+            safeClose(ois);
         } // end finally
 
         return obj;
@@ -1299,10 +1265,7 @@ class Base64 {
             throw e; // Catch and throw to execute finally{} block
         } // end catch: java.io.IOException
         finally {
-            try {
-                bos.close();
-            } catch (Exception e) {
-            }
+            safeClose(bos);
         } // end finally
 
     } // end encodeToFile
@@ -1331,10 +1294,7 @@ class Base64 {
             throw e; // Catch and throw to execute finally{} block
         } // end catch: java.io.IOException
         finally {
-            try {
-                bos.close();
-            } catch (Exception e) {
-            }
+            safeClose(bos);
         } // end finally
 
     } // end decodeToFile
@@ -1386,10 +1346,7 @@ class Base64 {
             throw e; // Catch and release to execute finally{}
         } // end catch: java.io.IOException
         finally {
-            try {
-                bis.close();
-            } catch (Exception e) {
-            }
+            safeClose(bis);
         } // end finally
 
         return decodedData;
@@ -1437,10 +1394,7 @@ class Base64 {
             throw e; // Catch and release to execute finally{}
         } // end catch: java.io.IOException
         finally {
-            try {
-                bis.close();
-            } catch (Exception e) {
-            }
+            safeClose(bis);
         } // end finally
 
         return encodedData;
@@ -1466,10 +1420,7 @@ class Base64 {
             throw e; // Catch and release to execute finally{}
         } // end catch
         finally {
-            try {
-                out.close();
-            } catch (Exception ex) {
-            }
+            safeClose(out);
         } // end finally
     } // end encodeFileToFile
 
@@ -1493,10 +1444,7 @@ class Base64 {
             throw e; // Catch and release to execute finally{}
         } // end catch
         finally {
-            try {
-                out.close();
-            } catch (Exception ex) {
-            }
+            safeClose(out);
         } // end finally
     } // end decodeFileToFile
 
