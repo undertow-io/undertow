@@ -147,8 +147,10 @@ public class Http2ClientTestCase {
 
     @AfterClass
     public static void afterClass() {
-        server.stop();
-        worker.shutdown();
+        if (server != null)
+            server.stop();
+        if (worker != null)
+            worker.shutdown();
     }
 
     static UndertowClient createClient() {
