@@ -35,6 +35,8 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import javax.net.ssl.KeyManager;
@@ -99,8 +101,6 @@ import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.XnioSsl;
 
 import static io.undertow.server.handlers.ResponseCodeHandler.HANDLE_404;
-import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
-import static io.undertow.testutils.StopServerWithExternalWorkerUtils.waitWorkerRunnableCycle;
 import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
 import static org.xnio.SslClientAuthMode.REQUESTED;
 
@@ -545,7 +545,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             }
             stopSSLServer();
             if (worker != null) {
-                stopWorker(worker);
+                worker.shutdownNow();
+                if (!worker.awaitTermination(10, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Worker failed to shutdown within ten seconds");
+                }
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -841,7 +844,17 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         }
         if (shuttingDown) {
             // TODO replace this by the mechanism described in UNDERTOW-1648 once it is implemented
-            waitWorkerRunnableCycle(worker);
+            final CountDownLatch latch = new CountDownLatch(1);
+            worker.getIoThread().execute(() -> {
+                latch.countDown();
+            });
+            //some environments seem to need a small delay to re-bind the socket
+            try {
+                latch.await();
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                //ignore
+            }
         }
     }
 
