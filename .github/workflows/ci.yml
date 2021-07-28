@@ -42,7 +42,9 @@ jobs:
       if: failure()
       with:
         name: surefire-reports-build
-        path: '**/surefire*-reports/*.txt'
+        path: |
+          **/surefire*-reports/*.txt
+          **/*.dump*
   test-matrix:
     name: JDK ${{ matrix.jdk }} - ${{ matrix.module }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -95,7 +97,9 @@ jobs:
       if: failure()
       with:
         name: surefire-reports-${{ matrix.jdk }}-${{ matrix.module }}-${{ matrix.os }}
-        path: '**/surefire*-reports/*.txt'
+        path: |
+              **/surefire*-reports/*.txt
+              **/*.dump*
   test-matrix-ipv6:
     name: JDK ${{ matrix.jdk }} - ipv6 - ${{ matrix.module }} ${{ matrix.proxy }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -141,4 +145,6 @@ jobs:
       if: failure()
       with:
         name: surefire-reports-${{ matrix.jdk }}-ipv6-${{ matrix.module }}${{ matrix.proxy }}-${{ matrix.os }}
-        path: '**/surefire*-reports/*.txt'
+        path: |
+          **/surefire*-reports/*.txt
+          **/*.dump*
