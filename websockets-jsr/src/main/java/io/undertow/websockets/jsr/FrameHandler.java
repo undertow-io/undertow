@@ -152,6 +152,8 @@ class FrameHandler extends AbstractReceiveListener {
                     }
                 }
             });
+        } else {
+            bufferedBinaryMessage.getData().free();
         }
     }
 
