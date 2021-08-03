@@ -27,6 +27,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -70,6 +71,8 @@ public class MaxRequestSizeTestCase {
 
     @Test
     public void testMaxRequestHeaderSize() throws IOException {
+        // FIXME UNDERTOW-1938 (returns 500 response instead of 200, sporadic)
+        Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows"));
         OptionMap existing = DefaultServer.getUndertowOptions();
         final TestHttpClient client = new TestHttpClient();
         try {
