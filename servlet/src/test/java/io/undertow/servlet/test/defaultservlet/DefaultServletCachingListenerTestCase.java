@@ -67,8 +67,8 @@ import org.xnio.BufferAllocator;
 public class DefaultServletCachingListenerTestCase {
 
     private static final int MAX_FILE_SIZE = 20;
-    private static final int MAX_WAIT_TIME = 20000;
-    private static final int WAIT_TIME = 500;
+    private static final int MAX_WAIT_TIME = 30000;
+    private static final int WAIT_TIME = 1000;
     public static final String DIR_NAME = "cacheTest";
 
     private static Path tmpDir;
