@@ -87,8 +87,8 @@ public class TestHttpClient extends DefaultHttpClient {
 
     private static HttpParams preventSocketTimeoutException(HttpParams params) {
         // UNDERTOW-1929 prevent the SocketTimeoutException that we see recurring
-        // in CI when running tests on Windows / proxy ajp mode
-        if (System.getProperty("os.name").startsWith("Windows") && DefaultServer.isProxy() && DefaultServer.isAjp()) {
+        // in CI when running tests on proxy mode
+        if (DefaultServer.isProxy()) {
             if (params == null) {
                 params = new SyncBasicHttpParams();
                 setDefaultHttpParams(params);
@@ -107,7 +107,7 @@ public class TestHttpClient extends DefaultHttpClient {
     @Override
     protected HttpParams createHttpParams() {
         HttpParams params = super.createHttpParams();
-        HttpConnectionParams.setSoTimeout(params, 30000);
+        HttpConnectionParams.setSoTimeout(params, 120000);
         return params;
     }
 
