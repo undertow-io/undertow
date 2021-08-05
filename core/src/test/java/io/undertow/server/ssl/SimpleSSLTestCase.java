@@ -18,6 +18,13 @@
 
 package io.undertow.server.ssl;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
@@ -35,15 +42,9 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author Stuart Douglas
@@ -111,6 +112,8 @@ public class SimpleSSLTestCase {
 
     @Test
     public void parallel() throws Exception {
+        // FIXME UNDERTOW-1928
+        Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows") && DefaultServer.isProxy());
         runTest(32, new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
@@ -122,6 +125,8 @@ public class SimpleSSLTestCase {
 
     @Test
     public void parallelWithDispatch() throws Exception {
+        // FIXME UNDERTOW-1928
+        Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows"));
         runTest(32, new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
@@ -135,6 +140,8 @@ public class SimpleSSLTestCase {
 
     @Test
     public void parallelWithBlockingDispatch() throws Exception {
+        // FIXME UNDERTOW-1928
+        Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows"));
         runTest(32, new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {

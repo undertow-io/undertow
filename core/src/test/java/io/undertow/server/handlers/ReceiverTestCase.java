@@ -25,6 +25,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
@@ -172,7 +173,7 @@ public class ReceiverTestCase {
         doTest("/fullbytes");
     }
 
-    @Test
+    @Test @ProxyIgnore // FIXME UNDERTOW-1942 assertion of not null IOException fails sporadically (last line of this method)
     public void testAsyncReceiveWholeBytesFailed() throws Exception {
 
         EXCEPTIONS.clear();
