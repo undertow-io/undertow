@@ -478,7 +478,7 @@ public class PortableConcurrentDirectDeque<E>
             // TODO: better HOP heuristics
             if (hops < HOPS
                 // always squeeze out interior deleted nodes
-                && (isFirst | isLast))
+                && (isFirst || isLast))
                 return;
 
             // Squeeze out deleted nodes between activePred and
@@ -487,7 +487,7 @@ public class PortableConcurrentDirectDeque<E>
             skipDeletedPredecessors(activeSucc);
 
             // Try to gc-unlink, if possible
-            if ((isFirst | isLast) &&
+            if ((isFirst || isLast) &&
 
                 // Recheck expected state of predecessor and successor
                 (activePred.next == activeSucc) &&
