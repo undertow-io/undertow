@@ -309,7 +309,7 @@ public class PathResourceManager implements ResourceManager  {
     /**
      * Returns true is some element of path inside base path is a symlink.
      */
-    private SymlinkResult getSymlinkBase(final String base, final Path file) throws IOException {
+    private SymlinkResult getSymlinkBase(final String base, final Path file) {
         int nameCount = file.getNameCount();
         Path root = fileSystem.getPath(base);
         int rootCount = root.getNameCount();
