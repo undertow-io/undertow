@@ -621,4 +621,11 @@ public interface UndertowMessages {
 
     @Message(id = 199, value = "Read timed out after %s milliseconds.")
     ReadTimeoutException readTimedOut(long timeoutMilliseconds);
+
+    @Message(id = 200, value = "Failed to replace hash output stream ")
+    SSLException failedToReplaceHashOutputStream(@Cause Exception e);
+
+    @Message(id = 201, value = "Failed to replace hash output stream ")
+    RuntimeException failedToReplaceHashOutputStreamOnWrite(@Cause Exception e);
+
 }

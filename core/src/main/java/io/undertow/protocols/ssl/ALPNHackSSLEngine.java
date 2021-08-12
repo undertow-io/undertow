@@ -19,6 +19,7 @@
 package io.undertow.protocols.ssl;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Field;
@@ -408,7 +409,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
     }
 
 
-    static ALPNHackServerByteArrayOutputStream replaceServerByteOutput(SSLEngine sslEngine, String selectedAlpnProtocol) {
+    static ALPNHackServerByteArrayOutputStream replaceServerByteOutput(SSLEngine sslEngine, String selectedAlpnProtocol) throws SSLException {
         try {
             Object handshaker = HANDSHAKER.get(sslEngine);
             Object hash = HANDSHAKE_HASH.get(handshaker);
@@ -418,12 +419,11 @@ public class ALPNHackSSLEngine extends SSLEngine {
             HANDSHAKE_HASH_DATA.set(hash, out);
             return out;
         } catch (Exception e) {
-            UndertowLogger.ROOT_LOGGER.debug("Failed to replace hash output stream ", e);
-            return null;
+            throw UndertowMessages.MESSAGES.failedToReplaceHashOutputStream(e);
         }
     }
 
-    static ALPNHackClientByteArrayOutputStream replaceClientByteOutput(SSLEngine sslEngine) {
+    static ALPNHackClientByteArrayOutputStream replaceClientByteOutput(SSLEngine sslEngine) throws SSLException {
         try {
             Object handshaker = HANDSHAKER.get(sslEngine);
             Object hash = HANDSHAKE_HASH.get(handshaker);
@@ -432,8 +432,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
             HANDSHAKE_HASH_DATA.set(hash, out);
             return out;
         } catch (Exception e) {
-            UndertowLogger.ROOT_LOGGER.debug("Failed to replace hash output stream ", e);
-            return null;
+            throw UndertowMessages.MESSAGES.failedToReplaceHashOutputStream(e);
         }
     }
     static void regenerateHashes(SSLEngine sslEngineToHack, ByteArrayOutputStream data, byte[]... hashBytes) {
@@ -451,8 +450,7 @@ public class ALPNHackSSLEngine extends SSLEngine {
                 HANDSHAKE_HASH_UPDATE.invoke(hash, b, 0, b.length);
             }
         } catch (Exception e) {
-            e.printStackTrace(); //TODO: remove
-            throw new RuntimeException(e);
+            throw UndertowMessages.MESSAGES.failedToReplaceHashOutputStreamOnWrite(e);
         }
     }
 }
