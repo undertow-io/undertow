@@ -149,6 +149,9 @@ public class Cookies {
     }
 
     private static void handleValue(CookieImpl cookie, String key, String value) {
+        if (key == null) {
+            return;
+        }
         if (key.equalsIgnoreCase("path")) {
             cookie.setPath(value);
         } else if (key.equalsIgnoreCase("domain")) {

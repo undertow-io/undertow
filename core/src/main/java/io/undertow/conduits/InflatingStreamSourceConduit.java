@@ -123,7 +123,7 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
             } else if (nextDone && inflater.finished()) {
                 done();
                 return -1;
-            } else if (inflater.finished()) {
+            } else if (inflater.finished() && compressed != null) {
                 int rem = inflater.getRemaining();
                 ByteBuffer buf = compressed.getBuffer();
                 buf.position(buf.limit() - rem);
