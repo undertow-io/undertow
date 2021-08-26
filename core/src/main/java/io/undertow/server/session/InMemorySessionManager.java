@@ -503,6 +503,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             }
             UndertowLogger.SESSION_LOGGER.debugf("Setting max inactive interval for %s to %s", sessionId, interval);
             maxInactiveInterval = interval;
+            this.bumpTimeout();
         }
 
         @Override
