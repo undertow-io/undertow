@@ -302,6 +302,10 @@ public class ProxyProtocolTestCase {
             Assert.assertTrue(result, result.contains(expectedResponse));
         } finally {
             undertow.stop();
+            // sleep 1 s to prevent BindException (Address already in use) when running the tests
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignore) {}
         }
     }
 
@@ -539,6 +543,10 @@ public class ProxyProtocolTestCase {
             Assert.assertTrue(result, result.contains(expectedResponse));
         } finally {
             undertow.stop();
+            // sleep 1 s to prevent BindException (Address already in use) when restarting the server
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignore) {}
         }
     }
 
@@ -579,6 +587,10 @@ public class ProxyProtocolTestCase {
             Assert.assertTrue(result, result.contains(expected));
         } finally {
             undertow.stop();
+            // sleep 1 s to prevent BindException (Address already in use) when restarting the server
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignore) {}
         }
     }
 

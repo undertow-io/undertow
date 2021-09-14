@@ -119,6 +119,10 @@ public class AjpClientTestCase {
     public static void afterClass() throws InterruptedException {
         undertow.stop();
         stopWorker(worker);
+        // sleep 1 s to prevent BindException (Address already in use) when running the CI
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ignore) {}
     }
 
     static UndertowClient createClient() {
@@ -218,6 +222,12 @@ public class AjpClientTestCase {
                 }
 
             } finally {
+                // add an extra sleep time to make sure we are not getting a BindException
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    // ignore
+                }
                 undertow.start();
             }
 

@@ -71,6 +71,10 @@ public class LoadBalancingProxyWithCustomHostSelectorTestCase {
     public static void teardown() {
         server1.stop();
         server2.stop();
+        // sleep 1 s to prevent BindException (Address already in use) when running the CI
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ignore) {}
     }
 
     // https://issues.jboss.org/browse/UNDERTOW-289

@@ -181,6 +181,10 @@ public class Http2EndExchangeTestCase {
         } finally {
             stopWorker(xnioWorker);
             server.stop();
+            // sleep 1 s to prevent BindException (Address already in use) when running the CI
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignore) {}
         }
     }
 

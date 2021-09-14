@@ -56,6 +56,10 @@ public class TLS13HalfCloseHangTestCase {
     doRequest(clientSslContext, address);
 
     server.stop();
+    // sleep 1 s to prevent BindException (Address already in use) when running the CI
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException ignore) {}
   }
 
   private void doRequest(SSLContext clientSslContext, InetSocketAddress address)

@@ -115,6 +115,10 @@ public class DelegatedTaskExecutorTestCase {
         } finally {
             undertow.stop();
             client.getConnectionManager().shutdown();
+            // sleep 1 s to prevent BindException (Address already in use) when running the CI
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignore) {}
         }
     }
 

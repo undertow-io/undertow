@@ -28,6 +28,12 @@ public class ProxyPathHandlingTest {
     public void cleanup() {
         targetServer.stop();
         proxyServer.stop();
+        // add a 1s sleep time to prevent BindException (Address already in use) when restarting the server
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ignore) {
+
+        }
     }
 
     @Test
