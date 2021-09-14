@@ -30,6 +30,7 @@ import org.junit.Test;
 import javax.net.ssl.SSLHandshakeException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -68,7 +69,10 @@ public class DelegatedTaskExecutorTestCase {
         } finally {
             undertow.stop();
             client.getConnectionManager().shutdown();
-            delegatedTaskExecutor.shutdownNow();
+            List<Runnable> tasks = delegatedTaskExecutor.shutdownNow();
+            for (Runnable task: tasks) {
+                task.run();
+            }
             assertTrue(
                     "ExecutorService did not shut down in time",
                     delegatedTaskExecutor.awaitTermination(1, TimeUnit.SECONDS));

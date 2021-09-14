@@ -60,6 +60,8 @@ import io.undertow.util.StatusCodes;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
 
+import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
+
 /**
  * @author Emanuel Muckenhuber
  */
@@ -150,7 +152,7 @@ public class Http2ClientTestCase {
         if (server != null)
             server.stop();
         if (worker != null)
-            worker.shutdown();
+            stopWorker(worker);
     }
 
     static UndertowClient createClient() {

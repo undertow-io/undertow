@@ -18,6 +18,16 @@
 
 package io.undertow.client.http;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.SSLContext;
+
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientExchange;
@@ -52,14 +62,7 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.ssl.XnioSsl;
 
-import javax.net.ssl.SSLContext;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
 
 /**
  * @author Emanuel Muckenhuber
@@ -128,7 +131,7 @@ public class HttpClientTestCase {
 
     @AfterClass
     public static void afterClass() {
-        worker.shutdown();
+        stopWorker(worker);
     }
 
     static UndertowClient createClient() {

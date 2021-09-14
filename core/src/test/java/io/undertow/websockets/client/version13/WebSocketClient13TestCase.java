@@ -54,6 +54,7 @@ import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.core.protocol.server.AutobahnWebSocketServer;
 
+import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
 
 /**
  * @author Stuart Douglas
@@ -103,16 +104,11 @@ public class WebSocketClient13TestCase {
     }
 
     @AfterClass
-    public static void stop() throws IOException {
+    public static void stopAndShutdown() throws IOException {
         server.stop();
         server = null;
         DefaultServer.stopSSLServer();
-    }
-
-
-    @AfterClass
-    public static void shutdown() {
-        worker.shutdown();
+        stopWorker(worker);
     }
 
     @Test
