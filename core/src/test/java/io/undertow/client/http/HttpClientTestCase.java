@@ -38,6 +38,7 @@ import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
+import javax.net.ssl.SSLContext;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -53,7 +54,6 @@ import org.xnio.channels.ReadTimeoutException;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.ssl.XnioSsl;
 
-import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
