@@ -50,6 +50,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
+
 @RunWith(DefaultServer.class)
 @HttpOneOnly
 public class Http2EndExchangeTestCase {
@@ -181,7 +183,7 @@ public class Http2EndExchangeTestCase {
                 IoUtils.safeClose(connection);
             }
         } finally {
-            xnioWorker.shutdownNow();
+            stopWorker(xnioWorker);
             server.stop();
         }
     }

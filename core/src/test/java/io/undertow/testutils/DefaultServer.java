@@ -35,7 +35,6 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import javax.net.ssl.KeyManager;
@@ -100,6 +99,8 @@ import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.XnioSsl;
 
 import static io.undertow.server.handlers.ResponseCodeHandler.HANDLE_404;
+import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
+import static io.undertow.testutils.StopServerWithExternalWorkerUtils.waitWorkerRunnableCycle;
 import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
 import static org.xnio.SslClientAuthMode.REQUESTED;
 
@@ -544,10 +545,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             }
             stopSSLServer();
             if (worker != null) {
-                worker.shutdownNow();
-                if (!worker.awaitTermination(10, TimeUnit.SECONDS)) {
-                    throw new IllegalStateException("Worker failed to shutdown within ten seconds");
-                }
+                stopWorker(worker);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -827,15 +825,23 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * cause an error.
      */
     public static void stopSSLServer() throws IOException {
+        boolean shuttingDown = false;
         if (sslServer != null) {
             sslServer.close();
             sslServer = null;
+            shuttingDown = true;
         }
         clientSslContext = null;
         if (proxyOpenListener != null) {
             proxyOpenListener.closeConnections();
+            shuttingDown = true;
         } else if (openListener != null) {
             openListener.closeConnections();
+            shuttingDown = true;
+        }
+        if (shuttingDown) {
+            // TODO replace this by the mechanism described in UNDERTOW-1648 once it is implemented
+            waitWorkerRunnableCycle(worker);
         }
     }
 

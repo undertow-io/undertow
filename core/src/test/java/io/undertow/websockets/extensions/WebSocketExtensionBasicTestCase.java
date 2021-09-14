@@ -54,6 +54,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.undertow.Handlers.path;
+import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
 
 /**
  *
@@ -150,7 +151,7 @@ public class WebSocketExtensionBasicTestCase {
         Assert.assertEquals(longMsg.toString(), result.get());
         clientChannel.sendClose();
 
-        client.shutdown();
+        stopWorker(client);
     }
 
     @Test
@@ -226,7 +227,7 @@ public class WebSocketExtensionBasicTestCase {
         Assert.assertEquals(longMsg.toString(), result.get());
         clientChannel.sendClose();
 
-        client.shutdown();
+        stopWorker(client);
     }
 
     /**
@@ -319,6 +320,7 @@ public class WebSocketExtensionBasicTestCase {
         clientChannel.sendClose();
 
         client.shutdown();
+        stopWorker(client);
 
         Assert.assertEquals(SEC_WEBSOCKET_EXTENSIONS_EXPECTED, debug.getResponseExtensions().toString());
     }

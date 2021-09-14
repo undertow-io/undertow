@@ -18,6 +18,14 @@
 
 package io.undertow.client.http;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import io.undertow.Undertow;
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
@@ -52,13 +60,7 @@ import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.StreamSinkChannel;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
 
 /**
  * @author Emanuel Muckenhuber
@@ -131,9 +133,9 @@ public class AjpClientTestCase {
     }
 
     @AfterClass
-    public static void afterClass() {
-        worker.shutdown();
+    public static void afterClass() throws InterruptedException {
         undertow.stop();
+        stopWorker(worker);
     }
 
     static UndertowClient createClient() {
