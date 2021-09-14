@@ -78,6 +78,10 @@ public class AjpCharacterEncodingTestCase {
     public static void after() {
         DefaultServer.setUndertowOptions(old);
         undertow.stop();
+        // sleep 1 s to prevent BindException (Address already in use) when running the CI
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ignore) {}
 
     }
 

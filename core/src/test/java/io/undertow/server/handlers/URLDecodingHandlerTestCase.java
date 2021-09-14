@@ -62,6 +62,10 @@ public class URLDecodingHandlerTestCase {
             }
         } finally {
             undertow.stop();
+            // sleep 1 s to prevent BindException (Address already in use) when restarting the server
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignore) {}
         }
     }
 
@@ -87,6 +91,10 @@ public class URLDecodingHandlerTestCase {
             }
         } finally {
             undertow.stop();
+            // sleep 1 s to prevent BindException (Address already in use) when restarting the server
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignore) {}
         }
     }
 
@@ -116,6 +124,10 @@ public class URLDecodingHandlerTestCase {
             }
         } finally {
             undertow.stop();
+            // sleep 1 s to prevent BindException (Address already in use) when restarting the server
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignore) {}
         }
     }
 
@@ -141,6 +153,10 @@ public class URLDecodingHandlerTestCase {
             }
         } finally {
             undertow.stop();
+            // sleep 1 s to prevent BindException (Address already in use) when restarting the server
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignore) {}
         }
     }
 

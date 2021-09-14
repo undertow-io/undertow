@@ -63,6 +63,11 @@ public class ProxyHandlerXForwardedForTestCase {
     public static void teardown() throws Exception {
         DefaultServer.stopSSLServer();
         server.stop();
+        // sleep 1 s to prevent BindException (Address already in use) when running the CI
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ignore) {}
+
     }
 
     private static void setProxyHandler(boolean rewriteHostHeader, boolean reuseXForwarded) throws Exception {
