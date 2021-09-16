@@ -34,6 +34,8 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import io.undertow.testutils.IPv6Ignore;
+import io.undertow.testutils.IPv6Only;
 
 @RunWith(DefaultServer.class)
 public class IPAddressAccessControlHandlerWithProxyPeerAddressHandlerTestCase {
@@ -45,12 +47,20 @@ public class IPAddressAccessControlHandlerWithProxyPeerAddressHandlerTestCase {
             public void handleRequest(HttpServerExchange exchange) throws Exception {
                 exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
                 exchange.getResponseSender().send(exchange.getSourceAddress().getHostString());
+                // System.out.println("X-Forwarded-For header = " + exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_FOR));
+                // System.out.println("source address = " + exchange.getSourceAddress());
             }
         };
-        DefaultServer.setRootHandler(Handlers.proxyPeerAddress(Handlers.ipAccessControl(rootHandler, false).addAllow("127.0.0.0/8")));
+        if (DefaultServer.isIpv6()) {
+            rootHandler = Handlers.ipAccessControl(rootHandler, false).addAllow("::1");
+        } else {
+            rootHandler = Handlers.ipAccessControl(rootHandler, false).addAllow("127.0.0.0/8");
+        }
+        DefaultServer.setRootHandler(Handlers.proxyPeerAddress(rootHandler));
     }
 
     @Test
+    @IPv6Ignore
     public void testWithoutXForwardedFor() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
@@ -65,6 +75,22 @@ public class IPAddressAccessControlHandlerWithProxyPeerAddressHandlerTestCase {
     }
 
     @Test
+    @IPv6Only
+    public void testWithoutXForwardedForIPv6() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertTrue(response.contains("0:0:0:0:0:0:0:1"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    @IPv6Ignore
     public void testWithXForwardedFor1() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
@@ -80,6 +106,7 @@ public class IPAddressAccessControlHandlerWithProxyPeerAddressHandlerTestCase {
     }
 
     @Test
+    @IPv6Ignore
     public void testWithXForwardedFor2() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
@@ -95,6 +122,7 @@ public class IPAddressAccessControlHandlerWithProxyPeerAddressHandlerTestCase {
     }
 
     @Test
+    @IPv6Ignore
     public void testWithXForwardedFor3() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
@@ -110,6 +138,7 @@ public class IPAddressAccessControlHandlerWithProxyPeerAddressHandlerTestCase {
     }
 
     @Test
+    @IPv6Ignore
     public void testForbiddenWithXForwardedFor1() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
@@ -125,6 +154,7 @@ public class IPAddressAccessControlHandlerWithProxyPeerAddressHandlerTestCase {
     }
 
     @Test
+    @IPv6Ignore
     public void testForbiddenWithXForwardedFor2() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
