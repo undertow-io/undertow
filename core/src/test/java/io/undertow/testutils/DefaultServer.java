@@ -204,6 +204,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final boolean dump = Boolean.getBoolean("test.dump");
     private static final boolean single = Boolean.getBoolean("test.single");
     private static final boolean openssl = Boolean.getBoolean("test.openssl");
+    private static final boolean ipv6 = Boolean.getBoolean("test.ipv6");
     private static final int runs = Integer.getInteger("test.runs", 1);
 
     private static final DelegatingHandler rootHandler = new DelegatingHandler();
@@ -672,6 +673,21 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 return;
             }
         }
+        if (ipv6) {
+            if (method.getAnnotation(IPv6Ignore.class) != null ||
+                    method.getMethod().getDeclaringClass().isAnnotationPresent(IPv6Ignore.class) ||
+                    getTestClass().getJavaClass().isAnnotationPresent(IPv6Ignore.class)) {
+                notifier.fireTestIgnored(describeChild(method));
+                return;
+            }
+        } else {
+            if (method.getAnnotation(IPv6Only.class) != null ||
+                    method.getMethod().getDeclaringClass().isAnnotationPresent(IPv6Only.class) ||
+                    getTestClass().getJavaClass().isAnnotationPresent(IPv6Only.class)) {
+                notifier.fireTestIgnored(describeChild(method));
+                return;
+            }
+        }
         try {
             if (runs > 1) {
                 Statement statement = methodBlock(method);
@@ -710,6 +726,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             }
             if (h2cUpgrade) {
                 sb.append("[http2-clear-upgrade]");
+            }
+            if (ipv6) {
+                sb.append("[ipv6]");
             }
             return sb.toString();
         }
@@ -965,6 +984,10 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     public static boolean isH2upgrade() {
         return h2cUpgrade;
+    }
+
+    public static boolean isIpv6() {
+        return ipv6;
     }
 
     /**
