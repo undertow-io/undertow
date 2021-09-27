@@ -21,9 +21,10 @@ package io.undertow.protocols.http2;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.xnio.IoUtils;
+import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.protocol.framed.SendFrameHeader;
+import org.xnio.IoUtils;
 
 /**
  * @author Stuart Douglas
@@ -169,6 +170,25 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
             }
         }
         return ret;
+    }
+
+    /**
+     * Invokes super awaitWritable, with an extra check for flowControlWindow. The purpose of this is to
+     * warn clearly that peer is not updating the flow control window.
+     *
+     * @throws IOException if an IO error occurs
+     */
+    public void awaitWritable() throws IOException {
+        final int flowControlWindow;
+        synchronized (flowControlLock) {
+            flowControlWindow = this.flowControlWindow;
+        }
+        super.awaitWritable();
+        synchronized (flowControlLock) {
+            if (isReadyForFlush() && flowControlWindow <= 0 && flowControlWindow == this.flowControlWindow) {
+                throw UndertowMessages.MESSAGES.noWindowUpdate(getAwaitWritableTimeout());
+            }
+        }
     }
 
     /**

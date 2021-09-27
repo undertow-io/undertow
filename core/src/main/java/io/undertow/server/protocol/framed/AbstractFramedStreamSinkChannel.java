@@ -18,8 +18,16 @@
 
 package io.undertow.server.protocol.framed;
 
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.util.ImmediatePooledByteBuffer;
 import org.xnio.Buffers;
@@ -27,19 +35,13 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
+import org.xnio.Options;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
-
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
@@ -110,11 +112,20 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private volatile int inListenerLoop;
     /* keep track of successful writes to properly prevent a loop UNDERTOW-1624 */
     private volatile boolean writeSucceeded;
+    /** Timeout used by awaitWritable (ms) */
+    private final long awaitWritableTimeout;
 
     private static final AtomicIntegerFieldUpdater<AbstractFramedStreamSinkChannel> inListenerLoopUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedStreamSinkChannel.class, "inListenerLoop");
 
     protected AbstractFramedStreamSinkChannel(C channel) {
         this.channel = channel;
+        Integer writeTimeout = null;
+        try {
+            writeTimeout = channel.getOption(Options.WRITE_TIMEOUT);
+        } catch (IOException e) {
+            UndertowLogger.ROOT_LOGGER.ioException(e);
+        }
+        awaitWritableTimeout =  writeTimeout != null && writeTimeout > 0? writeTimeout : UndertowOptions.DEFAULT_WRITE_TIMEOUT;
     }
 
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
@@ -284,9 +295,8 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 try {
                     waiterCount++;
                     //we need to re-check after incrementing the waiters count
-
                     if(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken) {
-                        lock.wait();
+                        lock.wait(awaitWritableTimeout);
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -463,6 +473,15 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             throw UndertowMessages.MESSAGES.bodyIsSetAndNotReadyForFlush();
         }
         return true;
+    }
+
+    /**
+     * Return the timeout used by awaitWritable.
+     *
+     * @return the awaitWritable timeout, in milliseconds
+     */
+    protected long getAwaitWritableTimeout() {
+        return this.awaitWritableTimeout;
     }
 
     @Override
