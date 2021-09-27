@@ -43,9 +43,9 @@ import java.util.regex.Pattern;
  */
 public class ProxyPeerAddressHandler implements HttpHandler {
 
-    private static final Pattern IP4_EXACT = Pattern.compile("(?:\\d{1,3}\\.){3}\\d{1,3}");
+    private static final Pattern IP4_EXACT = Pattern.compile(NetworkUtils.IP4_EXACT);
 
-    private static final Pattern IP6_EXACT = Pattern.compile("(?:[a-zA-Z0-9]{1,4}:){7}[a-zA-Z0-9]{1,4}");
+    private static final Pattern IP6_EXACT = Pattern.compile(NetworkUtils.IP6_EXACT);
 
     private final HttpHandler next;
 
