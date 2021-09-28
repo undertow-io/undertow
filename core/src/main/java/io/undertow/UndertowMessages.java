@@ -632,7 +632,6 @@ public interface UndertowMessages {
     @Message(id = 201, value = "Failed to replace hash output stream ")
     RuntimeException failedToReplaceHashOutputStreamOnWrite(@Cause Exception e);
 
-    // place holder for unmerged features in maintenance branch
     @Message(id = 202, value = "Failed to initialize path manager for '%s' path.")
     RuntimeException failedToInitializePathManager(String path, @Cause IOException ioe);
 
