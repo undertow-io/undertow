@@ -63,20 +63,23 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
             ByteArrayInputStream stream = new ByteArrayInputStream(certificateBytes);
             Collection<? extends java.security.cert.Certificate> certCol = cf.generateCertificates(stream);
             this.peerCertificate = new java.security.cert.Certificate[certCol.size()];
-            this.certificate = new X509Certificate[certCol.size()];
+            X509Certificate[] legacyCertificate = new X509Certificate[certCol.size()];
             int i=0;
             for(java.security.cert.Certificate cert : certCol) {
                 this.peerCertificate[i] = cert;
-                try {
-                    this.certificate[i] = X509Certificate.getInstance(cert.getEncoded());
-                } catch (CertificateException ce) {
-                    // [UNDERTOW-1969] We don't care about deprecated JDK methods failure caused by the fact newer JDKs
-                    // doesn't support them anymore. "this.certificate" is used only by deprecated method
-                    // {@link SSLSessionInfo.getPeerCertificateChain()} which call should be avoided by API users.
-                    this.certificate[i] = null;
+                if (legacyCertificate != null) {
+                    try {
+                        legacyCertificate[i] = X509Certificate.getInstance(cert.getEncoded());
+                    } catch (CertificateException ce) {
+                        // [UNDERTOW-1969] We don't care about deprecated JDK methods failure caused by the fact newer JDKs
+                        // doesn't support them anymore. "this.certificate" is used only by deprecated method
+                        // {@link SSLSessionInfo.getPeerCertificateChain()} which call should be avoided by API users.
+                        legacyCertificate = null;
+                    }
                 }
                 i++;
             }
+            this.certificate = legacyCertificate;
         } else {
             this.peerCertificate = null;
             this.certificate = null;
