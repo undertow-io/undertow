@@ -52,6 +52,9 @@ import org.xnio.XnioWorker;
  */
 public class InMemorySessionManager implements SessionManager, SessionManagerStatistics {
 
+    // place holder for sessions during id creation, it prevents collision of session ids in race condition scenarios where two sessions are being created with the same id
+    private static final SessionImpl PLACE_HOLDER_SESSION = new SessionImpl(null, null, null, null, null, null, 0);
+
     private final AttachmentKey<SessionImpl> NEW_SESSION = AttachmentKey.create(SessionImpl.class);
 
     private final SessionIdGenerator sessionIdGenerator;
@@ -166,47 +169,27 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         }
 
         String sessionID = config.findSessionId(serverExchange);
-        boolean idRequested = false;
-        if (sessionID == null) {
-            sessionID = sessionIdGenerator.createSessionId();
+        if (sessionID != null) {
+            if (!saveSessionID(sessionID))
+                throw UndertowMessages.MESSAGES.sessionWithIdAlreadyExists(sessionID);
+            // else: succeeded to use requested session id
         } else {
-            idRequested = true;
+            sessionID = createAndSaveNewID();
         }
-        SessionImpl session;
-        synchronized(this.sessions) {
-            if(this.sessions.containsKey(sessionID)) {
-                if(idRequested) {
-                    throw UndertowMessages.MESSAGES.sessionWithIdAlreadyExists(sessionID);
-                } else {
-                    int count = 0;
-                    sessionID = null;
-                    while (sessionID == null) {
-                        sessionID = sessionIdGenerator.createSessionId();
-                        if (sessions.containsKey(sessionID)) {
-                            sessionID = null;
-                        }
-                        if (count++ == 100) {
-                            //this should 'never' happen
-                            //but we guard against pathalogical session id generators to prevent an infinite loop
-                            throw UndertowMessages.MESSAGES.couldNotGenerateUniqueSessionId();
-                        }
-                    }
-                }
-            }
-            Object evictionToken;
-            if (evictionQueue != null) {
-                evictionToken = evictionQueue.offerLastAndReturnToken(sessionID);
-            } else {
-                evictionToken = null;
-            }
-            session = new SessionImpl(this, sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker(), evictionToken, defaultSessionTimeout);
-            sessions.put(sessionID, session);
-            config.setSessionId(serverExchange, session.getId());
-            serverExchange.putAttachment(NEW_SESSION, session);
+        Object evictionToken;
+        if (evictionQueue != null) {
+            evictionToken = evictionQueue.offerLastAndReturnToken(sessionID);
+        } else {
+            evictionToken = null;
         }
-        session.bumpTimeout();
+        final SessionImpl session = new SessionImpl(this, sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker(), evictionToken, defaultSessionTimeout);
+
         UndertowLogger.SESSION_LOGGER.debugf("Created session with id %s for exchange %s", sessionID, serverExchange);
+        saveSession(sessionID, session);
+        config.setSessionId(serverExchange, session.getId());
+        session.bumpTimeout();
         sessionListeners.sessionCreated(session, serverExchange);
+        serverExchange.putAttachment(NEW_SESSION, session);
 
         if(statisticsEnabled) {
             createdSessionCount.incrementAndGet();
@@ -221,6 +204,26 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             } while (!highestSessionCount.compareAndSet(highest, sessionSize));
         }
         return session;
+    }
+
+    private boolean saveSessionID(String sessionID) {
+        return this.sessions.putIfAbsent(sessionID, PLACE_HOLDER_SESSION) == null;
+    }
+
+    private String createAndSaveNewID() {
+        for (int i = 0; i < 100; i++) {
+            final String sessionID = sessionIdGenerator.createSessionId();
+            if (saveSessionID(sessionID))
+                return sessionID;
+        }
+        //this should 'never' happen
+        //but we guard against pathalogical session id generators to prevent an infinite loop
+        throw UndertowMessages.MESSAGES.couldNotGenerateUniqueSessionId();
+    }
+
+    private void saveSession(String savedID, SessionImpl session) {
+        final SessionImpl placeHolder = sessions.put(savedID, session);
+        assert(placeHolder == PLACE_HOLDER_SESSION);
     }
 
     @Override
@@ -633,16 +636,13 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public String changeSessionId(final HttpServerExchange exchange, final SessionConfig config) {
             final String oldId = sessionId;
-            String newId = null;
-            synchronized(sessionManager.sessions) {
-                newId = sessionManager.sessionIdGenerator.createSessionId();
-                this.sessionId = newId;
-                if(!invalid) {
-                    sessionManager.sessions.put(newId, this);
-                    config.setSessionId(exchange, this.getId());
-                }
-                sessionManager.sessions.remove(oldId);
+            String newId = sessionManager.createAndSaveNewID();
+            this.sessionId = newId;
+            if(!invalid) {
+                sessionManager.saveSession(newId, this);
+                config.setSessionId(exchange, this.getId());
             }
+            sessionManager.sessions.remove(oldId);
             sessionManager.sessionListeners.sessionIdChanged(this, oldId);
             UndertowLogger.SESSION_LOGGER.debugf("Changing session id %s to %s", oldId, newId);
 
