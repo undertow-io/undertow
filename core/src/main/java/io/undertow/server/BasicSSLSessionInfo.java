@@ -67,7 +67,15 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
             int i=0;
             for(java.security.cert.Certificate cert : certCol) {
                 this.peerCertificate[i] = cert;
-                this.certificate[i++] = X509Certificate.getInstance(cert.getEncoded());
+                try {
+                    this.certificate[i] = X509Certificate.getInstance(cert.getEncoded());
+                } catch (CertificateException ce) {
+                    // [UNDERTOW-1969] We don't care about deprecated JDK methods failure caused by the fact newer JDKs
+                    // doesn't support them anymore. "this.certificate" is used only by deprecated method
+                    // {@link SSLSessionInfo.getPeerCertificateChain()} which call should be avoided by API users.
+                    this.certificate[i] = null;
+                }
+                i++;
             }
         } else {
             this.peerCertificate = null;
@@ -138,7 +146,7 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
 
     @Override
     public java.security.cert.Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
-        if (certificate == null) {
+        if (peerCertificate == null) {
             throw UndertowMessages.MESSAGES.peerUnverified();
         }
         return peerCertificate;
