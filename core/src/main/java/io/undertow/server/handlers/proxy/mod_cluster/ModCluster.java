@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 
 import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.handlers.proxy.RouteParsingStrategy;
 import org.xnio.OptionMap;
@@ -35,8 +34,6 @@ import org.xnio.ssl.XnioSsl;
  * @author Emanuel Muckenhuber
  */
 public class ModCluster {
-
-    private static final HttpHandler NEXT_HANDLER = ResponseCodeHandler.HANDLE_404;
 
     // Health check intervals
     private final long healthCheckInterval;

@@ -138,7 +138,7 @@ public class Http2ClientProvider implements ClientProvider {
                 listener.completed(createHttp2Channel(connection, bufferPool, options, uri.getHost()));
             }
         }, HTTP2);
-    };
+    }
 
     private void handleConnected(StreamConnection connection, final ClientCallback<ClientConnection> listener, URI uri,ByteBufferPool bufferPool, OptionMap options) {
         ALPNClientSelector.runAlpn((SslConnection) connection, FAILED, listener, alpnProtocol(listener, uri, bufferPool, options));

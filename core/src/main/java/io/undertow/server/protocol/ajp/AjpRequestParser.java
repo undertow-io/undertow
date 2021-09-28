@@ -321,9 +321,7 @@ public class AjpRequestParser {
             }
             case AjpRequestParseState.READING_REMOTE_HOST: {
                 StringHolder result = parseString(buf, state, StringType.OTHER);
-                if (result.readComplete) {
-                    //exchange.setRequestURI(result.value);
-                } else {
+                if (!result.readComplete) {
                     state.state = AjpRequestParseState.READING_REMOTE_HOST;
                     return;
                 }

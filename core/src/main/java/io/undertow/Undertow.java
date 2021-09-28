@@ -574,7 +574,7 @@ public final class Undertow {
          * Additionally, the provided {@link XnioWorker} will NOT be shutdown when {@link Undertow#stop()} is called.
          * Essentially, the lifecycle of the provided worker must be maintained outside of the {@link Undertow} instance.
          */
-        public <T> Builder setWorker(XnioWorker worker) {
+        public Builder setWorker(XnioWorker worker) {
             this.worker = worker;
             return this;
         }
@@ -584,7 +584,7 @@ public final class Undertow {
             return this;
         }
 
-        public <T> Builder setByteBufferPool(ByteBufferPool byteBufferPool) {
+        public Builder setByteBufferPool(ByteBufferPool byteBufferPool) {
             this.byteBufferPool = byteBufferPool;
             return this;
         }

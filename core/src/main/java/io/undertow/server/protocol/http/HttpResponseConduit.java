@@ -398,9 +398,6 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                         buffer.clear();
                     }
                     buffer.put((byte) ' ');
-                    //if (valueIterator == null) {
-                    //    valueIterator = exchange.getResponseHeaders().get(headerName).iterator();
-                    //}
                     string = headerValues.get(valueIdx++);
                     charIndex = 0;
                     // fall thru

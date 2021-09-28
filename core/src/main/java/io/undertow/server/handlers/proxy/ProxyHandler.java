@@ -889,7 +889,7 @@ public final class ProxyHandler implements HttpHandler {
         private int maxConnectionRetries = DEFAULT_MAX_RETRY_ATTEMPTS;
         private Predicate idempotentRequestPredicate = IdempotentPredicate.INSTANCE;
 
-        Builder() {};
+        Builder() {}
 
 
         public ProxyClient getProxyClient() {

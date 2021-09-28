@@ -83,8 +83,6 @@ final class SNISSLExplorer {
         input.get();
         byte thirdByte = input.get();
         if ((firstByte & 0x80) != 0 && thirdByte == 0x01) {
-            // looks like a V2ClientHello
-            // return (((firstByte & 0x7F) << 8) | (secondByte & 0xFF)) + 2;
             return RECORD_HEADER_SIZE;   // Only need the header fields
         } else {
             return ((input.get() & 0xFF) << 8 | input.get() & 0xFF) + 5;
@@ -519,14 +517,6 @@ final class SNISSLExplorer {
 
     private static void ignoreByteVector8(ByteBuffer input) {
         ignoreByteVector(input, getInt8(input));
-    }
-
-    private static void ignoreByteVector16(ByteBuffer input) {
-        ignoreByteVector(input, getInt16(input));
-    }
-
-    private static void ignoreByteVector24(ByteBuffer input) {
-        ignoreByteVector(input, getInt24(input));
     }
 
     private static void ignoreByteVector(ByteBuffer input, int length) {

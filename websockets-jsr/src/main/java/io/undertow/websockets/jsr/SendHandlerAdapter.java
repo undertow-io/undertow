@@ -31,7 +31,6 @@ import javax.websocket.SendResult;
  */
 final class SendHandlerAdapter implements WebSocketCallback<Void> {
     private final SendHandler handler;
-    private static final SendResult OK = new SendResult();
     private volatile boolean done;
 
     SendHandlerAdapter(SendHandler handler) {
