@@ -93,7 +93,7 @@ public class TestHttpClient extends DefaultHttpClient {
                 params = new SyncBasicHttpParams();
                 setDefaultHttpParams(params);
             }
-            HttpConnectionParams.setSoTimeout(params, 120000);
+            HttpConnectionParams.setSoTimeout(params, 300000);
             return params;
         }
         return params;
@@ -107,7 +107,7 @@ public class TestHttpClient extends DefaultHttpClient {
     @Override
     protected HttpParams createHttpParams() {
         HttpParams params = super.createHttpParams();
-        HttpConnectionParams.setSoTimeout(params, 120000);
+        HttpConnectionParams.setSoTimeout(params, 300000);
         return params;
     }
 
