@@ -52,9 +52,6 @@ import org.xnio.XnioWorker;
  */
 public class InMemorySessionManager implements SessionManager, SessionManagerStatistics {
 
-    // place holder for sessions during id creation, it prevents collision of session ids in race condition scenarios where two sessions are being created with the same id
-    private static final SessionImpl PLACE_HOLDER_SESSION = new SessionImpl(null, null, null, null, null, null, 0);
-
     private final AttachmentKey<SessionImpl> NEW_SESSION = AttachmentKey.create(SessionImpl.class);
 
     private final SessionIdGenerator sessionIdGenerator;
@@ -135,7 +132,14 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     @Override
     public void stop() {
         for (Map.Entry<String, SessionImpl> session : sessions.entrySet()) {
-            session.getValue().destroy();
+            final SessionImpl sessionValue = session.getValue();
+            sessionValue.destroy();
+            if (sessionValue.getId() == null) {
+                // this means we are creating the session right now in a different thread,
+                // do not send the session to listener with a null id,
+                // just set it again, setting the same session id twice is harmless
+                sessionValue.setId(session.getKey());
+            }
             sessionListeners.sessionDestroyed(session.getValue(), null, SessionListener.SessionDestroyedReason.UNDEPLOY);
         }
         sessions.clear();
@@ -157,7 +161,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                         toRemove.invalidate(null, SessionListener.SessionDestroyedReason.TIMEOUT); //todo: better reason
                     }
                 }
-            } else if(sessions.size() >= maxSize) {
+            } else if (sessions.size() >= maxSize) {
                 if(statisticsEnabled) {
                     rejectedSessionCount.incrementAndGet();
                 }
@@ -169,23 +173,19 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         }
 
         String sessionID = config.findSessionId(serverExchange);
+        final SessionImpl session = new SessionImpl(this, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker(), defaultSessionTimeout);
         if (sessionID != null) {
-            if (!saveSessionID(sessionID))
+            if (!saveSessionID(sessionID, session))
                 throw UndertowMessages.MESSAGES.sessionWithIdAlreadyExists(sessionID);
             // else: succeeded to use requested session id
         } else {
-            sessionID = createAndSaveNewID();
+            sessionID = createAndSaveNewID(session);
         }
-        Object evictionToken;
+        session.setId(sessionID);
         if (evictionQueue != null) {
-            evictionToken = evictionQueue.offerLastAndReturnToken(sessionID);
-        } else {
-            evictionToken = null;
+            session.setEvictionToken(evictionQueue.offerLastAndReturnToken(sessionID));
         }
-        final SessionImpl session = new SessionImpl(this, sessionID, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker(), evictionToken, defaultSessionTimeout);
-
         UndertowLogger.SESSION_LOGGER.debugf("Created session with id %s for exchange %s", sessionID, serverExchange);
-        saveSession(sessionID, session);
         config.setSessionId(serverExchange, session.getId());
         session.bumpTimeout();
         sessionListeners.sessionCreated(session, serverExchange);
@@ -203,27 +203,23 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                 }
             } while (!highestSessionCount.compareAndSet(highest, sessionSize));
         }
+
         return session;
     }
 
-    private boolean saveSessionID(String sessionID) {
-        return this.sessions.putIfAbsent(sessionID, PLACE_HOLDER_SESSION) == null;
+    private boolean saveSessionID(String sessionID, SessionImpl session) {
+        return this.sessions.putIfAbsent(sessionID, session) == null;
     }
 
-    private String createAndSaveNewID() {
+    private String createAndSaveNewID(SessionImpl session) {
         for (int i = 0; i < 100; i++) {
             final String sessionID = sessionIdGenerator.createSessionId();
-            if (saveSessionID(sessionID))
+            if (saveSessionID(sessionID, session))
                 return sessionID;
         }
         //this should 'never' happen
-        //but we guard against pathalogical session id generators to prevent an infinite loop
+        //but we guard against pathological session id generators to prevent an infinite loop
         throw UndertowMessages.MESSAGES.couldNotGenerateUniqueSessionId();
-    }
-
-    private void saveSession(String savedID, SessionImpl session) {
-        final SessionImpl placeHolder = sessions.put(savedID, session);
-        assert(placeHolder == PLACE_HOLDER_SESSION);
     }
 
     @Override
@@ -250,11 +246,15 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         final SessionImpl sess = sessions.get(sessionId);
         if (sess == null) {
             return null;
-        } else {
-            return sess;
         }
+        if (sess.getId() == null) {
+            // this means we are creating the session right now in a different thread,
+            // do not return the session with a null id to the outer world,
+            // just set it again, setting the same session id twice is harmless
+            sess.setId(sessionId);
+        }
+        return sess;
     }
-
 
     @Override
     public synchronized void registerSessionListener(final SessionListener listener) {
@@ -392,7 +392,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         }
 
 
-        private String sessionId;
+        private volatile String sessionId;
         private volatile Object evictionToken;
         private final SessionConfig sessionCookieConfig;
         private volatile long expireTime = -1;
@@ -421,13 +421,11 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             }
         };
 
-        private SessionImpl(final InMemorySessionManager sessionManager, final String sessionId, final SessionConfig sessionCookieConfig, final XnioIoThread executor, final XnioWorker worker, final Object evictionToken, final int maxInactiveInterval) {
+        private SessionImpl(final InMemorySessionManager sessionManager, final SessionConfig sessionCookieConfig, final XnioIoThread executor, final XnioWorker worker, final int maxInactiveInterval) {
             this.sessionManager = sessionManager;
-            this.sessionId = sessionId;
             this.sessionCookieConfig = sessionCookieConfig;
             this.executor = executor;
             this.worker = worker;
-            this.evictionToken = evictionToken;
             creationTime = lastAccessed = System.currentTimeMillis();
             this.setMaxInactiveInterval(maxInactiveInterval);
         }
@@ -462,6 +460,10 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                     timerCancelKey = null;
                 }
             }
+        }
+
+        private void setEvictionToken(Object evictionToken) {
+            this.evictionToken = evictionToken;
             if (evictionToken != null) {
                 Object token = evictionToken;
                 if (evictionTokenUpdater.compareAndSet(this, token, null)) {
@@ -471,6 +473,9 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             }
         }
 
+        private void setId(final String sessionId) {
+            this.sessionId = sessionId;
+        }
 
         @Override
         public String getId() {
@@ -585,7 +590,7 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public void invalidate(final HttpServerExchange exchange) {
             invalidate(exchange, SessionListener.SessionDestroyedReason.INVALIDATED);
-            if(exchange != null) {
+            if (exchange != null) {
                 exchange.removeAttachment(sessionManager.NEW_SESSION);
             }
             Object evictionToken = this.evictionToken;
@@ -636,10 +641,9 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         @Override
         public String changeSessionId(final HttpServerExchange exchange, final SessionConfig config) {
             final String oldId = sessionId;
-            String newId = sessionManager.createAndSaveNewID();
+            String newId = sessionManager.createAndSaveNewID(this);
             this.sessionId = newId;
             if(!invalid) {
-                sessionManager.saveSession(newId, this);
                 config.setSessionId(exchange, this.getId());
             }
             sessionManager.sessions.remove(oldId);
