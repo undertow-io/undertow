@@ -18,6 +18,8 @@
 
 package io.undertow.servlet.test.wrapper;
 
+import static org.wildfly.common.Assert.checkNotNullParam;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collection;
@@ -44,10 +46,7 @@ public class NonStandardResponseWrapper implements HttpServletResponse {
      *          if the response is null.
      */
     public NonStandardResponseWrapper(ServletResponse response) {
-        if (response == null) {
-            throw new IllegalArgumentException("Response cannot be null");
-        }
-        this.response = response;
+        this.response = checkNotNullParam("response", response);
     }
 
     /**
@@ -67,10 +66,7 @@ public class NonStandardResponseWrapper implements HttpServletResponse {
      */
 
     public void setResponse(ServletResponse response) {
-        if (response == null) {
-            throw new IllegalArgumentException("Response cannot be null");
-        }
-        this.response = response;
+        this.response = checkNotNullParam("response", response);
     }
 
     /**

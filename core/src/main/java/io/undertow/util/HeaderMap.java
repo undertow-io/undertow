@@ -18,6 +18,8 @@
 
 package io.undertow.util;
 
+import static org.wildfly.common.Assert.checkNotNullParam;
+
 import java.util.AbstractCollection;
 import java.util.Arrays;
 import java.util.Collection;
@@ -691,9 +693,7 @@ public final class HeaderMap implements Iterable<HeaderValues> {
     }
 
     public HeaderMap addFirst(final HttpString headerName, final String headerValue) {
-        if (headerName == null) {
-            throw new IllegalArgumentException("headerName is null");
-        }
+        checkNotNullParam("headerName", headerName);
         if (headerValue == null) {
             return this;
         }
@@ -702,9 +702,7 @@ public final class HeaderMap implements Iterable<HeaderValues> {
     }
 
     public HeaderMap addLast(final HttpString headerName, final String headerValue) {
-        if (headerName == null) {
-            throw new IllegalArgumentException("headerName is null");
-        }
+        checkNotNullParam("headerName", headerName);
         if (headerValue == null) {
             return this;
         }
@@ -719,9 +717,7 @@ public final class HeaderMap implements Iterable<HeaderValues> {
 
 
     public HeaderMap addAll(HttpString headerName, Collection<String> headerValues) {
-        if (headerName == null) {
-            throw new IllegalArgumentException("headerName is null");
-        }
+        checkNotNullParam("headerName", headerName);
         if (headerValues == null || headerValues.isEmpty()) {
             return this;
         }
@@ -732,9 +728,7 @@ public final class HeaderMap implements Iterable<HeaderValues> {
     // put
 
     public HeaderMap put(HttpString headerName, String headerValue) {
-        if (headerName == null) {
-            throw new IllegalArgumentException("headerName is null");
-        }
+        checkNotNullParam("headerName", headerName);
         if (headerValue == null) {
             remove(headerName);
             return this;
@@ -746,9 +740,7 @@ public final class HeaderMap implements Iterable<HeaderValues> {
     }
 
     public HeaderMap put(HttpString headerName, long headerValue) {
-        if (headerName == null) {
-            throw new IllegalArgumentException("headerName is null");
-        }
+        checkNotNullParam("headerName", headerName);
         final HeaderValues entry = getOrCreateEntry(headerName);
         entry.clear();
         entry.add(Long.toString(headerValue));
@@ -756,9 +748,7 @@ public final class HeaderMap implements Iterable<HeaderValues> {
     }
 
     public HeaderMap putAll(HttpString headerName, Collection<String> headerValues) {
-        if (headerName == null) {
-            throw new IllegalArgumentException("headerName is null");
-        }
+        checkNotNullParam("headerName", headerName);
         if (headerValues == null || headerValues.isEmpty()) {
             remove(headerName);
             return this;
