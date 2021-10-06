@@ -361,13 +361,9 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
         }
     }
 
-    static int hashCodeOf(String headerName) {
-        int hc = 17;
-
-        for (int i = 0; i < headerName.length(); ++i) {
-            hc = (hc << 4) + hc + higher((byte) headerName.charAt(i));
-        }
-        return hc;
+    static int hashCodeOf(final String headerName) {
+        final byte[] bytes = toByteArray(headerName);
+        return calcHashCode(bytes);
     }
 
     public boolean equalToString(String headerName) {
