@@ -138,7 +138,7 @@
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${project.basedir}/target/input</outputDirectory>
                                 </artifactItem>
-                               <artifactItem>
+                                <artifactItem>
                                     <groupId>io.undertow</groupId>
                                     <artifactId>undertow-examples</artifactId>
                                     <version>${project.version}</version>
@@ -224,30 +224,58 @@
                     </systemProperties>
                 </configuration>
             </plugin>
-            <!-- <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <version>3.0.0-M1</version>
-                <executions>
-                    <execution>
-                        <id>run</id>
-                        <phase>deploy</phase>
-                        <goals>
-                            <goal>deploy-file</goal>
-                        </goals>
-                        <configuration>
-                            <file>${project.basedir}/target/output/undertow-examples-jakartaee9-${project.version}.jar</file>
-                            <pomFile>${project.basedir}/target/output/undertow-examples-jakartaee9-${project.version}.pom</pomFile>
-                            <sources>${project.basedir}/target/output/undertow-examples-jakartaee9-${project.version}-sources.jar</sources>
-                            <repositoryId>jboss-releases-repository</repositoryId>
-                            <url>https://repository.jboss.org/nexus/service/local/staging/deploy/maven2</url>
-                        </configuration>
-                    </execution>
-                </executions>
-                <configuration>
-                </configuration>
-            </plugin> -->
         </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                    <version>${version.deploy.plugin}</version>
+                    <executions>
+                        <execution>
+                            <id>deploy-servlet-jakartaee9</id>
+                            <phase>deploy</phase>
+                            <goals>
+                                <goal>deploy-file</goal>
+                            </goals>
+                            <configuration>
+                                <file>${project.basedir}/target/output/undertow-servlet-jakartaee9-${project.version}.jar</file>
+                                <pomFile>${project.basedir}/target/output/undertow-servlet-jakartaee9-${project.version}.pom</pomFile>
+                                <sources>${project.basedir}/target/output/undertow-servlet-jakartaee9-${project.version}-sources.jar</sources>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>deploy-websockets-jsr-jakartaee9</id>
+                            <phase>deploy</phase>
+                            <goals>
+                                <goal>deploy-file</goal>
+                            </goals>
+                            <configuration>
+                                <file>${project.basedir}/target/output/undertow-websockets-jsr-jakartaee9-${project.version}.jar</file>
+                                <pomFile>${project.basedir}/target/output/undertow-websockets-jsr-jakartaee9-${project.version}.pom</pomFile>
+                                <sources>${project.basedir}/target/output/undertow-websockets-jsr-jakartaee9-${project.version}-sources.jar</sources>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>deploy-examples-jakartaee9</id>
+                            <phase>deploy</phase>
+                            <goals>
+                                <goal>deploy-file</goal>
+                            </goals>
+                            <configuration>
+                                <file>${project.basedir}/target/output/undertow-examples-jakartaee9-${project.version}.jar</file>
+                                <pomFile>${project.basedir}/target/output/undertow-examples-jakartaee9-${project.version}.pom</pomFile>
+                                <sources>${project.basedir}/target/output/undertow-examples-jakartaee9-${project.version}-sources.jar</sources>
+                            </configuration>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <repositoryId>jboss-releases-repository</repositoryId>
+                        <url>https://repository.jboss.org/nexus/service/local/staging/deploy/maven2</url>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 
 
