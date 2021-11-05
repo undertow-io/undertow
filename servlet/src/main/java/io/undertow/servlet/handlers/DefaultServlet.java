@@ -412,14 +412,7 @@ public class DefaultServlet extends HttpServlet {
         if (!path.isEmpty()) {
             if(dispatcherType == DispatcherType.REQUEST) {
                 //WFLY-3543 allow the dispatcher to access stuff in web-inf and meta inf
-                if (path.equals("/META-INF") ||
-                        path.equals("META-INF") ||
-                        path.startsWith("/META-INF/") ||
-                        path.startsWith("META-INF/") ||
-                        path.equals("/WEB-INF") ||
-                        path.equals("WEB-INF") ||
-                        path.startsWith("/WEB-INF/") ||
-                        path.startsWith("WEB-INF/")) {
+                if (Paths.isForbidden(path)) {
                     return false;
                 }
             }
