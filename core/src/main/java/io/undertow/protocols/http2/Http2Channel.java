@@ -1137,7 +1137,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         if (lastGoodStreamId != 0) {
             throw new IllegalStateException();
         }
-        lastGoodStreamId = 1;
+        updateStreamIdsCountersInHeaders(1);
         Http2HeadersStreamSinkChannel stream = new Http2HeadersStreamSinkChannel(this, 1);
         StreamHolder streamHolder = new StreamHolder(stream);
         streamHolder.sourceClosed = true;
