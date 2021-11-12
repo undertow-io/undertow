@@ -346,6 +346,10 @@ public class PredicatedHandlersParser {
                 }
                 break;
             } else if(token.getToken().equals("\n") || token.getToken().equals(";")) {
+                if(token.getToken().equals(";") && tokens.peek()!=null && tokens.peek().getToken().equals(ELSE)) {
+                    // something() -> predicate; ELSE predicate; - dont end processing since its followed by ELSE and its singular block
+                    continue;
+                }
                 handleLineEnd(string, operatorStack, output, blocks);
             } else if (isSpecialChar(token.getToken())) {
                 if (token.getToken().equals("(")) {
