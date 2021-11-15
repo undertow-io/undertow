@@ -22,6 +22,7 @@ import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ErrorPage;
 import io.undertow.servlet.api.ServletStackTraces;
+import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.testutils.DefaultServer;
@@ -40,6 +41,8 @@ import org.junit.runner.RunWith;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import java.io.IOException;
+import java.text.ParseException;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 import static io.undertow.servlet.Servlets.servlet;
@@ -52,6 +55,20 @@ public class SimpleAsyncTestCase {
 
     public static final String HELLO_WORLD = "Hello World";
 
+    private static class SimpleDateThreadSetupHandler implements ThreadSetupHandler {
+        @Override
+        public <T, C> Action<T, C> create(Action<T, C> action) {
+            return (exchange, context) -> {
+                SimpleDateThreadLocalAsyncServlet.initThreadLocalSimpleDate();
+                try {
+                    return action.call(exchange, context);
+                } finally {
+                    SimpleDateThreadLocalAsyncServlet.removeThreadLocalSimpleDate();
+                }
+            };
+        }
+    };
+
     @BeforeClass
     public static void setup() throws ServletException {
         DeploymentUtils.setupServlet(new ServletExtension() {
@@ -59,6 +76,7 @@ public class SimpleAsyncTestCase {
             public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
                 deploymentInfo.setServletStackTraces(ServletStackTraces.NONE);
                 deploymentInfo.addErrorPages(new ErrorPage("/500", StatusCodes.INTERNAL_SERVER_ERROR));
+                deploymentInfo.addThreadSetupAction(new SimpleDateThreadSetupHandler());
             }
         },
                 servlet("messageServlet", MessageServlet.class)
@@ -87,7 +105,10 @@ public class SimpleAsyncTestCase {
                         .addMapping("/dispatch"),
                 servlet("doubleCompleteServlet", AsyncDoubleCompleteServlet.class)
                         .setAsyncSupported(true)
-                        .addMapping("/double-complete"));
+                        .addMapping("/double-complete"),
+                servlet("simpleDateThreadLocal", SimpleDateThreadLocalAsyncServlet.class)
+                        .setAsyncSupported(true)
+                        .addMapping("/simple-date-thread-local"));
 
     }
 
@@ -192,6 +213,23 @@ public class SimpleAsyncTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(HELLO_WORLD, response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testSimpleDateThreahLocalAsyncServlet() throws IOException, ParseException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            final Date start = new Date();
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/simple-date-thread-local");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals("Response status is not OK", StatusCodes.OK, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertNotEquals("Date thread-local was not found", SimpleDateThreadLocalAsyncServlet.NULL_THREAD_LOCAL, response);
+            final Date date = SimpleDateThreadLocalAsyncServlet.parseDate(response);
+            Assert.assertTrue("Date thread-local is not in range", date.compareTo(start) >= 0 && date.compareTo(new Date()) <= 0);
         } finally {
             client.getConnectionManager().shutdown();
         }
