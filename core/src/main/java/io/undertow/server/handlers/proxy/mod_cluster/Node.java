@@ -291,24 +291,6 @@ class Node {
         return null;
     }
 
-    boolean disableContext(final String path, final List<String> aliases) {
-        final Context context = getContext(path, aliases);
-        if (context != null) {
-            context.disable();
-            return true;
-        }
-        return false;
-    }
-
-    int stopContext(final String path, final List<String> aliases) {
-        final Context context = getContext(path, aliases);
-        if (context != null) {
-            context.stop();
-            return context.getActiveRequests();
-        }
-        return -1;
-    }
-
     Context removeContext(final String path, final List<String> aliases) {
         final Context context = getContext(path, aliases);
         if (context != null) {
