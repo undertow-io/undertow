@@ -66,6 +66,7 @@ public class AsyncServlet5 extends HttpServlet {
                     e.printStackTrace();
                 }
                 scheduledFuture.cancel(true);
+                ctx.complete();
             }
         });
         t.start();
