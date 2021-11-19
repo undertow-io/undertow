@@ -18,8 +18,6 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import static org.wildfly.common.Assert.checkNotNullParam;
-
 import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -193,9 +191,10 @@ public class ModCluster {
      * @throws IOException
      */
     public synchronized void advertise(MCMPConfig config) throws IOException {
-        checkNotNullParam("config", config);
-        final MCMPConfig.AdvertiseConfig advertiseConfig = checkNotNullParam("config.getAdvertiseConfig", config.getAdvertiseConfig());
-
+        final MCMPConfig.AdvertiseConfig advertiseConfig = config.getAdvertiseConfig();
+        if (advertiseConfig == null) {
+            throw new IllegalArgumentException("advertise not enabled");
+        }
         MCMPAdvertiseTask.advertise(container, advertiseConfig, xnioWorker);
     }
 

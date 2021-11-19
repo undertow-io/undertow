@@ -18,7 +18,6 @@
 
 package io.undertow.util;
 
-import static org.wildfly.common.Assert.checkNotNullParamWithNullPointerException;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -96,7 +95,9 @@ public class SubstringMap<V> {
     }
 
     public synchronized void put(String key, V value) {
-        checkNotNullParamWithNullPointerException("key", key);
+        if (key == null) {
+            throw new NullPointerException();
+        }
         Object[] newTable;
         if (table.length / (double) size < 4 && table.length != Integer.MAX_VALUE) {
             newTable = new Object[table.length << 1];
@@ -115,7 +116,9 @@ public class SubstringMap<V> {
     }
 
     public synchronized V remove(String key) {
-        checkNotNullParamWithNullPointerException("key", key);
+        if (key == null) {
+            throw new NullPointerException();
+        }
         //we just assume it is present, and always do a copy
         //for this maps intended use cases as a path matcher it won't be called when
         //the value is not present anyway

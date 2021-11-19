@@ -24,8 +24,6 @@
 
 package io.undertow.util;
 
-import static org.wildfly.common.Assert.checkNotNullParamWithNullPointerException;
-
 import java.io.Serializable;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
@@ -1321,7 +1319,8 @@ public class FastConcurrentDirectDeque<E>
      */
     @SuppressWarnings("unchecked")
     public <T> T[] toArray(T[] a) {
-        return (T[]) toArrayInternal(checkNotNullParamWithNullPointerException("a", a));
+        if (a == null) throw new NullPointerException();
+        return (T[]) toArrayInternal(a);
     }
 
     /**
