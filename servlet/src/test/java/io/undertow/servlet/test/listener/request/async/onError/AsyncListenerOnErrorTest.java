@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import javax.servlet.ServletException;
 
+import io.undertow.testutils.ProxyIgnore;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.jboss.logging.Logger;
@@ -167,7 +168,8 @@ public class AsyncListenerOnErrorTest {
         }
     }
 
-    @Test
+    @Test @ProxyIgnore
+    // FIXME UNDERTOW-1523
     public void testAsyncErrorOnClientBreakdown() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
