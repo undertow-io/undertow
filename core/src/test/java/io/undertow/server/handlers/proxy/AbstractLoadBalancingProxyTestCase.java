@@ -84,7 +84,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                 final XnioWorker worker = server1.getWorker();
                 server1.stop();
                 // if stop did not shutdown the worker, we need to run the latch to prevent a Address already in use (UNDERTOW-1960)
-                if (!worker.isShutdown()) {
+                if (worker != null && !worker.isShutdown()) {
                     countDown++;
                     worker1 = worker;
                 }
@@ -95,7 +95,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                     final XnioWorker worker = server2.getWorker();
                     server2.stop();
                     // if stop did not shutdown the worker, we need to run the latch to prevent a Address already in use (UNDERTOW-1960)
-                    if (!worker.isShutdown() && worker != worker1) {
+                    if (worker != null && !worker.isShutdown() && worker != worker1) {
                         worker2 = worker;
                         countDown ++;
                     }
