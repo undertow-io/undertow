@@ -18,8 +18,6 @@
 
 package io.undertow.server.handlers;
 
-import static org.wildfly.common.Assert.checkNotEmptyParam;
-
 import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -68,10 +66,11 @@ public final class ChannelUpgradeHandler implements HttpHandler {
     }
 
     private synchronized void addProtocol(String productString, HttpUpgradeListener openListener, final ChannelListener<? super StreamConnection> channelListener, final HttpUpgradeHandshake handshake) {
-        checkNotEmptyParam("productString", productString);
-
+        if (productString == null) {
+            throw new IllegalArgumentException("productString is null");
+        }
         if (openListener == null && channelListener == null) {
-            throw new IllegalArgumentException("openListener and channelListener are null");
+            throw new IllegalArgumentException("openListener is null");
         }
         if(openListener == null) {
             openListener = new HttpUpgradeListener() {

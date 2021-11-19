@@ -18,8 +18,6 @@
 
 package io.undertow.server.handlers.cache;
 
-import static org.wildfly.common.Assert.checkNotNullParam;
-
 import org.xnio.BufferAllocator;
 
 import java.nio.ByteBuffer;
@@ -66,7 +64,7 @@ public final class LimitedBufferSlicePool {
         }
         buffersPerRegion = maxRegionSize / bufferSize;
         this.bufferSize = bufferSize;
-        this.allocator = checkNotNullParam("allocator", allocator);
+        this.allocator = allocator;
         this.maxRegions = maxRegions;
     }
 

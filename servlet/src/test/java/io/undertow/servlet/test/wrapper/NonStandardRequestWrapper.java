@@ -18,8 +18,6 @@
 
 package io.undertow.servlet.test.wrapper;
 
-import static org.wildfly.common.Assert.checkNotNullParam;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -56,7 +54,10 @@ public class NonStandardRequestWrapper implements HttpServletRequest {
      * @throws java.lang.IllegalArgumentException if the request is null
      */
     public NonStandardRequestWrapper(ServletRequest request) {
-        this.request = checkNotNullParam("request", request);
+        if (request == null) {
+            throw new IllegalArgumentException("Request cannot be null");
+        }
+        this.request = request;
     }
 
     /**
@@ -72,7 +73,10 @@ public class NonStandardRequestWrapper implements HttpServletRequest {
      * @throws java.lang.IllegalArgumentException if the request is null.
      */
     public void setRequest(ServletRequest request) {
-        this.request = checkNotNullParam("request", request);
+        if (request == null) {
+            throw new IllegalArgumentException("Request cannot be null");
+        }
+        this.request = request;
     }
 
 
