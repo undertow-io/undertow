@@ -440,6 +440,10 @@ public class HttpClientTestCase {
     }
 
     private ClientCallback<ClientExchange> createClientCallback(final List<ClientResponse> responses, final CountDownLatch latch) {
+        return createClientCallback(responses, latch, true);
+    }
+
+    private ClientCallback<ClientExchange> createClientCallback(final List<ClientResponse> responses, final CountDownLatch latch, final boolean expectedResponse) {
         return new ClientCallback<ClientExchange>() {
             @Override
             public void completed(ClientExchange result) {
