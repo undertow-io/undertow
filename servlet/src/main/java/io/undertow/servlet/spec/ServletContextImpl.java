@@ -175,13 +175,13 @@ public class ServletContextImpl implements ServletContext {
                 return null;
             }
         });
-        this.runnableTask = new ThreadSetupHandler.Action<Void, Runnable>() {
+        this.runnableTask = deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, Runnable>() {
             @Override
-            public Void call(HttpServerExchange exchange, Runnable context) throws Exception {
-                context.run();
+            public Void call(HttpServerExchange exchange, Runnable runnable) throws Exception {
+                runnable.run();
                 return null;
             }
-        };
+        });
         this.onDataAvailableTask = deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, ReadListener>() {
             @Override
             public Void call(HttpServerExchange exchange, ReadListener context) throws Exception {
