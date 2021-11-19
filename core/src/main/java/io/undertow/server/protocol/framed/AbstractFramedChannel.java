@@ -815,7 +815,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * Forcibly closes the {@link io.undertow.server.protocol.framed.AbstractFramedChannel}.
      */
     @Override
-    public synchronized void close() throws IOException {
+    public void close() throws IOException {
         if (UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_IO_LOGGER.tracef(new ClosedChannelException(), "Channel %s is being closed", this);
         }
