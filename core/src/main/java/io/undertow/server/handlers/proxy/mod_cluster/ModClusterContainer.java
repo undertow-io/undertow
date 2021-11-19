@@ -319,20 +319,7 @@ class ModClusterContainer implements ModClusterController {
     public synchronized boolean enableContext(final String contextPath, final String jvmRoute, final List<String> aliases) {
         final Node node = nodes.get(jvmRoute);
         if (node != null) {
-            Context context = node.getContext(contextPath, aliases);
-            if (context == null) {
-                context = node.registerContext(contextPath, aliases);
-                UndertowLogger.ROOT_LOGGER.registeringContext(contextPath, jvmRoute);
-                UndertowLogger.ROOT_LOGGER.registeringContext(contextPath, jvmRoute, aliases);
-                for (final String alias : aliases) {
-                    VirtualHost virtualHost = hosts.get(alias);
-                    if (virtualHost == null) {
-                        virtualHost = new VirtualHost();
-                        hosts.put(alias, virtualHost);
-                    }
-                    virtualHost.registerContext(contextPath, jvmRoute, context);
-                }
-            }
+            Context context = getOrRegisterContext(contextPath, jvmRoute, aliases, node);
             context.enable();
             return true;
         }
@@ -342,7 +329,8 @@ class ModClusterContainer implements ModClusterController {
     public synchronized boolean disableContext(final String contextPath, final String jvmRoute, List<String> aliases) {
         final Node node = nodes.get(jvmRoute);
         if (node != null) {
-            node.disableContext(contextPath, aliases);
+            Context context = getOrRegisterContext(contextPath, jvmRoute, aliases, node);
+            context.disable();
             return true;
         }
         return false;
@@ -351,7 +339,9 @@ class ModClusterContainer implements ModClusterController {
     synchronized int stopContext(final String contextPath, final String jvmRoute, List<String> aliases) {
         final Node node = nodes.get(jvmRoute);
         if (node != null) {
-            return node.stopContext(contextPath, aliases);
+            Context context = getOrRegisterContext(contextPath, jvmRoute, aliases, node);
+            context.stop();
+            return context.getActiveRequests();
         }
         return -1;
     }
@@ -385,6 +375,24 @@ class ModClusterContainer implements ModClusterController {
             }
         }
         return true;
+    }
+
+    private Context getOrRegisterContext(String contextPath, String jvmRoute, List<String> aliases, Node node) {
+        Context context = node.getContext(contextPath, aliases);
+        if (context == null) {
+            context = node.registerContext(contextPath, aliases);
+            UndertowLogger.ROOT_LOGGER.registeringContext(contextPath, jvmRoute);
+            UndertowLogger.ROOT_LOGGER.registeringContext(contextPath, jvmRoute, aliases);
+            for (final String alias : aliases) {
+                VirtualHost virtualHost = hosts.get(alias);
+                if (virtualHost == null) {
+                    virtualHost = new VirtualHost();
+                    hosts.put(alias, virtualHost);
+                }
+                virtualHost.registerContext(contextPath, jvmRoute, context);
+            }
+        }
+        return context;
     }
 
     /**
