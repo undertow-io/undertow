@@ -21,6 +21,7 @@ package io.undertow.client.http;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -66,6 +67,7 @@ import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker
 
 /**
  * @author Emanuel Muckenhuber
+ * @author Flavia Rainone
  */
 @RunWith(DefaultServer.class)
 @HttpOneOnly
@@ -81,6 +83,8 @@ public class HttpClientTestCase {
     private static final URI ADDRESS;
 
     private static final AttachmentKey<String> RESPONSE_BODY = AttachmentKey.create(String.class);
+
+    private IOException exception;
 
     static {
         final OptionMap.Builder builder = OptionMap.builder()
@@ -120,6 +124,11 @@ public class HttpClientTestCase {
         .addExactPath(READTIMEOUT, new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
+                exchange.setStatusCode(StatusCodes.OK);
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 5 + "");
+                StreamSinkChannel responseChannel = exchange.getResponseChannel();
+                responseChannel.write(ByteBuffer.wrap(new byte[]{'a', 'b', 'c'}));
+                responseChannel.flush();
                 try {
                     //READ_TIMEOUT set as 600ms on the client side
                     //On the server side intentionally sleep 2000ms
@@ -128,7 +137,8 @@ public class HttpClientTestCase {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                sendMessage(exchange);
+                responseChannel.write(ByteBuffer.wrap(new byte[]{'d', 'e'}));
+                responseChannel.close();
             }
         })
         .addExactPath(POST, new HttpHandler() {
@@ -325,10 +335,12 @@ public class HttpClientTestCase {
         }
 
     }
+
     @Test
     public void testReadTimeout() throws Exception {
         //
         final UndertowClient client = createClient();
+        exception = null;
 
         final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(1);
@@ -337,7 +349,7 @@ public class HttpClientTestCase {
         final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), builder.getMap()).get();
         final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(READTIMEOUT);
         request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
-        connection.sendRequest(request, createClientCallback(responses, latch));
+        connection.sendRequest(request, createClientCallback(responses, latch, false));
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -345,41 +357,49 @@ public class HttpClientTestCase {
                     for (int i = 0; i < 1; i++) {
                         final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(READTIMEOUT);
                         request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
-                        connection.sendRequest(request, createClientCallback(responses, latch));
+                        connection.sendRequest(request, createClientCallback(responses, latch, false));
                     }
                 }
 
             });
-
             latch.await(10, TimeUnit.SECONDS);
-
-            Assert.assertEquals(0, responses.size());//expected no response since READ_TIMEOUT happens
+            //exception expected because of read timeout
+            Assert.assertNotNull(exception);
         } finally {
             IoUtils.safeClose(connection);
         }
     }
 
-
     private ClientCallback<ClientExchange> createClientCallback(final List<ClientResponse> responses, final CountDownLatch latch) {
+        return createClientCallback(responses, latch, true);
+    }
+
+    private ClientCallback<ClientExchange> createClientCallback(final List<ClientResponse> responses, final CountDownLatch latch, final boolean expectedResponse) {
         return new ClientCallback<ClientExchange>() {
             @Override
             public void completed(ClientExchange result) {
                 result.setResponseListener(new ClientCallback<ClientExchange>() {
                     @Override
                     public void completed(final ClientExchange result) {
-                        responses.add(result.getResponse());
                         new StringReadChannelListener(result.getConnection().getBufferPool()) {
 
                             @Override
                             protected void stringDone(String string) {
                                 result.getResponse().putAttachment(RESPONSE_BODY, string);
-                                latch.countDown();
+                                // add response only if there is a string or error, or else
+                                // we risk adding keep alive messages in timeout tests
+                                responses.add(result.getResponse());
+                                if (expectedResponse)
+                                    latch.countDown();
                             }
 
                             @Override
                             protected void error(IOException e) {
                                 e.printStackTrace();
-
+                                exception = e;
+                                // add response only if there is a string or error, or else
+                                // we risk adding keep alive messages in timeout tests
+                                responses.add(result.getResponse());
                                 latch.countDown();
                             }
                         }.setup(result.getResponseChannel());
@@ -388,6 +408,7 @@ public class HttpClientTestCase {
                     @Override
                     public void failed(IOException e) {
                         e.printStackTrace();
+                        exception = e;
 
                         latch.countDown();
                     }
@@ -399,6 +420,7 @@ public class HttpClientTestCase {
                         result.getRequestChannel().resumeWrites();
                     }
                 } catch (IOException e) {
+                    exception = e;
                     e.printStackTrace();
                     latch.countDown();
                 }
@@ -406,6 +428,7 @@ public class HttpClientTestCase {
 
             @Override
             public void failed(IOException e) {
+                exception = e;
                 e.printStackTrace();
                 latch.countDown();
             }
