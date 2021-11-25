@@ -792,6 +792,24 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void declareRoles(final String... roleNames) {
+        final DeploymentInfo di = this.getDeploymentInfo();
+        if (isInitialized()) {
+            throw UndertowServletMessages.MESSAGES.servletAlreadyInitialize(di.getDeploymentName(), di.getContextPath());
+        }
+
+        for (String role : roleNames) {
+            if (role == null || role.isEmpty()) {
+                throw UndertowServletMessages.MESSAGES.roleMustNotBeEmpty(di.getDeploymentName(), di.getContextPath());
+            }
+        }
+
+        if (ApplicationListeners.listenerState() == PROGRAMATIC_LISTENER) {
+            //NOTE: its either null or false for non-programatic? - null in case its not ApplicationListener
+            throw UndertowServletMessages.MESSAGES.cantCallFromDynamicListener(di.getDeploymentName(), di.getContextPath());
+        }
+
+        deploymentInfo.addSecurityRoles(roleNames);
+
     }
 
     @Override
