@@ -235,4 +235,13 @@ public interface UndertowServletMessages {
 
     @Message(id = 10063, value = "Path %s must start with a / to get the request dispatcher")
     IllegalArgumentException pathMustStartWithSlashForRequestDispatcher(String path);
+
+    @Message(id = 10064, value = "Servlet context for context path '%s' in deployment '%s' has already been initialized, can not declare roles.")
+    IllegalStateException servletAlreadyInitialize(String deploymentName, String contextPath);
+
+    @Message(id = 10065, value = "Can not set empty/null role in servlet context for context path '%s' in deployment '%s' ")
+    IllegalArgumentException roleMustNotBeEmpty(String deploymentName, String contextPath);
+
+    @Message(id = 10066, value = "Can not set invoke 'declareRoles' from dynamic listener in servlet context for context path '%s' in deployment '%s' ")
+    UnsupportedOperationException cantCallFromDynamicListener(String deploymentName, String contextPath);
 }
