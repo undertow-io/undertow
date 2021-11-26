@@ -260,6 +260,18 @@ public class DefaultServletTestCase {
     }
 
     @Test
+    public void testNoAccessToMetaInfResource() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/meta-inf/secret");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
     public void testDirectoryListing() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
