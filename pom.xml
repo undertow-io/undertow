@@ -62,6 +62,10 @@
          -->
         <version.com.h2database>1.4.200</version.com.h2database>
         <version.easymock>4.2</version.easymock>
+        <version.jakarta.annotation.jakarta-annotation-api>2.0.0</version.jakarta.annotation.jakarta-annotation-api>
+        <version.jakarta.servlet.jakarta-servlet-api>5.0.0</version.jakarta.servlet.jakarta-servlet-api>
+        <version.jakarta.websocket.jakarta-websocket-api>2.0.0</version.jakarta.websocket.jakarta-websocket-api>
+        <version.org.wildfly.extras.batavia>1.0.11.Final</version.org.wildfly.extras.batavia>
         <version.junit>4.13</version.junit>
         <version.netty>4.1.50.Final</version.netty>
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
@@ -103,8 +107,6 @@
         <version.bundle.plugin>5.1.1</version.bundle.plugin>
 
         <version.jmh>1.21</version.jmh>
-
-        <version.org.wildfly.extras.batavia>1.0.4.Final</version.org.wildfly.extras.batavia>
     </properties>
 
     <modules>
@@ -114,7 +116,7 @@
         <module>examples</module>
         <module>websockets-jsr</module>
         <module>benchmarks</module>
-        <module>jakartaee9</module>
+        <module>jakarta</module>
     </modules>
 
     <build>
@@ -274,6 +276,30 @@
                     <artifactId>maven-bundle-plugin</artifactId>
                     <version>${version.bundle.plugin}</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.wildfly.extras.batavia</groupId>
+                    <artifactId>transformer-tools-mvn</artifactId>
+                    <version>${version.org.wildfly.extras.batavia}</version>
+                    <executions>
+                        <execution>
+                            <id>transform-sources</id>
+                            <phase>generate-sources</phase>
+                            <goals>
+                                <goal>transform-sources</goal>
+                            </goals>
+                            <configuration>
+                                <source-project>${jakarta.transformer.input.dir}</source-project>
+                            </configuration>
+                        </execution>
+                    </executions>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.wildfly.extras.batavia</groupId>
+                            <artifactId>transformer-impl-eclipse</artifactId>
+                            <version>${version.org.wildfly.extras.batavia}</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
@@ -305,7 +331,7 @@
 
             <dependency>
                 <groupId>io.undertow</groupId>
-                <artifactId>undertow-examples-jakartaee9</artifactId>
+                <artifactId>undertow-examples-jakarta</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -323,8 +349,15 @@
 
             <dependency>
                 <groupId>io.undertow</groupId>
-                <artifactId>undertow-servlet-jakartaee9</artifactId>
+                <artifactId>undertow-servlet-jakarta</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.undertow</groupId>
+                <artifactId>undertow-servlet-jakarta</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
             </dependency>
 
             <dependency>
@@ -343,7 +376,7 @@
 
             <dependency>
                 <groupId>io.undertow</groupId>
-                <artifactId>undertow-websockets-jsr-jakartaee9</artifactId>
+                <artifactId>undertow-websockets-jsr-jakarta</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -353,14 +386,30 @@
                 <version>${project.version}</version>
             </dependency>
 
-
-
             <!-- External Dependencies -->
 
             <dependency>
                 <groupId>io.undertow.build</groupId>
                 <artifactId>undertow-checkstyle-config</artifactId>
                 <version>${version.io.undertow.build.checkstyle-config}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>jakarta.servlet</groupId>
+                <artifactId>jakarta.servlet-api</artifactId>
+                <version>${version.jakarta.servlet.jakarta-servlet-api}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>jakarta.annotation</groupId>
+                <artifactId>jakarta.annotation-api</artifactId>
+                <version>${version.jakarta.annotation.jakarta-annotation-api}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>jakarta.websocket</groupId>
+                <artifactId>jakarta.websocket-api</artifactId>
+                <version>${version.jakarta.websocket.jakarta-websocket-api}</version>
             </dependency>
 
             <dependency>
