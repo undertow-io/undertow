@@ -87,6 +87,9 @@
         <version.org.jacoco>0.7.9</version.org.jacoco>
         <jacoco.agent.argLine></jacoco.agent.argLine>
 
+        <!-- Spotbugs properties -->
+        <spotbugs.exclude.filter.file>../spotbugs-exclude.xml</spotbugs.exclude.filter.file>
+
         <!-- Surefire args -->
         <surefire.jpda.args/>
         <surefire.system.args>-ea ${surefire.jpda.args} -Xmx1024m</surefire.system.args>
@@ -215,7 +218,7 @@
                     <artifactId>spotbugs-maven-plugin</artifactId>
                     <version>${version.com.github.spotbugs-maven-plugin}</version>
                     <configuration>
-                        <excludeFilterFile>../spotbugs-exclude.xml</excludeFilterFile>
+                        <excludeFilterFile>${spotbugs.exclude.filter.file}</excludeFilterFile>
                     </configuration>
                     <executions>
                         <execution>
