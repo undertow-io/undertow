@@ -25,6 +25,7 @@ import org.junit.experimental.categories.Category;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -48,6 +49,16 @@ public final class HeaderMapTestCase {
     }
 
     @Test
+    public void testMixedCase() {
+        final HeaderMap headerMap = new HeaderMap();
+        headerMap.add(new HttpString("Aa"), "A");
+        headerMap.add(new HttpString("aa"), "a");
+        assertArrayEquals(headerMap.get(new HttpString("aa")).toArray(), new String[]{"A", "a"});
+        assertArrayEquals(headerMap.get(new HttpString("Aa")).toArray(), new String[]{"A", "a"});
+        assertArrayEquals(headerMap.get(new HttpString("AA")).toArray(), new String[]{"A", "a"});
+    }
+
+    @Test
     public void testSimple() {
         final HeaderMap headerMap = new HeaderMap();
         headerMap.add(Headers.HOST, "yay.undertow.io");
@@ -68,7 +79,7 @@ public final class HeaderMapTestCase {
     public void testGrowing() {
         final HeaderMap headerMap = new HeaderMap();
         for (HttpString item : HTTP_STRING_LIST) {
-            for (int i = 0; i < (item.hashCode() & 7) + 1; i ++)
+            for (int i = 0; i < (item.hashCode() & 7) + 1; i++)
                 headerMap.add(item, "Test value");
         }
         for (HttpString item : HTTP_STRING_LIST) {

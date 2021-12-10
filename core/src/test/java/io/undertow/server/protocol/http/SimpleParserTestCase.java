@@ -419,6 +419,15 @@ public class SimpleParserTestCase {
         runTest(in);
     }
 
+    @Test
+    public void testDifferentCaseHeaders() throws BadRequestException {
+        final ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        byte[] in = "GET /somepath HTTP/1.1\r\nHost: www.somehost.net\r\nhost: other\r\n\r\n".getBytes();
+        HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertArrayEquals(result.getRequestHeaders().get("HOST").toArray(), new String[] {"www.somehost.net", "other"});
+    }
+
     @Test(expected = BadRequestException.class)
     public void testTabInsteadOfSpaceAfterVerb() throws BadRequestException {
         byte[] in = "GET\t/somepath HTTP/1.1\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\n\r\n".getBytes();
