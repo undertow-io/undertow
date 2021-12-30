@@ -78,7 +78,10 @@ public class PathResource implements RangeAwareResource {
 
     @Override
     public String getName() {
-        return file.getFileName().toString();
+        if( file.getFileName() != null ) {
+            return file.getFileName().toString();
+        }
+        return file.toString();
     }
 
     @Override
