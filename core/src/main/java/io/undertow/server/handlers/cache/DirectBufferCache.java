@@ -90,17 +90,9 @@ public class DirectBufferCache {
     }
 
     public CacheEntry get(Object key) {
-        CacheEntry cacheEntry = cache.get(key);
+        CacheEntry cacheEntry = getQuiet(key);
         if (cacheEntry == null) {
             return null;
-        }
-
-        long expires = cacheEntry.getExpires();
-        if(expires != -1) {
-            if(System.currentTimeMillis() > expires) {
-                remove(key);
-                return null;
-            }
         }
 
         if (cacheEntry.hit() % SAMPLE_INTERVAL == 0) {
@@ -131,6 +123,22 @@ public class DirectBufferCache {
             }
         }
 
+        return cacheEntry;
+    }
+
+    public CacheEntry getQuiet(Object key) {
+        CacheEntry cacheEntry = cache.get(key);
+        if (cacheEntry == null) {
+            return null;
+        }
+
+        long expires = cacheEntry.getExpires();
+        if(expires != -1) {
+            if(System.currentTimeMillis() > expires) {
+                remove(key);
+                return null;
+            }
+        }
         return cacheEntry;
     }
 
@@ -172,6 +180,7 @@ public class DirectBufferCache {
             if (old != null) {
                 accessQueue.removeToken(old);
             }
+            // When the last thread dereferences itself and the refs counter reaches 0, the cache entry will destroy its buffers
             remove.dereference();
         }
     }
@@ -193,9 +202,11 @@ public class DirectBufferCache {
         private final DirectBufferCache cache;
         private final int maxAge;
         private volatile PooledByteBuffer[] buffers = INIT_BUFFERS;
+        // How many threads are referencing this cache entry.  Defaults to 1.  When dereferenced to zero, the entry destroys its buffers
         private volatile int refs = 1;
-        private volatile int hits = 1;
+        private volatile int hits = 0;
         private volatile Object accessToken;
+        // 0 = disabled, 1 = claimed by a thread and still being initialized, 2 = buffers filled and ready to go
         private volatile int enabled;
         private volatile long expires = -1;
 
@@ -215,14 +226,11 @@ public class DirectBufferCache {
         }
 
         public int hit() {
-            for (;;) {
-                int i = hits;
+            return hitsUpdater.incrementAndGet(this);
+        }
 
-                if (hitsUpdater.weakCompareAndSet(this, i, ++i)) {
-                    return i;
-                }
-
-            }
+        public int getHits() {
+            return hits;
         }
 
         public Object key() {
@@ -231,6 +239,14 @@ public class DirectBufferCache {
 
         public boolean enabled() {
             return enabled == 2;
+        }
+
+        public int getEnabled() {
+            return enabled;
+        }
+
+        public int getRefs() {
+            return refs;
         }
 
         public void enable() {
@@ -247,10 +263,12 @@ public class DirectBufferCache {
         }
 
         public boolean claimEnable() {
+            // Only allow the current thread to claim enablement if the enable flag is currently 0
             return enabledUpdator.compareAndSet(this, 0, 1);
         }
 
         public boolean reference() {
+            // Keep trying until we get a clean increment of the ref counter
             for(;;) {
                 int refs = this.refs;
                 if (refs < 1) {
@@ -264,6 +282,7 @@ public class DirectBufferCache {
         }
 
         public boolean dereference() {
+            // Keep trying until we get a clean decrement of the ref counter
             for(;;) {
                 int refs = this.refs;
                 if (refs < 1) {
@@ -278,8 +297,13 @@ public class DirectBufferCache {
                 }
             }
         }
-
+        /**
+         * Returns true if buffers are already allocated or allocation was successful.
+         * Returns false if buffer allocation was not successful.
+         * @return true/false
+         */
         public boolean allocate() {
+
             if (buffers.length > 0)
                 return true;
 
@@ -319,11 +343,14 @@ public class DirectBufferCache {
             return true;
         }
 
+        /**
+         * Frees all buffers associated
+         */
         private void destroy() {
-            this.buffers = EMPTY_BUFFERS;
             for (PooledByteBuffer buffer : buffers) {
                 buffer.free();
             }
+            this.buffers = EMPTY_BUFFERS;
         }
 
         Object claimToken() {
