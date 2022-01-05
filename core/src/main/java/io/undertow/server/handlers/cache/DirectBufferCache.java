@@ -204,7 +204,7 @@ public class DirectBufferCache {
         private volatile PooledByteBuffer[] buffers = INIT_BUFFERS;
         // How many threads are referencing this cache entry.  Defaults to 1.  When dereferenced to zero, the entry destroys its buffers
         private volatile int refs = 1;
-        private volatile int hits = 0;
+        private volatile int hits = 1;
         private volatile Object accessToken;
         // 0 = disabled, 1 = claimed by a thread and still being initialized, 2 = buffers filled and ready to go
         private volatile int enabled;
