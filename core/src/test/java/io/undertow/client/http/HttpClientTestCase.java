@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
@@ -35,9 +36,11 @@ import io.undertow.client.ClientExchange;
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.client.UndertowClient;
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.io.Receiver;
 import io.undertow.io.Sender;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
@@ -45,10 +48,12 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.StringReadChannelListener;
 import io.undertow.util.StringWriteChannelListener;
+import org.apache.commons.lang.StringUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -118,6 +123,10 @@ public class HttpClientTestCase {
         .addExactPath(MESSAGE, new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
+                for (int i = 0; i < 100; i++) {
+                    exchange.getResponseHeaders()
+                            .put(HttpString.tryFromString("" + i), "" + i);
+                }
                 sendMessage(exchange);
             }
         })
@@ -126,6 +135,10 @@ public class HttpClientTestCase {
             public void handleRequest(HttpServerExchange exchange) throws Exception {
                 exchange.setStatusCode(StatusCodes.OK);
                 exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 5 + "");
+//                for (int i = 0; i < 100; i++) {
+//                    exchange.getResponseHeaders()
+//                            .put(HttpString.tryFromString("" + i), "" + i);
+//                }
                 StreamSinkChannel responseChannel = exchange.getResponseChannel();
                 responseChannel.write(ByteBuffer.wrap(new byte[]{'a', 'b', 'c'}));
                 responseChannel.flush();
@@ -144,6 +157,10 @@ public class HttpClientTestCase {
         .addExactPath(POST, new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
+                for (int i = 0; i < 10; i++) {
+                    exchange.getResponseHeaders()
+                            .put(HttpString.tryFromString("" + i), "" + i);
+                }
                 exchange.getRequestReceiver().receiveFullString(new Receiver.FullStringCallback() {
                     @Override
                     public void handle(HttpServerExchange exchange, String message) {
@@ -174,7 +191,7 @@ public class HttpClientTestCase {
 
         final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
-        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, getBufferPool(), OptionMap.EMPTY).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -182,6 +199,10 @@ public class HttpClientTestCase {
                     for (int i = 0; i < 10; i++) {
                         final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(MESSAGE);
                         request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+                        for (int j = 0; j < 100; j++) {
+                            request.getRequestHeaders()
+                                    .put(HttpString.tryFromString("" + ThreadLocalRandom.current().nextInt(100)), "" + ThreadLocalRandom.current().nextInt(100));
+                        }
                         connection.sendRequest(request, createClientCallback(responses, latch));
                     }
                 }
@@ -207,7 +228,7 @@ public class HttpClientTestCase {
 
         final List<String> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(10);
-        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, getBufferPool(), OptionMap.EMPTY).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -223,7 +244,7 @@ public class HttpClientTestCase {
                                 result.setResponseListener(new ClientCallback<ClientExchange>() {
                                     @Override
                                     public void completed(ClientExchange result) {
-                                        new StringReadChannelListener(DefaultServer.getBufferPool()) {
+                                        new StringReadChannelListener(getBufferPool()) {
 
                                             @Override
                                             protected void stringDone(String string) {
@@ -281,7 +302,7 @@ public class HttpClientTestCase {
         SSLContext context = DefaultServer.getClientSSLContext();
         XnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, context);
 
-        final ClientConnection connection = client.connect(new URI(DefaultServer.getDefaultServerSSLAddress()), worker, ssl, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(new URI(DefaultServer.getDefaultServerSSLAddress()), worker, ssl, getBufferPool(), OptionMap.EMPTY).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
@@ -319,7 +340,7 @@ public class HttpClientTestCase {
         final UndertowClient client = createClient();
 
         final CountDownLatch latch = new CountDownLatch(1);
-        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, getBufferPool(), OptionMap.EMPTY).get();
         try {
             ClientRequest request = new ClientRequest().setPath(MESSAGE).setMethod(Methods.GET);
             request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
@@ -346,7 +367,7 @@ public class HttpClientTestCase {
         final CountDownLatch latch = new CountDownLatch(1);
         OptionMap.Builder builder = OptionMap.builder();
         builder.set(Options.READ_TIMEOUT, 600);
-        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), builder.getMap()).get();
+        final ClientConnection connection = client.connect(ADDRESS, worker, getBufferPool(), builder.getMap()).get();
         final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(READTIMEOUT);
         request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
         connection.sendRequest(request, createClientCallback(responses, latch, false));
@@ -433,6 +454,10 @@ public class HttpClientTestCase {
                 latch.countDown();
             }
         };
+    }
+
+    public static ByteBufferPool getBufferPool() {
+        return new DefaultByteBufferPool(true, 50, 0, 0, 100);
     }
 
 }

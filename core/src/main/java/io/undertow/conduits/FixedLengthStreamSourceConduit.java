@@ -257,7 +257,10 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
                 return res = next.read(dst);
             }
         } catch (IOException | RuntimeException | Error e) {
-            IoUtils.safeClose(exchange.getConnection());
+            HttpServerExchange exchangeSnapshot = exchange;
+            if (exchangeSnapshot != null) {
+                IoUtils.safeClose(exchangeSnapshot.getConnection());
+            }
             readError = e;
             throw e;
         }  finally {
