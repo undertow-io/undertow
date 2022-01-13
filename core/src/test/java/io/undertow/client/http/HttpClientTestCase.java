@@ -190,13 +190,14 @@ public class HttpClientTestCase {
         final UndertowClient client = createClient();
 
         final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
-        final CountDownLatch latch = new CountDownLatch(10);
+        final int iterations = 100;
+        final CountDownLatch latch = new CountDownLatch(iterations);
         final ClientConnection connection = client.connect(ADDRESS, worker, getBufferPool(), OptionMap.EMPTY).get();
         try {
             connection.getIoThread().execute(new Runnable() {
                 @Override
                 public void run() {
-                    for (int i = 0; i < 10; i++) {
+                    for (int i = 0; i < iterations; i++) {
                         final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(MESSAGE);
                         request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
                         for (int j = 0; j < 100; j++) {
@@ -211,7 +212,7 @@ public class HttpClientTestCase {
 
             latch.await(10, TimeUnit.SECONDS);
 
-            Assert.assertEquals(10, responses.size());
+            Assert.assertEquals(iterations, responses.size());
             for (final ClientResponse response : responses) {
                 Assert.assertEquals(message, response.getAttachment(RESPONSE_BODY));
             }
