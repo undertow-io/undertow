@@ -280,11 +280,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                             do {
                                 res = writeNext(buffer);
                                 if (res == 0) {
-                                    this.string = string;
-                                    this.headerName = headerName;
-                                    this.charIndex = charIndex;
-                                    this.valueIterator = valueIterator;
-                                    this.nameIterator = nameIterator;
                                     log.trace("Continuation");
                                     return STATE_HDR_EOL_CR;
                                 }
@@ -297,11 +292,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                             do {
                                 res = writeNext(buffer);
                                 if (res == 0) {
-                                    this.string = string;
-                                    this.headerName = headerName;
-                                    this.charIndex = charIndex;
-                                    this.valueIterator = valueIterator;
-                                    this.nameIterator = nameIterator;
                                     log.trace("Continuation");
                                     return STATE_HDR_EOL_LF;
                                 }
@@ -320,11 +310,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                                 do {
                                     res = writeNext(buffer);
                                     if (res == 0) {
-                                        this.string = string;
-                                        this.headerName = headerName;
-                                        this.charIndex = charIndex;
-                                        this.valueIterator = valueIterator;
-                                        this.nameIterator = nameIterator;
                                         log.trace("Continuation");
                                         return STATE_HDR_FINAL_CR;
                                     }
@@ -337,11 +322,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                                 do {
                                     res = writeNext(buffer);
                                     if (res == 0) {
-                                        this.string = string;
-                                        this.headerName = headerName;
-                                        this.charIndex = charIndex;
-                                        this.valueIterator = valueIterator;
-                                        this.nameIterator = nameIterator;
                                         log.trace("Continuation");
                                         return STATE_HDR_FINAL_LF;
                                     }
@@ -367,11 +347,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                                 do {
                                     long r = next.write(b, 0, b.length);
                                     if (r == 0 && buffer.hasRemaining()) {
-                                        this.string = string;
-                                        this.headerName = headerName;
-                                        this.charIndex = charIndex;
-                                        this.valueIterator = valueIterator;
-                                        this.nameIterator = nameIterator;
                                         log.trace("Continuation");
                                         return STATE_BUF_FLUSH;
                                     }
@@ -393,11 +368,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                         do {
                             res = writeNext(buffer);
                             if (res == 0) {
-                                this.string = string;
-                                this.headerName = headerName;
-                                this.charIndex = charIndex;
-                                this.valueIterator = valueIterator;
-                                this.nameIterator = nameIterator;
                                 log.trace("Continuation");
                                 return STATE_HDR_EOL_CR;
                             }
@@ -412,11 +382,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                         do {
                             res = writeNext(buffer);
                             if (res == 0) {
-                                this.string = string;
-                                this.headerName = headerName;
-                                this.charIndex = charIndex;
-                                this.valueIterator = valueIterator;
-                                this.nameIterator = nameIterator;
                                 log.trace("Continuation");
                                 return STATE_HDR_EOL_LF;
                             }
@@ -441,11 +406,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                         do {
                             res = writeNext(buffer);
                             if (res == 0) {
-                                this.string = string;
-                                this.headerName = headerName;
-                                this.charIndex = charIndex;
-                                this.valueIterator = valueIterator;
-                                this.nameIterator = nameIterator;
                                 log.trace("Continuation");
                                 return STATE_HDR_FINAL_CR;
                             }
@@ -461,11 +421,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                         do {
                             res = writeNext(buffer);
                             if (res == 0) {
-                                this.string = string;
-                                this.headerName = headerName;
-                                this.charIndex = charIndex;
-                                this.valueIterator = valueIterator;
-                                this.nameIterator = nameIterator;
                                 log.trace("Continuation");
                                 return STATE_HDR_FINAL_LF;
                             }
@@ -482,11 +437,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                         do {
                             res = writeNext(buffer);
                             if (res == 0) {
-                                this.string = string;
-                                this.headerName = headerName;
-                                this.charIndex = charIndex;
-                                this.valueIterator = valueIterator;
-                                this.nameIterator = nameIterator;
                                 log.trace("Continuation");
                                 return STATE_BUF_FLUSH;
                             }
@@ -496,11 +446,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                         do {
                             long r = next.write(b, 0, b.length);
                             if (r == 0 && buffer.hasRemaining()) {
-                                this.string = string;
-                                this.headerName = headerName;
-                                this.charIndex = charIndex;
-                                this.valueIterator = valueIterator;
-                                this.nameIterator = nameIterator;
                                 log.trace("Continuation");
                                 return STATE_BUF_FLUSH;
                             }
