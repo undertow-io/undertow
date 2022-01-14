@@ -100,12 +100,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         }
         ClientRequest request = this.request;
         ByteBuffer buffer = pooledBuffer.getBuffer();
-        Iterator<HttpString> nameIterator = this.nameIterator;
-        Iterator<String> valueIterator = this.valueIterator;
-        int charIndex = this.charIndex;
         int length;
-        String string = this.string;
-        HttpString headerName = this.headerName;
         int res;
         // BUFFER IS FLIPPED COMING IN
         if (state != STATE_START && buffer.hasRemaining()) {
@@ -189,11 +184,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                             do {
                                 res = next.write(buffer);
                                 if (res == 0) {
-                                    this.string = string;
-                                    this.headerName = headerName;
-                                    this.charIndex = charIndex;
-                                    this.valueIterator = valueIterator;
-                                    this.nameIterator = nameIterator;
                                     log.trace("Continuation");
                                     return STATE_HDR_NAME;
                                 }
@@ -210,11 +200,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                             res = next.write(buffer);
                             if (res == 0) {
                                 log.trace("Continuation");
-                                this.string = string;
-                                this.headerName = headerName;
-                                this.charIndex = charIndex;
-                                this.valueIterator = valueIterator;
-                                this.nameIterator = nameIterator;
                                 return STATE_HDR_D;
                             }
                         } while (buffer.hasRemaining());
@@ -230,11 +215,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                             res = next.write(buffer);
                             if (res == 0) {
                                 log.trace("Continuation");
-                                this.string = string;
-                                this.headerName = headerName;
-                                this.charIndex = charIndex;
-                                this.valueIterator = valueIterator;
-                                this.nameIterator = nameIterator;
                                 return STATE_HDR_DS;
                             }
                         } while (buffer.hasRemaining());
@@ -260,11 +240,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                             do {
                                 res = next.write(buffer);
                                 if (res == 0) {
-                                    this.string = string;
-                                    this.headerName = headerName;
-                                    this.charIndex = charIndex;
-                                    this.valueIterator = valueIterator;
-                                    this.nameIterator = nameIterator;
                                     log.trace("Continuation");
                                     return STATE_HDR_VAL;
                                 }
@@ -467,7 +442,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                                 if (res == 0) {
                                     log.trace("Continuation");
                                     this.charIndex = i;
-                                    this.string = string;
                                     this.state = STATE_URL;
                                     return STATE_URL;
                                 }
