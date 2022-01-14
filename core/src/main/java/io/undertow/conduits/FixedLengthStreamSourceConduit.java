@@ -126,7 +126,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
         try {
             return res = next.transferTo(position, min(count, val & MASK_COUNT), target);
         } catch (IOException | RuntimeException | Error e) {
-            IoUtils.safeClose(exchange.getConnection());
+            closeConnection();
             transferError = e;
             throw e;
         } finally {
@@ -151,7 +151,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
         try {
             return res = next.transferTo(min(count, val & MASK_COUNT), throughBuffer, target);
         } catch (IOException | RuntimeException | Error e) {
-            IoUtils.safeClose(exchange.getConnection());
+            closeConnection();
             transferError = e;
             throw e;
         } finally {
@@ -219,7 +219,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
             // the total buffer space is less than the remaining count.
             return res = next.read(dsts, offset, length);
         } catch (IOException | RuntimeException | Error e) {
-            IoUtils.safeClose(exchange.getConnection());
+            closeConnection();
             readError = e;
             throw e;
         } finally {
@@ -257,7 +257,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
                 return res = next.read(dst);
             }
         } catch (IOException | RuntimeException | Error e) {
-            IoUtils.safeClose(exchange.getConnection());
+            closeConnection();
             readError = e;
             throw e;
         }  finally {
@@ -302,7 +302,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
         try {
             next.awaitReadable(time, timeUnit);
         } catch (IOException | RuntimeException | Error e) {
-            IoUtils.safeClose(exchange.getConnection());
+            closeConnection();
             throw e;
         }
     }
@@ -363,6 +363,13 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
     private void invokeFinishListener() {
         this.state |= FLAG_FINISHED;
         finishListener.handleEvent(this);
+    }
+
+    private void closeConnection() {
+        HttpServerExchange exchange = this.exchange;
+        if (exchange != null) {
+            IoUtils.safeClose(exchange.getConnection());
+        }
     }
 
 }
