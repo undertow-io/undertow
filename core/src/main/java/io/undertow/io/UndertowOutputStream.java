@@ -26,6 +26,7 @@ import java.nio.channels.FileChannel;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import io.undertow.util.Methods;
 import org.xnio.Buffers;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
@@ -327,7 +328,9 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         if (anyAreSet(state, FLAG_CLOSED)) return;
         try {
             state |= FLAG_CLOSED;
-            if (anyAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
+            if (anyAreClear(state, FLAG_WRITE_STARTED)
+                    && channel == null
+                    && !isHeadRequestWithContentLength(exchange)) {
                 if (buffer == null) {
                     exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                 } else {
@@ -354,6 +357,12 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
                 buffer = null;
             }
         }
+    }
+
+    // Head request handlers may set the content-length response header in lieu of writing bytes
+    private static boolean isHeadRequestWithContentLength(HttpServerExchange exchange) {
+        return Methods.HEAD.equals(exchange.getRequestMethod())
+                && exchange.getResponseHeaders().contains(Headers.CONTENT_LENGTH);
     }
 
     private ByteBuffer buffer() {
