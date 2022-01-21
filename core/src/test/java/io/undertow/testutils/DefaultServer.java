@@ -97,6 +97,7 @@ import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 import org.xnio.channels.AcceptingChannel;
 import org.xnio.ssl.XnioSsl;
+import reactor.blockhound.BlockHound;
 
 import static io.undertow.server.handlers.ResponseCodeHandler.HANDLE_404;
 import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
@@ -168,6 +169,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             failure = t;
         }
         OPENSSL_FAILURE = failure;
+        BlockHound.install();
     }
 
     static final String DEFAULT = "default";

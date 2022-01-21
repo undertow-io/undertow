@@ -77,6 +77,7 @@ public class SuspendResumeTestCase {
                         new WebSocketDeploymentInfo()
                                 .setBuffers(DefaultServer.getBufferPool())
                                 .setWorker(DefaultServer.getWorker())
+                                .setDispatchToWorkerThread(true)
                                 .addListener(c -> serverContainer = c)
                                 .addEndpoint(SuspendResumeEndpoint.class)
                 )

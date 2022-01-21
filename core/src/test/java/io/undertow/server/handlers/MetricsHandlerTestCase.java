@@ -44,7 +44,7 @@ public class MetricsHandlerTestCase {
 
         MetricsHandler metricsHandler;
         CompletionLatchHandler latchHandler;
-        DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(metricsHandler = new MetricsHandler(new HttpHandler() {
+        DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(metricsHandler = new MetricsHandler(new BlockingHandler(new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
                 Thread.sleep(100);
@@ -53,7 +53,7 @@ public class MetricsHandlerTestCase {
                 }
                 exchange.getResponseSender().send("Hello");
             }
-        })));
+        }))));
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
         TestHttpClient client = new TestHttpClient();
         try {
