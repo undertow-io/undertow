@@ -389,8 +389,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             } else if (read == -1 && !hasData) {
                 forceFree = true;
                 readChannelDone = true;
-                lastDataRead();
-                return null;
+                return lastDataRead();
             } else if(isLastFrameReceived() && frameDataRemaining == 0) {
                 //we got data, although we should have received the last frame
                 forceFree = true;
@@ -554,8 +553,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     /**
      * Method than is invoked when read() returns -1.
      */
-    protected void lastDataRead() {
-
+    protected R lastDataRead() {
+        return null;
     }
 
     /**

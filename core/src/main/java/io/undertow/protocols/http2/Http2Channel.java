@@ -581,7 +581,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     }
 
-    protected void lastDataRead() {
+    protected AbstractHttp2StreamSourceChannel lastDataRead() {
         lastDataRead = true;
         if(!peerGoneAway) {
             //we just close the connection, as the peer has performed an unclean close
@@ -593,6 +593,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 sendGoAway(ERROR_CONNECT_ERROR);
             }
         }
+        return null;
     }
 
     @Override

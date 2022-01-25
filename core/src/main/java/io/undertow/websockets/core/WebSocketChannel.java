@@ -147,7 +147,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
     }
 
     @Override
-    protected void lastDataRead() {
+    protected StreamSourceFrameChannel lastDataRead() {
         if(!closeFrameReceived && !closeFrameSent) {
             //the peer has likely already gone away, but try and send a close frame anyway
             //this will likely just result in the write() failing an immediate connection termination
@@ -158,6 +158,81 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
             } catch (IOException e) {
                 IoUtils.safeClose(this);
             }
+            //UNDERTOW-1934 - nasty hack, but that's how processing work
+            return new StreamSourceFrameChannel(null,WebSocketFrameType.CLOSE,null,-1){
+                private boolean readCloseMessage = false;
+                //TODO: possibly make it i18n msg ?
+                private final CloseMessage CLOSE_MSG = new CloseMessage(CloseMessage.GOING_AWAY, "");
+                @Override
+                public boolean isFinalFragment() {
+                   return true;
+                }
+
+                @Override
+                public int getRsv() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                int getWebSocketFrameCount() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                protected WebSocketChannel getFramedChannel() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public WebSocketChannel getWebSocketChannel() {
+                    return WebSocketChannel.this;
+                }
+
+                @Override
+                public void finalFrame() {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                protected void handleHeaderData(FrameHeaderData headerData) {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                public int read(ByteBuffer dst) throws IOException {
+                    if(readCloseMessage) {
+                        return -1;
+                    } else {
+                        final ByteBuffer src = CLOSE_MSG.toByteBuffer();
+                        final byte[] data = src.array();
+                        dst.put(data);
+                        readCloseMessage = true;
+                        return data.length;
+                    }
+                }
+
+                @Override
+                public long read(ByteBuffer[] dsts, int offset, int length) throws IOException {
+                    return -1;
+                }
+
+                @Override
+                protected void afterRead(ByteBuffer buffer, int position, int length) throws IOException {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                protected void checker(ByteBuffer buffer, int position, int length, boolean complete) throws IOException {
+                    throw new UnsupportedOperationException();
+                }
+
+                @Override
+                protected PooledByteBuffer processFrameData(PooledByteBuffer frameData, boolean lastFragmentOfFrame)
+                        throws IOException {
+                    throw new UnsupportedOperationException();
+                }};
+        } else {
+            return null;
         }
     }
 
