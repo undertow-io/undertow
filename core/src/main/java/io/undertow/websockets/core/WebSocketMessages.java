@@ -171,4 +171,7 @@ public interface WebSocketMessages {
 
     @Message(id = 2045, value = "Unable to send on newly created channel!")
     IllegalStateException unableToSendOnNewChannel();
+
+    @Message(id = 2046, value = "Closing WebSocket, peer went away.")
+    String messageCloseWebSocket();
 }
