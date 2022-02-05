@@ -92,6 +92,7 @@ public class QueryParametersTestCase {
             runTest(client, "{unicode=>Iñtërnâtiônàližætiøn}", "/path?unicode=Iñtërnâtiônàližætiøn");
             runTest(client, "{a=>b,value=>bb bb}", "/path?a=b&value=bb%20bb");
             runTest(client, "{a=>b,value=>[bb,cc]}", "/path?a=b&value=bb&value=cc");
+            runTest(client, "{a=>b,value=>[bb,cc]}", "/path?&a=b&value=bb&&value=cc"); // Specifing some query parameters with empty by intentional for the test purpose. These should be ignored.
             runTest(client, "{a=>b,s =>,t =>,value=>[bb,cc]}", "/path?a=b&value=bb&value=cc&s%20&t%20");
             runTest(client, "{a=>b,s =>,t =>,value=>[bb,cc]}", "/path?a=b&value=bb&value=cc&s%20&t%20&");
             runTest(client, "{a=>b,s =>,t =>,u=>,value=>[bb,cc]}", "/path?a=b&value=bb&value=cc&s%20&t%20&u");

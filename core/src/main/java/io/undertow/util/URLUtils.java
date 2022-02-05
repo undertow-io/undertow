@@ -263,7 +263,7 @@ public class URLUtils {
                             if(++count > max) {
                                 throw UndertowMessages.MESSAGES.tooManyParameters(max);
                             }
-                        } else {
+                        } else if (stringStart != i) { // Ignore if attrName == null and stringStart == i because it means both key and value are empty.
                             handle(exchange, decode(charset, string.substring(stringStart, i), doDecode), "");
                             if(++count > max) {
                                 throw UndertowMessages.MESSAGES.tooManyParameters(max);
