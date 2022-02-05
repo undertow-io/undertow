@@ -266,10 +266,12 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
     }
 
     private void handleCPing() {
-        sendMessages(CPONG);
+        if (sendMessages(CPONG)) {
+            AjpReadListener.this.handleEvent(connection.getChannel().getSourceChannel());
+        }
     }
 
-    private void sendMessages(final byte[]... rawMessages) {
+    private boolean sendMessages(final byte[]... rawMessages) {
         state = new AjpRequestParseState();
         final StreamConnection underlyingChannel = connection.getChannel();
         underlyingChannel.getSourceChannel().suspendReads();
@@ -310,13 +312,14 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                         }
                     });
                     underlyingChannel.getSinkChannel().resumeWrites();
-                    return;
+                    return false;
                 }
             } while (buffer.hasRemaining());
-            AjpReadListener.this.handleEvent(underlyingChannel.getSourceChannel());
+            return true;
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             safeClose(connection);
+            return false;
         }
     }
 
