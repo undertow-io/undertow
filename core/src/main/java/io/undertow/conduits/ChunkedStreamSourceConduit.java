@@ -65,6 +65,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
 
     private long remainingAllowed;
     private final ChunkReader chunkReader;
+    private final PushBackStreamSourceConduit channel;
 
     public ChunkedStreamSourceConduit(final StreamSourceConduit next, final PushBackStreamSourceConduit channel, final ByteBufferPool pool, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, Attachable attachable, Closeable closeable) {
         this(next, new BufferWrapper() {
@@ -77,7 +78,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
             public void pushBack(PooledByteBuffer pooled) {
                 channel.pushBack(new PooledAdaptor(pooled));
             }
-        }, finishListener, attachable, null, closeable);
+        }, finishListener, attachable, null, closeable, channel);
     }
 
     public ChunkedStreamSourceConduit(final StreamSourceConduit next, final HttpServerExchange exchange, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener) {
@@ -91,10 +92,10 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
             public void pushBack(PooledByteBuffer pooled) {
                 ((HttpServerConnection) exchange.getConnection()).ungetRequestBytes(pooled);
             }
-        }, finishListener, exchange, exchange, exchange.getConnection());
+        }, finishListener, exchange, exchange, exchange.getConnection(), null);
     }
 
-    protected ChunkedStreamSourceConduit(final StreamSourceConduit next, final BufferWrapper bufferWrapper, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final Attachable attachable, final HttpServerExchange exchange, final Closeable closeable) {
+    protected ChunkedStreamSourceConduit(final StreamSourceConduit next, final BufferWrapper bufferWrapper, final ConduitListener<? super ChunkedStreamSourceConduit> finishListener, final Attachable attachable, final HttpServerExchange exchange, final Closeable closeable, PushBackStreamSourceConduit channel) {
         super(next);
         this.bufferWrapper = bufferWrapper;
         this.finishListener = finishListener;
@@ -102,6 +103,7 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         this.chunkReader = new ChunkReader<>(attachable, HttpAttachments.REQUEST_TRAILERS, this);
         this.exchange = exchange;
         this.closeable = closeable;
+        this.channel = channel;
     }
 
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
@@ -158,6 +160,9 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
 
     @Override
     public void terminateReads() throws IOException {
+        super.terminateReads();
+        if (channel != null)
+            channel.terminateReads();
         if (!isFinished()) {
             exchange.setPersistent(false);
             super.terminateReads();
