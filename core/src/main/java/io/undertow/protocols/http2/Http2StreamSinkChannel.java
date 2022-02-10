@@ -19,6 +19,7 @@
 package io.undertow.protocols.http2;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 
 import io.undertow.UndertowMessages;
@@ -27,7 +28,10 @@ import io.undertow.server.protocol.framed.SendFrameHeader;
 import org.xnio.IoUtils;
 
 /**
+ * Stream sink channel used for HTTP2 communication.
+ *
  * @author Stuart Douglas
+ * @author Flavia Rainone
  */
 public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChannel {
 
@@ -118,8 +122,11 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
             int newWindowSize = this.getChannel().getInitialSendWindowSize();
             int settingsDelta = newWindowSize - this.initialWindowSize;
             //first adjust for any settings frame updates
-            this.initialWindowSize = newWindowSize;
-            this.flowControlWindow += settingsDelta;
+            if (settingsDelta != 0) {
+                this.initialWindowSize = newWindowSize;
+                this.flowControlWindow += settingsDelta;
+                flowControlLock.notifyAll();
+            }
 
             int min = Math.min(toSend, this.flowControlWindow);
             int actualBytes = this.getChannel().grabFlowControlBytes(min);
@@ -140,6 +147,7 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
                 return;
             }
             flowControlWindow += delta;
+            flowControlLock.notifyAll();
         }
         if (exhausted) {
             getChannel().notifyFlowControlAllowed();
@@ -183,9 +191,22 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
         synchronized (flowControlLock) {
             flowControlWindow = this.flowControlWindow;
         }
+        long initialTime = System.nanoTime();
         super.awaitWritable();
         synchronized (flowControlLock) {
             if (isReadyForFlush() && flowControlWindow <= 0 && flowControlWindow == this.flowControlWindow) {
+                final long timeout = getAwaitWritableTimeout();
+                long remainingTimeout;
+                while ((remainingTimeout = timeout * 1_000_000 - (System.nanoTime() - initialTime)) > 0) {
+                    try {
+                        flowControlLock.wait(remainingTimeout/ 1_000_000, (int) (remainingTimeout % 1_000_000));
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new InterruptedIOException();
+                    }
+                    if (flowControlWindow != this.flowControlWindow)
+                        return;
+                }
                 throw UndertowMessages.MESSAGES.noWindowUpdate(getAwaitWritableTimeout());
             }
         }
