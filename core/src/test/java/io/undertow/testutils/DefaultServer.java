@@ -386,22 +386,24 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
             @Override
             public void testFinished(Description description) throws Exception {
-
-                if (!DebuggingSlicePool.BUFFERS.isEmpty()) {
+                boolean empty = DebuggingSlicePool.BUFFERS.isEmpty();
+                if (!empty) {
                     try {
-                        Thread.sleep(200);
                         long end = System.currentTimeMillis() + 20000;
-                        while (!DebuggingSlicePool.BUFFERS.isEmpty() && System.currentTimeMillis() < end) {
+                        do {
                             Thread.sleep(200);
-                        }
+                            empty = DebuggingSlicePool.BUFFERS.isEmpty();
+                        } while (!empty && System.currentTimeMillis() < end);
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                    for (DebuggingSlicePool.DebuggingBuffer b : DebuggingSlicePool.BUFFERS) {
-                        b.getAllocationPoint().printStackTrace();
-                        notifier.fireTestFailure(new Failure(description, new RuntimeException("Buffer Leak " + b.getLabel(), b.getAllocationPoint())));
+                    if (!empty) {
+                        for (DebuggingSlicePool.DebuggingBuffer b : DebuggingSlicePool.BUFFERS) {
+                            b.getAllocationPoint().printStackTrace();
+                            notifier.fireTestFailure(new Failure(description, new RuntimeException("Buffer Leak " + b.getLabel(), b.getAllocationPoint())));
+                        }
+                        DebuggingSlicePool.BUFFERS.clear();
                     }
-                    DebuggingSlicePool.BUFFERS.clear();
                 }
                 super.testFinished(description);
             }
@@ -579,6 +581,9 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         try {
             if (server != null) {
                 server.close();
+            }
+            if (proxyServer != null) {
+                proxyServer.close();
             }
             stopSSLServer();
             if (worker != null) {
