@@ -20,7 +20,6 @@ package io.undertow.io;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
-import org.xnio.Buffers;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.Channels;
@@ -117,7 +116,8 @@ public class UndertowInputStream extends InputStream {
             return 0;
         }
         ByteBuffer buffer = pooled.getBuffer();
-        int copied = Buffers.copy(ByteBuffer.wrap(b, off, len), buffer);
+        int copied = Math.min(buffer.remaining(), len);
+        buffer.get(b, off, copied);
         if (!buffer.hasRemaining()) {
             pooled.close();
             pooled = null;

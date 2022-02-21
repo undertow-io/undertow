@@ -19,7 +19,6 @@
 package io.undertow.servlet.spec;
 
 import io.undertow.servlet.UndertowServletMessages;
-import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import io.undertow.connector.ByteBufferPool;
@@ -132,7 +131,8 @@ public class UpgradeServletInputStream extends ServletInputStream {
             return 0;
         }
         ByteBuffer buffer = pooled.getBuffer();
-        int copied = Buffers.copy(ByteBuffer.wrap(b, off, len), buffer);
+        int copied = Math.min(buffer.remaining(), len);
+        buffer.get(b, off, copied);
         if (!buffer.hasRemaining()) {
             pooled.close();
             pooled = null;
