@@ -21,6 +21,7 @@ package io.undertow.protocols.http2;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
@@ -184,20 +185,44 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
      * Invokes super awaitWritable, with an extra check for flowControlWindow. The purpose of this is to
      * warn clearly that peer is not updating the flow control window.
      *
+     * This method will block for the maximum amount of time specified by {@link #getAwaitWritableTimeout()}
+     *
      * @throws IOException if an IO error occurs
      */
     public void awaitWritable() throws IOException {
+        awaitWritable(getAwaitWritableTimeout() * 1_000_000);
+    }
+
+    /**
+     * Invokes super awaitWritable, with an extra check for flowControlWindow. The purpose of this is to
+     * warn clearly that peer is not updating the flow control window.
+     *
+     * @param time the time to wait
+     * @param timeUnit the time unit
+     * @throws IOException if an IO error occurs
+     */
+    public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
+        awaitWritable(timeUnit.toNanos(time));
+    }
+
+    /**
+     * Invokes super awaitWritable, with an extra check for flowControlWindow. The purpose of this is to
+     * warn clearly that peer is not updating the flow control window.
+     *
+     * @param timeoutInNanos the time to wait in nanoseconds
+     * @throws IOException if an IO error occurs
+     */
+    protected void awaitWritable(final long timeoutInNanos) throws IOException {
         final int flowControlWindow;
         synchronized (flowControlLock) {
             flowControlWindow = this.flowControlWindow;
         }
         long initialTime = System.nanoTime();
-        super.awaitWritable();
+        super.awaitWritable(timeoutInNanos);
         synchronized (flowControlLock) {
             if (isReadyForFlush() && flowControlWindow <= 0 && flowControlWindow == this.flowControlWindow) {
-                final long timeout = getAwaitWritableTimeout();
                 long remainingTimeout;
-                while ((remainingTimeout = timeout * 1_000_000 - (System.nanoTime() - initialTime)) > 0) {
+                while ((remainingTimeout = timeoutInNanos - (System.nanoTime() - initialTime)) > 0) {
                     try {
                         flowControlLock.wait(remainingTimeout/ 1_000_000, (int) (remainingTimeout % 1_000_000));
                     } catch (InterruptedException e) {
@@ -207,7 +232,7 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
                     if (flowControlWindow != this.flowControlWindow)
                         return;
                 }
-                throw UndertowMessages.MESSAGES.noWindowUpdate(getAwaitWritableTimeout());
+                throw UndertowMessages.MESSAGES.noWindowUpdate(timeoutInNanos / 1_000_000);
             }
         }
     }
