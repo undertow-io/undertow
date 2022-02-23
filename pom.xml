@@ -65,7 +65,7 @@
         <version.jakarta.annotation.jakarta-annotation-api>2.0.0</version.jakarta.annotation.jakarta-annotation-api>
         <version.jakarta.servlet.jakarta-servlet-api>5.0.0</version.jakarta.servlet.jakarta-servlet-api>
         <version.jakarta.websocket.jakarta-websocket-api>2.0.0</version.jakarta.websocket.jakarta-websocket-api>
-        <version.org.wildfly.extras.batavia>1.0.11.Final</version.org.wildfly.extras.batavia>
+        <version.org.wildfly.extras.batavia>1.0.13.Final</version.org.wildfly.extras.batavia>
         <version.junit>4.13</version.junit>
         <version.netty>4.1.50.Final</version.netty>
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
