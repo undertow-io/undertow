@@ -116,9 +116,6 @@ public class NetworkUtils {
                     throw UndertowMessages.MESSAGES.invalidIpAddress(addressString);
                 }
                 partOffset = off * 2;
-            } else if (part.length() > 1 && part.charAt(0) == '0') {
-                //leading zeros are not allowed
-                throw UndertowMessages.MESSAGES.invalidIpAddress(addressString);
             } else {
                 int num = Integer.parseInt(part, 16);
                 data[i * 2 + partOffset] = (byte) (num >> 8);
