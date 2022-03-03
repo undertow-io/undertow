@@ -33,8 +33,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -106,7 +106,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      * new frames to be sent. These will be added to either the pending or held frames list
      * depending on the {@link #framePriority} implementation in use.
      */
-    private final Deque<S> newFrames = new LinkedBlockingDeque<>();
+    private final Deque<S> newFrames = new ConcurrentLinkedDeque<>();
 
     private volatile long frameDataRemaining;
     private volatile R receiver;
@@ -135,7 +135,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private volatile int outstandingBuffers;
     private static final AtomicIntegerFieldUpdater<AbstractFramedChannel> outstandingBuffersUpdater = AtomicIntegerFieldUpdater.newUpdater(AbstractFramedChannel.class, "outstandingBuffers");
 
-    private final LinkedBlockingDeque<Runnable> taskRunQueue = new LinkedBlockingDeque<>();
+    private final Deque<Runnable> taskRunQueue = new ConcurrentLinkedDeque<>();
     private final Runnable taskRunQueueRunnable = new Runnable() {
         @Override
         public void run() {

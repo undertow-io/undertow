@@ -151,6 +151,11 @@
             <version>${version.org.wildfly.openssl}</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>io.projectreactor.tools</groupId>
+            <artifactId>blockhound</artifactId>
+        </dependency>
     </dependencies>
 
 

@@ -66,6 +66,7 @@
         <version.jakarta.servlet.jakarta-servlet-api>5.0.0</version.jakarta.servlet.jakarta-servlet-api>
         <version.jakarta.websocket.jakarta-websocket-api>2.0.0</version.jakarta.websocket.jakarta-websocket-api>
         <version.org.wildfly.extras.batavia>1.0.11.Final</version.org.wildfly.extras.batavia>
+        <version.io.projectreactor.tools.blockhound>1.0.6.RELEASE</version.io.projectreactor.tools.blockhound>
         <version.junit>4.13</version.junit>
         <version.netty>4.1.50.Final</version.netty>
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
@@ -79,7 +80,7 @@
         <version.org.jboss.spec.javax.websockets>2.0.0.Final</version.org.jboss.spec.javax.websockets>
         <version.xnio>3.8.6.Final</version.xnio>
         <!-- TODO remove this dependency once xnio upgrades to latest jboss threads -->
-        <version.org.jboss.threads>3.1.0.Final</version.org.jboss.threads>
+        <version.org.jboss.threads>3.1.1.Final</version.org.jboss.threads>
         <version.org.wildfly.common>1.5.4.Final</version.org.wildfly.common>
         <version.org.wildfly.client-config>1.0.1.Final</version.org.wildfly.client-config>
 
@@ -595,6 +596,11 @@
                 <version>${version.org.wildfly.extras.batavia}</version>
             </dependency>
 
+            <dependency>
+                <groupId>io.projectreactor.tools</groupId>
+                <artifactId>blockhound</artifactId>
+                <version>${version.io.projectreactor.tools.blockhound}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 

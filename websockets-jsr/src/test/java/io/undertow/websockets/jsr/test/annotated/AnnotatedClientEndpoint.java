@@ -18,9 +18,8 @@
 
 package io.undertow.websockets.jsr.test.annotated;
 
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
+import java.util.Deque;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import javax.websocket.ClientEndpoint;
 import javax.websocket.OnClose;
 import javax.websocket.OnMessage;
@@ -33,12 +32,20 @@ import javax.websocket.Session;
 @ClientEndpoint(subprotocols = {"foo", "bar"})
 public class AnnotatedClientEndpoint {
 
-    private static final BlockingDeque<String> MESSAGES = new LinkedBlockingDeque<>();
+    private static final Deque<String> MESSAGES = new ConcurrentLinkedDeque<>();
 
     private volatile boolean open = false;
 
     public static String message() throws InterruptedException {
-        return MESSAGES.pollFirst(3, TimeUnit.SECONDS);
+        long start = System.nanoTime();
+        while (System.nanoTime() - start < 3_000_000_000L) {
+            String result = MESSAGES.pollFirst();
+            if (result != null) {
+                return result;
+            }
+            Thread.sleep(1);
+        }
+        return null;
     }
 
     @OnOpen

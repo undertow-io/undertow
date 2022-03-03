@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -49,6 +48,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
+import org.jboss.threads.EnhancedQueueExecutor;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -75,7 +75,10 @@ public class WebsocketStressTestCase {
     @BeforeClass
     public static void setup() throws Exception {
         defaultContainer = ContainerProvider.getWebSocketContainer();
-        executor = Executors.newFixedThreadPool(NUM_THREADS);
+        executor = new EnhancedQueueExecutor.Builder()
+                .setCorePoolSize(NUM_THREADS)
+                .setMaximumPoolSize(NUM_THREADS)
+                .build();
 
         final ServletContainer container = ServletContainer.Factory.newInstance();
 

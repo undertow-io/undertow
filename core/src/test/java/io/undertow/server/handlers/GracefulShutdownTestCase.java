@@ -52,7 +52,7 @@ public class GracefulShutdownTestCase {
     @BeforeClass
     public static void setup() {
 
-        shutdown = Handlers.gracefulShutdown(new HttpHandler() {
+        shutdown = Handlers.gracefulShutdown(new BlockingHandler(new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
                 final CountDownLatch countDownLatch = latch2.get();
@@ -64,7 +64,7 @@ public class GracefulShutdownTestCase {
                     countDownLatch.await();
                 }
             }
-        });
+        }));
         DefaultServer.setRootHandler(shutdown);
     }
 
