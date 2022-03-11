@@ -1,5 +1,5 @@
-#Undertow
-
+Undertow
+========
 Undertow is a Java web server based on non-blocking IO. It consists of a few different parts:
 
 - A core HTTP server that supports both blocking and non-blocking IO
@@ -17,18 +17,19 @@ Undertow Dev Group: https://groups.google.com/g/undertow-dev/
 
 Zulip Chat: https://wildfly.zulipchat.com stream [#undertow](https://wildfly.zulipchat.com/#narrow/stream/174183-undertow)
 
-##Contributing to Undertow - PR Review Process
+Contributing to Undertow - PR Review Process
+--------------------------------------------
 
 Bug fixes and documentation improvements are welcome! If you want to contribute and are not sure where to start, I suggest you have a look at our Jira project and get in touch with us via Zulip.
 
 PRs must be submitted to master branch (soon to be [renamed to main](https://issues.redhat.com/browse/UNDERTOW-2043)) and they should:
 - state clearly what they do
 - point to associated Jira
-- contain a test case, unless already existent tests already verify the code added by the PR
-- license header in all new files, with current year’s number
+- contain a test case, unless existing tests already verify the code added by the PR
+- have a license header in all new files, with current year’s number
 - pass CI (except for known failures, we are working on fixing those, tracked by [UNDERTOW-1523](https://issues.redhat.com/browse/UNDERTOW-1523))
 
-If your PR is incomplete ,the reviewer might request you add the missing bits or add them for you if that is simple enough.
+If your PR is incomplete, the reviewer might request you add the missing bits or add them for you if that is simple enough.
 
 PR reviewers will take into account the following factors when reviewing your PR:
 - correctness: the code must be correct
@@ -47,10 +48,11 @@ Besides the classifications labels, a series of labels are going to be added to 
 - **failed CI**  a new failure was introduced to CI
 - **question** reviewer has asked one or more questions to the contributor so the PR can be better assessed
 - **under verification**  reviewer will perform some extra verifications before giving their feedback (usually this means running reproducers, reviewing specs, and the like)
-- **waiting peer review** PRs has been reviewed but is waiting on a second review before being merged
+- **waiting peer review** PR has been reviewed but is waiting on a second review before being merged
 - **next release** PR is in the payload of the next release
 
-##Notifying Security Relevant Bugs
+Notifying Security Relevant Bugs
+--------------------------------
 
 If you find a bug that has a security impact, please notify us sending an email to Red Hat SecAlert <secalert@redhat.com> with a copy to Flavia Rainone <frainone@redhat.com>. This will ensure the bug is properly handled without causing unnecessary negative impacts for the Undertow's user base.
 
