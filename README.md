@@ -35,10 +35,10 @@ PR reviewers will take into account the following aspects when reviewing your PR
 - correctness: the code must be correct
 - performance impact: if there are negative performance impacts in the code, careful consideration must be taken whereas the impact could be eliminated and, in case it cannot, if the new code should be accepted
 - code style: keep your code style consistent with the classes you are editing, such as variable names, ordering of methods, etc
-- scope of the fix: this is a very important factor. Sometimes, the fix should be applied to a broader range of classes, such as bug that repeats itself in other parts of the code. Other times, the PR solves a bug only partially, because the bug has a broader impact than initially evaluated.
+- scope of the fix: this is a very important factor. Sometimes, the fix should be applied to a broader range of classes, such as a bug that repeats itself in other parts of the code. Other times, the PR solves a bug only partially, because the bug has a broader impact than initially evaluated.
 - is the proposed fix the best approach for the Jira at hand?
 - backwards compatibility: we must prevent any PR that breaks compatibility with previous versions
-- security impact: it is important to evaluate if the PR has any sort of security impact, preventing the addition of exploitable flaws.
+- security impact: it is critical to evaluate if the PR has any sort of security impact, preventing the addition of exploitable flaws.
 
 Your PR will be classified by the reviewer with one or more of the following labels: **bug fix**, **enhancement**, **new feature/API change**, and **dependency upgrade**.
 
@@ -46,7 +46,7 @@ Besides the classifications labels, a series of labels are going to be added to 
 - **waiting CI check**  PR is ready to be merged, but we are waiting for CI results. The use of this label is optional.
 - **waiting PR update**  reviewer has requested changes to the PR
 - **failed CI**  a new failure was introduced to CI
-- **question** reviewer has asked one or more questions to the contributor so the PR can be better assessed
+- **question** reviewer has asked one or more questions to the contributor, so the PR can be better assessed
 - **under verification**  reviewer will perform some extra verifications before giving their feedback (usually this means running reproducers, reviewing specs, and the like)
 - **waiting peer review** PR has been reviewed but is waiting on a second review before being merged  (as the changes affects core classes or adds a new feature)
 - **next release** PR is in the payload of the next release
