@@ -8,7 +8,7 @@ Undertow is a Java web server based on non-blocking IO. It consists of a few dif
 
 Website: http://undertow.io
 
-Issues: https://issues.jboss.org/browse/UNDERTOW
+Issues: https://issues.redhat.com/projects/UNDERTOW
 
 Project Lead: Flavia Rainone <frainone@redhat.com>
 
@@ -20,7 +20,7 @@ Zulip Chat: https://wildfly.zulipchat.com stream [#undertow](https://wildfly.zul
 Contributing to Undertow - PR Review Process
 --------------------------------------------
 
-Bug fixes and documentation improvements are welcome! If you want to contribute and are not sure where to start, I suggest you have a look at our Jira project and get in touch with us via Zulip.
+Bug fixes and documentation improvements are welcome! If you want to contribute and are not sure where to start, I suggest you have a look at our [Jira project](https://issues.redhat.com/projects/UNDERTOW "Undertow Jira") and get in touch with us via [Zulip chat](https://wildfly.zulipchat.com/#narrow/stream/174183-undertow "#undertow").
 
 PRs must be submitted to master branch (soon to be [renamed to main](https://issues.redhat.com/browse/UNDERTOW-2043)) and they should:
 - state clearly what they do
@@ -31,7 +31,7 @@ PRs must be submitted to master branch (soon to be [renamed to main](https://iss
 
 If your PR is incomplete, the reviewer might request you add the missing bits or add them for you if that is simple enough.
 
-PR reviewers will take into account the following factors when reviewing your PR:
+PR reviewers will take into account the following aspects when reviewing your PR:
 - correctness: the code must be correct
 - performance impact: if there are negative performance impacts in the code, careful consideration must be taken whereas the impact could be eliminated and, in case it cannot, if the new code should be accepted
 - code style: keep your code style consistent with the classes you are editing, such as variable names, ordering of methods, etc
@@ -48,7 +48,7 @@ Besides the classifications labels, a series of labels are going to be added to 
 - **failed CI**  a new failure was introduced to CI
 - **question** reviewer has asked one or more questions to the contributor so the PR can be better assessed
 - **under verification**  reviewer will perform some extra verifications before giving their feedback (usually this means running reproducers, reviewing specs, and the like)
-- **waiting peer review** PR has been reviewed but is waiting on a second review before being merged
+- **waiting peer review** PR has been reviewed but is waiting on a second review before being merged  (as the changes affects core classes or adds a new feature)
 - **next release** PR is in the payload of the next release
 
 Notifying Security Relevant Bugs
