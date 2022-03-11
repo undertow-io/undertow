@@ -212,6 +212,18 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
     }
 
     @Override
+    public void resumeReads() {
+        super.resumeReads();
+        if (handle == null) {
+            try {
+                handleReadTimeout(1);
+            } catch (IOException e) {
+                // impossible as 1 is passed
+            }
+        }
+    }
+
+    @Override
     public void terminateReads() throws IOException {
         checkExpired();
         super.terminateReads();
