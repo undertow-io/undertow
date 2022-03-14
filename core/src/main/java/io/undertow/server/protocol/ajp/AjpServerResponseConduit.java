@@ -42,8 +42,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.xnio.Bits.allAreClear;
@@ -266,6 +268,40 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
         queueFrame(null, buffer);
     }
 
+    private void queueRemainingBytes(final ByteBuffer src, final ByteBuffer[] buffers) {
+        List<PooledByteBuffer> pools = new ArrayList<>(4);
+
+        try {
+            PooledByteBuffer newPooledBuffer = pool.allocate();
+            pools.add(newPooledBuffer);
+            while (src.remaining() > newPooledBuffer.getBuffer().remaining()) {
+                ByteBuffer dupSrc = src.duplicate();
+                dupSrc.limit(dupSrc.position() + newPooledBuffer.getBuffer().remaining());
+                newPooledBuffer.getBuffer().put(dupSrc);
+                src.position(dupSrc.position());
+                newPooledBuffer.getBuffer().flip();
+                newPooledBuffer = pool.allocate();
+                pools.add(newPooledBuffer);
+            }
+            newPooledBuffer.getBuffer().put(src);
+            newPooledBuffer.getBuffer().flip();
+
+            ByteBuffer[] savedBuffers = new ByteBuffer[pools.size() + 2];
+            int i = 0;
+            savedBuffers[i++] = buffers[0];
+            for (PooledByteBuffer p : pools) {
+                savedBuffers[i++] = p.getBuffer();
+            }
+            savedBuffers[i] = buffers[2];
+            queueFrame(new PooledBuffersFrameCallback(pools.toArray(new PooledByteBuffer[0])), savedBuffers);
+        } catch (RuntimeException | Error e) {
+            for (PooledByteBuffer p : pools) {
+                p.close();
+            }
+            throw e;
+        }
+    }
+
     public int write(final ByteBuffer src) throws IOException {
         if(queuedDataLength() > 0) {
             //if there is data in the queue we flush and return
@@ -300,18 +336,8 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
                 if (r == -1) {
                     throw new ClosedChannelException();
                 } else if (r == 0) {
-                    //we need to copy all the remaining bytes
-                    //TODO: this assumes the buffer is big enough
-                    PooledByteBuffer newPooledBuffer = pool.allocate();
-                    while (src.hasRemaining()) {
-                        newPooledBuffer.getBuffer().put(src);
-                    }
-                    newPooledBuffer.getBuffer().flip();
-                    ByteBuffer[] savedBuffers = new ByteBuffer[3];
-                    savedBuffers[0] = buffers[0];
-                    savedBuffers[1] = newPooledBuffer.getBuffer();
-                    savedBuffers[2] = buffers[2];
-                    queueFrame(new PooledBufferFrameCallback(newPooledBuffer), savedBuffers);
+                    // we need to queue all the remaining bytes for writing
+                    queueRemainingBytes(src, buffers);
                     return originalPayloadSize;
                 }
             } while (toWrite > 0);
