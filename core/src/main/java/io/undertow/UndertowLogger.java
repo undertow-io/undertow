@@ -464,4 +464,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = DEBUG)
     @Message(id = 5101, value = "No source to list resources from")
     void noSourceToListResourcesFrom();
+
+    @LogMessage(level = WARN)
+    @Message(id = 5102, value = "Flushing waiting in a frame more than %s miliseconds. The framed channel will be forcibly closed.")
+    void noFrameflushInTimeout(long timeoutMiliseconds);
 }
