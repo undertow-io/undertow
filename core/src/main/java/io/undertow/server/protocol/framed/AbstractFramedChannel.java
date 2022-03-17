@@ -609,6 +609,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         framePriority.frameAdded(frame, pendingFrames, heldFrames);
                     }
                 } else {
+                    // frame not ready for sending, add in held queue and start the timeout task
+                    frame.addReadyForFlushTask();
                     heldFrames.add(frame);
                 }
             }
