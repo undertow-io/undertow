@@ -25,7 +25,7 @@ import io.undertow.attribute.RequestURLAttribute;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
 
-import javax.servlet.RequestDispatcher;
+import jakarta.servlet.RequestDispatcher;
 
 /**
  * The request URL

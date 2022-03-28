@@ -19,7 +19,7 @@ package io.undertow.websockets.jsr;
 
 import org.xnio.Buffers;
 
-import javax.websocket.PongMessage;
+import jakarta.websocket.PongMessage;
 import java.nio.ByteBuffer;
 
 /**

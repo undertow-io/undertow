@@ -33,7 +33,7 @@ import io.undertow.servlet.util.SavedRequest;
 
 import java.security.AccessController;
 
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSession;
 
 /**
  * {@link HttpHandler} responsible for setting up the {@link AuthenticatedSessionManager} for cached authentications and

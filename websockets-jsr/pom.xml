@@ -30,9 +30,8 @@
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-websockets-jsr</artifactId>
-    <version>2.3.0.Alpha1-SNAPSHOT</version>
-
     <name>Undertow WebSockets JSR356 implementations</name>
+    <version>2.3.0.Alpha1-SNAPSHOT</version>
 
     <properties>
         <test.level>INFO</test.level>
@@ -52,8 +51,8 @@
             <artifactId>undertow-servlet</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jboss.spec.javax.websocket</groupId>
-            <artifactId>jboss-websocket-api_1.1_spec</artifactId>
+            <groupId>jakarta.websocket</groupId>
+            <artifactId>jakarta.websocket-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jboss.logging</groupId>

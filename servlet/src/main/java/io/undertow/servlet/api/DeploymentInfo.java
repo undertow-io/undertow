@@ -33,10 +33,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.MultipartConfigElement;
-import javax.servlet.ServletContextListener;
-import javax.servlet.descriptor.JspConfigDescriptor;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.ServletContextListener;
+import jakarta.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
@@ -1195,7 +1195,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     /**
-     * Set if if the message passed to {@link javax.servlet.http.HttpServletResponse#sendError(int, String)} should be escaped.
+     * Set if if the message passed to {@link jakarta.servlet.http.HttpServletResponse#sendError(int, String)} should be escaped.
      *
      * If this is false applications must be careful not to use user provided data (such as the URI) in the message
      *
@@ -1278,8 +1278,8 @@ public class DeploymentInfo implements Cloneable {
     }
 
     /**
-     * If this is true then the message parameter of {@link javax.servlet.http.HttpServletResponse#sendError(int, String)} and
-     * {@link javax.servlet.http.HttpServletResponse#setStatus(int, String)} will be used as the HTTP reason phrase in
+     * If this is true then the message parameter of {@link jakarta.servlet.http.HttpServletResponse#sendError(int, String)} and
+     * {@link jakarta.servlet.http.HttpServletResponse#setStatus(int, String)} will be used as the HTTP reason phrase in
      * the response.
      *
      * @param sendCustomReasonPhraseOnError If the parameter to sendError should be used as a HTTP reason phrase

@@ -20,10 +20,10 @@ package io.undertow.servlet.core;
 
 import java.security.AccessController;
 import java.util.HashSet;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpSessionBindingEvent;
-import javax.servlet.http.HttpSessionBindingListener;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpSessionBindingEvent;
+import jakarta.servlet.http.HttpSessionBindingListener;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;

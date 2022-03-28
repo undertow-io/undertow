@@ -75,8 +75,6 @@
         <version.org.jboss.logging.processor>2.2.1.Final</version.org.jboss.logging.processor>
         <version.org.jboss.logmanager>2.1.14.Final</version.org.jboss.logmanager>
         <version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.3_spec>2.0.1.Final</version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.3_spec>
-        <version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec>2.0.0.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec>
-        <version.org.jboss.spec.javax.websockets>2.0.0.Final</version.org.jboss.spec.javax.websockets>
         <version.xnio>3.8.7.Final</version.xnio>
         <!-- TODO remove this dependency once xnio upgrades to latest jboss threads -->
         <version.org.jboss.threads>3.1.0.Final</version.org.jboss.threads>
@@ -121,7 +119,6 @@
         <module>examples</module>
         <module>websockets-jsr</module>
         <module>benchmarks</module>
-        <module>jakarta</module>
     </modules>
 
     <build>
@@ -350,7 +347,7 @@
 
             <dependency>
                 <groupId>io.undertow</groupId>
-                <artifactId>undertow-examples-jakarta</artifactId>
+                <artifactId>undertow-examples</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -368,19 +365,6 @@
 
             <dependency>
                 <groupId>io.undertow</groupId>
-                <artifactId>undertow-servlet-jakarta</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.undertow</groupId>
-                <artifactId>undertow-servlet-jakarta</artifactId>
-                <version>${project.version}</version>
-                <type>test-jar</type>
-            </dependency>
-
-            <dependency>
-                <groupId>io.undertow</groupId>
                 <artifactId>undertow-servlet</artifactId>
                 <version>${project.version}</version>
                 <type>test-jar</type>
@@ -390,12 +374,6 @@
             <dependency>
                 <groupId>io.undertow</groupId>
                 <artifactId>undertow-websockets-jsr</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.undertow</groupId>
-                <artifactId>undertow-websockets-jsr-jakarta</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -515,19 +493,6 @@
                 <groupId>org.jboss.spec.javax.annotation</groupId>
                 <artifactId>jboss-annotations-api_1.3_spec</artifactId>
                 <version>${version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.3_spec}</version>
-            </dependency>
-
-            <!-- TODO: replace with JBoss Spec Artifact-->
-            <dependency>
-                <groupId>org.jboss.spec.javax.servlet</groupId>
-                <artifactId>jboss-servlet-api_4.0_spec</artifactId>
-                <version>${version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.jboss.spec.javax.websocket</groupId>
-                <artifactId>jboss-websocket-api_1.1_spec</artifactId>
-                <version>${version.org.jboss.spec.javax.websockets}</version>
             </dependency>
 
             <dependency>

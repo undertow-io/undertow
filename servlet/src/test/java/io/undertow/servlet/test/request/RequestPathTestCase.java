@@ -21,8 +21,8 @@ package io.undertow.servlet.test.request;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletException;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;

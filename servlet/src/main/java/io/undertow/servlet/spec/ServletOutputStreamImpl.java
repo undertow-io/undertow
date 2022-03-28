@@ -26,10 +26,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.WriteListener;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.WriteListener;
 
 import io.undertow.UndertowLogger;
 import org.xnio.Buffers;

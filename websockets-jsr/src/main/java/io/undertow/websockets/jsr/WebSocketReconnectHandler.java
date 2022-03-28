@@ -18,8 +18,8 @@
 
 package io.undertow.websockets.jsr;
 
-import javax.websocket.CloseReason;
-import javax.websocket.Session;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.Session;
 import java.io.IOException;
 import java.net.URI;
 

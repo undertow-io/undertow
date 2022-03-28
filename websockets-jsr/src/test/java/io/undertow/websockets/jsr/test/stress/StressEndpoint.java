@@ -18,10 +18,10 @@
 
 package io.undertow.websockets.jsr.test.stress;
 
-import javax.websocket.OnError;
-import javax.websocket.OnMessage;
-import javax.websocket.Session;
-import javax.websocket.server.ServerEndpoint;
+import jakarta.websocket.OnError;
+import jakarta.websocket.OnMessage;
+import jakarta.websocket.Session;
+import jakarta.websocket.server.ServerEndpoint;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;

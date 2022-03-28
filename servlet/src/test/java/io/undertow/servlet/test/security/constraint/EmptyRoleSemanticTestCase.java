@@ -39,7 +39,7 @@ import io.undertow.util.FlexBase64;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;

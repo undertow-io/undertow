@@ -30,9 +30,8 @@
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-examples</artifactId>
-    <version>2.3.0.Alpha1-SNAPSHOT</version>
-
     <name>Undertow Examples</name>
+    <version>2.3.0.Alpha1-SNAPSHOT</version>
 
     <dependencies>
 

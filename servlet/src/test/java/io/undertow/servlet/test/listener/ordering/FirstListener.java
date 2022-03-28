@@ -19,8 +19,8 @@ package io.undertow.servlet.test.listener.ordering;
 
 import io.undertow.servlet.test.util.Tracker;
 
-import javax.servlet.ServletRequestEvent;
-import javax.servlet.ServletRequestListener;
+import jakarta.servlet.ServletRequestEvent;
+import jakarta.servlet.ServletRequestListener;
 
 public class FirstListener implements ServletRequestListener {
 

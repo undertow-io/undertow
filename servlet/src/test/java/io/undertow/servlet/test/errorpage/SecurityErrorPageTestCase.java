@@ -39,9 +39,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 import java.io.IOException;
-import javax.servlet.RequestDispatcher;
+import jakarta.servlet.RequestDispatcher;
 import org.hamcrest.CoreMatchers;
 
 /**

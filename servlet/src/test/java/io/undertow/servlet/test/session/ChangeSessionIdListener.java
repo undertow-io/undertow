@@ -18,8 +18,8 @@
 
 package io.undertow.servlet.test.session;
 
-import javax.servlet.http.HttpSessionEvent;
-import javax.servlet.http.HttpSessionIdListener;
+import jakarta.servlet.http.HttpSessionEvent;
+import jakarta.servlet.http.HttpSessionIdListener;
 
 /**
  * @author Stuart Douglas

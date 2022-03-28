@@ -27,7 +27,7 @@ import org.xnio.StreamConnection;
 import java.util.Collections;
 
 /**
- * {@link Hybi08Handshake} sub-class which takes care of match against the {@link javax.websocket.server.ServerEndpointConfig} and
+ * {@link Hybi08Handshake} sub-class which takes care of match against the {@link jakarta.websocket.server.ServerEndpointConfig} and
  * stored the config in the attributes for later usage.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

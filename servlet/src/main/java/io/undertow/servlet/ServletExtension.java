@@ -20,7 +20,7 @@ package io.undertow.servlet;
 
 import io.undertow.servlet.api.DeploymentInfo;
 
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletContext;
 
 /**
  *

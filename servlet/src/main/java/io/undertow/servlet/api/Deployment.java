@@ -100,7 +100,7 @@ public interface Deployment {
     DeploymentManager.State getDeploymentState();
 
     /**
-     * Attempts to add a servlet mapping using {@link javax.servlet.ServletRegistration#addMapping(String...)}
+     * Attempts to add a servlet mapping using {@link jakarta.servlet.ServletRegistration#addMapping(String...)}
      *
      * @return true if the addition was sucessful
      */

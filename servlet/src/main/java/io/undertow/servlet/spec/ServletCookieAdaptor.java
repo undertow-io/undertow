@@ -35,12 +35,12 @@ import io.undertow.servlet.UndertowServletMessages;
  */
 public class ServletCookieAdaptor implements Cookie {
 
-    private final javax.servlet.http.Cookie cookie;
+    private final jakarta.servlet.http.Cookie cookie;
 
     private boolean sameSite;
     private String sameSiteMode;
 
-    public ServletCookieAdaptor(final javax.servlet.http.Cookie cookie) {
+    public ServletCookieAdaptor(final jakarta.servlet.http.Cookie cookie) {
         this.cookie = cookie;
     }
 

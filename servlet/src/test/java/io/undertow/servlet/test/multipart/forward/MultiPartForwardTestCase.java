@@ -28,7 +28,7 @@ import io.undertow.testutils.TestHttpClient;
 import java.io.IOException;
 import java.util.Arrays;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpEntity;

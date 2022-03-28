@@ -19,8 +19,8 @@ package io.undertow.websockets.jsr.test.autobahn;
 
 import java.net.InetSocketAddress;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletException;
 
 import org.jboss.logging.Logger;
 

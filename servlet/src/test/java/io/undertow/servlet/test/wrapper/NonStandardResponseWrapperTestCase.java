@@ -20,7 +20,7 @@ package io.undertow.servlet.test.wrapper;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;

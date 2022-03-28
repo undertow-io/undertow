@@ -21,9 +21,9 @@ package io.undertow.websockets.jsr.test.annotated;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
-import javax.websocket.DecodeException;
-import javax.websocket.EncodeException;
-import javax.websocket.EndpointConfig;
+import jakarta.websocket.DecodeException;
+import jakarta.websocket.EncodeException;
+import jakarta.websocket.EndpointConfig;
 
 /**
  * @author Stuart Douglas
@@ -40,7 +40,7 @@ public class EncodableObject {
         return value;
     }
 
-    public static class TextEncoder implements javax.websocket.Encoder.Text<EncodableObject> {
+    public static class TextEncoder implements jakarta.websocket.Encoder.Text<EncodableObject> {
 
         boolean initalized = false;
         public static volatile boolean destroyed = false;
@@ -64,7 +64,7 @@ public class EncodableObject {
         }
     }
 
-    public static class TextDecoder implements javax.websocket.Decoder.Text<EncodableObject> {
+    public static class TextDecoder implements jakarta.websocket.Decoder.Text<EncodableObject> {
 
         boolean initalized = false;
         public static volatile boolean destroyed = false;
@@ -93,7 +93,7 @@ public class EncodableObject {
         }
     }
 
-    public static class BinaryDecoder implements javax.websocket.Decoder.Binary<EncodableObject> {
+    public static class BinaryDecoder implements jakarta.websocket.Decoder.Binary<EncodableObject> {
 
         boolean initalized = false;
         public static volatile boolean destroyed = false;

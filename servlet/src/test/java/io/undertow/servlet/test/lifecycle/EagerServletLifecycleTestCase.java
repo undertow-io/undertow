@@ -18,7 +18,7 @@
 
 package io.undertow.servlet.test.lifecycle;
 
-import javax.servlet.DispatcherType;
+import jakarta.servlet.DispatcherType;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;

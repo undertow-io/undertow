@@ -24,11 +24,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
-import javax.servlet.MultipartConfigElement;
-import javax.servlet.Servlet;
-import javax.servlet.ServletException;
-import javax.servlet.SingleThreadModel;
-import javax.servlet.UnavailableException;
+import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.SingleThreadModel;
+import jakarta.servlet.UnavailableException;
 
 import io.undertow.server.handlers.form.FormEncodedDataDefinition;
 import io.undertow.server.handlers.form.FormParserFactory;

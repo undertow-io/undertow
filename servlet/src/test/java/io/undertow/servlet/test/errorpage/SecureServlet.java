@@ -18,7 +18,7 @@
 
 package io.undertow.servlet.test.errorpage;
 
-import javax.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServlet;
 
 /**
  * @author Stuart Douglas

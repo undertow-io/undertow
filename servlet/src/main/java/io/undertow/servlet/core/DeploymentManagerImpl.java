@@ -90,11 +90,11 @@ import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.spec.SessionCookieConfigImpl;
 import io.undertow.util.MimeMappings;
 
-import javax.servlet.ServletContainerInitializer;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletContainerInitializer;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
+import jakarta.servlet.ServletException;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -109,10 +109,10 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.TreeMap;
 
-import static javax.servlet.http.HttpServletRequest.BASIC_AUTH;
-import static javax.servlet.http.HttpServletRequest.CLIENT_CERT_AUTH;
-import static javax.servlet.http.HttpServletRequest.DIGEST_AUTH;
-import static javax.servlet.http.HttpServletRequest.FORM_AUTH;
+import static jakarta.servlet.http.HttpServletRequest.BASIC_AUTH;
+import static jakarta.servlet.http.HttpServletRequest.CLIENT_CERT_AUTH;
+import static jakarta.servlet.http.HttpServletRequest.DIGEST_AUTH;
+import static jakarta.servlet.http.HttpServletRequest.FORM_AUTH;
 
 /**
  * The deployment manager. This manager is responsible for controlling the lifecycle of a servlet deployment.

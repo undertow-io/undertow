@@ -24,8 +24,8 @@ import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.util.PathTemplate;
 import io.undertow.websockets.jsr.annotated.AnnotatedEndpointFactory;
 
-import javax.websocket.Extension;
-import javax.websocket.server.ServerEndpointConfig;
+import jakarta.websocket.Extension;
+import jakarta.websocket.server.ServerEndpointConfig;
 
 /**
  * @author Stuart Douglas

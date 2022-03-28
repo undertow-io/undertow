@@ -18,8 +18,8 @@
 
 package io.undertow.servlet.spec;
 
-import javax.servlet.http.HttpServletMapping;
-import javax.servlet.http.MappingMatch;
+import jakarta.servlet.http.HttpServletMapping;
+import jakarta.servlet.http.MappingMatch;
 
 /**
  * @author Stuart Douglas

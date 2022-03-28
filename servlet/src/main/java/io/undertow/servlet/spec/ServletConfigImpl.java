@@ -20,8 +20,8 @@ package io.undertow.servlet.spec;
 
 import java.util.Enumeration;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletContext;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.ServletInfo;

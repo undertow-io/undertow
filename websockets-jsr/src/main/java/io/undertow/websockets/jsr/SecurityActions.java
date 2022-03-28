@@ -20,7 +20,7 @@ package io.undertow.websockets.jsr;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-import javax.websocket.WebSocketContainer;
+import jakarta.websocket.WebSocketContainer;
 
 class SecurityActions {
     static void addContainer(final ClassLoader classLoader, final WebSocketContainer webSocketContainer) {

@@ -21,9 +21,9 @@ package io.undertow.servlet.spec;
 import java.io.IOException;
 import java.util.concurrent.Executor;
 
-import javax.servlet.ServletInputStream;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.http.WebConnection;
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.WebConnection;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;

@@ -22,11 +22,11 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
 
-import javax.servlet.Filter;
-import javax.servlet.Servlet;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
+import jakarta.servlet.Filter;
+import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
 
 import io.undertow.servlet.api.DeploymentManager;
 import org.jboss.logging.annotations.Cause;
@@ -71,13 +71,13 @@ public interface UndertowServletMessages {
     @Message(id = 10008, value = "Header %s cannot be converted to a date")
     IllegalArgumentException headerCannotBeConvertedToDate(String header);
 
-    @Message(id = 10009, value = "Servlet %s of type %s does not implement javax.servlet.Servlet")
+    @Message(id = 10009, value = "Servlet %s of type %s does not implement jakarta.servlet.Servlet")
     IllegalArgumentException servletMustImplementServlet(String name, Class<? extends Servlet> servletClass);
 
     @Message(id = 10010, value = "%s of type %s must have a default constructor")
     IllegalArgumentException componentMustHaveDefaultConstructor(String componentType, Class<?> componentClass);
 
-    @Message(id = 10011, value = "Filter %s of type %s does not implement javax.servlet.Filter")
+    @Message(id = 10011, value = "Filter %s of type %s does not implement jakarta.servlet.Filter")
     IllegalArgumentException filterMustImplementFilter(String name, Class<? extends Filter> filterClass);
 
     @Message(id = 10012, value = "Listener class %s must implement at least one listener interface")
