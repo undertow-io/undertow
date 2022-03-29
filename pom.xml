@@ -110,6 +110,8 @@
         <version.bundle.plugin>5.1.1</version.bundle.plugin>
 
         <version.jmh>1.21</version.jmh>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
     </properties>
 
     <modules>
@@ -178,6 +180,20 @@
         </plugins>
         <pluginManagement>
             <plugins>
+                <!-- Compiler -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${version.compiler.plugin}</version>
+                    <configuration>
+                        <!-- fork is needed so compiler args can be used -->
+                        <fork>true</fork>
+                        <failOnError>false</failOnError>
+                        <compilerArgs>
+                            <arg>-J--add-opens=java.base/java.lang=ALL-UNNAMED</arg>
+                        </compilerArgs>
+                    </configuration>
+                </plugin>
 
                 <!-- Checkstyle -->
                 <plugin>
@@ -611,54 +627,11 @@
                     <plugin>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs-maven-plugin</artifactId>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <!-- Temporary profile to workaround issue described here https://github.com/spotbugs/spotbugs/issues/756. -->
-            <id>spotbugs-jdk11</id>
-            <activation>
-                <jdk>11</jdk>
-                <property>
-                    <name>findbugs</name> <!-- not modified just for compatibility reason -->
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>com.github.spotbugs</groupId>
-                        <artifactId>spotbugs-maven-plugin</artifactId>
                         <configuration>
                             <failOnError>false</failOnError>
                         </configuration>
                     </plugin>
                 </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>jdk9</id>
-            <activation>
-                <jdk>9</jdk>
-            </activation>
-            <build>
-                <pluginManagement>
-                    <plugins>
-                        <plugin>
-                            <groupId>org.apache.maven.plugins</groupId>
-                            <artifactId>maven-compiler-plugin</artifactId>
-                            <version>${version.compiler.plugin}</version>
-                            <configuration>
-                                <!-- fork is needed so compiler args can be used -->
-                                <fork>true</fork>
-                                <failOnError>false</failOnError>
-                                <compilerArgs>
-                                    <arg>-J--add-opens=java.base/java.lang=ALL-UNNAMED</arg>
-                                </compilerArgs>
-                            </configuration>
-                        </plugin>
-                    </plugins>
-                </pluginManagement>
             </build>
         </profile>
 
