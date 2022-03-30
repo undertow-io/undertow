@@ -389,6 +389,14 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
     }
 
+    @Override
+    public void upgradeHttpToWebSocket(Object req, Object res, ServerEndpointConfig sec, Map<String, String> pathParameters) throws IOException, DeploymentException {
+        try {
+            doUpgrade((HttpServletRequest) req, (HttpServletResponse) res, sec, pathParameters);
+        } catch (final ServletException e) {
+            throw new DeploymentException(e.getRootCause().getMessage(), e.getRootCause());
+        }
+    }
 
     public void doUpgrade(HttpServletRequest request,
                           HttpServletResponse response, final ServerEndpointConfig sec,
