@@ -109,6 +109,16 @@ public class NetworkUtilsAddressParsingTestCase {
         }
         Assert.assertEquals("/2001:1db8:100:0:0:ff00:42:8329", res.toString());
 
+        addressString = "2001:1db8:0100:0000:0000:ff00:0042:8329";
+        res = NetworkUtils.parseIpv6Address(addressString);
+        Assert.assertTrue(res instanceof Inet6Address);
+
+        parts = new int[]{0x2001, 0x1db8, 0x100, 0x0, 0x0, 0xff00, 0x42, 0x8329};
+        for(int i = 0 ; i < parts.length; ++i) {
+            Assert.assertEquals(((byte)(parts[i]>>8)), res.getAddress()[i * 2]);
+            Assert.assertEquals(((byte)(parts[i])), res.getAddress()[i * 2 + 1]);
+        }
+        Assert.assertEquals("/2001:1db8:100:0:0:ff00:42:8329", res.toString());
 
         addressString = "::1";
         res = NetworkUtils.parseIpv6Address(addressString);
@@ -120,11 +130,6 @@ public class NetworkUtilsAddressParsingTestCase {
             Assert.assertEquals(((byte)(parts[i])), res.getAddress()[i * 2 + 1]);
         }
         Assert.assertEquals("/0:0:0:0:0:0:0:1", res.toString());
-    }
-
-    @Test(expected = IOException.class)
-    public void testIpV6AddressWithLeadingZero() throws IOException {
-        NetworkUtils.parseIpv6Address("2001:1db8:100:03:6:ff00:42:8329");
     }
 
     @Test(expected = IOException.class)
