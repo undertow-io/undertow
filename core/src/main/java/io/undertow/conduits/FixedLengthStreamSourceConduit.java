@@ -278,6 +278,19 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
     }
 
     @Override
+    public void resumeReads() {
+        long val = state;
+        if (anyAreSet(val, FLAG_CLOSED | FLAG_FINISHED)) {
+            return;
+        }
+        if (allAreClear(val, MASK_COUNT)) {
+            next.wakeupReads();
+        } else {
+            next.resumeReads();
+        }
+    }
+
+    @Override
     public void terminateReads() throws IOException {
         long val = enterShutdownReads();
         if (allAreSet(val, FLAG_CLOSED)) {
