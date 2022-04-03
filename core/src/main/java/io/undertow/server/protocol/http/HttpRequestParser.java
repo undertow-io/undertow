@@ -786,6 +786,24 @@ public abstract class HttpRequestParser {
                 }
             }
         }
+        // we left the previous loop after reading the /n and that was the last character... this means there is
+        // a pending pair of header name (stored in headerName) and header value (stored in stringBuilder)
+        if (parseState == LINE_END) {
+            //we have a header
+            String headerValue = stringBuilder.toString();
+            if (++state.mapCount > maxHeaders) {
+                throw new BadRequestException(UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders));
+            }
+            //TODO: we need to decode this according to RFC-2047 if we have seen a =? symbol
+            builder.getRequestHeaders().add(headerName, headerValue);
+            if (headerValuesCache != null && headerName.length() + headerValue.length() < maxCachedHeaderSize) {
+                headerValuesCache.put(headerName, headerValue);
+            }
+            state.nextHeader = null;
+            state.stringBuilder.setLength(0);
+            state.state = ParseState.PARSE_COMPLETE;
+            return;
+        }
         //we only write to the state if we did not finish parsing
         state.parseState = parseState;
     }

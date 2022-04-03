@@ -18,21 +18,21 @@
 
 package io.undertow.server.protocol.http;
 
+import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
+
 import io.undertow.UndertowOptions;
-import io.undertow.testutils.category.UnitTest;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.testutils.category.UnitTest;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
-import io.undertow.util.BadRequestException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.xnio.OptionMap;
-
-import java.io.UnsupportedEncodingException;
-import java.nio.ByteBuffer;
 
 /**
  * Basic test of the HTTP parser functionality.
@@ -369,6 +369,105 @@ public class SimpleParserTestCase {
         Assert.assertEquals("/", result.getRequestPath());
         Assert.assertEquals("http://myurl.com", result.getRequestURI());
         Assert.assertTrue(result.isHostIncludedInRequestURI());
+    }
+
+    @Test
+    public void testHTTPClientRequest() throws BadRequestException {
+        byte[] in = ("POST /wildfly-services/ejb/v1/invoke/-/ejb-remote-server-side/-/CalculatorBean/-/org.jboss.as.quickstarts.ejb.remote.stateless.RemoteCalculator/concat/%5BLjava.lang.String%3B HTTP/1.1\r\n" +
+        "Accept: application/x-wf-ejb-response;version=1,application/x-wf-jbmar-exception;version=1\r\n" +
+        "Authorization: Digest username=\"quickstartUser\", uri=\"http://localhost:8080/wildfly-services/ejb/v1/invoke/-/ejb-remote-server-side/-/CalculatorBean/-/org.jboss.as.quickstarts.ejb.remote.stateless.RemoteCalculator/concat/%255BLjava.lang.String%253B\", realm=\"ApplicationRealm\", nc=00000052, cnonce=\"HgqQmHZKAJC44WA8W3yZvJmxNn9p6tpYE-gXd5BB\", algorithm=MD5, nonce=\"AAAABQABIeNiOHTsLqhR+iBs2wrWA4rOh5kc9QIjztvj4f3106O7qmH3LVQ=\", opaque=\"00000000000000000000000000000000\", qop=auth, response=\"daf568673f3998b7c50a86cfaa5e0d21\"\r\n" +
+        "Transfer-Encoding: chunked\r\n" +
+        "Content-Type: application/x-wf-ejb-jbmar-invocation;version=1\r\n" +
+        "Cookie: JSESSIONID=9ZcvdCLqUtp0hVD3C5XUfH_pczo8bos3qfHfyQDB.localhost\r\n" +
+        "Host: localhost:8080\r\n").getBytes();
+
+        final ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        OptionMap map = OptionMap.builder().set(org.xnio.Options.BALANCING_TOKENS, 1)
+                .set(org.xnio.Options.REUSE_ADDRESSES, true)
+                .set(io.undertow.UndertowOptions.DECODE_URL, true)
+                .set(io.undertow.UndertowOptions.ALWAYS_SET_KEEP_ALIVE, true)
+                .set(io.undertow.UndertowOptions.ENABLE_STATISTICS, false)
+                .set(io.undertow.UndertowOptions.RECORD_REQUEST_START_TIME, false)
+                .set(io.undertow.UndertowOptions.NO_REQUEST_TIMEOUT, 60000)
+                .set(io.undertow.UndertowOptions.MAX_HEADER_SIZE, 1048576)
+                .set(io.undertow.UndertowOptions.MAX_COOKIES, 200)
+                .set(io.undertow.UndertowOptions.MAX_PARAMETERS, 1000)
+                .set(io.undertow.UndertowOptions.ALLOW_ENCODED_SLASH, false)
+                .set(org.xnio.Options.TCP_NODELAY, true)
+                .set(io.undertow.UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false)
+                .set(io.undertow.UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true)
+                .set(io.undertow.UndertowOptions.HTTP2_SETTINGS_HEADER_TABLE_SIZE, 4096)
+                .set(io.undertow.UndertowOptions.URL_CHARSET, "UTF-8")
+                .set(org.xnio.Options.BALANCING_CONNECTIONS, 2)
+                .set(io.undertow.UndertowOptions.BUFFER_PIPELINED_DATA, false)
+                .set(io.undertow.UndertowOptions.MAX_ENTITY_SIZE, 10485760)
+                .set(io.undertow.UndertowOptions.MAX_HEADERS, 200)
+                .set(io.undertow.UndertowOptions.HTTP2_SETTINGS_INITIAL_WINDOW_SIZE, 65535)
+                .set(io.undertow.UndertowOptions.HTTP2_SETTINGS_MAX_FRAME_SIZE, 16384)
+                .set(io.undertow.UndertowOptions.MAX_BUFFERED_REQUEST_SIZE, 16384)
+                .set(io.undertow.UndertowOptions.ENABLE_HTTP2, true)
+                .set(io.undertow.UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false)
+                .set(io.undertow.UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, false)
+                .set(io.undertow.UndertowOptions.REQUIRE_HOST_HTTP11, false).getMap();
+        HttpRequestParser.instance(map).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.POST, result.getRequestMethod());
+        Assert.assertEquals("/wildfly-services/ejb/v1/invoke/-/ejb-remote-server-side/-/CalculatorBean/-/org.jboss.as.quickstarts.ejb.remote.stateless.RemoteCalculator/concat/[Ljava.lang.String;", result.getRequestPath());
+        Assert.assertEquals("/wildfly-services/ejb/v1/invoke/-/ejb-remote-server-side/-/CalculatorBean/-/org.jboss.as.quickstarts.ejb.remote.stateless.RemoteCalculator/concat/%5BLjava.lang.String%3B", result.getRequestURI());
+        Assert.assertFalse(result.isHostIncludedInRequestURI());
+        Assert.assertEquals(6, result.getRequestHeaders().size());
+        Assert.assertEquals("application/x-wf-ejb-response;version=1,application/x-wf-jbmar-exception;version=1", result.getRequestHeaders().getFirst(Headers.ACCEPT));
+        Assert.assertEquals("Digest username=\"quickstartUser\", uri=\"http://localhost:8080/wildfly-services/ejb/v1/invoke/-/ejb-remote-server-side/-/CalculatorBean/-/org.jboss.as.quickstarts.ejb.remote.stateless.RemoteCalculator/concat/%255BLjava.lang.String%253B\", realm=\"ApplicationRealm\", nc=00000052, cnonce=\"HgqQmHZKAJC44WA8W3yZvJmxNn9p6tpYE-gXd5BB\", algorithm=MD5, nonce=\"AAAABQABIeNiOHTsLqhR+iBs2wrWA4rOh5kc9QIjztvj4f3106O7qmH3LVQ=\", opaque=\"00000000000000000000000000000000\", qop=auth, response=\"daf568673f3998b7c50a86cfaa5e0d21\"", result.getRequestHeaders().getFirst(
+                Headers.AUTHORIZATION));
+        Assert.assertEquals("chunked", result.getRequestHeaders().getFirst(Headers.TRANSFER_ENCODING));
+        Assert.assertEquals("application/x-wf-ejb-jbmar-invocation;version=1", result.getRequestHeaders().getFirst(Headers.CONTENT_TYPE));
+        Assert.assertEquals("JSESSIONID=9ZcvdCLqUtp0hVD3C5XUfH_pczo8bos3qfHfyQDB.localhost", result.getRequestHeaders().getFirst(Headers.COOKIE));
+        Assert.assertEquals("localhost:8080", result.getRequestHeaders().getFirst(Headers.HOST));
+        //Assert.assertEquals(1, result.getRequestCookies().size());
+    }
+
+    @Test
+    public void testHTTPClientRequestOnlySession() throws BadRequestException {
+        byte[] in = ("POST /wildfly-services/ejb/v1/invoke/-/ejb-remote-server-side/-/CalculatorBean/-/org.jboss.as.quickstarts.ejb.remote.stateless.RemoteCalculator/concat/%5BLjava.lang.String%3B HTTP/1.1\r\n" +
+                "Cookie: JSESSIONID=9ZcvdCLqUtp0hVD3C5XUfH_pczo8bos3qfHfyQDB.localhost\r\n").getBytes();
+
+        final ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        OptionMap map = OptionMap.builder().set(org.xnio.Options.BALANCING_TOKENS, 1)
+                .set(org.xnio.Options.REUSE_ADDRESSES, true)
+                .set(io.undertow.UndertowOptions.DECODE_URL, true)
+                .set(io.undertow.UndertowOptions.ALWAYS_SET_KEEP_ALIVE, true)
+                .set(io.undertow.UndertowOptions.ENABLE_STATISTICS, false)
+                .set(io.undertow.UndertowOptions.RECORD_REQUEST_START_TIME, false)
+                .set(io.undertow.UndertowOptions.NO_REQUEST_TIMEOUT, 60000)
+                .set(io.undertow.UndertowOptions.MAX_HEADER_SIZE, 1048576)
+                .set(io.undertow.UndertowOptions.MAX_COOKIES, 200)
+                .set(io.undertow.UndertowOptions.MAX_PARAMETERS, 1000)
+                .set(io.undertow.UndertowOptions.ALLOW_ENCODED_SLASH, false)
+                .set(org.xnio.Options.TCP_NODELAY, true)
+                .set(io.undertow.UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false)
+                .set(io.undertow.UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true)
+                .set(io.undertow.UndertowOptions.HTTP2_SETTINGS_HEADER_TABLE_SIZE, 4096)
+                .set(io.undertow.UndertowOptions.URL_CHARSET, "UTF-8")
+                .set(org.xnio.Options.BALANCING_CONNECTIONS, 2)
+                .set(io.undertow.UndertowOptions.BUFFER_PIPELINED_DATA, false)
+                .set(io.undertow.UndertowOptions.MAX_ENTITY_SIZE, 10485760)
+                .set(io.undertow.UndertowOptions.MAX_HEADERS, 200)
+                .set(io.undertow.UndertowOptions.HTTP2_SETTINGS_INITIAL_WINDOW_SIZE, 65535)
+                .set(io.undertow.UndertowOptions.HTTP2_SETTINGS_MAX_FRAME_SIZE, 16384)
+                .set(io.undertow.UndertowOptions.MAX_BUFFERED_REQUEST_SIZE, 16384)
+                .set(io.undertow.UndertowOptions.ENABLE_HTTP2, true)
+                .set(io.undertow.UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false)
+                .set(io.undertow.UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, false)
+                .set(io.undertow.UndertowOptions.REQUIRE_HOST_HTTP11, false).getMap();
+        HttpRequestParser.instance(map).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.POST, result.getRequestMethod());
+        Assert.assertEquals("/wildfly-services/ejb/v1/invoke/-/ejb-remote-server-side/-/CalculatorBean/-/org.jboss.as.quickstarts.ejb.remote.stateless.RemoteCalculator/concat/[Ljava.lang.String;", result.getRequestPath());
+        Assert.assertEquals("/wildfly-services/ejb/v1/invoke/-/ejb-remote-server-side/-/CalculatorBean/-/org.jboss.as.quickstarts.ejb.remote.stateless.RemoteCalculator/concat/%5BLjava.lang.String%3B", result.getRequestURI());
+        Assert.assertFalse(result.isHostIncludedInRequestURI());
+        Assert.assertEquals(1, result.getRequestHeaders().size());
+        Assert.assertEquals("JSESSIONID=9ZcvdCLqUtp0hVD3C5XUfH_pczo8bos3qfHfyQDB.localhost", result.getRequestHeaders().getFirst(Headers.COOKIE));
+        //Assert.assertEquals(1, result.getRequestCookies().size());
     }
 
     @Test
