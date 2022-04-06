@@ -281,20 +281,20 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                         try {
                             boolean readAgain;
                             do {
+                                ChannelListener<? super R> listener = getReadListener();
                                 synchronized(lock) {
                                     state &= ~STATE_READS_AWAKEN;
-                                }
-                                ChannelListener<? super R> listener = getReadListener();
-                                if (listener == null || !isReadResumed()) {
-                                    return;
+                                    if (listener == null || !isReadResumed()) {
+                                        state &= ~STATE_IN_LISTENER_LOOP;
+                                        return;
+                                    }
                                 }
                                 ChannelListeners.invokeChannelListener((R) AbstractFramedStreamSourceChannel.this, listener);
                                 //if writes are shutdown or we become active then we stop looping
                                 //we stop when writes are shutdown because we can't flush until we are active
                                 //although we may be flushed as part of a batch
-                                final boolean moreData = (frameDataRemaining > 0 && data != null) || !pendingFrameData.isEmpty() || anyAreSet(state, STATE_WAITNG_MINUS_ONE);
-
                                 synchronized (lock) {
+                                    final boolean moreData = (frameDataRemaining > 0 && data != null) || !pendingFrameData.isEmpty() || anyAreSet(state, STATE_WAITNG_MINUS_ONE);
                                     // keep running if either reads are resumed and there is more data to read, or if reads are awaken
                                     readAgain =((isReadResumed() && moreData) || allAreSet(state, STATE_READS_AWAKEN))
                                                // as long as channel is not closed and there is no stream broken
