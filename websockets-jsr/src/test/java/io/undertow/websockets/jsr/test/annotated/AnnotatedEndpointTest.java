@@ -339,10 +339,10 @@ public class AnnotatedEndpointTest {
     public void testRequestUri() throws Exception {
         final byte[] payload = "hello".getBytes();
         final FutureResult<?> latch = new FutureResult<>();
-
-        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/request?a=b"));
+        final String uri = "ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/request?a=b";
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI(uri));
         client.connect();
-        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "/ws/request?a=b".getBytes(), latch));
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, uri.getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
