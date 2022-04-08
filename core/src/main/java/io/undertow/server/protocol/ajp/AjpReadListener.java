@@ -58,7 +58,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
     private static final byte[] CPONG = {'A', 'B', 0, 1, 9};
     private static final byte[] SEND_HEADERS_INTERNAL_SERVER_ERROR_MSG = {'A', 'B', 0, 8, 4, (byte)((500 >> 8) & 0xFF) , (byte)(500 & 0xFF), 0, 0, '\0', 0, 0};
     private static final byte[] SEND_HEADERS_BAD_REQUEST_MSG = {'A', 'B', 0, 8, 4, (byte)((400 >> 8) & 0xFF) , (byte)(400 & 0xFF), 0, 0, '\0', 0, 0};
-    private static final byte[] END_RESPONSE = {'A', 'B', 0, 2, 5, 1};
+    private static final byte[] END_RESPONSE = {'A', 'B', 0, 2, 5, 0};
 
     private final AjpServerConnection connection;
     private final String scheme;
@@ -235,7 +235,6 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             if(oldState.badRequest) {
                 httpServerExchange.setStatusCode(StatusCodes.BAD_REQUEST);
                 httpServerExchange.endExchange();
-                handleBadRequest();
                 safeClose(connection);
             } else {
                 Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
