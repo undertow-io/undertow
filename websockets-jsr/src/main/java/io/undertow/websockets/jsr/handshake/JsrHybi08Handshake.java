@@ -49,7 +49,7 @@ public final class JsrHybi08Handshake extends Hybi08Handshake {
     @Override
     public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection c, final ByteBufferPool buffers) {
         WebSocketChannel channel = super.createChannel(exchange, c, buffers);
-        HandshakeUtil.setConfig(channel, config);
+        HandshakeUtil.setConfig(channel, config, exchange);
         return channel;
     }
 

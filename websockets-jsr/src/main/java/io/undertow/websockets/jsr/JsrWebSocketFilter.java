@@ -101,7 +101,6 @@ public class JsrWebSocketFilter implements Filter {
         HttpServletResponse resp = (HttpServletResponse) response;
         if (req.getHeader(Headers.UPGRADE_STRING) != null) {
             final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(req, resp, peerConnections);
-
             String path;
             if (req.getPathInfo() == null) {
                 path = req.getServletPath();
@@ -134,7 +133,7 @@ public class JsrWebSocketFilter implements Filter {
                     facade.upgradeChannel(new HttpUpgradeListener() {
                         @Override
                         public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
-
+                            HandshakeUtil.propagate(exchange, facade);
                             WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
                             peerConnections.add(channel);
                             if(session != null) {
