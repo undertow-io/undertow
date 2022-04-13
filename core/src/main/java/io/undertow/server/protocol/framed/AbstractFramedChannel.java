@@ -160,7 +160,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         @Override
         public void freed() {
             int res = outstandingBuffersUpdater.decrementAndGet(AbstractFramedChannel.this);
-            if (!receivesSuspendedByUser && res == maxQueuedBuffers - 1) {
+            if (receivesSuspendedTooManyBuffers && res == maxQueuedBuffers - 1) {
                 //we need to do the resume in the IO thread, as there is a risk of deadlock otherwise, as the calling thread is an application thread
                 //and may hold a lock on a stream source channel, see UNDERTOW-1312
                 getIoThread().execute(new Runnable() {
