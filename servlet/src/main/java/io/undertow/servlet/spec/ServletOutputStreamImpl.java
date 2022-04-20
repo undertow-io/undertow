@@ -594,13 +594,13 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             if (anyAreSet(state, FLAG_CLOSED)) return;
             setFlags(FLAG_CLOSED);
             clearFlags(FLAG_READY);
-            if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null && servletRequestContext.getOriginalResponse().getHeader(Headers.CONTENT_LENGTH_STRING) == null) {
+            if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
                 if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null
                         && servletRequestContext.getExchange().getAttachment(HttpAttachments.RESPONSE_TRAILER_SUPPLIER) == null
                         && servletRequestContext.getExchange().getAttachment(HttpAttachments.RESPONSE_TRAILERS) == null) {
                     if (buffer == null) {
                         servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
-                    } else {
+                    } else if (servletRequestContext.getOriginalResponse().getHeader(Headers.CONTENT_LENGTH_STRING) == null) {
                         servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
                     }
                 }
