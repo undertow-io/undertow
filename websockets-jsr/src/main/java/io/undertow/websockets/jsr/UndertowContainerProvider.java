@@ -18,6 +18,8 @@
 
 package io.undertow.websockets.jsr;
 
+import static org.wildfly.common.Assert.checkNotNullParam;
+
 import java.io.IOException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -130,10 +132,7 @@ public class UndertowContainerProvider extends ContainerProvider {
     }
 
     public void setDefaultClassIntrospector(ClassIntrospecter classIntrospector) {
-        if (classIntrospector == null) {
-            throw new IllegalArgumentException();
-        }
-        defaultIntrospector.setIntrospecter(classIntrospector);
+        defaultIntrospector.setIntrospecter(checkNotNullParam("classIntrospector", classIntrospector));
     }
 
     public static void disableDefaultContainer() {
