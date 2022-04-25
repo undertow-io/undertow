@@ -804,6 +804,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     }
 
     private void doResume() {
+        if (receivesSuspendedTooManyQueuedMessages || receivesSuspendedByUser || receivesSuspendedTooManyBuffers)
+            return;
         //NOTE: this should not require syncing with below part
         final ReferenceCountedPooled localReadData = this.readData;
         if (localReadData != null && !localReadData.isFreed()) {
