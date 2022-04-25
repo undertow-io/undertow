@@ -233,7 +233,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         }
 
         if (inListenerLoopUpdater.compareAndSet(this, 0, 1)) {
-            getChannel().runInIoThread(new Runnable() {
+            getChannel().scheduleTaskInIoThread(new Runnable() {
 
                 // loopCount keeps track of runnable being invoked in a
                 // loop without any successful write operation

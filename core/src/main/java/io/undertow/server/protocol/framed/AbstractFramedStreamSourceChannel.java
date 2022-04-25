@@ -264,6 +264,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
      * For this class there is no difference between a resume and a wakeup
      */
     void resumeReadsInternal(boolean wakeup) {
+        final Runnable task;
         synchronized (lock) {
             state |= STATE_READS_RESUMED;
             // mark state awaken if wakeup is true
@@ -272,46 +273,44 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
             // if not waked && not resumed, return
             else if (!anyAreSet(state, STATE_READS_RESUMED))
                 return;
-            if (!anyAreSet(state, STATE_IN_LISTENER_LOOP)) {
-                state |= STATE_IN_LISTENER_LOOP;
-                getFramedChannel().runInIoThread(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        try {
-                            boolean readAgain;
-                            do {
-                                ChannelListener<? super R> listener = getReadListener();
-                                synchronized(lock) {
-                                    state &= ~STATE_READS_AWAKEN;
-                                    if (listener == null || !isReadResumed()) {
-                                        state &= ~STATE_IN_LISTENER_LOOP;
-                                        return;
-                                    }
-                                }
-                                ChannelListeners.invokeChannelListener((R) AbstractFramedStreamSourceChannel.this, listener);
-                                //if writes are shutdown or we become active then we stop looping
-                                //we stop when writes are shutdown because we can't flush until we are active
-                                //although we may be flushed as part of a batch
-                                synchronized (lock) {
-                                    final boolean moreData = (frameDataRemaining > 0 && data != null) || !pendingFrameData.isEmpty() || anyAreSet(state, STATE_WAITNG_MINUS_ONE);
-                                    // keep running if either reads are resumed and there is more data to read, or if reads are awaken
-                                    readAgain =((isReadResumed() && moreData) || allAreSet(state, STATE_READS_AWAKEN))
-                                               // as long as channel is not closed and there is no stream broken
-                                               && allAreClear(state,STATE_CLOSED | STATE_STREAM_BROKEN);
-                                    if (!readAgain)
-                                        state &= ~STATE_IN_LISTENER_LOOP;
-                                }
-                            } while (readAgain);
-                        } catch (RuntimeException | Error e) {
-                            synchronized (lock) {
+            if (anyAreSet(state, STATE_IN_LISTENER_LOOP)) {
+                return;
+            }
+            state |= STATE_IN_LISTENER_LOOP;
+            task = () -> {
+                try {
+                    boolean readAgain;
+                    do {
+                        ChannelListener<? super R> listener = getReadListener();
+                        synchronized(lock) {
+                            state &= ~STATE_READS_AWAKEN;
+                            if (listener == null || !isReadResumed()) {
                                 state &= ~STATE_IN_LISTENER_LOOP;
+                                return;
                             }
                         }
+                        ChannelListeners.invokeChannelListener((R) AbstractFramedStreamSourceChannel.this, listener);
+                        //if writes are shutdown or we become active then we stop looping
+                        //we stop when writes are shutdown because we can't flush until we are active
+                        //although we may be flushed as part of a batch
+                        synchronized (lock) {
+                            final boolean moreData = (frameDataRemaining > 0 && data != null) || !pendingFrameData.isEmpty() || anyAreSet(state, STATE_WAITNG_MINUS_ONE);
+                            // keep running if either reads are resumed and there is more data to read, or if reads are awaken
+                            readAgain =((isReadResumed() && moreData) || allAreSet(state, STATE_READS_AWAKEN))
+                                    // as long as channel is not closed and there is no stream broken
+                                    && allAreClear(state,STATE_CLOSED | STATE_STREAM_BROKEN);
+                            if (!readAgain)
+                                state &= ~STATE_IN_LISTENER_LOOP;
+                        }
+                    } while (readAgain);
+                } catch (RuntimeException | Error e) {
+                    synchronized (lock) {
+                        state &= ~STATE_IN_LISTENER_LOOP;
                     }
-                });
-            }
+                }
+            };
         }
+        getFramedChannel().scheduleTaskInIoThread(task);
     }
 
     private ChannelListener<? super R> getReadListener() {

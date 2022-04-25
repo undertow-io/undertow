@@ -17,8 +17,6 @@
  */
 package io.undertow.server.protocol.framed;
 
-import static org.xnio.IoUtils.safeClose;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -39,6 +37,13 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
+import io.undertow.conduits.IdleTimeoutConduit;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.util.ReferenceCountedPooled;
 import org.xnio.Buffers;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -56,13 +61,7 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.channels.SuspendableWriteChannel;
 
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.UndertowOptions;
-import io.undertow.conduits.IdleTimeoutConduit;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import io.undertow.util.ReferenceCountedPooled;
+import static org.xnio.IoUtils.safeClose;
 
 /**
  * A {@link org.xnio.channels.ConnectedChannel} which can be used to send and receive Frames.
@@ -164,17 +163,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             if (res == maxQueuedBuffers / 2 && receivesSuspendedTooManyBuffers) {
                 //we need to do the resume in the IO thread, as there is a risk of deadlock otherwise, as the calling thread is an application thread
                 //and may hold a lock on a stream source channel, see UNDERTOW-1312
-                getIoThread().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        synchronized (AbstractFramedChannel.this) {
-                            if (UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
-                                UndertowLogger.REQUEST_IO_LOGGER.tracef("Resuming reads on %s as buffers have been consumed", AbstractFramedChannel.this);
-                            }
-                            new UpdateResumeState(null, false, null).run();
-                        }
-                    }
-                });
+                synchronized (this) {
+                    receivesSuspendedTooManyBuffers = false;
+                }
+                if (UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
+                    UndertowLogger.REQUEST_IO_LOGGER.tracef("Resuming reads on %s as buffers have been consumed", AbstractFramedChannel.this);
+                }
+                runInIoThread(AbstractFramedChannel.this::doResume);
             }
         }
     };
@@ -246,7 +241,22 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         return new IdleTimeoutConduit(connectedStreamChannel);
     }
 
-    void runInIoThread(Runnable task) {
+    final void runInIoThread(Runnable task) {
+        XnioIoThread xnioIoThread = getIoThread();
+        if (xnioIoThread == Thread.currentThread()) {
+            task.run();
+        } else {
+            this.taskRunQueue.add(task);
+            try {
+                getIoThread().execute(taskRunQueueRunnable);
+            } catch (RejectedExecutionException e) {
+                //thread is shutting down
+                ShutdownFallbackExecutor.execute(taskRunQueueRunnable);
+            }
+        }
+    }
+
+    final void scheduleTaskInIoThread(Runnable task) {
         this.taskRunQueue.add(task);
         try {
             getIoThread().execute(taskRunQueueRunnable);
@@ -544,10 +554,12 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                                 UndertowLogger.REQUEST_IO_LOGGER.tracef("Suspending reads on %s due to too many outstanding buffers", this);
                             }
                             receivesSuspendedTooManyBuffers = true;
-                            getIoThread().execute(new UpdateResumeState(null, true, null));
-                            return null;
+                        } else {
+                            continue;
                         }
                     }
+                    runInIoThread(getSourceChannel()::suspendReads);
+                    return null;
                 }
             } while (!outstandingBuffersUpdater.compareAndSet(this, expect, expect + 1));
         }
@@ -691,9 +703,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         channel.getSinkChannel().resumeWrites();
                     }
                 } else if (pendingFrames.size() > queuedFrameHighWaterMark) {
-                    new UpdateResumeState(null, null, true).run();
+                    if (!receivesSuspendedTooManyQueuedMessages) {
+                        receivesSuspendedTooManyQueuedMessages = true;
+                        getSourceChannel().suspendReads();
+                    }
                 } else if (receivesSuspendedTooManyQueuedMessages && pendingFrames.size() < queuedFrameLowWaterMark) {
-                    new UpdateResumeState(null, null, false).run();
+                    receivesSuspendedTooManyQueuedMessages = false;
+                    doResume();
                 }
 
             } catch (IOException|RuntimeException|Error e) {
@@ -703,12 +719,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         } finally {
             flushingSenders = false;
             if(!newFrames.isEmpty()) {
-                runInIoThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        flushSenders();
-                    }
-                });
+                scheduleTaskInIoThread(this::flushSenders);
             }
         }
     }
@@ -744,16 +755,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     public void flush() {
         if (!flushingSenders) {
-            if(channel.getIoThread() == Thread.currentThread()) {
-                flushSenders();
-            } else {
-                runInIoThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        flushSenders();
-                    }
-                });
-            }
+            runInIoThread(this::flushSenders);
         }
     }
 
@@ -790,17 +792,21 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     /**
      * Suspend the receive of new frames via {@link #receive()}
      */
-    public synchronized void suspendReceives() {
-        receivesSuspendedByUser = true;
-        getIoThread().execute(new UpdateResumeState(true, null, null));
+    public void suspendReceives() {
+        synchronized (this) {
+            receivesSuspendedByUser = true;
+        }
+        runInIoThread(getSourceChannel()::suspendReads);
     }
 
     /**
      * Resume the receive of new frames via {@link #receive()}
      */
-    public synchronized void resumeReceives() {
-        receivesSuspendedByUser = false;
-        getIoThread().execute(new UpdateResumeState(false, null, null));
+    public void resumeReceives() {
+        synchronized (this) {
+            receivesSuspendedByUser = false;
+        }
+        runInIoThread(this::doResume);
     }
 
     private void doResume() {
@@ -966,16 +972,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             }
             final ReferenceCountedPooled localReadData = readData;
             if (localReadData != null && !localReadData.isFreed() && channel.isOpen() && !partialRead) {
-                try {
-                    runInIoThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            ChannelListeners.invokeChannelListener(channel, FrameReadListener.this);
-                        }
-                    });
-                } catch (RejectedExecutionException e) {
-                    IoUtils.safeClose(AbstractFramedChannel.this);
-                }
+                runInIoThread(()->ChannelListeners.invokeChannelListener(channel, FrameReadListener.this));
             }
             synchronized (AbstractFramedChannel.this) {
                 AbstractFramedChannel.this.partialRead = false;
@@ -1005,12 +1002,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         @Override
         public void handleEvent(final CloseableChannel c) {
             if (Thread.currentThread() != c.getIoThread() && !c.getWorker().isShutdown()) {
-                runInIoThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        ChannelListeners.invokeChannelListener(c, FrameCloseListener.this);
-                    }
-                });
+                scheduleTaskInIoThread(()->ChannelListeners.invokeChannelListener(c, FrameCloseListener.this));
                 return;
             }
 
@@ -1026,26 +1018,24 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 return; //both sides need to be closed
             } else if(localReadData != null && !localReadData.isFreed()) {
                 //we make sure there is no data left to receive, if there is then we invoke the receive listener
-                runInIoThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        while (localReadData != null  && !localReadData.isFreed()) {
-                            int rem = localReadData.getBuffer().remaining();
-                            ChannelListener listener = receiveSetter.get();
-                            if(listener == null) {
-                                listener = DRAIN_LISTENER;
+                runInIoThread(()-> {
+                            while (localReadData != null && !localReadData.isFreed()) {
+                                int rem = localReadData.getBuffer().remaining();
+                                ChannelListener listener = receiveSetter.get();
+                                if (listener == null) {
+                                    listener = DRAIN_LISTENER;
+                                }
+                                ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, listener);
+                                if (!AbstractFramedChannel.this.isOpen()) {
+                                    break;
+                                }
+                                if (localReadData != null && rem == localReadData.getBuffer().remaining()) {
+                                    break;//make sure we are making progress
+                                }
                             }
-                            ChannelListeners.invokeChannelListener(AbstractFramedChannel.this, listener);
-                            if(!AbstractFramedChannel.this.isOpen()) {
-                                break;
-                            }
-                            if (localReadData != null && rem == localReadData.getBuffer().remaining()) {
-                                break;//make sure we are making progress
-                            }
+                            handleEvent(c);
                         }
-                        handleEvent(c);
-                    }
-                });
+                );
 
                 return;
             }
@@ -1164,36 +1154,5 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
 
     protected OptionMap getSettings() {
         return settings;
-    }
-
-    private class UpdateResumeState implements Runnable {
-
-        private final Boolean user;
-        private final Boolean buffers;
-        private final Boolean frames;
-
-        private UpdateResumeState(Boolean user, Boolean buffers, Boolean frames) {
-            this.user = user;
-            this.buffers = buffers;
-            this.frames = frames;
-        }
-
-        @Override
-        public void run() {
-            if (user != null) {
-                receivesSuspendedByUser = user;
-            }
-            if (buffers != null) {
-                receivesSuspendedTooManyBuffers = buffers;
-            }
-            if (frames != null) {
-                receivesSuspendedTooManyQueuedMessages = frames;
-            }
-            if (receivesSuspendedByUser || receivesSuspendedTooManyQueuedMessages || receivesSuspendedTooManyBuffers) {
-                channel.getSourceChannel().suspendReads();
-            } else {
-                doResume();
-            }
-        }
     }
 }
