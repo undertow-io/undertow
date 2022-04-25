@@ -794,7 +794,11 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     public void suspendReceives() {
         synchronized (this) {
+            if (receivesSuspendedByUser)
+                return;
             receivesSuspendedByUser = true;
+            if (receivesSuspendedTooManyQueuedMessages || receivesSuspendedTooManyBuffers)
+                return;
         }
         runInIoThread(getSourceChannel()::suspendReads);
     }
@@ -804,12 +808,18 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     public void resumeReceives() {
         synchronized (this) {
+            if (!receivesSuspendedByUser)
+                return;
             receivesSuspendedByUser = false;
+            if (receivesSuspendedTooManyBuffers || receivesSuspendedTooManyQueuedMessages)
+                return;
         }
         runInIoThread(this::doResume);
     }
 
     private void doResume() {
+        if (receivesSuspendedTooManyQueuedMessages || receivesSuspendedByUser || receivesSuspendedTooManyBuffers)
+            return;
         //NOTE: this should not require syncing with below part
         final ReferenceCountedPooled localReadData = this.readData;
         if (localReadData != null && !localReadData.isFreed()) {
