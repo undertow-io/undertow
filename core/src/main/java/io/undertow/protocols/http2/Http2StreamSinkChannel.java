@@ -190,7 +190,7 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
      * @throws IOException if an IO error occurs
      */
     public void awaitWritable() throws IOException {
-        awaitWritable(getAwaitWritableTimeout() * 1_000_000);
+        awaitWritable(getAwaitWritableTimeout() * 1_000_000L);
     }
 
     /**
