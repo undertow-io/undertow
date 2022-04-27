@@ -72,10 +72,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletConnection;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.ServletRequest;
@@ -384,6 +386,22 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         String newId = underlyingSession.changeSessionId(exchange, originalServletContext.getSessionConfig());
         servletContext.getDeployment().getApplicationListeners().httpSessionIdChanged(session, oldId);
         return newId;
+    }
+
+    @Override
+    public String getRequestId() {
+        return exchange.getRequestId();
+    }
+
+    @Override
+    public String getProtocolRequestId() {
+        return exchange.getConnection().getProtocolRequestId();
+    }
+
+    @Override
+    public ServletConnection getServletConnection() {
+        String connectionId = Long.toString(exchange.getConnection().getId());
+        return new ServletConnectionImpl(connectionId, exchange.getProtocol().toString(), isSecure());
     }
 
     @Override

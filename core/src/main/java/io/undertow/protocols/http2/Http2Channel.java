@@ -899,6 +899,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         return http2SynStreamStreamSinkChannel;
     }
 
+    public String getProtocolRequestId() {
+        return Integer.toString(streamIdCounter);
+    }
+
     /**
      * Adds a received pushed stream into the current streams for a client. The
      * stream is added into the currentStream and lastAssignedStreamOtherSide is incremented.
