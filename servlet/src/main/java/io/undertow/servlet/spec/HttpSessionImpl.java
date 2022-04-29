@@ -26,7 +26,6 @@ import java.util.Set;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpSession;
-import jakarta.servlet.http.HttpSessionContext;
 
 import io.undertow.server.session.Session;
 import io.undertow.servlet.UndertowServletMessages;
@@ -110,24 +109,11 @@ public class HttpSessionImpl implements HttpSession {
     }
 
     @Override
-    public HttpSessionContext getSessionContext() {
-        return null;
-    }
-
-    @Override
     public Object getAttribute(final String name) {
         if(name.startsWith(IO_UNDERTOW)) {
             throw new SecurityException();
         }
         return session.getAttribute(name);
-    }
-
-    @Override
-    public Object getValue(final String name) {
-        if(name.startsWith(IO_UNDERTOW)) {
-            throw new SecurityException();
-        }
-        return getAttribute(name);
     }
 
     @Override
@@ -148,17 +134,6 @@ public class HttpSessionImpl implements HttpSession {
     }
 
     @Override
-    public String[] getValueNames() {
-        Set<String> names = getFilteredAttributeNames();
-        String[] ret = new String[names.size()];
-        int i = 0;
-        for (String name : names) {
-            ret[i++] = name;
-        }
-        return ret;
-    }
-
-    @Override
     public void setAttribute(final String name, final Object value) {
         if(name.startsWith(IO_UNDERTOW)) {
             throw new SecurityException();
@@ -171,21 +146,11 @@ public class HttpSessionImpl implements HttpSession {
     }
 
     @Override
-    public void putValue(final String name, final Object value) {
-        setAttribute(name, value);
-    }
-
-    @Override
     public void removeAttribute(final String name) {
         if(name.startsWith(IO_UNDERTOW)) {
             throw new SecurityException();
         }
         session.removeAttribute(name);
-    }
-
-    @Override
-    public void removeValue(final String name) {
-        removeAttribute(name);
     }
 
     @Override

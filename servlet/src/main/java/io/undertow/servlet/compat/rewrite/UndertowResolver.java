@@ -78,7 +78,7 @@ public class UndertowResolver extends Resolver {
         } else if (key.equals("REQUEST_METHOD")) {
             return request.getMethod();
         } else if (key.equals("SCRIPT_FILENAME")) {
-            return request.getRealPath(request.getServletPath());
+            return request.getServletContext().getRealPath(request.getServletPath());
         } else if (key.equals("REQUEST_PATH")) {
             return servletRequestContext.getExchange().getRelativePath();
         } else if (key.equals("CONTEXT_PATH")) {
@@ -92,7 +92,7 @@ public class UndertowResolver extends Resolver {
         } else if (key.equals("AUTH_TYPE")) {
             return request.getAuthType();
         } else if (key.equals("DOCUMENT_ROOT")) {
-            return request.getRealPath("/");
+            return request.getServletContext().getRealPath("/");
         } else if (key.equals("SERVER_NAME")) {
             return request.getLocalName();
         } else if (key.equals("SERVER_ADDR")) {

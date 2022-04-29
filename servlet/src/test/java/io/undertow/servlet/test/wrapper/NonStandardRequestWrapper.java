@@ -31,6 +31,7 @@ import java.util.Map;
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletConnection;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletInputStream;
@@ -300,18 +301,6 @@ public class NonStandardRequestWrapper implements HttpServletRequest {
      */
     public RequestDispatcher getRequestDispatcher(String path) {
         return this.request.getRequestDispatcher(path);
-    }
-
-
-    /**
-     * The default behavior of this method is to return
-     * getRealPath(String path) on the wrapped request object.
-     *
-     * @deprecated As of Version 2.1 of the Java Servlet API,
-     * use {@link ServletContext#getRealPath} instead
-     */
-    public String getRealPath(String path) {
-        return this.request.getRealPath(path);
     }
 
 
@@ -780,15 +769,6 @@ public class NonStandardRequestWrapper implements HttpServletRequest {
     }
 
     /**
-     * The default behavior of this method is to return isRequestedSessionIdFromUrl()
-     * on the wrapped request object.
-     */
-    @Override
-    public boolean isRequestedSessionIdFromUrl() {
-        return this._getHttpServletRequest().isRequestedSessionIdFromUrl();
-    }
-
-    /**
      * The default behavior of this method is to call authenticate on the
      * wrapped request object.
      *
@@ -858,5 +838,20 @@ public class NonStandardRequestWrapper implements HttpServletRequest {
     @Override
     public <T extends HttpUpgradeHandler> T upgrade(Class<T> handlerClass) throws IOException, ServletException {
         return this._getHttpServletRequest().upgrade(handlerClass);
+    }
+
+    @Override
+    public String getRequestId() {
+        return this._getHttpServletRequest().getRequestId();
+    }
+
+    @Override
+    public String getProtocolRequestId() {
+        return this._getHttpServletRequest().getProtocolRequestId();
+    }
+
+    @Override
+    public ServletConnection getServletConnection() {
+        return this._getHttpServletRequest().getServletConnection();
     }
 }

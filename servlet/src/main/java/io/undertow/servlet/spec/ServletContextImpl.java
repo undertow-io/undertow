@@ -49,7 +49,6 @@ import io.undertow.servlet.core.ManagedServlet;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
-import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
@@ -363,28 +362,8 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public Servlet getServlet(final String name) throws ServletException {
-        return deployment.getServletPaths().getServletHandlerByName(name).getManagedServlet().getServlet().getInstance();
-    }
-
-    @Override
-    public Enumeration<Servlet> getServlets() {
-        return EmptyEnumeration.instance();
-    }
-
-    @Override
-    public Enumeration<String> getServletNames() {
-        return EmptyEnumeration.instance();
-    }
-
-    @Override
     public void log(final String msg) {
         UndertowServletLogger.ROOT_LOGGER.info(msg);
-    }
-
-    @Override
-    public void log(final Exception exception, final String msg) {
-        UndertowServletLogger.ROOT_LOGGER.error(msg, exception);
     }
 
     @Override

@@ -250,11 +250,6 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         }
 
         @Override
-        public void setStatus(int sc, String sm) {
-            status = sc;
-        }
-
-        @Override
         public void setStatus(int sc) {
             status = sc;
         }
