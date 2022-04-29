@@ -115,6 +115,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
     private volatile boolean receivesSuspendedTooManyQueuedMessages = false;
     private volatile boolean receivesSuspendedTooManyBuffers = false;
 
+    // freed method forces to use a different lock as it can be called from everywhere
+    private final Object lockTooManyQueuedMessages = new Object();
 
     @SuppressWarnings("unused")
     private volatile int readsBroken = 0;
@@ -161,20 +163,24 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         public void freed() {
             int res = outstandingBuffersUpdater.decrementAndGet(AbstractFramedChannel.this);
             // do not resume immediately, take some time to consume half the buffers
-            if (res == maxQueuedBuffers / 2 && receivesSuspendedTooManyBuffers) {
-                //we need to do the resume in the IO thread, as there is a risk of deadlock otherwise, as the calling thread is an application thread
-                //and may hold a lock on a stream source channel, see UNDERTOW-1312
-                getIoThread().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        synchronized (AbstractFramedChannel.this) {
-                            if (UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
-                                UndertowLogger.REQUEST_IO_LOGGER.tracef("Resuming reads on %s as buffers have been consumed", AbstractFramedChannel.this);
+            if (res == maxQueuedBuffers / 2) {
+                synchronized (lockTooManyQueuedMessages) {
+                    if (receivesSuspendedTooManyBuffers) {
+                        //we need to do the resume in the IO thread, as there is a risk of deadlock otherwise, as the calling thread is an application thread
+                        //and may hold a lock on a stream source channel, see UNDERTOW-1312
+                        getIoThread().execute(new Runnable() {
+                            @Override
+                            public void run() {
+                                synchronized (AbstractFramedChannel.this) {
+                                    if (UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
+                                        UndertowLogger.REQUEST_IO_LOGGER.tracef("Resuming reads on %s as buffers have been consumed", AbstractFramedChannel.this);
+                                    }
+                                    new UpdateResumeState(null, false, null).run();
+                                }
                             }
-                            new UpdateResumeState(null, false, null).run();
-                        }
+                        });
                     }
-                });
+                }
             }
         }
     };
@@ -532,8 +538,8 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             do {
                 expect = outstandingBuffersUpdater.get(this);
                 if (expect >= maxQueuedBuffers || receivesSuspendedTooManyBuffers) {
-                    synchronized (this) {
-                        //we need to re-read in a sync block, to prevent races
+                    synchronized (lockTooManyQueuedMessages) {
+                        // although this method is already synched on this by receive, we need to synch on lockTooManyQueuedMessages because of freed
                         if (receivesSuspendedTooManyBuffers) {
                             // suspend already sent to the IO thread
                             return null;
