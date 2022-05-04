@@ -37,6 +37,14 @@ import java.net.UnknownHostException;
 public class IPAddressAccessControlHandlerUnitTestCase {
 
     @Test
+    public void testIPv4SlashMatchDefaultDeny() throws UnknownHostException {
+        IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler()
+                .setDefaultAllow(false)
+                .addAllow("85.112.112.58/29");
+        Assert.assertTrue(handler.isAllowed(InetAddress.getByName("85.112.112.58")));
+    }
+
+    @Test
     public void testIPv4ExactMatch() throws UnknownHostException {
         IPAddressAccessControlHandler handler = new IPAddressAccessControlHandler()
                 .setDefaultAllow(false)
