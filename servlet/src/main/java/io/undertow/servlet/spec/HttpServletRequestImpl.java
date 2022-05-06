@@ -236,7 +236,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         ServletPathMatch match = src.getOriginalServletPathMatch();
         final DispatcherType dispatcherType = getDispatcherType();
         //UNDERTOW-1899 - ERROR is essentially forward operation
-        if(dispatcherType == DispatcherType.FORWARD || dispatcherType == DispatcherType.ERROR) {
+        if(dispatcherType == DispatcherType.FORWARD || dispatcherType == DispatcherType.ERROR || dispatcherType == DispatcherType.ASYNC || dispatcherType == DispatcherType.REQUEST) {
             match = src.getServletPathMatch();
         }
         String matchValue;
