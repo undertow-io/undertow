@@ -45,6 +45,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.servlet.UndertowServletMessages;
+import io.undertow.servlet.core.DefaultCharsetMapping;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.DateUtils;
@@ -532,15 +533,21 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         exchange.getResponseHeaders().put(Headers.CONTENT_LANGUAGE, loc.getLanguage() + "-" + loc.getCountry());
         if (!charsetSet && writer == null) {
             final Map<String, String> localeCharsetMapping = servletContext.getDeployment().getDeploymentInfo().getLocaleCharsetMapping();
-            // Match full language_country_variant first, then language_country,
-            // then language only
-            String charset = localeCharsetMapping.get(locale.toString());
-            if (charset == null) {
-                charset = localeCharsetMapping.get(locale.getLanguage() + "_"
-                        + locale.getCountry());
+            // first try DD provided mappings
+            String charset = null;
+            if (!localeCharsetMapping.isEmpty()) {
+                charset = localeCharsetMapping.get(locale.toString());
                 if (charset == null) {
-                    charset = localeCharsetMapping.get(locale.getLanguage());
+                    charset = localeCharsetMapping.get(locale.getLanguage() + "_"
+                            + locale.getCountry());
+                    if (charset == null) {
+                        charset = localeCharsetMapping.get(locale.getLanguage());
+                    }
                 }
+            }
+            // if DD provided mapping failed then use default
+            if (charset == null) {
+                charset = DefaultCharsetMapping.INSTANCE.getCharset(loc);
             }
             if (charset != null) {
                 this.charset = charset;
