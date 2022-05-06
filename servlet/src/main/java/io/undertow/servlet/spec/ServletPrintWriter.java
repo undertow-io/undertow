@@ -27,6 +27,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.Locale;
 
 /**
@@ -60,11 +61,18 @@ public class ServletPrintWriter {
         }
     }
 
-    private void createEncoder() {
-        this.charsetEncoder = Charset.forName(this.charset).newEncoder();
-        //replace malformed and unmappable with question marks
-        this.charsetEncoder.onUnmappableCharacter(CodingErrorAction.REPLACE);
-        this.charsetEncoder.onMalformedInput(CodingErrorAction.REPLACE);
+    private void createEncoder() throws UnsupportedEncodingException {
+        try {
+            this.charsetEncoder = Charset.forName(this.charset).newEncoder();
+            //replace malformed and unmappable with question marks
+            this.charsetEncoder.onUnmappableCharacter(CodingErrorAction.REPLACE);
+            this.charsetEncoder.onMalformedInput(CodingErrorAction.REPLACE);
+        } catch (UnsupportedCharsetException e) {
+            // Servlet 6 clarification - UnsupportedEncodingException must be thrown
+            final UnsupportedEncodingException uee = new UnsupportedEncodingException(e.getMessage());
+            uee.initCause(e);
+            throw uee;
+        }
     }
 
     public void flush() {
