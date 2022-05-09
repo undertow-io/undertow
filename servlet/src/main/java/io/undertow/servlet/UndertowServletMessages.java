@@ -242,6 +242,6 @@ public interface UndertowServletMessages {
     @Message(id = 10065, value = "Can not set empty/null role in servlet context for context path '%s' in deployment '%s' ")
     IllegalArgumentException roleMustNotBeEmpty(String deploymentName, String contextPath);
 
-    @Message(id = 10066, value = "Can not set invoke 'declareRoles' from dynamic listener in servlet context for context path '%s' in deployment '%s' ")
-    UnsupportedOperationException cantCallFromDynamicListener(String deploymentName, String contextPath);
+    //@Message(id = 10066, value = "Can not set invoke 'declareRoles' from dynamic listener in servlet context for context path '%s' in deployment '%s' ")
+    //UnsupportedOperationException cantCallFromDynamicListener(String deploymentName, String contextPath);
 }
