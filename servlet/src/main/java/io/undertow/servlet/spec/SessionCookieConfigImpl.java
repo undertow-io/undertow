@@ -196,6 +196,9 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
 
     @Override
     public void setAttribute(final String name, final String value) {
+        if(servletContext.isInitialized()) {
+            throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
+        }
         attributes.put(name, value);
     }
 
