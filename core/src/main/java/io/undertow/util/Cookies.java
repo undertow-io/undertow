@@ -363,6 +363,20 @@ public class Cookies {
             }
             parsedCookies.add(c);
         }
+
+        // RFC 6265 treats the domain, path and version attributes of an RFC 2109 cookie as a separate cookies
+        for (final Map.Entry<String, String> entry : additional.entrySet()) {
+            if (DOMAIN.equals(entry.getKey())) {
+                Cookie c = new CookieImpl(DOMAIN, entry.getValue());
+                parsedCookies.add(c);
+            } else if (PATH.equals(entry.getKey())) {
+                Cookie c = new CookieImpl(PATH, entry.getValue());
+                parsedCookies.add(c);
+            } else if (VERSION.equals(entry.getKey())) {
+                Cookie c = new CookieImpl(VERSION, entry.getValue());
+                parsedCookies.add(c);
+            }
+        }
     }
 
     private static int createCookie(final String name, final String value, int maxCookies, int cookieCount,

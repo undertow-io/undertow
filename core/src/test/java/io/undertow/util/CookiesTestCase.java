@@ -111,9 +111,10 @@ public class CookiesTestCase {
         Map<String, Cookie> cookies = Cookies.parseRequestCookies(1, false, Arrays.asList(
                 "CUSTOMER=WILE_E_COYOTE; $Domain=LOONEY_TUNES; $Version=1; $Path=/"));
 
-        Assert.assertFalse(cookies.containsKey("$Domain"));
-        Assert.assertFalse(cookies.containsKey("$Version"));
-        Assert.assertFalse(cookies.containsKey("$Path"));
+        // RFC 6265 treats the domain, path and version attributes of an RFC 2109 cookie as a separate cookies
+        Assert.assertTrue(cookies.containsKey("$Domain"));
+        Assert.assertTrue(cookies.containsKey("$Version"));
+        Assert.assertTrue(cookies.containsKey("$Path"));
 
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertEquals("CUSTOMER", cookie.getName());
