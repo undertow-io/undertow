@@ -24,7 +24,7 @@ import io.undertow.servlet.util.ConstructorInstanceFactory;
 import java.lang.reflect.Constructor;
 import java.util.Set;
 
-import javax.servlet.ServletContainerInitializer;
+import jakarta.servlet.ServletContainerInitializer;
 
 /**
  * @author Stuart Douglas
@@ -61,7 +61,7 @@ public class ServletContainerInitializerInfo {
     /**
      * Returns the actual types present in the deployment that are handled by this ServletContainerInitializer.
      *
-     * (i.e. not the types in the {@link javax.servlet.annotation.HandlesTypes} annotation, but rather actual types
+     * (i.e. not the types in the {@link jakarta.servlet.annotation.HandlesTypes} annotation, but rather actual types
      * the container has discovered that meet the criteria)
      *
      * @return The handled types

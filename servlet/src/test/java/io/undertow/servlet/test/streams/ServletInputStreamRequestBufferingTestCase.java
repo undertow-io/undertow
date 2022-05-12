@@ -18,7 +18,7 @@
 
 package io.undertow.servlet.test.streams;
 
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletContext;
 
 import io.undertow.server.handlers.RequestBufferingHandler;
 import io.undertow.servlet.ServletExtension;

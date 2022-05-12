@@ -31,8 +31,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.MappingMatch;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.MappingMatch;
 import java.io.IOException;
 
 /**

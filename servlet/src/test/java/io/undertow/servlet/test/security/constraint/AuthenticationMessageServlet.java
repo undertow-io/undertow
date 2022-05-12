@@ -21,9 +21,9 @@ import io.undertow.servlet.test.util.MessageServlet;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * An extension to the MessageServlet that can also perform additional checks related to the authenticated principal.

@@ -28,8 +28,8 @@ import io.undertow.servlet.core.Lifecycle;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 
-import javax.servlet.http.HttpSessionActivationListener;
-import javax.servlet.http.HttpSessionEvent;
+import jakarta.servlet.http.HttpSessionActivationListener;
+import jakarta.servlet.http.HttpSessionEvent;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Date;

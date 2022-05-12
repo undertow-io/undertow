@@ -18,8 +18,8 @@
 
 package io.undertow.websockets.jsr.test.suspendresume;
 
-import javax.websocket.OnMessage;
-import javax.websocket.server.ServerEndpoint;
+import jakarta.websocket.OnMessage;
+import jakarta.websocket.server.ServerEndpoint;
 
 /**
  * @author Stuart Douglas

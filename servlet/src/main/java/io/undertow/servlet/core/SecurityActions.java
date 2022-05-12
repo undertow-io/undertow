@@ -22,7 +22,7 @@ package io.undertow.servlet.core;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletContext;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.session.Session;

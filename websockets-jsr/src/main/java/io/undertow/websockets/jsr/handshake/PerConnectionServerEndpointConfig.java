@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2022 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,69 +15,69 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-package io.undertow.websockets.jsr;
+package io.undertow.websockets.jsr.handshake;
 
 import jakarta.websocket.Decoder;
 import jakarta.websocket.Encoder;
 import jakarta.websocket.Extension;
 import jakarta.websocket.server.ServerEndpointConfig;
+
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * @author Stuart Douglas
+ * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public class ServerEndpointConfigImpl implements ServerEndpointConfig {
+final class PerConnectionServerEndpointConfig implements ServerEndpointConfig {
 
-    private final Class<?> endpointclass;
-    private final String path;
-    private final Map<String, Object> userProperties = new ConcurrentHashMap<>();
+    private final ServerEndpointConfig delegate;
+    private final Map<String, Object> userProperties;
 
-    public ServerEndpointConfigImpl(Class<?> endpointclass, String path) {
-        this.endpointclass = endpointclass;
-        this.path = path;
+    PerConnectionServerEndpointConfig(final ServerEndpointConfig delegate) {
+        this.delegate = delegate;
+        this.userProperties = Collections.synchronizedMap(new HashMap<>(delegate.getUserProperties()));
     }
 
     @Override
     public Class<?> getEndpointClass() {
-        return endpointclass;
+        return delegate.getEndpointClass();
     }
 
     @Override
     public String getPath() {
-        return path;
+        return delegate.getPath();
     }
 
     @Override
     public List<String> getSubprotocols() {
-        return Collections.emptyList();
+        return delegate.getSubprotocols();
     }
 
     @Override
     public List<Extension> getExtensions() {
-        return Collections.emptyList();
+        return delegate.getExtensions();
     }
 
     @Override
     public Configurator getConfigurator() {
-        return new Configurator();
+        return delegate.getConfigurator();
     }
 
     @Override
     public List<Class<? extends Encoder>> getEncoders() {
-        return Collections.emptyList();
+        return delegate.getEncoders();
     }
 
     @Override
     public List<Class<? extends Decoder>> getDecoders() {
-        return Collections.emptyList();
+        return delegate.getDecoders();
     }
 
     @Override
     public Map<String, Object> getUserProperties() {
         return userProperties;
     }
+
 }

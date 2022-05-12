@@ -27,9 +27,9 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.core.ManagedFilter;
 import io.undertow.servlet.core.ManagedServlet;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-import javax.servlet.http.MappingMatch;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.MappingMatch;
 
 /**
 * @author Stuart Douglas

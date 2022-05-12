@@ -36,9 +36,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.servlet.ServletException;
-import javax.websocket.CloseReason;
-import javax.websocket.Session;
+import jakarta.servlet.ServletException;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.Session;
 import java.io.IOException;
 import java.net.URI;
 

@@ -20,8 +20,8 @@ package io.undertow.servlet.spec;
 
 import java.util.Enumeration;
 
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletContext;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletContext;
 
 import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.util.IteratorEnumeration;

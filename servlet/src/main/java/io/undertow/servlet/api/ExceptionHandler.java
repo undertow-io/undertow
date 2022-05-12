@@ -18,8 +18,8 @@
 
 package io.undertow.servlet.api;
 
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
 
 import io.undertow.server.HttpServerExchange;
 

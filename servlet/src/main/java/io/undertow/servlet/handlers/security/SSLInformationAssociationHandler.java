@@ -20,7 +20,7 @@ package io.undertow.servlet.handlers.security;
 
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import javax.servlet.ServletRequest;
+import jakarta.servlet.ServletRequest;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -31,9 +31,9 @@ import io.undertow.util.HexConverter;
 /**
  * Handler that associates SSL metadata with request
  * <p>
- * cipher suite - javax.servlet.request.cipher_suite String
- * bit size of the algorithm - javax.servlet.request.key_size Integer
- * SSL session id - javax.servlet.request.ssl_session_id String
+ * cipher suite - jakarta.servlet.request.cipher_suite String
+ * bit size of the algorithm - jakarta.servlet.request.key_size Integer
+ * SSL session id - jakarta.servlet.request.ssl_session_id String
  *
  * @author <a href="mailto:tomaz.cerar@redhat.com">Tomaz Cerar</a> (c) 2013 Red Hat Inc.
  */
@@ -105,12 +105,12 @@ public class SSLInformationAssociationHandler implements HttpHandler {
         if (ssl != null) {
             String cipherSuite = ssl.getCipherSuite();
             byte[] sessionId = ssl.getSessionId();
-            request.setAttribute("javax.servlet.request.cipher_suite", cipherSuite);
-            request.setAttribute("javax.servlet.request.key_size", ssl.getKeySize());
-            request.setAttribute("javax.servlet.request.ssl_session_id", sessionId != null? HexConverter.convertToHexString(sessionId) : null);
+            request.setAttribute("jakarta.servlet.request.cipher_suite", cipherSuite);
+            request.setAttribute("jakarta.servlet.request.key_size", ssl.getKeySize());
+            request.setAttribute("jakarta.servlet.request.ssl_session_id", sessionId != null? HexConverter.convertToHexString(sessionId) : null);
             X509Certificate[] certs = getCerts(ssl);
             if (certs != null) {
-                request.setAttribute("javax.servlet.request.X509Certificate", certs);
+                request.setAttribute("jakarta.servlet.request.X509Certificate", certs);
             }
 
         }

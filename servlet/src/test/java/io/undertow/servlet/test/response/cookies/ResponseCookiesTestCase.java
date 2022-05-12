@@ -21,7 +21,7 @@ package io.undertow.servlet.test.response.cookies;
 import java.util.Arrays;
 import java.util.Comparator;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;

@@ -20,7 +20,7 @@ package io.undertow.servlet.test.listener.request.async.onError;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.testutils.ProxyIgnore;
 import org.apache.http.HttpResponse;

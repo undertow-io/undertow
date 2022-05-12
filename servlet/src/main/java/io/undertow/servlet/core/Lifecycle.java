@@ -18,7 +18,7 @@
 
 package io.undertow.servlet.core;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 /**
  *

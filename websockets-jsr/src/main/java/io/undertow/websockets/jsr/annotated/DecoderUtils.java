@@ -20,8 +20,8 @@ package io.undertow.websockets.jsr.annotated;
 
 import java.util.List;
 
-import javax.websocket.Decoder;
-import javax.websocket.EndpointConfig;
+import jakarta.websocket.Decoder;
+import jakarta.websocket.EndpointConfig;
 
 /**
  * @author Stuart Douglas

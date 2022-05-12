@@ -27,7 +27,7 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 
-import javax.servlet.DispatcherType;
+import jakarta.servlet.DispatcherType;
 
 import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;

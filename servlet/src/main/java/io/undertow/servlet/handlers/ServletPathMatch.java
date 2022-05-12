@@ -18,7 +18,7 @@
 
 package io.undertow.servlet.handlers;
 
-import javax.servlet.http.MappingMatch;
+import jakarta.servlet.http.MappingMatch;
 
 /**
  * @author Stuart Douglas

@@ -20,10 +20,10 @@ package io.undertow.servlet.test.response.cookies;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Servlet that emulates a buggy behavior where JSessionID cookie is added several times with
@@ -35,19 +35,19 @@ public class JSessionIDCookiesServlet extends HttpServlet {
 
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
-        javax.servlet.http.Cookie cookie1 = new javax.servlet.http.Cookie("JSESSIONID", "_bug_fix");
+        jakarta.servlet.http.Cookie cookie1 = new jakarta.servlet.http.Cookie("JSESSIONID", "_bug_fix");
         cookie1.setPath("/path1");
         cookie1.setMaxAge(0);
 
-        javax.servlet.http.Cookie cookie2 = new javax.servlet.http.Cookie("JSESSIONID", "_bug_fix");
+        jakarta.servlet.http.Cookie cookie2 = new jakarta.servlet.http.Cookie("JSESSIONID", "_bug_fix");
         cookie2.setPath("/path2");
         cookie2.setMaxAge(0);
 
-        javax.servlet.http.Cookie cookie3 = new javax.servlet.http.Cookie("JSESSIONID", "_bug_fix");
+        jakarta.servlet.http.Cookie cookie3 = new jakarta.servlet.http.Cookie("JSESSIONID", "_bug_fix");
         cookie1.setPath("/path3");
         cookie1.setMaxAge(500);
 
-        javax.servlet.http.Cookie cookie4 = new javax.servlet.http.Cookie("JSESSIONID", "_bug_fix");
+        jakarta.servlet.http.Cookie cookie4 = new jakarta.servlet.http.Cookie("JSESSIONID", "_bug_fix");
         cookie2.setPath("/path4");
         cookie2.setMaxAge(1000);
 

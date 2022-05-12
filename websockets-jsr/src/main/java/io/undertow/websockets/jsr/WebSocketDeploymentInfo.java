@@ -24,7 +24,7 @@ import io.undertow.connector.ByteBufferPool;
 import org.xnio.Pool;
 import org.xnio.XnioWorker;
 
-import javax.websocket.server.ServerEndpointConfig;
+import jakarta.websocket.server.ServerEndpointConfig;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;

@@ -42,7 +42,7 @@ import org.xnio.FutureResult;
 
 import java.net.URI;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

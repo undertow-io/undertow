@@ -17,8 +17,8 @@
  */
 package io.undertow.servlet.test.listener.servletcontext;
 
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
 /**
  *
  * @author baranowb

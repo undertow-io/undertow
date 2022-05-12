@@ -21,7 +21,7 @@ package io.undertow.servlet;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Set;
-import javax.servlet.UnavailableException;
+import jakarta.servlet.UnavailableException;
 
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;

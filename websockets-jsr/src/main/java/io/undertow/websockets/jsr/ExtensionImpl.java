@@ -20,7 +20,7 @@ package io.undertow.websockets.jsr;
 
 import io.undertow.websockets.WebSocketExtension;
 
-import javax.websocket.Extension;
+import jakarta.websocket.Extension;
 import java.util.ArrayList;
 import java.util.List;
 

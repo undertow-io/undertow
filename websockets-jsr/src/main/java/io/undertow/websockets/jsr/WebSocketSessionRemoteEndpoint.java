@@ -25,9 +25,9 @@ import io.undertow.websockets.core.WebSocketUtils;
 import io.undertow.websockets.core.WebSockets;
 import org.xnio.channels.Channels;
 
-import javax.websocket.EncodeException;
-import javax.websocket.RemoteEndpoint;
-import javax.websocket.SendHandler;
+import jakarta.websocket.EncodeException;
+import jakarta.websocket.RemoteEndpoint;
+import jakarta.websocket.SendHandler;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;

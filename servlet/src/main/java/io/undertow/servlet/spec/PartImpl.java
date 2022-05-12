@@ -33,8 +33,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import javax.servlet.MultipartConfigElement;
-import javax.servlet.http.Part;
+import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.http.Part;
 
 /**
  * @author Stuart Douglas

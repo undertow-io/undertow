@@ -17,15 +17,15 @@
  */
 package io.undertow.websockets.jsr.test.annotated;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.websocket.ClientEndpoint;
-import javax.websocket.CloseReason;
-import javax.websocket.OnClose;
-import javax.websocket.Session;
-import javax.websocket.server.ServerEndpointConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.websocket.ClientEndpoint;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.OnClose;
+import jakarta.websocket.Session;
+import jakarta.websocket.server.ServerEndpointConfig;
 
 import java.io.IOException;
 import java.net.URI;
@@ -339,10 +339,10 @@ public class AnnotatedEndpointTest {
     public void testRequestUri() throws Exception {
         final byte[] payload = "hello".getBytes();
         final FutureResult<?> latch = new FutureResult<>();
-
-        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/request?a=b"));
+        final String uri = "ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/request?a=b";
+        WebSocketTestClient client = new WebSocketTestClient(WebSocketVersion.V13, new URI(uri));
         client.connect();
-        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, "/ws/request?a=b".getBytes(), latch));
+        client.send(new TextWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(TextWebSocketFrame.class, uri.getBytes(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }

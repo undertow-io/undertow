@@ -26,8 +26,8 @@ import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSourceChannel;
 
-import javax.servlet.ReadListener;
-import javax.servlet.ServletInputStream;
+import jakarta.servlet.ReadListener;
+import jakarta.servlet.ServletInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;

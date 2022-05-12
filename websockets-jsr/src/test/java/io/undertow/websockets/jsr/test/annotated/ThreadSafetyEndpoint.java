@@ -20,9 +20,9 @@ package io.undertow.websockets.jsr.test.annotated;
 
 import java.util.HashSet;
 import java.util.Set;
-import javax.websocket.OnOpen;
-import javax.websocket.Session;
-import javax.websocket.server.ServerEndpoint;
+import jakarta.websocket.OnOpen;
+import jakarta.websocket.Session;
+import jakarta.websocket.server.ServerEndpoint;
 
 /**
  * @author Stuart Douglas

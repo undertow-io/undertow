@@ -23,7 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.servlet.Filter;
+import jakarta.servlet.Filter;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.util.ConstructorInstanceFactory;

@@ -29,7 +29,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.concurrent.TimeUnit;

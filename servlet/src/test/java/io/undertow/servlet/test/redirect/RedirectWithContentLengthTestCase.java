@@ -43,7 +43,7 @@ import static org.junit.Assert.assertEquals;
 @RunWith(DefaultServer.class)
 public class RedirectWithContentLengthTestCase {
     @BeforeClass
-    public static void setup() throws javax.servlet.ServletException {
+    public static void setup() throws jakarta.servlet.ServletException {
         final PathHandler pathHandler = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
         DeploymentInfo builder = new DeploymentInfo()

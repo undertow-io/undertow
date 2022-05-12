@@ -21,8 +21,8 @@ package io.undertow.websockets.jsr;
 import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
 
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.Endpoint;
+import jakarta.websocket.ClientEndpointConfig;
+import jakarta.websocket.Endpoint;
 import java.net.URI;
 
 /**

@@ -22,7 +22,7 @@ import io.undertow.server.handlers.resource.Resource;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.DateUtils;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.Calendar;
 

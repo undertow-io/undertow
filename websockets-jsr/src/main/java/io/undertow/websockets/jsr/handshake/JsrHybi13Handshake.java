@@ -27,7 +27,8 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.connector.ByteBufferPool;
 import org.xnio.StreamConnection;
 
-import javax.websocket.Extension;
+import jakarta.websocket.Extension;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,7 +36,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * {@link Hybi13Handshake} sub-class which takes care of match against the {@link javax.websocket.server.ServerEndpointConfig} and
+ * {@link Hybi13Handshake} sub-class which takes care of match against the {@link jakarta.websocket.server.ServerEndpointConfig} and
  * stored the config in the attributes for later usage.
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>
@@ -57,7 +58,7 @@ public final class JsrHybi13Handshake extends Hybi13Handshake {
     @Override
     public WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection c, final ByteBufferPool buffers) {
         WebSocketChannel channel = super.createChannel(exchange, c, buffers);
-        HandshakeUtil.setConfig(channel, config);
+        HandshakeUtil.setConfig(channel, config, exchange);
         return channel;
     }
 

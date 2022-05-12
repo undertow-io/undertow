@@ -18,9 +18,9 @@
 
 package io.undertow.servlet.test.session;
 
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
-import javax.servlet.SessionTrackingMode;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
+import jakarta.servlet.SessionTrackingMode;
 import java.util.Arrays;
 import java.util.HashSet;
 

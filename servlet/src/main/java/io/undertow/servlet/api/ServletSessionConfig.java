@@ -20,7 +20,7 @@ package io.undertow.servlet.api;
 
 import java.util.Set;
 
-import javax.servlet.SessionTrackingMode;
+import jakarta.servlet.SessionTrackingMode;
 
 /**
  *

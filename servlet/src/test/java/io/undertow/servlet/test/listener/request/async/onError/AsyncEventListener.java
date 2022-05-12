@@ -24,12 +24,12 @@ import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 
-import javax.servlet.AsyncEvent;
+import jakarta.servlet.AsyncEvent;
 
 /**
  * @author Stuart Douglas
  */
-public class AsyncEventListener implements javax.servlet.AsyncListener {
+public class AsyncEventListener implements jakarta.servlet.AsyncListener {
 
     private static final LinkedBlockingDeque<String> EVENTS = new LinkedBlockingDeque<>();
 

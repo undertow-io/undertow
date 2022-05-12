@@ -1,8 +1,8 @@
 package io.undertow.servlet.api;
 
-import javax.servlet.Filter;
-import javax.servlet.Servlet;
-import javax.servlet.ServletException;
+import jakarta.servlet.Filter;
+import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletException;
 
 /**
  * Class that is run around invocations of servlet and filter lifecycle methods (init and destroy).

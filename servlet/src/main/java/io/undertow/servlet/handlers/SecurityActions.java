@@ -20,7 +20,7 @@ package io.undertow.servlet.handlers;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletContext;
 
 import io.undertow.server.session.Session;
 import io.undertow.servlet.spec.HttpSessionImpl;

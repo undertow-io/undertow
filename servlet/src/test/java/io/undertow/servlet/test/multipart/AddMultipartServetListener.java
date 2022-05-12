@@ -1,9 +1,9 @@
 package io.undertow.servlet.test.multipart;
 
-import javax.servlet.MultipartConfigElement;
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
-import javax.servlet.ServletRegistration;
+import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
+import jakarta.servlet.ServletRegistration;
 
 /**
  * @author Stuart Douglas

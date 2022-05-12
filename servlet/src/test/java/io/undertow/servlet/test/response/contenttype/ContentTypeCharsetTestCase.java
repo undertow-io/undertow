@@ -20,7 +20,7 @@ package io.undertow.servlet.test.response.contenttype;
 
 import java.net.URLEncoder;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;

@@ -25,8 +25,8 @@ import static org.xnio.Bits.anyAreSet;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import javax.servlet.ReadListener;
-import javax.servlet.ServletInputStream;
+import jakarta.servlet.ReadListener;
+import jakarta.servlet.ServletInputStream;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;

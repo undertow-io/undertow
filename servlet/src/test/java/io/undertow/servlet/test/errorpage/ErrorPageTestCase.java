@@ -20,7 +20,7 @@ package io.undertow.servlet.test.errorpage;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -35,7 +35,7 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import javax.servlet.RequestDispatcher;
+import jakarta.servlet.RequestDispatcher;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.hamcrest.CoreMatchers;

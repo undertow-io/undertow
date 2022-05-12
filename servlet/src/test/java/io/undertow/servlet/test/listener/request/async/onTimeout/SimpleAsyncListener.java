@@ -21,9 +21,9 @@ import io.undertow.util.StatusCodes;
 
 import java.io.IOException;
 
-import javax.servlet.AsyncEvent;
-import javax.servlet.AsyncListener;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.AsyncEvent;
+import jakarta.servlet.AsyncListener;
+import jakarta.servlet.http.HttpServletResponse;
 
 public class SimpleAsyncListener implements AsyncListener {
 

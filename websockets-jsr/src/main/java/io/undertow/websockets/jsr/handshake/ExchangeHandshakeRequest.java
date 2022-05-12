@@ -25,7 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.websocket.server.HandshakeRequest;
+import jakarta.websocket.server.HandshakeRequest;
 
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 

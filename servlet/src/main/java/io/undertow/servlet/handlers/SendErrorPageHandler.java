@@ -21,7 +21,7 @@ package io.undertow.servlet.handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * A handler that sends the servlet's error page if the status code is greater than 399
