@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-all:
-    name: Compile (no tests) with JDK 8
+    name: Compile (no tests) with JDK 11
     runs-on: ubuntu-latest
     steps:
     - uses: n1hility/cancel-previous-runs@v2
@@ -22,10 +22,10 @@ jobs:
         restore-keys: |
             m2-
     - uses: actions/checkout@v2
-    - name: Set up JDK 8
+    - name: Set up JDK 11
       uses: joschi/setup-jdk@v2
       with:
-        java-version: 8
+        java-version: 11
     - name: Print Version
       run: mvn -v
     - name: Build
@@ -54,7 +54,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         module: [core, servlet, websockets-jsr]
-        jdk: [8, 11]
+        jdk: [11, 17]
     steps:
     - name: Update hosts - linux
       if: matrix.os == 'ubuntu-latest'
