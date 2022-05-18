@@ -194,6 +194,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
                 int lastSlash = current.lastIndexOf("/");
                 if (lastSlash != -1) {
                     current = current.substring(0, lastSlash + 1);
+                } else {
+                    current = "";
                 }
                 realPath = CanonicalPathUtils.canonicalize(servletContext.getContextPath() + current + location);
             }
