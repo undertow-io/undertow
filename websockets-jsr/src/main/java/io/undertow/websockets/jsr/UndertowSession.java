@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -393,7 +394,7 @@ public final class UndertowSession implements Session {
                 //a close frame, which will be delivered shortly
                 //to get around this we schedule the code in the IO thread, so if there is a close
                 //frame awaiting delivery it will be delivered before the close
-                channel.getIoThread().execute(new Runnable() {
+                final Runnable task = new Runnable() {
                     @Override
                     public void run() {
                         //we delegate this execution to the IO thread
@@ -403,7 +404,12 @@ public final class UndertowSession implements Session {
                             //ignore
                         }
                     }
-                });
+                };
+                try {
+                    channel.getIoThread().execute(task);
+                } catch (RejectedExecutionException e) {
+                    task.run(); //thread is shutting down
+                }
             }
         });
     }
