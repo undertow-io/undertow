@@ -215,7 +215,11 @@
     <!-- Is done actually only once, no harm in it -->
     <Match>
         <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE"/>
-        <Class name="io.undertow.util.HttpString"/>
+        <Or>
+            <Class name="io.undertow.util.HttpString"/>
+            <Class name="io.undertow.security.impl.SimpleNonceManager" />
+            <Class name="io.undertow.websockets.client.WebSocket13ClientHandshake" />
+        </Or>
     </Match>
 
     <Match>
@@ -291,7 +295,16 @@
     <!-- Field can be modified by code between the first check-->
     <Match>
         <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
-        <Class name="io.undertow.client.http.HttpClientConnection$ClientReadListener" />
+        <Or>
+            <Class name="io.undertow.client.http.HttpClientConnection$ClientReadListener" />
+            <Class name="io.undertow.conduits.DeflatingStreamSinkConduit" />
+            <Class name="io.undertow.io.BlockingReceiverImpl" />
+            <Class name="io.undertow.io.BlockingSenderImpl" />
+            <Class name="io.undertow.security.impl.SingleSignOnAuthenticationMechanism$ResponseListener" />
+            <Class name="io.undertow.server.handlers.form.MultiPartParserDefinition$MultiPartUploadHandler" />
+            <Class name="io.undertow.server.handlers.resource.PathResource" />
+            <Class name="io.undertow.server.handlers.resource.URLResource" />
+        </Or>
     </Match>
     <!-- Comparison of cookies path and domain with == before invoking equals is necessary because
          both could be null; only if the == fails we check for one of them != null && equals the other -->
@@ -307,5 +320,15 @@
     <Match>
         <Bug pattern="IS2_INCONSISTENT_SYNC"/>
         <Class name="io.undertow.protocols.ssl.SslConduit"/>
+    </Match>
+
+    <Match>
+        <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE"/>
+        <Class name="io.undertow.security.impl.SingleSignOnAuthenticationMechanism"/>
+    </Match>
+
+    <Match>
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NULL_VALUE"/>
+        <Class name="io.undertow.security.impl.SingleSignOnAuthenticationMechanism"/>
     </Match>
 </FindBugsFilter>
