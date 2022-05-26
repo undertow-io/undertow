@@ -247,7 +247,7 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
     private void checkExpired() throws ReadTimeoutException {
         synchronized (this) {
             if (expired) {
-                throw UndertowMessages.MESSAGES.readTimedOut(System.currentTimeMillis());
+                throw UndertowMessages.MESSAGES.readTimedOut(this.getTimeout());
             }
         }
     }
