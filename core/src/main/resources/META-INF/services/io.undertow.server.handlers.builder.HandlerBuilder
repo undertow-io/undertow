@@ -7,6 +7,7 @@ io.undertow.server.handlers.ProxyPeerAddressHandler$Builder
 io.undertow.server.handlers.proxy.ProxyHandlerBuilder
 io.undertow.server.handlers.RedirectHandler$Builder
 io.undertow.server.handlers.accesslog.AccessLogHandler$Builder
+io.undertow.server.handlers.ActiveRequestTrackerHandler$Builder
 io.undertow.server.handlers.AllowedMethodsHandler$Builder
 io.undertow.server.handlers.BlockingHandler$Builder
 io.undertow.server.handlers.CanonicalPathHandler$Builder

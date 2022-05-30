@@ -362,6 +362,13 @@ public class UndertowOptions {
      */
     public static final Option<String> AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN = Option.simple(UndertowOptions.class, "AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN", String.class);
 
+    /**
+     * If active request tracking should be enabled. This has a slight performance impact, and will only be honored if
+     * ENABLE_STATISTICS is also enabled.
+     *
+     */
+    public static final Option<Boolean> TRACK_ACTIVE_REQUESTS = Option.simple(UndertowOptions.class, "TRACK_ACTIVE_REQUESTS", Boolean.class);
+
 
     private UndertowOptions() {
 
