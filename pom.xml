@@ -97,7 +97,7 @@
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
         <version.io.undertow.build.checkstyle-config>1.0.1.Final</version.io.undertow.build.checkstyle-config>
-        <version.com.github.spotbugs-maven-plugin>3.1.7</version.com.github.spotbugs-maven-plugin>
+        <version.com.github.spotbugs-maven-plugin>4.7.0.0</version.com.github.spotbugs-maven-plugin>
         <version.org.eclipse.jetty.alpn>1.1.3.v20160715</version.org.eclipse.jetty.alpn>
 
         <version.com.twitter.hpack>1.0.2</version.com.twitter.hpack>
