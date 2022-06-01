@@ -35,6 +35,7 @@ import org.junit.runner.RunWith;
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletConnection;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletInputStream;
@@ -251,11 +252,6 @@ public class MockRequestTestCase {
         }
 
         @Override
-        public boolean isRequestedSessionIdFromUrl() {
-            return false;
-        }
-
-        @Override
         public boolean authenticate(HttpServletResponse response) throws IOException, ServletException {
             return false;
         }
@@ -406,11 +402,6 @@ public class MockRequestTestCase {
         }
 
         @Override
-        public String getRealPath(String path) {
-            return null;
-        }
-
-        @Override
         public int getRemotePort() {
             return 0;
         }
@@ -464,6 +455,21 @@ public class MockRequestTestCase {
         public DispatcherType getDispatcherType() {
             return null;
         }
+
+        @Override
+        public String getRequestId() {
+            return null;
+        }
+
+        @Override
+        public String getProtocolRequestId() {
+            return null;
+        }
+
+        @Override
+        public ServletConnection getServletConnection() {
+            return null;
+        }
     }
 
     private static final class MockHttpResponse implements HttpServletResponse {
@@ -506,16 +512,6 @@ public class MockRequestTestCase {
         }
 
         @Override
-        public String encodeUrl(String url) {
-            return null;
-        }
-
-        @Override
-        public String encodeRedirectUrl(String url) {
-            return null;
-        }
-
-        @Override
         public void sendError(int sc, String msg) throws IOException {
         }
 
@@ -553,10 +549,6 @@ public class MockRequestTestCase {
 
         @Override
         public void setStatus(int sc) {
-        }
-
-        @Override
-        public void setStatus(int sc, String sm) {
         }
 
         @Override

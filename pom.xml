@@ -63,8 +63,8 @@
         <version.com.h2database>1.4.200</version.com.h2database>
         <version.easymock>4.2</version.easymock>
         <version.jakarta.annotation.jakarta-annotation-api>2.0.0</version.jakarta.annotation.jakarta-annotation-api>
-        <version.jakarta.servlet.jakarta-servlet-api>5.0.0</version.jakarta.servlet.jakarta-servlet-api>
-        <version.jakarta.websocket.jakarta-websocket-api>2.1.0.RC1-jbossorg-2</version.jakarta.websocket.jakarta-websocket-api>
+        <version.jakarta.servlet.jakarta-servlet-api>6.0.0.RC1-jbossorg-1</version.jakarta.servlet.jakarta-servlet-api>
+        <version.jakarta.websocket.jakarta-websocket-api>2.1.0</version.jakarta.websocket.jakarta-websocket-api>
         <version.org.wildfly.extras.batavia>1.0.13.Final</version.org.wildfly.extras.batavia>
         <version.junit>4.13</version.junit>
         <version.netty>4.1.50.Final</version.netty>

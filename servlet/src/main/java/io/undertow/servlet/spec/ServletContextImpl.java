@@ -49,7 +49,6 @@ import io.undertow.servlet.core.ManagedServlet;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
-import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
@@ -363,28 +362,8 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public Servlet getServlet(final String name) throws ServletException {
-        return deployment.getServletPaths().getServletHandlerByName(name).getManagedServlet().getServlet().getInstance();
-    }
-
-    @Override
-    public Enumeration<Servlet> getServlets() {
-        return EmptyEnumeration.instance();
-    }
-
-    @Override
-    public Enumeration<String> getServletNames() {
-        return EmptyEnumeration.instance();
-    }
-
-    @Override
     public void log(final String msg) {
         UndertowServletLogger.ROOT_LOGGER.info(msg);
-    }
-
-    @Override
-    public void log(final Exception exception, final String msg) {
-        UndertowServletLogger.ROOT_LOGGER.error(msg, exception);
     }
 
     @Override
@@ -451,6 +430,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public boolean setInitParameter(final String name, final String value) {
+        ensureNotProgramaticListener();
         if(name == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNullNPE("name");
         }
@@ -714,18 +694,18 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Set<SessionTrackingMode> getDefaultSessionTrackingModes() {
-        ensureNotProgramaticListener();
         return defaultSessionTrackingModes;
     }
 
     @Override
     public Set<SessionTrackingMode> getEffectiveSessionTrackingModes() {
-        ensureNotProgramaticListener();
         return Collections.unmodifiableSet(sessionTrackingModes);
     }
 
     @Override
     public void addListener(final String className) {
+        ensureNotInitialized();
+        ensureNotProgramaticListener();
         try {
             Class<? extends EventListener> clazz = (Class<? extends EventListener>) getDeploymentInfo().getClassLoader().loadClass(className);
             addListener(clazz);
@@ -792,28 +772,23 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void declareRoles(final String... roleNames) {
+        ensureNotProgramaticListener();
         final DeploymentInfo di = this.getDeploymentInfo();
         if (isInitialized()) {
             throw UndertowServletMessages.MESSAGES.servletAlreadyInitialize(di.getDeploymentName(), di.getContextPath());
         }
-
         for (String role : roleNames) {
             if (role == null || role.isEmpty()) {
                 throw UndertowServletMessages.MESSAGES.roleMustNotBeEmpty(di.getDeploymentName(), di.getContextPath());
             }
         }
-
-        if (ApplicationListeners.listenerState() == PROGRAMATIC_LISTENER) {
-            //NOTE: its either null or false for non-programatic? - null in case its not ApplicationListener
-            throw UndertowServletMessages.MESSAGES.cantCallFromDynamicListener(di.getDeploymentName(), di.getContextPath());
-        }
-
         deploymentInfo.addSecurityRoles(roleNames);
 
     }
 
     @Override
     public ServletRegistration.Dynamic addJspFile(String servletName, String jspFile) {
+        ensureNotProgramaticListener();
         if(servletName == null || servletName.isEmpty()) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("servletName");
         }

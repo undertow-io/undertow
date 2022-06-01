@@ -76,6 +76,7 @@ import java.util.Deque;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -121,7 +122,6 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Attachment key that can be used to hold a remotely authenticated user
      */
     public static final AttachmentKey<String> REMOTE_USER = AttachmentKey.create(String.class);
-
 
     /**
      * Attachment key that can be used as a flag of secure attribute
@@ -336,6 +336,9 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private InetSocketAddress destinationAddress;
 
+    private static final AtomicLong REQUEST_ID_GENERATOR = new AtomicLong(0);
+    private final String requestId = Long.toString(REQUEST_ID_GENERATOR.incrementAndGet());
+
     public HttpServerExchange(final ServerConnection connection, long maxEntitySize) {
         this(connection, new HeaderMap(), new HeaderMap(), maxEntitySize);
     }
@@ -445,6 +448,10 @@ public final class HttpServerExchange extends AbstractAttachable {
     public HttpServerExchange setRequestScheme(final String requestScheme) {
         this.requestScheme = requestScheme;
         return this;
+    }
+
+    public String getRequestId() {
+        return requestId;
     }
 
     /**

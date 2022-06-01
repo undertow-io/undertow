@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.Servlet;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.SingleThreadModel;
 import jakarta.servlet.UnavailableException;
 
 import io.undertow.server.handlers.form.FormEncodedDataDefinition;
@@ -72,11 +71,7 @@ public class ManagedServlet implements Lifecycle {
     public ManagedServlet(final ServletInfo servletInfo, final ServletContextImpl servletContext) {
         this.servletInfo = servletInfo;
         this.servletContext = servletContext;
-        if (SingleThreadModel.class.isAssignableFrom(servletInfo.getServletClass())) {
-            instanceStrategy = new SingleThreadModelPoolStrategy(servletInfo.getInstanceFactory(), servletInfo, servletContext);
-        } else {
-            instanceStrategy = new DefaultInstanceStrategy(servletInfo.getInstanceFactory(), servletInfo, servletContext);
-        }
+        instanceStrategy = new DefaultInstanceStrategy(servletInfo.getInstanceFactory(), servletInfo, servletContext);
         setupMultipart(servletContext);
     }
 
@@ -339,68 +334,5 @@ public class ManagedServlet implements Lifecycle {
             return instanceHandle;
         }
     }
-
-    /**
-     * pooling strategy for single thread model servlet
-     */
-    private static class SingleThreadModelPoolStrategy implements InstanceStrategy {
-
-
-        private final InstanceFactory<? extends Servlet> factory;
-        private final ServletInfo servletInfo;
-        private final ServletContextImpl servletContext;
-
-        private SingleThreadModelPoolStrategy(final InstanceFactory<? extends Servlet> factory, final ServletInfo servletInfo, final ServletContextImpl servletContext) {
-            this.factory = factory;
-            this.servletInfo = servletInfo;
-            this.servletContext = servletContext;
-        }
-
-        @Override
-        public void start() throws ServletException {
-            if(servletInfo.getLoadOnStartup() != null) {
-                //see UNDERTOW-734, make sure init method is called for load on startup
-                getServlet().release();
-            }
-        }
-
-        @Override
-        public void stop() {
-
-        }
-
-        @Override
-        public InstanceHandle<? extends Servlet> getServlet() throws ServletException {
-            final InstanceHandle<? extends Servlet> instanceHandle;
-            final Servlet instance;
-            //TODO: pooling
-            try {
-                instanceHandle = factory.createInstance();
-            } catch (Exception e) {
-                throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(servletInfo.getName(), e);
-            }
-            instance = instanceHandle.getInstance();
-            new LifecyleInterceptorInvocation(servletContext.getDeployment().getDeploymentInfo().getLifecycleInterceptors(), servletInfo, instance, new ServletConfigImpl(servletInfo, servletContext)).proceed();
-
-            return new InstanceHandle<Servlet>() {
-                @Override
-                public Servlet getInstance() {
-                    return instance;
-                }
-
-                @Override
-                public void release() {
-                    try {
-                        instance.destroy();
-                    } catch (Throwable t) {
-                        UndertowServletLogger.REQUEST_LOGGER.failedToDestroy(instance, t);
-                    }
-                    instanceHandle.release();
-                }
-            };
-
-        }
-    }
-
 
 }

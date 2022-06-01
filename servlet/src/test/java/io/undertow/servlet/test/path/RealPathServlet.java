@@ -34,7 +34,7 @@ public class RealPathServlet extends HttpServlet {
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         PrintWriter writer = resp.getWriter();
         if (req.getPathInfo().equals("/real-path")) {
-            writer.write(req.getRealPath("file.txt"));
+            writer.write(req.getServletContext().getRealPath("file.txt"));
         } else if (req.getPathInfo().equals("/file.txt")) {
             writer.write(req.getPathTranslated());
         }

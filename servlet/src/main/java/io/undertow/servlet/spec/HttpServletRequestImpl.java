@@ -72,10 +72,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+
 import jakarta.servlet.AsyncContext;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.MultipartConfigElement;
 import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletConnection;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.ServletRequest;
@@ -234,7 +236,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         ServletPathMatch match = src.getOriginalServletPathMatch();
         final DispatcherType dispatcherType = getDispatcherType();
         //UNDERTOW-1899 - ERROR is essentially forward operation
-        if(dispatcherType == DispatcherType.FORWARD || dispatcherType == DispatcherType.ERROR) {
+        if(dispatcherType == DispatcherType.FORWARD || dispatcherType == DispatcherType.ERROR || dispatcherType == DispatcherType.ASYNC || dispatcherType == DispatcherType.REQUEST) {
             match = src.getServletPathMatch();
         }
         String matchValue;
@@ -295,7 +297,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getPathTranslated() {
-        return getRealPath(getPathInfo());
+        return servletContext.getRealPath(getPathInfo());
     }
 
     @Override
@@ -387,6 +389,22 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
+    public String getRequestId() {
+        return exchange.getRequestId();
+    }
+
+    @Override
+    public String getProtocolRequestId() {
+        return exchange.getConnection().getProtocolRequestId();
+    }
+
+    @Override
+    public ServletConnection getServletConnection() {
+        String connectionId = Long.toString(exchange.getConnection().getId());
+        return new ServletConnectionImpl(connectionId, exchange.getProtocol().toString(), isSecure());
+    }
+
+    @Override
     public String getRequestURI() {
         //we need the non-decoded string, which means we need to use exchange.getRequestURI()
         if(exchange.isHostIncludedInRequestURI()) {
@@ -451,11 +469,6 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public boolean isRequestedSessionIdFromURL() {
         return sessionCookieSource() == SessionConfig.SessionCookieSource.URL;
-    }
-
-    @Override
-    public boolean isRequestedSessionIdFromUrl() {
-        return isRequestedSessionIdFromURL();
     }
 
     @Override
@@ -1001,11 +1014,6 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             realPath = current + path;
         }
         return servletContext.getRequestDispatcher(realPath);
-    }
-
-    @Override
-    public String getRealPath(final String path) {
-        return servletContext.getRealPath(path);
     }
 
     @Override

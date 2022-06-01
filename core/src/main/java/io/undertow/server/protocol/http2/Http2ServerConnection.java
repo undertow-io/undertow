@@ -103,6 +103,7 @@ public class Http2ServerConnection extends ServerConnection {
     private HttpServerExchange exchange;
     private boolean continueSent = false;
     private XnioBufferPoolAdaptor poolAdaptor;
+    private final String protocolRequestId;
 
     public Http2ServerConnection(Http2Channel channel, Http2StreamSourceChannel requestChannel, OptionMap undertowOptions, int bufferSize, HttpHandler rootHandler) {
         this.channel = channel;
@@ -115,6 +116,7 @@ public class Http2ServerConnection extends ServerConnection {
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
         this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(channel, originalSourceConduit);
+        this.protocolRequestId = channel.getProtocolRequestId();
     }
 
     void setExchange(HttpServerExchange exchange) {
@@ -139,13 +141,19 @@ public class Http2ServerConnection extends ServerConnection {
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
         this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(Configurable.EMPTY, new EmptyStreamSourceConduit(getIoThread()));
+        this.protocolRequestId = channel.getProtocolRequestId();
     }
+
     @Override
     public Pool<ByteBuffer> getBufferPool() {
         if(poolAdaptor == null) {
             poolAdaptor = new XnioBufferPoolAdaptor(getByteBufferPool());
         }
         return poolAdaptor;
+    }
+
+    public String getProtocolRequestId() {
+        return protocolRequestId;
     }
 
     public SSLSession getSslSession() {
