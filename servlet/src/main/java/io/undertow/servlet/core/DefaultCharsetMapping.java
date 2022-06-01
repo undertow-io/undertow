@@ -24,7 +24,7 @@ import java.util.Properties;
 
 public final class DefaultCharsetMapping {
 
-    public static DefaultCharsetMapping INSTANCE = new DefaultCharsetMapping();
+    public static final DefaultCharsetMapping INSTANCE = new DefaultCharsetMapping();
     private static final String DEFAULT_MAPPING = "/io/undertow/servlet/core/charset.mapping";
     private final Properties map = new Properties();
 
