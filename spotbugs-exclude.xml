@@ -86,6 +86,22 @@
                 <Class name="io.undertow.websockets.jsr.SessionContainer"/>
                 <Field name="waiterCount"/>
             </And>
+            <And>
+                <Class name="io.undertow.protocols.ssl.SslConduit"/>
+                <Field name="outstandingTasks"/>
+            </And>
+            <And>
+                <Class name="io.undertow.protocols.ssl.SslConduit$5"/>
+                <Field name="outstandingTasks"/>
+            </And>
+            <And>
+                <Class name="io.undertow.protocols.ssl.SslConduit$5$1"/>
+                <Field name="outstandingTasks"/>
+            </And>
+            <And>
+                <Class name="io.undertow.server.session.InMemorySessionManager$SessionImpl"/>
+                <Field name="expiredSessionCount"/>
+            </And>
         </Or>
     </Match>
 
@@ -215,7 +231,11 @@
     <!-- Is done actually only once, no harm in it -->
     <Match>
         <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE"/>
-        <Class name="io.undertow.util.HttpString"/>
+        <Or>
+            <Class name="io.undertow.util.HttpString"/>
+            <Class name="io.undertow.security.impl.SimpleNonceManager" />
+            <Class name="io.undertow.websockets.client.WebSocket13ClientHandshake" />
+        </Or>
     </Match>
 
     <Match>
@@ -289,9 +309,9 @@
         <Class name="io.undertow.server.protocol.http.AlpnOpenListener$AlpnConnectionListener"/>
     </Match>
     <!-- Field can be modified by code between the first check-->
+    <!-- see https://github.com/spotbugs/spotbugs/issues/1338 -->
     <Match>
         <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
-        <Class name="io.undertow.client.http.HttpClientConnection$ClientReadListener" />
     </Match>
     <!-- Comparison of cookies path and domain with == before invoking equals is necessary because
          both could be null; only if the == fails we check for one of them != null && equals the other -->
@@ -308,4 +328,64 @@
         <Bug pattern="IS2_INCONSISTENT_SYNC"/>
         <Class name="io.undertow.protocols.ssl.SslConduit"/>
     </Match>
+
+   <Match>
+       <!-- apparently a false positive associated with the try with resources -->
+       <!-- see https://github.com/spotbugs/spotbugs/issues/647 -->
+        <Bug pattern="NP_LOAD_OF_KNOWN_NULL_VALUE"/>
+        <Class name="io.undertow.security.impl.SingleSignOnAuthenticationMechanism"/>
+    </Match>
+
+   <Match>
+       <!-- apparently a false positive associated with the try with resources -->
+       <!-- see https://github.com/spotbugs/spotbugs/issues/647 -->
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NULL_VALUE"/>
+        <Class name="io.undertow.security.impl.SingleSignOnAuthenticationMechanism"/>
+    </Match>
+
+    <!-- At least for now, we don't mind throwing runtime exception, as this is a framework
+     and currently several internal errors are wrapped in a RuntimeException whenever
+      it is an internal error caller cannot handle or an external superclass signature
+      does not contain a throw class-->
+    <Match>
+        <Bug pattern="THROWS_METHOD_THROWS_RUNTIMEEXCEPTION"/>
+    </Match>
+
+    <!-- HttpHandler.handleEvent throws Exception, and so do all of its subclasses
+    (there are tons of those)-->
+    <Match>
+        <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_BASIC_EXCEPTION"/>
+    </Match>
+
+    <!-- SslConduit needs to update the expanded buffer pool (static field) taking
+    in consideration the buffer size needed for wrapping (instance lock context) -->
+    <Match>
+        <Bug pattern="SSD_DO_NOT_USE_INSTANCE_LOCK_ON_SHARED_STATIC_DATA"/>
+        <Class name="io.undertow.protocols.ssl.SslConduit"/>
+    </Match>
+
+    <Match>
+        <Bug pattern="THROWS_METHOD_THROWS_CLAUSE_THROWABLE"/>
+        <Or>
+            <!-- throws Throwable declared by finalize -->
+            <Class name="io.undertow.server.DefaultByteBufferPool"/>
+            <Class name="io.undertow.server.DefaultByteBufferPool$LeakDetector"/>
+            <Class name="io.undertow.server.DefaultByteBufferPool$ThreadLocalData"/>
+        </Or>
+    </Match>
+
+    <Match>
+        <Bug pattern="MS_EXPOSE_REP"/>
+        <Or>
+            <Class name="io.undertow.servlet.Servlets"/>
+            <Class name="io.undertow.servlet.core.ServletExtensionHolder"/>
+        </Or>
+    </Match>
+
+    <Match>
+        <!-- The getEndpointClassInstance is expected to invoke newInstance -->
+        <Bug pattern="REFLC_REFLECTION_MAY_INCREASE_ACCESSIBILITY_OF_CLASS"/>
+        <Class name="io.undertow.websockets.jsr.DefaultContainerConfigurator"/>
+    </Match>
+
 </FindBugsFilter>
