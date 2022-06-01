@@ -39,7 +39,6 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     private static final String COOKIE_PATH_ATTR = "Path";
     private static final String COOKIE_SECURE_ATTR = "Secure";
     private static final String COOKIE_HTTP_ONLY_ATTR = "HttpOnly";
-    private static final String COOKIE_SAME_SITE_ATTR = "SameSite";
 
     private final ServletContextImpl servletContext;
     private final io.undertow.server.session.SessionCookieConfig delegate;
@@ -47,8 +46,6 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     private static final int DEFAULT_MAX_AGE = -1;
     private static final boolean DEFAULT_HTTP_ONLY = false;
     private static final boolean DEFAULT_SECURE = false;
-    private static final String DEFAULT_NAME = "JSESSIONID";
-    private String name = DEFAULT_NAME;
     private final Map<String,String> attributes = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
     public SessionCookieConfigImpl(final ServletContextImpl servletContext) {
