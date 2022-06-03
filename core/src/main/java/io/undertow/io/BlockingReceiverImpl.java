@@ -121,10 +121,14 @@ public class BlockingReceiverImpl implements Receiver {
         }
         int s;
         try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
-            while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
-                sb.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), s);
+            if (pooled != null) {
+                while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
+                    sb.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), s);
+                }
+                callback.handle(exchange, sb.toString(charset.name()));
+            } else {
+                throw UndertowMessages.MESSAGES.failedToAllocateResource();
             }
-            callback.handle(exchange, sb.toString(charset.name()));
         } catch (IOException e) {
             error.error(exchange, e);
         }
@@ -169,13 +173,17 @@ public class BlockingReceiverImpl implements Receiver {
         CharsetDecoder decoder = charset.newDecoder();
         int s;
         try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
-            while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
-                pooled.getBuffer().limit(s);
-                CharBuffer res = decoder.decode(pooled.getBuffer());
-                callback.handle(exchange, res.toString(), false);
-                pooled.getBuffer().clear();
+            if (pooled != null) {
+                while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
+                    pooled.getBuffer().limit(s);
+                    CharBuffer res = decoder.decode(pooled.getBuffer());
+                    callback.handle(exchange, res.toString(), false);
+                    pooled.getBuffer().clear();
+                }
+                callback.handle(exchange, "", true);
+            } else {
+                throw UndertowMessages.MESSAGES.failedToAllocateResource();
             }
-            callback.handle(exchange, "", true);
         } catch (IOException e) {
             error.error(exchange, e);
         }
@@ -222,10 +230,14 @@ public class BlockingReceiverImpl implements Receiver {
         }
         int s;
         try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
-            while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
-                sb.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), s);
+            if (pooled != null) {
+                while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
+                    sb.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), s);
+                }
+                callback.handle(exchange, sb.toByteArray());
+            } else {
+                throw UndertowMessages.MESSAGES.failedToAllocateResource();
             }
-            callback.handle(exchange, sb.toByteArray());
         } catch (IOException e) {
             error.error(exchange, e);
         }
@@ -269,12 +281,16 @@ public class BlockingReceiverImpl implements Receiver {
         }
         int s;
         try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
-            while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
-                byte[] newData = new byte[s];
-                System.arraycopy(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), newData, 0, s);
-                callback.handle(exchange, newData, false);
+            if (pooled != null) {
+                while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
+                    byte[] newData = new byte[s];
+                    System.arraycopy(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), newData, 0, s);
+                    callback.handle(exchange, newData, false);
+                }
+                callback.handle(exchange, EMPTY_BYTE_ARRAY, true);
+            } else {
+                throw UndertowMessages.MESSAGES.failedToAllocateResource();
             }
-            callback.handle(exchange, EMPTY_BYTE_ARRAY, true);
         } catch (IOException e) {
             error.error(exchange, e);
         }
