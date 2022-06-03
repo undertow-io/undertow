@@ -103,9 +103,6 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             IoUtils.safeClose(streamConnection);
-        } catch (Exception e) {
-            UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
-            IoUtils.safeClose(streamConnection);
         } finally {
             if (freeBuffer.get()) {
                 buffer.close();
@@ -115,7 +112,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
 
 
 
-    private void parseProxyProtocolV2(PooledByteBuffer buffer, AtomicBoolean freeBuffer) throws Exception {
+    private void parseProxyProtocolV2(PooledByteBuffer buffer, AtomicBoolean freeBuffer) throws IOException {
         while (byteCount < SIG.length) {
             byte c = buffer.getBuffer().get();
 
@@ -222,7 +219,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
         return;
     }
 
-    private void parseProxyProtocolV1(PooledByteBuffer buffer, AtomicBoolean freeBuffer) throws Exception {
+    private void parseProxyProtocolV1(PooledByteBuffer buffer, AtomicBoolean freeBuffer) throws IOException {
         while (buffer.getBuffer().hasRemaining()) {
             char c = (char) buffer.getBuffer().get();
             if (byteCount < NAME.length) {

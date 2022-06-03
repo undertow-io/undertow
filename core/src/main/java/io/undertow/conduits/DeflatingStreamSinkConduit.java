@@ -41,6 +41,7 @@ import org.xnio.conduits.StreamSinkConduit;
 import org.xnio.conduits.WriteReadyHandler;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.NewInstanceObjectPool;
@@ -481,40 +482,44 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         //this point
         boolean nextCreated = false;
         try (PooledByteBuffer arrayPooled = this.exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
-            PooledByteBuffer pooled = this.currentBuffer;
-            final ByteBuffer outputBuffer = pooled.getBuffer();
+            if (arrayPooled != null) {
+                PooledByteBuffer pooled = this.currentBuffer;
+                final ByteBuffer outputBuffer = pooled.getBuffer();
 
-            final boolean shutdown = anyAreSet(state, SHUTDOWN);
-            ByteBuffer buf = arrayPooled.getBuffer();
-            while (force || !deflater.needsInput() || (shutdown && !deflater.finished())) {
-                int count = deflater.deflate(buf.array(), buf.arrayOffset(), buf.remaining(), force ? Deflater.SYNC_FLUSH: Deflater.NO_FLUSH);
-                Connectors.updateResponseBytesSent(exchange, count);
-                if (count != 0) {
-                    int remaining = outputBuffer.remaining();
-                    if (remaining > count) {
-                        outputBuffer.put(buf.array(), buf.arrayOffset(), count);
-                    } else {
-                        if (remaining == count) {
+                final boolean shutdown = anyAreSet(state, SHUTDOWN);
+                ByteBuffer buf = arrayPooled.getBuffer();
+                while (force || !deflater.needsInput() || (shutdown && !deflater.finished())) {
+                    int count = deflater.deflate(buf.array(), buf.arrayOffset(), buf.remaining(), force ? Deflater.SYNC_FLUSH: Deflater.NO_FLUSH);
+                    Connectors.updateResponseBytesSent(exchange, count);
+                    if (count != 0) {
+                        int remaining = outputBuffer.remaining();
+                        if (remaining > count) {
                             outputBuffer.put(buf.array(), buf.arrayOffset(), count);
                         } else {
-                            outputBuffer.put(buf.array(), buf.arrayOffset(), remaining);
-                            additionalBuffer = ByteBuffer.allocate(count - remaining);
-                            additionalBuffer.put(buf.array(), buf.arrayOffset() + remaining, count - remaining);
-                            additionalBuffer.flip();
+                            if (remaining == count) {
+                                outputBuffer.put(buf.array(), buf.arrayOffset(), count);
+                            } else {
+                                outputBuffer.put(buf.array(), buf.arrayOffset(), remaining);
+                                additionalBuffer = ByteBuffer.allocate(count - remaining);
+                                additionalBuffer.put(buf.array(), buf.arrayOffset() + remaining, count - remaining);
+                                additionalBuffer.flip();
+                            }
+                            outputBuffer.flip();
+                            this.state |= FLUSHING_BUFFER;
+                            if (next == null) {
+                                nextCreated = true;
+                                this.next = createNextChannel();
+                            }
+                            if (!performFlushIfRequired()) {
+                                return;
+                            }
                         }
-                        outputBuffer.flip();
-                        this.state |= FLUSHING_BUFFER;
-                        if (next == null) {
-                            nextCreated = true;
-                            this.next = createNextChannel();
-                        }
-                        if (!performFlushIfRequired()) {
-                            return;
-                        }
+                    } else {
+                        force = false;
                     }
-                } else {
-                    force = false;
                 }
+            } else {
+                throw UndertowMessages.MESSAGES.failedToAllocateResource();
             }
         } finally {
             if (nextCreated) {

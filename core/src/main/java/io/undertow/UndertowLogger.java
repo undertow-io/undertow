@@ -452,4 +452,16 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = DEBUG)
     @Message(id = 5098, value = "GSSAPI negotiation failed for %s")
     void failedToNegotiateAtGSSAPI(final HttpServerExchange exchange, final @Cause Throwable e);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5099, value = "Failed to create SSO for session '%s'")
+    void failedToCreateSSOForSession(final String sessionId);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5100, value = "Failed to list paths for '%s'")
+    void failedToListPathsForFile(final Path f);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5101, value = "No source to list resources from")
+    void noSourceToListResourcesFrom();
 }

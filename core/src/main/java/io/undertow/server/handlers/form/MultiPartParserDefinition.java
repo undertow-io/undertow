@@ -220,22 +220,26 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 throw new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided());
             }
             try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()){
-                ByteBuffer buf = pooled.getBuffer();
-                while (true) {
-                    buf.clear();
-                    int c = inputStream.read(buf.array(), buf.arrayOffset(), buf.remaining());
-                    if (c == -1) {
-                        if (parser.isComplete()) {
-                            break;
-                        } else {
-                            throw UndertowMessages.MESSAGES.connectionTerminatedReadingMultiPartData();
+                if(pooled != null) {
+                    ByteBuffer buf = pooled.getBuffer();
+                    while (true) {
+                        buf.clear();
+                        int c = inputStream.read(buf.array(), buf.arrayOffset(), buf.remaining());
+                        if (c == -1) {
+                            if (parser.isComplete()) {
+                                break;
+                            } else {
+                                throw UndertowMessages.MESSAGES.connectionTerminatedReadingMultiPartData();
+                            }
+                        } else if (c != 0) {
+                            buf.limit(c);
+                            parser.parse(buf);
                         }
-                    } else if (c != 0) {
-                        buf.limit(c);
-                        parser.parse(buf);
                     }
+                    exchange.putAttachment(FORM_DATA, data);
+                } else {
+                    throw UndertowMessages.MESSAGES.failedToAllocateResource();
                 }
-                exchange.putAttachment(FORM_DATA, data);
             } catch (MalformedMessageException e) {
                 throw new IOException(e);
             }
