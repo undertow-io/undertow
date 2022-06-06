@@ -928,4 +928,8 @@
         <Class name="io.undertow.client.http.HttpClientConnection$ClientReadListener"/>
         <Method name="handleEvent"/>
     </Match>
+    <!-- ignore benchmarks -->
+    <Match>
+        <Package name="io.undertow.benchmarks"/>
+    </Match>
 </FindBugsFilter>
