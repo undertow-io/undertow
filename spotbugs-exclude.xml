@@ -699,6 +699,45 @@
                 <Class name="io.undertow.servlet.core.SessionListenerBridge"/>
                 <Method name="sessionDestroyed"/>
             </And>
+              <And>
+                <!-- TODO: figure out lambda ref? -->
+                <Class name="io.undertow.servlet.spec.ServletContextImpl"/>
+            </And>
+             <And>
+                <Class name="io.undertow.websockets.jsr.Bootstrap"/>
+                <Method name="handleDeployment"/>
+            </And>
+            <And>
+                <Class name="io.undertow.websockets.jsr.DefaultContainerConfigurator"/>
+                <Method name="getEndpointInstance"/>
+            </And>
+            <And>
+                <Class name="io.undertow.websockets.jsr.EncodingFactory"/>
+                <Method name="createEncoding"/>
+            </And>
+            <And>
+                <Class name="io.undertow.websockets.jsr.ServerWebSocketContainer"/>
+                <Or>
+                    <Method name="connectToServer"/>
+                    <Method name="invokeEndpointMethod"/>
+                    <Method name="getClientEndpoint"/>
+                    <Method name="validateDeployment"/>
+                </Or>
+            </And>
+            <And>
+                <!-- java.util.function.Supplier does not have any exception in interface def -->
+                <Class name="io.undertow.websockets.jsr.UndertowContainerProvider$2"/>
+                <Method name="get"/>
+            </And>
+            <And>
+                <!-- java.lang.Runnable does not have any exception in interface def -->
+                <Class name="io.undertow.websockets.jsr.annotated.AnnotatedEndpoint$5"/>
+                <Method name="run"/>
+            </And>
+            <And>
+                <Class name="io.undertow.websockets.jsr.annotated.BoundMethod"/>
+                <Method name="invoke"/>
+            </And>
             <And>
                 <Or>
                     <!-- TODO: figure out static{} block reference -->
@@ -835,6 +874,7 @@
                     <Class name="io.undertow.servlet.spec.ServletContextImpl$3"/>
                     <Class name="io.undertow.servlet.spec.ServletContextImpl$4"/>
                     <Class name="io.undertow.servlet.spec.ServletContextImpl$5"/>
+                    <Class name="io.undertow.websockets.jsr.ServerWebSocketContainer$1"/>
                 </Or>
                 <Method name="call"/>
             </And>
@@ -870,6 +910,10 @@
             <And>
                 <!-- TODO: figure out lambda ref? -->
                 <Class name="io.undertow.servlet.spec.ServletContextImpl"/>
+            </And>
+            <And>
+                <Class name="io.undertow.websockets.jsr.annotated.BoundMethod"/>
+                <Method name="invoke"/>
             </And>
         </Or>
     </Match>
