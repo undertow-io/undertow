@@ -52,7 +52,7 @@ jobs:
           **/surefire*-reports/*.txt
           **/*.dump*
   test-matrix:
-    name: JDK ${{ matrix.jdk }} - ${{ matrix.module }} - ${{ matrix.os }}
+    name: JDK ${{ matrix.jdk }} - ${{ matrix.module }} - ${{ matrix.os }} ${{ matrix.ssl && '- openssl' || '' }}
     runs-on: ${{ matrix.os }}
     needs: build-all
     strategy:
@@ -62,6 +62,7 @@ jobs:
         module: [core]
         jdk: [17, 21]
         openjdk_impl: [ temurin ]
+        ssl: [false, true]
     steps:
     - name: Update hosts - linux
       if: matrix.os == 'ubuntu-latest'
@@ -104,7 +105,7 @@ jobs:
     - name: Print Version
       run: mvn -v
     - name: Run Tests
-      run: mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }}
+      run: mvn -U -B -fae test -Pproxy '-Dopenssl=${{ matrix.ssl }} -DfailIfNoTests=false' -pl ${{ matrix.module }}
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
