@@ -69,6 +69,7 @@ public final class ServletPrintWriterDelegate extends PrintWriter {
 
     public void setServletPrintWriter(final ServletPrintWriter servletPrintWriter) {
         this.servletPrintWriter = servletPrintWriter;
+        this.lock = servletPrintWriter;
     }
 
     @Override
