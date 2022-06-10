@@ -256,20 +256,27 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
         @Override
         public ByteBuffer getBuffer() {
-            if(referenceCount == 0) {
+            final ByteBuffer tmp = this.buffer;
+            //UNDERTOW-2072
+            if (referenceCountUpdater.addAndGet(this, 0) == 0 || tmp == null) {
                 throw UndertowMessages.MESSAGES.bufferAlreadyFreed();
             }
-            return buffer;
+            return tmp;
         }
 
         @Override
         public void close() {
-            if(referenceCountUpdater.compareAndSet(this, 1, 0)) {
-                if(leakDetector != null) {
+            final ByteBuffer tmp = this.buffer;
+            if (referenceCountUpdater.compareAndSet(this, 1, 0)) {
+                this.buffer = null;
+                if (leakDetector != null) {
                     leakDetector.closed = true;
                 }
-                pool.freeInternal(buffer);
-                this.buffer = null;
+                if (tmp != null) {
+                    tmp.position(0);
+                    tmp.limit(0);
+                    pool.freeInternal(tmp);
+                }
             }
         }
 
