@@ -160,19 +160,18 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         @Override
         public void freed() {
             int res = outstandingBuffersUpdater.decrementAndGet(AbstractFramedChannel.this);
-            if (!receivesSuspendedByUser && res == maxQueuedBuffers - 1) {
+            // do not resume immediately, take some time to consume half the buffers
+            if (res == maxQueuedBuffers / 2 && receivesSuspendedTooManyBuffers) {
                 //we need to do the resume in the IO thread, as there is a risk of deadlock otherwise, as the calling thread is an application thread
                 //and may hold a lock on a stream source channel, see UNDERTOW-1312
                 getIoThread().execute(new Runnable() {
                     @Override
                     public void run() {
                         synchronized (AbstractFramedChannel.this) {
-                            if (outstandingBuffersUpdater.get(AbstractFramedChannel.this) < maxQueuedBuffers) {
-                                if (UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
-                                    UndertowLogger.REQUEST_IO_LOGGER.tracef("Resuming reads on %s as buffers have been consumed", AbstractFramedChannel.this);
-                                }
-                                new UpdateResumeState(null, false, null).run();
+                            if (UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
+                                UndertowLogger.REQUEST_IO_LOGGER.tracef("Resuming reads on %s as buffers have been consumed", AbstractFramedChannel.this);
                             }
+                            new UpdateResumeState(null, false, null).run();
                         }
                     }
                 });
@@ -207,7 +206,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
      */
     protected AbstractFramedChannel(final StreamConnection connectedStreamChannel, ByteBufferPool bufferPool, FramePriority<C, R, S> framePriority, final PooledByteBuffer readData, OptionMap settings) {
         this.framePriority = framePriority;
-        this.maxQueuedBuffers = settings.get(UndertowOptions.MAX_QUEUED_READ_BUFFERS, 10);
+        this.maxQueuedBuffers = settings.get(UndertowOptions.MAX_QUEUED_READ_BUFFERS, 16);
         this.settings = settings;
         if (readData != null) {
             if(readData.getBuffer().hasRemaining()) {
@@ -532,14 +531,19 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
             int expect;
             do {
                 expect = outstandingBuffersUpdater.get(this);
-                if (expect == maxQueuedBuffers) {
+                if (expect >= maxQueuedBuffers || receivesSuspendedTooManyBuffers) {
                     synchronized (this) {
                         //we need to re-read in a sync block, to prevent races
+                        if (receivesSuspendedTooManyBuffers) {
+                            // suspend already sent to the IO thread
+                            return null;
+                        }
                         expect = outstandingBuffersUpdater.get(this);
-                        if (expect == maxQueuedBuffers) {
+                        if (expect >= maxQueuedBuffers) {
                             if (UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
                                 UndertowLogger.REQUEST_IO_LOGGER.tracef("Suspending reads on %s due to too many outstanding buffers", this);
                             }
+                            receivesSuspendedTooManyBuffers = true;
                             getIoThread().execute(new UpdateResumeState(null, true, null));
                             return null;
                         }

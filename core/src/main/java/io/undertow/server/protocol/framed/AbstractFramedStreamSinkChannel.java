@@ -286,28 +286,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void awaitWritable() throws IOException {
-        if(Thread.currentThread() == getIoThread()) {
-            throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
-        }
-        synchronized (lock) {
-            if (anyAreSet(state, STATE_CLOSED) || broken) {
-                return;
-            }
-            if (readyForFlush) {
-                try {
-                    waiterCount++;
-                    //we need to re-check after incrementing the waiters count
-                    if(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken) {
-                        lock.wait(AWAIT_WRITABLE_TIMEOUT);
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new InterruptedIOException();
-                } finally {
-                    waiterCount--;
-                }
-            }
-        }
+        awaitWritable(AWAIT_WRITABLE_TIMEOUT, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -322,8 +301,13 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             if (readyForFlush) {
                 try {
                     waiterCount++;
-                    if(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken) {
-                        lock.wait(timeUnit.toMillis(l));
+                    final long initialTime = System.currentTimeMillis();
+                    long timeoutInMillis = timeUnit.toMillis(l);
+                    long remainingTimeout = timeoutInMillis;
+                    //we need to re-check after incrementing the waiters count
+                    while(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken && remainingTimeout > 0) {
+                        lock.wait(remainingTimeout);
+                        remainingTimeout = timeoutInMillis - (System.currentTimeMillis() - initialTime);
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();

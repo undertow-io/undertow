@@ -19,7 +19,9 @@
 package io.undertow.protocols.http2;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
@@ -27,7 +29,10 @@ import io.undertow.server.protocol.framed.SendFrameHeader;
 import org.xnio.IoUtils;
 
 /**
+ * Stream sink channel used for HTTP2 communication.
+ *
  * @author Stuart Douglas
+ * @author Flavia Rainone
  */
 public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChannel {
 
@@ -118,8 +123,11 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
             int newWindowSize = this.getChannel().getInitialSendWindowSize();
             int settingsDelta = newWindowSize - this.initialWindowSize;
             //first adjust for any settings frame updates
-            this.initialWindowSize = newWindowSize;
-            this.flowControlWindow += settingsDelta;
+            if (settingsDelta != 0) {
+                this.initialWindowSize = newWindowSize;
+                this.flowControlWindow += settingsDelta;
+                flowControlLock.notifyAll();
+            }
 
             int min = Math.min(toSend, this.flowControlWindow);
             int actualBytes = this.getChannel().grabFlowControlBytes(min);
@@ -140,6 +148,7 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
                 return;
             }
             flowControlWindow += delta;
+            flowControlLock.notifyAll();
         }
         if (exhausted) {
             getChannel().notifyFlowControlAllowed();
@@ -176,17 +185,44 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
      * Invokes super awaitWritable, with an extra check for flowControlWindow. The purpose of this is to
      * warn clearly that peer is not updating the flow control window.
      *
+     * This method will block for the maximum amount of time specified by {@link #getAwaitWritableTimeout()}
+     *
      * @throws IOException if an IO error occurs
      */
     public void awaitWritable() throws IOException {
+        awaitWritable(getAwaitWritableTimeout(), TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Invokes super awaitWritable, with an extra check for flowControlWindow. The purpose of this is to
+     * warn clearly that peer is not updating the flow control window.
+     *
+     * @param time the time to wait
+     * @param timeUnit the time unit
+     * @throws IOException if an IO error occurs
+     */
+    public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
         final int flowControlWindow;
         synchronized (flowControlLock) {
             flowControlWindow = this.flowControlWindow;
         }
-        super.awaitWritable();
+        long initialTime = System.currentTimeMillis();
+        super.awaitWritable(time, timeUnit);
         synchronized (flowControlLock) {
             if (isReadyForFlush() && flowControlWindow <= 0 && flowControlWindow == this.flowControlWindow) {
-                throw UndertowMessages.MESSAGES.noWindowUpdate(getAwaitWritableTimeout());
+                long remainingTimeout;
+                long timeoutInMillis = timeUnit.toMillis(time);
+                while ((remainingTimeout = timeoutInMillis - (System.currentTimeMillis() - initialTime)) > 0) {
+                    try {
+                        flowControlLock.wait(remainingTimeout);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new InterruptedIOException();
+                    }
+                    if (flowControlWindow != this.flowControlWindow)
+                        return;
+                }
+                throw UndertowMessages.MESSAGES.noWindowUpdate(timeoutInMillis);
             }
         }
     }
