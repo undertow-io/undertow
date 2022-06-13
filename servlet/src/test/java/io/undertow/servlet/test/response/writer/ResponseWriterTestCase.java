@@ -20,9 +20,10 @@ package io.undertow.servlet.test.response.writer;
 
 import jakarta.servlet.ServletException;
 
-import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -37,6 +38,7 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FileUtils;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Tomaz Cerar
@@ -57,7 +59,9 @@ public class ResponseWriterTestCase {
                 .addServlet(Servlets.servlet("resp", ResponseWriterServlet.class)
                         .addMapping("/resp"))
                 .addServlet(Servlets.servlet("respLArget", LargeResponseWriterServlet.class)
-                        .addMapping("/large"));
+                        .addMapping("/large"))
+                .addServlet(Servlets.servlet("exception", ExceptionWriterServlet.class)
+                        .addMapping("/exception"));
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -92,6 +96,20 @@ public class ResponseWriterTestCase {
             String data = FileUtils.readFile(result.getEntity().getContent());
             Assert.assertEquals(LargeResponseWriterServlet.getMessage(), data);
 
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testExceptionResponse() throws Exception {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/exception");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = FileUtils.readFile(result.getEntity().getContent());
+            MatcherAssert.assertThat(response, CoreMatchers.startsWith("java.lang.Exception: TestException"));
         } finally {
             client.getConnectionManager().shutdown();
         }
