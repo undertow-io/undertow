@@ -286,21 +286,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void awaitWritable() throws IOException {
-        awaitWritable(AWAIT_WRITABLE_TIMEOUT * 1_000_000L);
+        awaitWritable(AWAIT_WRITABLE_TIMEOUT, TimeUnit.MILLISECONDS);
     }
 
     @Override
     public void awaitWritable(long l, TimeUnit timeUnit) throws IOException {
-        awaitWritable(timeUnit.toNanos(l));
-    }
-
-    /**
-     * Block until this channel is writable again for the maximum timeout.
-     *
-     * @param timeoutInNanos maximum timeout to block in nanoseconds
-     * @throws IOException if an I/O error occurs
-     */
-    protected void awaitWritable(final long timeoutInNanos) throws IOException {
         if(Thread.currentThread() == getIoThread()) {
             throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
         }
@@ -311,12 +301,13 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             if (readyForFlush) {
                 try {
                     waiterCount++;
-                    final long initialTime = System.nanoTime();
-                    long remainingTimeout = timeoutInNanos;
+                    final long initialTime = System.currentTimeMillis();
+                    long timeoutInMillis = timeUnit.toMillis(l);
+                    long remainingTimeout = timeoutInMillis;
                     //we need to re-check after incrementing the waiters count
                     while(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken && remainingTimeout > 0) {
-                        lock.wait(remainingTimeout / 1_000_000, (int) (remainingTimeout % 1_000_000));
-                        remainingTimeout = timeoutInNanos - (System.nanoTime() - initialTime);
+                        lock.wait(remainingTimeout);
+                        remainingTimeout = timeoutInMillis - (System.currentTimeMillis() - initialTime);
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
