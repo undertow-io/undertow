@@ -268,6 +268,7 @@ public class IPAddressAccessControlHandler implements HttpHandler {
             int no = Integer.parseInt(part);
             prefix |= no;
         }
+        prefix &= mask;
         ipv4acl.add(new PrefixIpV4PeerMatch(deny, peer, mask, prefix));
     }
 
