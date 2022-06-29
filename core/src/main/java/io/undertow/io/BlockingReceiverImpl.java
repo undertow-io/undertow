@@ -54,6 +54,7 @@ public class BlockingReceiverImpl implements Receiver {
     private final InputStream inputStream;
 
     private int maxBufferSize = -1;
+    private long maxContentSize = -1;
     private boolean done = false;
 
     public BlockingReceiverImpl(HttpServerExchange exchange, InputStream inputStream) {
@@ -64,6 +65,11 @@ public class BlockingReceiverImpl implements Receiver {
     @Override
     public void setMaxBufferSize(int maxBufferSize) {
         this.maxBufferSize = maxBufferSize;
+    }
+
+    @Override
+    public void setMaxContentSize(long maxContentSize) {
+        this.maxContentSize = maxContentSize;
     }
 
     @Override
@@ -113,6 +119,12 @@ public class BlockingReceiverImpl implements Receiver {
             contentLength = -1;
             sb = new ByteArrayOutputStream();
         }
+        if(maxContentSize > 0){
+            if(contentLength > maxContentSize){
+                error.error(exchange, new RequestToLargeException());
+                return;
+            }
+        }
         if (maxBufferSize > 0) {
             if (contentLength > maxBufferSize) {
                 error.error(exchange, new RequestToLargeException());
@@ -155,6 +167,12 @@ public class BlockingReceiverImpl implements Receiver {
             contentLength = Long.parseLong(contentLengthString);
         } else {
             contentLength = -1;
+        }
+        if(maxContentSize > 0){
+            if(contentLength > maxContentSize){
+                error.error(exchange, new RequestToLargeException());
+                return;
+            }
         }
         CharsetDecoder decoder = charset.newDecoder();
         int s;
@@ -204,6 +222,12 @@ public class BlockingReceiverImpl implements Receiver {
             contentLength = -1;
             sb = new ByteArrayOutputStream();
         }
+        if(maxContentSize > 0){
+            if(contentLength > maxContentSize){
+                error.error(exchange, new RequestToLargeException());
+                return;
+            }
+        }
         if (maxBufferSize > 0) {
             if (contentLength > maxBufferSize) {
                 error.error(exchange, new RequestToLargeException());
@@ -246,6 +270,12 @@ public class BlockingReceiverImpl implements Receiver {
             contentLength = Long.parseLong(contentLengthString);
         } else {
             contentLength = -1;
+        }
+        if(maxContentSize > 0){
+            if(contentLength > maxContentSize){
+                error.error(exchange, new RequestToLargeException());
+                return;
+            }
         }
         int s;
         try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
