@@ -153,18 +153,8 @@ public class BlockingReceiverImpl implements Receiver {
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
-            if (contentLength > Integer.MAX_VALUE) {
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
         } else {
             contentLength = -1;
-        }
-        if (maxBufferSize > 0) {
-            if (contentLength > maxBufferSize) {
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
         }
         CharsetDecoder decoder = charset.newDecoder();
         int s;
@@ -254,18 +244,8 @@ public class BlockingReceiverImpl implements Receiver {
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
-            if (contentLength > Integer.MAX_VALUE) {
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
         } else {
             contentLength = -1;
-        }
-        if (maxBufferSize > 0) {
-            if (contentLength > maxBufferSize) {
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
         }
         int s;
         try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {

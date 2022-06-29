@@ -41,8 +41,6 @@ import java.nio.charset.StandardCharsets;
  * @author Stuart Douglas
  */
 public class AsyncReceiverImpl implements Receiver {
-
-
     private static final ErrorCallback END_EXCHANGE = new ErrorCallback() {
         @Override
         public void error(HttpServerExchange exchange, IOException e) {
@@ -241,18 +239,8 @@ public class AsyncReceiverImpl implements Receiver {
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
-            if (contentLength > Integer.MAX_VALUE) {
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
         } else {
             contentLength = -1;
-        }
-        if (maxBufferSize > 0) {
-            if (contentLength > maxBufferSize) {
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
         }
         final CharsetDecoder decoder = charset.newDecoder();
         PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
@@ -498,18 +486,8 @@ public class AsyncReceiverImpl implements Receiver {
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
-            if (contentLength > Integer.MAX_VALUE) {
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
         } else {
             contentLength = -1;
-        }
-        if (maxBufferSize > 0) {
-            if (contentLength > maxBufferSize) {
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
         }
         PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
         final ByteBuffer buffer = pooled.getBuffer();
