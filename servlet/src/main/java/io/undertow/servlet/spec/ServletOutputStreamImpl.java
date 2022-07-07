@@ -675,7 +675,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             clearFlags(FLAG_READY);
             if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
 
-                if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
+                if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null && 
+                        servletRequestContext.getOriginalResponse().getHeader(Headers.CONTENT_LENGTH_STRING) == null) {
                     if (buffer == null) {
                         servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "0");
                     } else {
