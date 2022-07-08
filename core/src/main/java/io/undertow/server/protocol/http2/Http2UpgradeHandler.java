@@ -73,8 +73,6 @@ public class Http2UpgradeHandler implements HttpHandler {
         if(settings != null && upgrade != null
                 && upgradeStrings.contains(upgrade)) {
                 handleUpgradeBody(exchange, upgrade, settings);
-            
-
             return;
         }
         next.handleRequest(exchange);
