@@ -30,7 +30,7 @@ public class RewriteRule {
 
     protected RewriteCond[] conditions = new RewriteCond[0];
 
-    protected ThreadLocal<Pattern> pattern = new ThreadLocal<Pattern>();
+    protected ThreadLocal<Pattern> pattern = new ThreadLocal<>();
     protected Substitution substitution = null;
 
     protected String patternString = null;
@@ -60,7 +60,7 @@ public class RewriteRule {
                 newEnvSubstitution.setSub(envValue.get(i));
                 newEnvSubstitution.parse(maps);
                 envSubstitution.add(newEnvSubstitution);
-                envResult.add(new ThreadLocal<String>());
+                envResult.add(new ThreadLocal<>());
             }
         }
         if (isCookie()) {
@@ -181,7 +181,7 @@ public class RewriteRule {
     protected boolean cookieSecure = false;
     protected boolean cookieHttpOnly = false;
     protected Substitution cookieSubstitution = null;
-    protected ThreadLocal<String> cookieResult = new ThreadLocal<String>();
+    protected ThreadLocal<String> cookieResult = new ThreadLocal<>();
 
     /**
      * This forces a request attribute named VAR to be set to the value VAL,
@@ -189,10 +189,10 @@ public class RewriteRule {
      * expanded. Multiple env flags are allowed.
      */
     protected boolean env = false;
-    protected ArrayList<String> envName = new ArrayList<String>();
-    protected ArrayList<String> envValue = new ArrayList<String>();
-    protected ArrayList<Substitution> envSubstitution = new ArrayList<Substitution>();
-    protected ArrayList<ThreadLocal<String>> envResult = new ArrayList<ThreadLocal<String>>();
+    protected ArrayList<String> envName = new ArrayList<>();
+    protected ArrayList<String> envValue = new ArrayList<>();
+    protected ArrayList<Substitution> envSubstitution = new ArrayList<>();
+    protected ArrayList<ThreadLocal<String>> envResult = new ArrayList<>();
 
     /**
      * This forces the current URL to be forbidden, i.e., it immediately sends

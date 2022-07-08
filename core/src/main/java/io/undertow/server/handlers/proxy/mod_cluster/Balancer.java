@@ -241,7 +241,7 @@ public class Balancer {
         /**
          * @deprecated Use {@link BalancerBuilder#getMaxRetries()}.
          */
-        @Deprecated
+        @Deprecated(since="2.3.0", forRemoval=true)
         public int getMaxattempts() {
             return maxRetries;
         }
@@ -249,7 +249,7 @@ public class Balancer {
         /**
          * @deprecated Use {@link BalancerBuilder#setMaxRetries(int)}.
          */
-        @Deprecated
+        @Deprecated(since="2.3.0", forRemoval=true)
         public BalancerBuilder setMaxattempts(int maxattempts) {
             this.maxRetries = maxattempts;
             return this;

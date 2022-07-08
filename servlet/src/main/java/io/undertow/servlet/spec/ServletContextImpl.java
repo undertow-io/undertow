@@ -722,7 +722,7 @@ public class ServletContextImpl implements ServletContext {
                 && ServletContextListener.class.isAssignableFrom(t.getClass())) {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
         }
-        ListenerInfo listener = new ListenerInfo(t.getClass(), new ImmediateInstanceFactory<EventListener>(t));
+        ListenerInfo listener = new ListenerInfo(t.getClass(), new ImmediateInstanceFactory<>(t));
         getDeploymentInfo().addListener(listener);
         deployment.getApplicationListeners().addListener(new ManagedListener(listener, true));
     }

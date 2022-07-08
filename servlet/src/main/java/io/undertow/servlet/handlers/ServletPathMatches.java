@@ -330,7 +330,7 @@ public class ServletPathMatches {
             //initialize the extension map. This contains all the filers in the noExtension map, plus
             //any filters that match the extension key
             for (String ext : extensionMatches) {
-                extension.put(ext, new EnumMap<DispatcherType, List<ManagedFilter>>(DispatcherType.class));
+                extension.put(ext, new EnumMap<>(DispatcherType.class));
             }
 
             //loop over all the filters, and add them to the appropriate map in the correct order

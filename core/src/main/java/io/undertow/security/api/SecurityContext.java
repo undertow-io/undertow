@@ -103,7 +103,7 @@ public interface SecurityContext {
      * @param mechanism The mechanism to add
      * @deprecated This method is now only applicable to {@code SecurityContext} implementations that also implement the {@link AuthenticationMechanismContext} interface.
      */
-    @Deprecated
+    @Deprecated(since="2.3.0", forRemoval=true)
     void addAuthenticationMechanism(AuthenticationMechanism mechanism);
 
     /**
@@ -111,7 +111,7 @@ public interface SecurityContext {
      * @return A list of all authentication mechanisms in this context
      * @deprecated Obtaining lists of mechanisms is discouraged, however there should not be a need to call this anyway.
      */
-    @Deprecated
+    @Deprecated(since="2.3.0", forRemoval=true)
     List<AuthenticationMechanism> getAuthenticationMechanisms();
 
     /*
@@ -149,7 +149,7 @@ public interface SecurityContext {
      * @return The associated {@link IdentityManager}
      * @deprecated Authentication mechanisms that rely on the {@link IdentityManager} should instead hold their own reference to it.
      */
-    @Deprecated
+    @Deprecated(since="2.3.0", forRemoval=true)
     IdentityManager getIdentityManager();
 
     /**

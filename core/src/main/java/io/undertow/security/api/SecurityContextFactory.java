@@ -28,7 +28,7 @@ import io.undertow.server.HttpServerExchange;
  * @author <a href="mailto:sguilhen@redhat.com">Stefan Guilhen</a>
  * @deprecated Instead extend AbstractSecurityContextAssociationHandler to provide alternative contexts.
  */
-@Deprecated()
+@Deprecated(since="2.3.0", forRemoval=true)
 public interface SecurityContextFactory {
 
     /**

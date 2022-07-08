@@ -96,10 +96,10 @@ public class EncodingFactory {
 
     public Encoding createEncoding(final EndpointConfig endpointConfig) {
         try {
-            Map<Class<?>, List<InstanceHandle<? extends Encoder>>> binaryEncoders = this.binaryEncoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Encoder>>>emptyMap() : new HashMap<Class<?>, List<InstanceHandle<? extends Encoder>>>();
-            Map<Class<?>, List<InstanceHandle<? extends Decoder>>> binaryDecoders = this.binaryDecoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Decoder>>>emptyMap() : new HashMap<Class<?>, List<InstanceHandle<? extends Decoder>>>();
-            Map<Class<?>, List<InstanceHandle<? extends Encoder>>> textEncoders = this.textEncoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Encoder>>>emptyMap() : new HashMap<Class<?>, List<InstanceHandle<? extends Encoder>>>();
-            Map<Class<?>, List<InstanceHandle<? extends Decoder>>> textDecoders = this.textDecoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Decoder>>>emptyMap() : new HashMap<Class<?>, List<InstanceHandle<? extends Decoder>>>();
+            Map<Class<?>, List<InstanceHandle<? extends Encoder>>> binaryEncoders = this.binaryEncoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Encoder>>>emptyMap() : new HashMap<>();
+            Map<Class<?>, List<InstanceHandle<? extends Decoder>>> binaryDecoders = this.binaryDecoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Decoder>>>emptyMap() : new HashMap<>();
+            Map<Class<?>, List<InstanceHandle<? extends Encoder>>> textEncoders = this.textEncoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Encoder>>>emptyMap() : new HashMap<>();
+            Map<Class<?>, List<InstanceHandle<? extends Decoder>>> textDecoders = this.textDecoders.isEmpty() ? Collections.<Class<?>, List<InstanceHandle<? extends Decoder>>>emptyMap() : new HashMap<>();
 
             for (Map.Entry<Class<?>, List<InstanceFactory<? extends Encoder>>> entry : this.binaryEncoders.entrySet()) {
                 final List<InstanceHandle<? extends Encoder>> val = new ArrayList<>(entry.getValue().size());

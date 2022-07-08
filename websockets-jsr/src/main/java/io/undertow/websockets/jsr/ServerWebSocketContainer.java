@@ -457,7 +457,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                 hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint, info.getExtensions());
             }
 
-            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(request, response, new HashSet<WebSocketChannel>());
+            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(request, response, new HashSet<>());
             Handshake handshaker = null;
             for (Handshake method : hand.handshakes) {
                 if (method.matches(facade)) {

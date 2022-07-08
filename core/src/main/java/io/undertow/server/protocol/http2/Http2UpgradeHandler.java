@@ -76,26 +76,8 @@ public class Http2UpgradeHandler implements HttpHandler {
         final String settings = exchange.getRequestHeaders().getFirst("HTTP2-Settings");
         if(settings != null && upgrade != null
                 && upgradeStrings.contains(upgrade)) {
-            if(HttpContinue.requiresContinueResponse(exchange) && false) {
-                HttpContinue.sendContinueResponse(exchange, new IoCallback() {
-                    @Override
-                    public void onComplete(HttpServerExchange exchange, Sender sender) {
-                        try {
-                            handleUpgradeBody(exchange, upgrade, settings);
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-
-                    @Override
-                    public void onException(HttpServerExchange exchange, Sender sender, IOException exception) {
-                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                        exchange.endExchange();
-                    }
-                });
-            } else {
                 handleUpgradeBody(exchange, upgrade, settings);
-            }
+            
 
             return;
         }

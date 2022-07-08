@@ -77,11 +77,11 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
     }
 
     public static ObjectPool<Inflater> newInstanceInflaterPool() {
-        return new NewInstanceObjectPool<Inflater>(() -> new Inflater(true), Inflater::end);
+        return new NewInstanceObjectPool<>(() -> new Inflater(true), Inflater::end);
     }
 
     public static ObjectPool<Inflater> simpleInflaterPool(int poolSize) {
-        return new SimpleObjectPool<Inflater>(poolSize, () -> new Inflater(true), Inflater::reset, Inflater::end);
+        return new SimpleObjectPool<>(poolSize, () -> new Inflater(true), Inflater::reset, Inflater::end);
     }
 
     @Override

@@ -62,7 +62,7 @@ public interface ModClusterStatus {
         /**
          * @deprecated Use {@link LoadBalancer#getMaxRetries()}.
          */
-        @Deprecated
+        @Deprecated(since="2.3.0", forRemoval=true)
         int getMaxAttempts();
     }
 

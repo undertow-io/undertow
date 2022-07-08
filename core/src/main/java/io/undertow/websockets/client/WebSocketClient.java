@@ -208,7 +208,7 @@ public class WebSocketClient {
         }
 
         public IoFuture<WebSocketChannel> connect() {
-            return connectImpl(uri, new FutureResult<WebSocketChannel>(), 0);
+            return connectImpl(uri, new FutureResult<>(), 0);
         }
         private IoFuture<WebSocketChannel> connectImpl(final URI uri, final FutureResult<WebSocketChannel> ioFuture, final int redirectCount) {
             WebSocketLogger.REQUEST_LOGGER.debugf("Opening websocket connection to %s", uri);

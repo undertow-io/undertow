@@ -95,7 +95,7 @@ public interface SSLSessionInfo {
      *             throws java 15.
      * @see SSLSession#getPeerCertificateChain()
      */
-    @Deprecated
+    @Deprecated(since="15.", forRemoval=true)
     javax.security.cert.X509Certificate[] getPeerCertificateChain() throws javax.net.ssl.SSLPeerUnverifiedException, RenegotiationRequiredException;
 
     /**
