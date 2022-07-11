@@ -171,6 +171,7 @@
                     <runOrder>reversealphabetical</runOrder>
                     <skip>${skipWebSocketTests}</skip>
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <failIfNoTests>true</failIfNoTests>
                     <systemPropertyVariables>
                         <proxy>${proxy}</proxy>
                         <default.server.address>localhost</default.server.address>
