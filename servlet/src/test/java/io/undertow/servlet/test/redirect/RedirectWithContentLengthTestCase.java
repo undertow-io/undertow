@@ -29,6 +29,9 @@ import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpHead;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -76,6 +79,59 @@ public class RedirectWithContentLengthTestCase {
             assertEquals(expectedBody.length(), Integer.valueOf(header[0].getValue()).intValue());
         } finally {
             client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testServletRedirectNoFollow() throws Exception {
+        final String requestURL = DefaultServer.getDefaultServerURL() + "/servletContext/redirect/";
+        final String expectedRedirect = DefaultServer.getDefaultServerURL() + "/servletContext/redirect/subpath";
+        try (CloseableHttpClient client = HttpClientBuilder.create().disableRedirectHandling().build()) {
+            HttpGet get = new HttpGet(requestURL);
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.FOUND, result.getStatusLine().getStatusCode());
+            assertEquals("", HttpClientUtils.readResponse(result));
+            Header[] header = result.getHeaders(Headers.CONTENT_LENGTH_STRING);
+            assertEquals(1, header.length);
+            assertEquals(0, Integer.parseInt(header[0].getValue()));
+            header = result.getHeaders(Headers.LOCATION_STRING);
+            assertEquals(1, header.length);
+            assertEquals(expectedRedirect, header[0].getValue());
+        }
+    }
+
+    public void testServletRedirectHead() throws Exception {
+        final String requestURL = DefaultServer.getDefaultServerURL() + "/servletContext/redirect/";
+        final String expectedBody = "/servletContext/redirect/subpath";
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpHead head = new HttpHead(requestURL);
+            HttpResponse result = client.execute(head);
+            assertEquals("", HttpClientUtils.readResponse(result));
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Header[] header = result.getHeaders(Headers.CONTENT_LENGTH_STRING);
+            assertEquals(1, header.length);
+            assertEquals(expectedBody.length(), Integer.parseInt(header[0].getValue()));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testServletRedirectHeadNoFollow() throws Exception {
+        final String requestURL = DefaultServer.getDefaultServerURL() + "/servletContext/redirect/";
+        final String expectedRedirect = DefaultServer.getDefaultServerURL() + "/servletContext/redirect/subpath";
+        try (CloseableHttpClient client = HttpClientBuilder.create().disableRedirectHandling().build()) {
+            HttpHead head = new HttpHead(requestURL);
+            HttpResponse result = client.execute(head);
+            assertEquals(StatusCodes.FOUND, result.getStatusLine().getStatusCode());
+            assertEquals("", HttpClientUtils.readResponse(result));
+            Header[] header = result.getHeaders(Headers.CONTENT_LENGTH_STRING);
+            assertEquals(1, header.length);
+            assertEquals(0, Integer.parseInt(header[0].getValue()));
+            header = result.getHeaders(Headers.LOCATION_STRING);
+            assertEquals(1, header.length);
+            assertEquals(expectedRedirect, header[0].getValue());
         }
     }
 }
