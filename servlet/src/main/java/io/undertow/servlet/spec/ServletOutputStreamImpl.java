@@ -44,6 +44,7 @@ import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.Headers;
+import io.undertow.util.Methods;
 
 /**
  * This stream essentially has two modes. When it is being used in standard blocking mode then
@@ -598,9 +599,10 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                 if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null
                         && servletRequestContext.getExchange().getAttachment(HttpAttachments.RESPONSE_TRAILER_SUPPLIER) == null
                         && servletRequestContext.getExchange().getAttachment(HttpAttachments.RESPONSE_TRAILERS) == null) {
-                    if (buffer == null) {
+                    final String contentLength = servletRequestContext.getOriginalResponse().getHeader(Headers.CONTENT_LENGTH_STRING);
+                    if (buffer == null && (contentLength == null || !Methods.HEAD_STRING.equals(servletRequestContext.getOriginalRequest().getMethod()))) {
                         servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
-                    } else if (servletRequestContext.getOriginalResponse().getHeader(Headers.CONTENT_LENGTH_STRING) == null) {
+                    } else if (buffer != null && contentLength == null) {
                         servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
                     }
                 }
@@ -666,11 +668,14 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             clearFlags(FLAG_READY);
             if (allAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
 
-                if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null) {
-                    if (buffer == null) {
-                        servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, "0");
-                    } else {
-                        servletRequestContext.getOriginalResponse().setHeader(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
+                if (servletRequestContext.getOriginalResponse().getHeader(Headers.TRANSFER_ENCODING_STRING) == null
+                        && servletRequestContext.getExchange().getAttachment(HttpAttachments.RESPONSE_TRAILER_SUPPLIER) == null
+                        && servletRequestContext.getExchange().getAttachment(HttpAttachments.RESPONSE_TRAILERS) == null) {
+                    final String contentLength = servletRequestContext.getOriginalResponse().getHeader(Headers.CONTENT_LENGTH_STRING);
+                    if (buffer == null && (contentLength == null || !Methods.HEAD_STRING.equals(servletRequestContext.getOriginalRequest().getMethod()))) {
+                        servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
+                    } else if (buffer != null && contentLength == null) {
+                        servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
                     }
                 }
             }
