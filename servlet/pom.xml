@@ -197,6 +197,7 @@
                 <configuration>
                     <enableAssertions>true</enableAssertions>
                     <runOrder>reversealphabetical</runOrder>
+                    <failIfNoTests>true</failIfNoTests>
                     <systemPropertyVariables>
                         <test.ajp>${ajp}</test.ajp>
                         <test.proxy>${proxy}</test.proxy>
