@@ -673,6 +673,27 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         doWrap(null, 0, 0);
     }
 
+    /**
+     * Perform unwraps while it is needed and there is data in src buffer.
+     *
+     * @param src The src wrapped data to unwrap.
+     * @param dsts The destinations buffers to unwrap the data to
+     * @param off Offset buffer
+     * @param len len buffer
+     * @param bytesProduced Accumulative or boolean for the bytes produced
+     * @return The last engine result
+     * @throws IOException Some error unwrapping
+     */
+    private SSLEngineResult engineUnwrap(ByteBuffer src, ByteBuffer[] dsts, int off,
+            int len, AccumulativeOrBoolean bytesProduced) throws IOException {
+        SSLEngineResult result;
+        do {
+            result = engine.unwrap(src, dsts, off, len);
+            bytesProduced.add(result.bytesProduced() > 0);
+        } while (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_UNWRAP
+                && result.getStatus() == SSLEngineResult.Status.OK && src.hasRemaining());
+        return result;
+    }
 
     /**
      * Unwrap channel data into the user buffers. If no user buffer is supplied (e.g. during handshaking) then the
@@ -697,7 +718,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 return 0;
             }
         }
-        boolean bytesProduced = false;
+        AccumulativeOrBoolean bytesProduced = new AccumulativeOrBoolean();
         PooledByteBuffer unwrappedData = this.unwrappedData;
         //copy any exiting data
         if(unwrappedData != null) {
@@ -759,7 +780,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             boolean unwrapBufferUsed = false;
             try {
                 if (userBuffers != null) {
-                    result = engine.unwrap(this.dataToUnwrap.getBuffer(), userBuffers, off, len);
+                    result = engineUnwrap(this.dataToUnwrap.getBuffer(), userBuffers, off, len, bytesProduced);
                     if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
                         //not enough space in the user buffers
                         //we use our own
@@ -767,10 +788,9 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                         ByteBuffer[] d = new ByteBuffer[len + 1];
                         System.arraycopy(userBuffers, off, d, 0, len);
                         d[len] = unwrappedData.getBuffer();
-                        result = engine.unwrap(this.dataToUnwrap.getBuffer(), d);
+                        result = engineUnwrap(this.dataToUnwrap.getBuffer(), d, 0, d.length, bytesProduced);
                         unwrapBufferUsed = true;
                     }
-                    bytesProduced = result.bytesProduced() > 0;
                 } else {
                     unwrapBufferUsed = true;
                     if (unwrappedData == null) {
@@ -778,8 +798,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     } else {
                         unwrappedData.getBuffer().compact();
                     }
-                    result = engine.unwrap(this.dataToUnwrap.getBuffer(), unwrappedData.getBuffer());
-                    bytesProduced = result.bytesProduced() > 0;
+                    result = engineUnwrap(this.dataToUnwrap.getBuffer(), new ByteBuffer[] {unwrappedData.getBuffer()}, 0, 1, bytesProduced);
                 }
             } finally {
                 if (unwrapBufferUsed) {
@@ -858,7 +877,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         } finally {
             boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
             //we always need to re-invoke if bytes have been produced, as the engine may have buffered some data
-            if (bytesProduced || (unwrappedData != null && unwrappedData.isOpen() && unwrappedData.getBuffer().hasRemaining())) {
+            if (bytesProduced.get() || (unwrappedData != null && unwrappedData.isOpen() && unwrappedData.getBuffer().hasRemaining())) {
                 requiresListenerInvocation = true;
             }
             if (dataToUnwrap != null) {
@@ -1375,5 +1394,17 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 ", dataToUnwrap=" + dataToUnwrap +
                 ", unwrappedData=" + unwrappedData +
                 '}';
+    }
+
+    private static class AccumulativeOrBoolean {
+        private boolean value = false;
+
+        public void add(boolean value) {
+            this.value = this.value || value;
+        }
+
+        public boolean get() {
+            return this.value;
+        }
     }
 }
