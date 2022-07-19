@@ -18,11 +18,6 @@
 
 package io.undertow.conduits;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
@@ -41,6 +36,11 @@ import org.xnio.conduits.ConduitStreamSourceChannel;
 import org.xnio.conduits.ReadReadyHandler;
 import org.xnio.conduits.StreamSourceConduit;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.util.concurrent.TimeUnit;
+
 /**
  * Wrapper for read timeout. This should always be the first wrapper applied to the underlying channel.
  *
@@ -49,7 +49,7 @@ import org.xnio.conduits.StreamSourceConduit;
  */
 public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceConduit<StreamSourceConduit> {
 
-    private XnioExecutor.Key handle;
+    private volatile XnioExecutor.Key handle;
     private final StreamConnection connection;
     private volatile long expireTime = -1;
     private final OpenListener openListener;
@@ -60,14 +60,21 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
     private final Runnable timeoutCommand = new Runnable() {
         @Override
         public void run() {
-            handle = null;
-            if (expireTime == -1) {
+            synchronized (ReadTimeoutStreamSourceConduit.this) {
+                handle = null;
+            }
+            if (expireTime == -1 || !connection.isOpen()) {
                 return;
             }
             long current = System.currentTimeMillis();
             if (current  < expireTime) {
                 //timeout has been bumped, re-schedule
-                handle = WorkerUtils.executeAfter(connection.getIoThread(),timeoutCommand, (expireTime - current) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
+                if (handle == null) {
+                    synchronized (ReadTimeoutStreamSourceConduit.this) {
+                        if (handle == null)
+                            handle = WorkerUtils.executeAfter(connection.getIoThread(), timeoutCommand, (expireTime - current) + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
+                    }
+                }
                 return;
             }
             UndertowLogger.REQUEST_LOGGER.tracef("Timing out channel %s due to inactivity", connection.getSourceChannel());
@@ -131,12 +138,16 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
             final long expireTimeVar = expireTime;
             if (expireTimeVar != -1 && currentTime > expireTimeVar) {
                 IoUtils.safeClose(connection);
-                throw UndertowMessages.MESSAGES.readTimedOut(this.getTimeout());
+                throw UndertowMessages.MESSAGES.readTimedOut(currentTime - (expireTimeVar - this.getTimeout()));
             }
         }
         expireTime = currentTime + timeout;
         if (handle == null) {
-            handle = connection.getIoThread().executeAfter(timeoutCommand, timeout, TimeUnit.MILLISECONDS);
+            synchronized (this) {
+                if (handle == null)
+                    handle = connection.getIoThread().executeAfter(timeoutCommand, timeout, TimeUnit.MILLISECONDS);
+            }
+
         }
     }
 
@@ -232,9 +243,13 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
 
     private void cleanup() {
         if (handle != null) {
-            handle.remove();
-            handle = null;
-            expireTime = -1;
+            synchronized (this) {
+                if (handle != null) {
+                    handle.remove();
+                    handle = null;
+                    expireTime = -1;
+                }
+            }
         }
     }
 
@@ -247,7 +262,7 @@ public final class ReadTimeoutStreamSourceConduit extends AbstractStreamSourceCo
     private void checkExpired() throws ReadTimeoutException {
         synchronized (this) {
             if (expired) {
-                throw UndertowMessages.MESSAGES.readTimedOut(System.currentTimeMillis());
+                throw UndertowMessages.MESSAGES.readTimedOut(System.currentTimeMillis() - (expireTime - getTimeout()));
             }
         }
     }
