@@ -156,6 +156,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         writer = null;
         responseState = ResponseState.NONE;
         resetBuffer();
+        exchange.getResponseHeaders().remove(Headers.CONTENT_LENGTH);
         treatAsCommitted = false;
         final String location = servletContext.getDeployment().getErrorPages().getErrorLocation(sc);
         if (location != null) {
@@ -190,6 +191,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
         }
         resetBuffer();
+        exchange.getResponseHeaders().remove(Headers.CONTENT_LENGTH);
         setStatus(StatusCodes.FOUND);
         String realPath;
         if (isAbsoluteUrl(location)) {//absolute url

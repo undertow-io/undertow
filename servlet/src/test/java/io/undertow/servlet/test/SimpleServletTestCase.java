@@ -31,10 +31,14 @@ import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import io.undertow.testutils.TestHttpClient;
+import org.apache.http.client.methods.HttpHead;
+
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -87,4 +91,19 @@ public class SimpleServletTestCase {
         }
     }
 
+    @Test
+    public void testSimpleHttpServletHead() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpHead head = new HttpHead(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
+            HttpResponse result = client.execute(head);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("", HttpClientUtils.readResponse(result));
+            Assert.assertNotNull(result.getHeaders(Headers.CONTENT_LENGTH_STRING));
+            Assert.assertEquals(1, result.getHeaders(Headers.CONTENT_LENGTH_STRING).length);
+            Assert.assertEquals(HELLO_WORLD.length(), Integer.parseInt(result.getFirstHeader(Headers.CONTENT_LENGTH_STRING).getValue()));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }
