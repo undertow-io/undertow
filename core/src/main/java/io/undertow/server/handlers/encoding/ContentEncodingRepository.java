@@ -50,12 +50,14 @@ public class ContentEncodingRepository {
         }
         final List<EncodingMapping> resultingMappings = new ArrayList<>();
         final List<List<QValueParser.QValueResult>> found = QValueParser.parse(res);
-        for (List<QValueParser.QValueResult> result : found) {
+        for (int i = 0; i < found.size(); i++) {
+            List<QValueParser.QValueResult> result = found.get(i);
             List<EncodingMapping> available = new ArrayList<>();
             boolean includesIdentity = false;
             boolean isQValue0 = false;
 
-            for (final QValueParser.QValueResult value : result) {
+            for (int j = 0; j < result.size(); j++) {
+                QValueParser.QValueResult value = result.get(j);
                 EncodingMapping encoding;
                 if (value.getValue().equals("*")) {
                     includesIdentity = true;
