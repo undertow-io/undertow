@@ -47,6 +47,7 @@ public class QValueParser {
     public static List<List<QValueResult>> parse(List<String> headers) {
         final List<QValueResult> found = new ArrayList<>();
         QValueResult current = null;
+        //noinspection ForLoopReplaceableByForEach - using induction for loop for iteration to avoid allocation
         for (int j = 0; j < headers.size(); j++) {
             final String header = headers.get(j);
             final int l = header.length();
@@ -108,6 +109,7 @@ public class QValueParser {
         List<List<QValueResult>> values = new ArrayList<>();
         List<QValueResult> currentSet = null;
 
+        //noinspection ForLoopReplaceableByForEach - using induction for loop for iteration to avoid allocation
         for (int i = 0; i < found.size(); i++) {
             final QValueResult val = found.get(i);
             if (!val.qvalue.equals(currentQValue)) {

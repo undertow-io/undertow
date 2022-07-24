@@ -50,12 +50,14 @@ public class ContentEncodingRepository {
         }
         final List<EncodingMapping> resultingMappings = new ArrayList<>();
         final List<List<QValueParser.QValueResult>> found = QValueParser.parse(res);
+        //noinspection ForLoopReplaceableByForEach - using induction for loop for iteration to avoid allocation
         for (int i = 0; i < found.size(); i++) {
             final List<QValueParser.QValueResult> result = found.get(i);
             List<EncodingMapping> available = new ArrayList<>();
             boolean includesIdentity = false;
             boolean isQValue0 = false;
 
+            //noinspection ForLoopReplaceableByForEach - using induction for loop for iteration to avoid allocation
             for (int j = 0; j < result.size(); j++) {
                 final QValueParser.QValueResult value = result.get(j);
                 EncodingMapping encoding;
