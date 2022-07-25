@@ -31,6 +31,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.RequestTooBigException;
 import io.undertow.util.ImmediatePooledByteBuffer;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
@@ -202,6 +203,8 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
             }
             assert STATE_FINISHED == state;
             return -1;
+        } catch (RequestTooBigException e) {
+            throw e;
         } catch (IOException | RuntimeException e) {
             IoUtils.safeClose(exchange.getConnection());
             throw e;
