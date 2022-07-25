@@ -18,22 +18,23 @@
 
 package io.undertow.websockets.client.version13;
 
-import java.io.IOException;
-import java.net.URI;
-import java.util.Deque;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
 import io.undertow.Undertow;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.ConnectHandler;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.ProxyIgnore;
+import io.undertow.util.StringWriteChannelListener;
+import io.undertow.websockets.client.WebSocketClient;
+import io.undertow.websockets.core.AbstractReceiveListener;
+import io.undertow.websockets.core.BufferedTextMessage;
+import io.undertow.websockets.core.StreamSinkFrameChannel;
+import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketFrameType;
+import io.undertow.websockets.core.protocol.server.AutobahnWebSocketServer;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -43,18 +44,16 @@ import org.xnio.Options;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
 
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.util.StringWriteChannelListener;
-import io.undertow.websockets.client.WebSocketClient;
-import io.undertow.websockets.core.AbstractReceiveListener;
-import io.undertow.websockets.core.BufferedTextMessage;
-import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.protocol.server.AutobahnWebSocketServer;
+import java.io.IOException;
+import java.net.URI;
+import java.util.Deque;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author Stuart Douglas
@@ -140,7 +139,7 @@ public class WebSocketClient13TestCase {
         new StringWriteChannelListener("Hello World").setup(sendChannel);
 
         latch.await(10, TimeUnit.SECONDS);
-        Assert.assertEquals("Hello World", result.get());
+        assertEquals("Hello World", result.get());
         webSocketChannel.sendClose();
     }
 
@@ -160,7 +159,7 @@ public class WebSocketClient13TestCase {
         final WebSocketClient.ConnectionBuilder connectionBuilder = WebSocketClient.connectionBuilder(worker, DefaultServer.getBufferPool(), new URI(urlProtocol + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostSSLPort("default")))
                 .setSsl(ssl);
         IoFuture<WebSocketChannel> future = connectionBuilder.connect();
-        future.await(4, TimeUnit.SECONDS);
+        assertEquals(org.xnio.IoFuture.Status.DONE, future.await(4, TimeUnit.SECONDS));
         final WebSocketChannel webSocketChannel = future.get();
 
         final CountDownLatch latch = new CountDownLatch(1);
@@ -187,7 +186,7 @@ public class WebSocketClient13TestCase {
         new StringWriteChannelListener("Hello World").setup(sendChannel);
 
         latch.await(10, TimeUnit.SECONDS);
-        Assert.assertEquals("Hello World", result.get());
+        assertEquals("Hello World", result.get());
         webSocketChannel.sendClose();
     }
 
@@ -223,9 +222,9 @@ public class WebSocketClient13TestCase {
         new StringWriteChannelListener("Hello World").setup(sendChannel);
 
         latch.await(10, TimeUnit.SECONDS);
-        Assert.assertEquals("Hello World", result.get());
+        assertEquals("Hello World", result.get());
         webSocketChannel.sendClose();
-        Assert.assertEquals("CONNECT " + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default"), connectLog.poll());
+        assertEquals("CONNECT " + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default"), connectLog.poll());
     }
 
 
@@ -263,8 +262,8 @@ public class WebSocketClient13TestCase {
         new StringWriteChannelListener("Hello World").setup(sendChannel);
 
         latch.await(10, TimeUnit.SECONDS);
-        Assert.assertEquals("Hello World", result.get());
+        assertEquals("Hello World", result.get());
         webSocketChannel.sendClose();
-        Assert.assertEquals("CONNECT " + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostSSLPort("default"), connectLog.poll());
+        assertEquals("CONNECT " + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostSSLPort("default"), connectLog.poll());
     }
 }
