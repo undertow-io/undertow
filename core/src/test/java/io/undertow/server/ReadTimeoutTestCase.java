@@ -136,7 +136,7 @@ public class ReadTimeoutTestCase {
                 client.execute(post);
             } catch (SocketException e) {
                 Assert.assertTrue(e.getMessage(), e.getMessage().contains("Broken pipe")
-                        || e.getMessage().contains("connection abort"));
+                        || e.getMessage().contains("connection abort") || e.getMessage().contains("connection was aborted"));
                 socketFailure = true;
             }
             Assert.assertTrue("Test sent request without any exception", socketFailure);
