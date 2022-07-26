@@ -47,7 +47,9 @@ public class QValueParser {
     public static List<List<QValueResult>> parse(List<String> headers) {
         final List<QValueResult> found = new ArrayList<>();
         QValueResult current = null;
-        for (final String header : headers) {
+        //noinspection ForLoopReplaceableByForEach - using induction for loop for iteration to avoid allocation
+        for (int j = 0; j < headers.size(); j++) {
+            final String header = headers.get(j);
             final int l = header.length();
             //we do not use a string builder
             //we just keep track of where the current string starts and call substring()
@@ -107,8 +109,10 @@ public class QValueParser {
         List<List<QValueResult>> values = new ArrayList<>();
         List<QValueResult> currentSet = null;
 
-        for(QValueResult val : found) {
-            if(!val.qvalue.equals(currentQValue)) {
+        //noinspection ForLoopReplaceableByForEach - using induction for loop for iteration to avoid allocation
+        for (int i = 0; i < found.size(); i++) {
+            final QValueResult val = found.get(i);
+            if (!val.qvalue.equals(currentQValue)) {
                 currentQValue = val.qvalue;
                 currentSet = new ArrayList<>();
                 values.add(currentSet);
