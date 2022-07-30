@@ -31,16 +31,20 @@ import org.xnio.StreamConnection;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
+import io.undertow.io.IoCallback;
 import io.undertow.io.Receiver;
+import io.undertow.io.Sender;
 import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
+import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.Headers;
 import io.undertow.util.ImmediatePooledByteBuffer;
 import io.undertow.util.Protocols;
+import io.undertow.util.StatusCodes;
 
 /**
  * Upgrade listener for HTTP2, this allows connections to be established using the upgrade
@@ -72,7 +76,27 @@ public class Http2UpgradeHandler implements HttpHandler {
         final String settings = exchange.getRequestHeaders().getFirst("HTTP2-Settings");
         if(settings != null && upgrade != null
                 && upgradeStrings.contains(upgrade)) {
+            if(HttpContinue.requiresContinueResponse(exchange) && false) { //NOSONAR https://issues.redhat.com/browse/UNDERTOW-2135
+                HttpContinue.sendContinueResponse(exchange, new IoCallback() {
+                    @Override
+                    public void onComplete(HttpServerExchange exchange, Sender sender) {
+                        try {
+                            handleUpgradeBody(exchange, upgrade, settings);
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+
+                    @Override
+                    public void onException(HttpServerExchange exchange, Sender sender, IOException exception) {
+                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                        exchange.endExchange();
+                    }
+                });
+            } else {
                 handleUpgradeBody(exchange, upgrade, settings);
+            }
+
             return;
         }
         next.handleRequest(exchange);
