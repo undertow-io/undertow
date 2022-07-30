@@ -1153,7 +1153,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return A mutable map of request cookies
      * @deprecated use either {@link #requestCookies()} or {@link #getRequestCookie(String)} or {@link #setRequestCookie(Cookie)} methods instead
      */
-    @Deprecated(since="2.3.0", forRemoval=true)
+    @Deprecated(since="2.2.0", forRemoval=true)
     public Map<String, Cookie> getRequestCookies() {
         if (deprecatedRequestCookies == null) {
             deprecatedRequestCookies = new MapDelegatingToSet((Set<Cookie>)((DelegatingIterable<Cookie>)requestCookies()).getDelegate());
@@ -1238,7 +1238,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return A mutable map of response cookies
      * @deprecated use either {@link #responseCookies()} or {@link #setResponseCookie(Cookie)} methods instead
      */
-    @Deprecated(since="2.3.0", forRemoval=true)
+    @Deprecated(since="2.2.0", forRemoval=true)
     public Map<String, Cookie> getResponseCookies() {
         if (deprecatedResponseCookies == null) {
             deprecatedResponseCookies = new MapDelegatingToSet((Set<Cookie>)((DelegatingIterable<Cookie>)responseCookies()).getDelegate());

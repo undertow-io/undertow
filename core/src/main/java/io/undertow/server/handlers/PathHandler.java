@@ -118,7 +118,7 @@ public class PathHandler implements HttpHandler {
      * @see #addPrefixPath(String, io.undertow.server.HttpHandler)
      * @deprecated Superseded by {@link #addPrefixPath(String, io.undertow.server.HttpHandler)}.
      */
-    @Deprecated(since="2.3.0", forRemoval=true)
+    @Deprecated(since="1.0.0", forRemoval=true)
     public synchronized PathHandler addPath(final String path, final HttpHandler handler) {
         return addPrefixPath(path, handler);
     }

@@ -204,7 +204,7 @@ public class Cookies {
      * @see <a href="http://tools.ietf.org/search/rfc2109">rfc2109</a>
      * @deprecated use {@link #parseRequestCookies(int, boolean, List, Set)} instead
      */
-    @Deprecated(since="2.3.0", forRemoval=true)
+    @Deprecated(since="2.2.0", forRemoval=true)
     public static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies) {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, LegacyCookieSupport.COMMA_IS_SEPARATOR);
     }
