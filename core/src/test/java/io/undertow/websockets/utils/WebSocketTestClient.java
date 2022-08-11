@@ -137,7 +137,11 @@ public final class WebSocketTestClient {
      * Destroy the client and also close open connections if any exist
      */
     public void destroy() {
-        if (!closed) {
+         this.destroy(false);
+     }
+
+    public void destroy(boolean dirty) {
+        if (!closed && !dirty) {
             final CountDownLatch latch = new CountDownLatch(1);
             send(new CloseWebSocketFrame(), new FrameListener() {
                 @Override
