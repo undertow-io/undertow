@@ -139,6 +139,14 @@ public class SecurityPathMatches {
             handleMatch(method, extensionMatch, currentMatch);
             return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
         }
+
+        // if nothing else, check for security info defined for URL pattern '/'
+        match = exactPathRoleInformation.get("/");
+        if (match != null) {
+            handleMatch(method, match, currentMatch);
+            return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
+        }
+
         return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
     }
 

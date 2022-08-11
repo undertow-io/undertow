@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2022 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,10 +18,6 @@
 
 package io.undertow.servlet.test.security.constraint;
 
-import java.io.IOException;
-
-import jakarta.servlet.ServletException;
-
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -36,30 +32,28 @@ import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.FlexBase64;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.junit.Assert;
+import jakarta.servlet.ServletException;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import java.io.IOException;
+
 import static org.junit.Assert.assertEquals;
 
 /**
- * @author Stuart Douglas
+ * Do the same as SecurityConstraintURLMappingTestCase, with a small difference, all access to / are denied and public/* is no longer
+ * covered by a SecurityConstraint.
+ * Verify that all works as in the super class test case, except for public/*, that now is forbidden for all HTTP methods.
+ *
+ * @author Flavia Rainone
  */
 @RunWith(DefaultServer.class)
-public class SecurityConstraintUrlMappingTestCase {
-
-    public static final String HELLO_WORLD = "Hello World";
+public class SecurityConstraintUrlMappingWithUnspecifiedForbiddenTestCase extends SecurityConstraintUrlMappingTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -123,7 +117,7 @@ public class SecurityConstraintUrlMappingTestCase {
                 .addRoleAllowed("role2"));
         builder.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection()
-                        .addUrlPattern("/public/*")).setEmptyRoleSemantic(SecurityInfo.EmptyRoleSemantic.PERMIT));
+                        .addUrlPattern("/")).setEmptyRoleSemantic(SecurityInfo.EmptyRoleSemantic.DENY));
         builder.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection()
                         .addUrlPattern("/public/postSecured/*")
@@ -156,25 +150,34 @@ public class SecurityConstraintUrlMappingTestCase {
     }
 
     @Test
-    public void testExactMatch() throws IOException {
-        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/role1", "user2:password2", "user1:password1");
+    @Override
+    public void testUnknown() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/unknown");
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 
     @Test
-    public void testPatternMatch() throws IOException {
-        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/role2/aa", "user1:password1", "user2:password2");
+    public void testPublic() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/public");
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 
     @Test
-    public void testStartStar() throws IOException {
-        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/starstar", null, "user2:password2");
-    }
-
-    @Test
-    public void testStartStar2() throws IOException {
-        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/star/starstar", "user1:password1", "user2:password2");
-    }
-    @Test
+    @Override
     public void testExtensionMatch() throws IOException {
         runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/extension/a.html", "user1:password1", "user2:password2");
         TestHttpClient client = new TestHttpClient();
@@ -183,103 +186,8 @@ public class SecurityConstraintUrlMappingTestCase {
             get.addHeader("ExpectedMechanism", "None");
             get.addHeader("ExpectedUser", "None");
             HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        } finally {
-            client.getConnectionManager().shutdown();
-        }
-    }
-
-    @Test
-    public void testAggregatedRoles() throws IOException {
-        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/1/2/aa", "user4:password4", "user3:password3");
-        runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/1/2/aa", "user1:password1", "user2:password2");
-    }
-
-    @Test
-    public void testUnknown() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/unknown");
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        } finally {
-            client.getConnectionManager().shutdown();
-        }
-    }
-
-    @Test
-    public void testHttpMethod() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        final String url = DefaultServer.getDefaultServerURL() + "/servletContext/public/postSecured/a";
-        try {
-            HttpGet initialGet = new HttpGet(url);
-            initialGet.addHeader("ExpectedMechanism", "None");
-            initialGet.addHeader("ExpectedUser", "None");
-            HttpResponse result = client.execute(initialGet);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-
-            HttpPost post = new HttpPost(url);
-            result = client.execute(post);
             assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-            assertEquals(1, values.length);
-            assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
             HttpClientUtils.readResponse(result);
-
-            post = new HttpPost(url);
-            post.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user2:password2".getBytes(), false));
-            result = client.execute(post);
-            assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-
-            post = new HttpPost(url);
-            post.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user1:password1".getBytes(), false));
-            post.addHeader("ExpectedMechanism", "BASIC");
-            post.addHeader("ExpectedUser", "user1");
-            result = client.execute(post);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(HELLO_WORLD, response);
-        } finally {
-            client.getConnectionManager().shutdown();
-        }
-    }
-
-    public void runSimpleUrlTest(final String url, final String badUser, final String goodUser) throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
-            HttpGet get = new HttpGet(url);
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-            assertEquals(1, values.length);
-            assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
-            HttpClientUtils.readResponse(result);
-            if(badUser != null) {
-                get = new HttpGet(url);
-                get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString(badUser.getBytes(), false));
-                result = client.execute(get);
-                assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-                HttpClientUtils.readResponse(result);
-            }
-            get = new HttpGet(url);
-            get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString(goodUser.getBytes(), false));
-            get.addHeader("ExpectedMechanism", "BASIC");
-            get.addHeader("ExpectedUser", goodUser.substring(0, goodUser.indexOf(':')));
-            result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-
-            //make sure that caching is disabled
-            Assert.assertEquals("0", result.getHeaders("Expires")[0].getValue());
-            Assert.assertEquals("no-cache", result.getHeaders("Pragma")[0].getValue());
-            Assert.assertEquals("no-cache, no-store, must-revalidate", result.getHeaders("Cache-Control")[0].getValue());
-
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(HELLO_WORLD, response);
         } finally {
             client.getConnectionManager().shutdown();
         }
