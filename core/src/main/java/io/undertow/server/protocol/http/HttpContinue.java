@@ -142,7 +142,6 @@ public class HttpContinue {
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
         exchange.putAttachment(ALREADY_SENT, true);
         newExchange.setStatusCode(StatusCodes.CONTINUE);
-        newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
         return new ContinueResponseSender() {
             boolean shutdown = false;
@@ -219,7 +218,6 @@ public class HttpContinue {
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
         exchange.putAttachment(ALREADY_SENT, true);
         newExchange.setStatusCode(StatusCodes.CONTINUE);
-        newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
         try {
             responseChannel.shutdownWrites();
