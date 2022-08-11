@@ -24,6 +24,7 @@ import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
+import org.xnio.ChannelListener.SimpleSetter;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -82,6 +83,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      */
     private final Set<WebSocketChannel> peerConnections;
 
+    private static final CloseMessage CLOSE_MSG = new CloseMessage(CloseMessage.GOING_AWAY, WebSocketMessages.MESSAGES.messageCloseWebSocket());
     /**
      * Create a new {@link WebSocketChannel}
      * 8
@@ -157,6 +159,15 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
                 sendClose();
             } catch (IOException e) {
                 IoUtils.safeClose(this);
+            }
+            final ChannelListener<?> listener = ((SimpleSetter<WebSocketChannel>)getReceiveSetter()).get();
+            if(listener instanceof AbstractReceiveListener) {
+                final AbstractReceiveListener abstractReceiveListener = (AbstractReceiveListener) listener;
+                try {
+                    abstractReceiveListener.onCloseMessage(CLOSE_MSG, this);
+                } catch(Exception e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
