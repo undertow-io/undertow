@@ -369,7 +369,6 @@ public class UndertowOptions {
      */
     public static final Option<Boolean> TRACK_ACTIVE_REQUESTS = Option.simple(UndertowOptions.class, "TRACK_ACTIVE_REQUESTS", Boolean.class);
 
-
     private UndertowOptions() {
 
     }

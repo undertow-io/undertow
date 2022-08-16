@@ -23,6 +23,8 @@ import io.undertow.UndertowMessages;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -417,6 +419,79 @@ public class Cookies {
         return new String(tmp, 0, dest);
     }
 
+    private static final String CRUMB_SEPARATOR = "; ";
+
+    /**
+     * Cookie headers form: https://www.rfc-editor.org/rfc/rfc6265#section-4.2.1
+     * If more than one header entry exist for "Cookie", it will be assembled into one that conforms to rfc.
+     * @param headerMap
+     * @return
+     */
+    public static void assembleCrumbs(final HeaderMap headerMap) {
+        final HeaderValues cookieValues = headerMap.get(Headers.COOKIE);
+
+        if (cookieValues != null && cookieValues.size() > 1) {
+            final StringBuilder oreos = new StringBuilder();
+            final String[] _cookieValues = cookieValues.toArray();
+            int slices = _cookieValues.length;
+            for (final String slice : _cookieValues) {
+                oreos.append(slice);
+                slices--;
+                if (slices >= 1) {
+                    oreos.append(CRUMB_SEPARATOR);
+                }
+            }
+            cookieValues.clear();
+            cookieValues.add(oreos.toString());
+        }
+    }
+
+    /**
+     * IF there is single entry that follows RFC separation rules, it will be turned into singular fields. This should be only
+     * used PRIOR to compression.
+     *
+     * @param headerMap
+     */
+    public static void disperseCrumbs(final HeaderMap headerMap) {
+        final HeaderValues cookieValues = headerMap.get(Headers.COOKIE);
+        // NOTE: If cookies are up2standard, thats the only case
+        // otherwise something is up, dont touch it
+        if (cookieValues != null && cookieValues.size() == 1) {
+            if (cookieValues.getFirst().contains(CRUMB_SEPARATOR)) {
+                final String[] cookieJar = cookieValues.getFirst().split(CRUMB_SEPARATOR);
+                headerMap.remove(Headers.COOKIE);
+                for (final String crumb : cookieJar) {
+                    headerMap.addLast(Headers.COOKIE, crumb);
+                }
+            }
+        }
+    }
+
+    /**
+     * Fetch list containing crumbs( singular entries of Cookie header )
+     * @param headerMap
+     * @return
+     */
+    public static List<String> getCrumbs(final HeaderMap headerMap) {
+        final HeaderValues cookieValues = headerMap.get(Headers.COOKIE);
+        if (cookieValues != null) {
+            if (cookieValues.size() == 1 && cookieValues.getFirst().contains(CRUMB_SEPARATOR)) {
+                final String[] cookieJar = cookieValues.getFirst().split(CRUMB_SEPARATOR);
+                return Arrays.asList(cookieJar);
+            } else {
+                return cookieValues;
+            }
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    private static final String CRUMBS_ASSEMBLY_DISABLE = "io.undertow.server.protocol.http.DisableCookieCrumbsAssembly";
+    private static final Boolean CRUMBS_ASSEMBLY_DISABLED = Boolean.valueOf(SecurityActions.getSystemProperty(CRUMBS_ASSEMBLY_DISABLE, "false"));
+
+    public static boolean isCrumbsAssemplyDisabled() {
+        return Cookies.CRUMBS_ASSEMBLY_DISABLED.booleanValue();
+    }
     private Cookies() {
 
     }
