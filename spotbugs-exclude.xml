@@ -228,16 +228,6 @@
         <Class name="~io\.undertow\.protocols\.ajp\.AjpClientChannel\$.*"/>
     </Match>
 
-    <!-- Is done actually only once, no harm in it -->
-    <Match>
-        <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE"/>
-        <Or>
-            <Class name="io.undertow.util.HttpString"/>
-            <Class name="io.undertow.security.impl.SimpleNonceManager" />
-            <Class name="io.undertow.websockets.client.WebSocket13ClientHandshake" />
-        </Or>
-    </Match>
-
     <Match>
         <Bug pattern="EQ_COMPARETO_USE_OBJECT_EQUALS"/>
         <Or>
