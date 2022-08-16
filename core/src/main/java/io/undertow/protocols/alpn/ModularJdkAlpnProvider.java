@@ -22,13 +22,13 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 
 /**
- * Open listener adaptor for ALPN connections that use the JDK9 API
+ * Open listener adaptor for ALPN connections that use the Modular JDK API
  * <p>
  * Not a proper open listener as such, but more a mechanism for selecting between them
  *
  * @author Stuart Douglas
  */
-public class JDK9AlpnProvider implements ALPNProvider {
+public class ModularJdkAlpnProvider implements ALPNProvider {
 
     @Override
     public boolean isEnabled(final SSLEngine sslEngine) {
@@ -55,7 +55,7 @@ public class JDK9AlpnProvider implements ALPNProvider {
 
     @Override
     public String toString() {
-        return "JDK9AlpnProvider";
+        return "ModularJdkAlpnProvider";
     }
 
 }

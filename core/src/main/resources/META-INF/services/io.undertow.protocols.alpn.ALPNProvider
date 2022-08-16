@@ -17,5 +17,5 @@
 #
 
 io.undertow.protocols.alpn.JettyAlpnProvider
-io.undertow.protocols.alpn.JDK9AlpnProvider
+io.undertow.protocols.alpn.ModularJdkAlpnProvider
 io.undertow.protocols.alpn.OpenSSLAlpnProvider
