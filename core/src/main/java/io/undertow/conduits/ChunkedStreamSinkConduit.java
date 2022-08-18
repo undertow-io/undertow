@@ -214,9 +214,10 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
 
     @Override
     public long write(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
-        for (int i = offset; i < length; ++i) {
-            if (srcs[i].hasRemaining()) {
-                return write(srcs[i]);
+        for (int i = 0; i < length; i++) {
+            ByteBuffer srcBuffer = srcs[offset + i];
+            if (srcBuffer.hasRemaining()) {
+                return write(srcBuffer);
             }
         }
         return 0;

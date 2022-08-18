@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers;
 
+import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
@@ -33,9 +34,13 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.channels.Channels;
+import org.xnio.channels.StreamSinkChannel;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author Stuart Douglas
@@ -58,7 +63,7 @@ public class ChunkedResponseTransferCodingTestCase {
     public static void setup() {
         final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
-        blockingHandler.setRootHandler(new HttpHandler() {
+        blockingHandler.setRootHandler(Handlers.path().addExactPath("/path", new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) {
                 try {
@@ -75,7 +80,35 @@ public class ChunkedResponseTransferCodingTestCase {
                     throw new RuntimeException(e);
                 }
             }
-        });
+        })
+                .addExactPath("/buffers", new BlockingHandler(new HttpHandler() {
+                    @Override
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        ByteBuffer[] buffers = new ByteBuffer[] {
+                                ByteBuffer.wrap("prefix".getBytes(StandardCharsets.UTF_8)),
+                                ByteBuffer.wrap("hello, ".getBytes(StandardCharsets.UTF_8)),
+                                ByteBuffer.wrap("world".getBytes(StandardCharsets.UTF_8)),
+                                ByteBuffer.wrap("suffix".getBytes(StandardCharsets.UTF_8))
+                        };
+                        StreamSinkChannel channel = exchange.getResponseChannel();
+                        Channels.writeBlocking(channel, buffers, 1, 2);
+                        channel.shutdownWrites();
+                        Channels.flushBlocking(channel);
+                    }
+                })));
+    }
+
+    @Test
+    public void testMultiBufferWrite() throws IOException {
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/buffers");
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("hello, world", HttpClientUtils.readResponse(result));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 
     @Test
@@ -102,7 +135,6 @@ public class ChunkedResponseTransferCodingTestCase {
             client.getConnectionManager().shutdown();
         }
     }
-
 
     private static void generateMessage(int repetitions) {
         final StringBuilder builder = new StringBuilder(repetitions * MESSAGE.length());
