@@ -310,7 +310,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                 }
             };
         }
-        getFramedChannel().scheduleTaskInIoThread(task);
+        getFramedChannel().runInIoThread(task);
     }
 
     private ChannelListener<? super R> getReadListener() {
