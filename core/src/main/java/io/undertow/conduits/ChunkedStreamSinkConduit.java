@@ -138,15 +138,18 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             return 0;
         }
         if (totalRemaining > Integer.MAX_VALUE) {
-            // Fall back to one buffer at a time if the total srcs remaining exceeds integer max-value
-            // This should be very rare.
-            for (int i = offset; i < offset + length; i++) {
-                ByteBuffer buf = srcs[i];
-                if (buf.hasRemaining()) {
-                    return write(buf);
+            // Write as many buffers as possible without a chunk-size overflowing an integer.
+            long total = 0;
+            for (int i = 0; i < length; i++) {
+                ByteBuffer buf = srcs[i + offset];
+                int remaining = buf.remaining();
+                if (total + remaining > Integer.MAX_VALUE) {
+                    length = i;
+                    totalRemaining = total;
+                    break;
                 }
+                total += remaining;
             }
-            return 0;
         }
         int remaining = (int) totalRemaining;
         this.state |= FLAG_FIRST_DATA_WRITTEN;
@@ -205,7 +208,6 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                     } else {
                         result = next.write(buf, 0, buf.length);
                     }
-                    // TODO(ckozak): Buffers.hasRemaining fast-path?
                     if (Buffers.remaining(srcs, offset, length) == 0) {
                         state |= FLAG_WRITES_SHUTDOWN;
                     }
