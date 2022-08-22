@@ -133,23 +133,22 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             throw new ClosedChannelException();
         }
-        long totalRemaining = Buffers.remaining(srcs, offset, length);
+        // Write as many buffers as possible without a chunk-size overflowing an integer.
+        long totalRemaining = 0;
+        for (int i = 0; i < length; i++) {
+            ByteBuffer buf = srcs[i + offset];
+            int remaining = buf.remaining();
+            if (totalRemaining + remaining > Integer.MAX_VALUE) {
+                // Avoid producing chunks too large for clients by reducing the number of buffers
+                // until total remaining fits within a 32-bit signed integer value. This is safe
+                // because a single java ByteBuffer has a capacity represented by an integer.
+                length = i;
+                break;
+            }
+            totalRemaining += remaining;
+        }
         if(totalRemaining == 0) {
             return 0;
-        }
-        if (totalRemaining > Integer.MAX_VALUE) {
-            // Write as many buffers as possible without a chunk-size overflowing an integer.
-            long total = 0;
-            for (int i = 0; i < length; i++) {
-                ByteBuffer buf = srcs[i + offset];
-                int remaining = buf.remaining();
-                if (total + remaining > Integer.MAX_VALUE) {
-                    length = i;
-                    totalRemaining = total;
-                    break;
-                }
-                total += remaining;
-            }
         }
         int remaining = (int) totalRemaining;
         this.state |= FLAG_FIRST_DATA_WRITTEN;
