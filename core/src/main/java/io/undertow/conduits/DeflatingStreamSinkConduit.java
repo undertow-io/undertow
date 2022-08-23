@@ -131,12 +131,22 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                     return 0;
                 }
             }
+            int initialSrcPosition = src.position();
             int initialRemaining = src.remaining();
-            preDeflate(src);
             deflater.setInput(src);
             Connectors.updateResponseBytesSent(exchange, 0 - initialRemaining);
             deflateData(false);
             int consumed = initialRemaining - src.remaining();
+            int endSrcPosition = src.position();
+            int srcLimit = src.limit();
+            // Reset the buffer to original values with a limit based on what has
+            // been deflated such that only data that has been compressed is
+            // represented by the buffer.
+            src.position(initialSrcPosition);
+            src.limit(endSrcPosition);
+            postDeflate(src);
+            src.limit(srcLimit);
+            src.position(endSrcPosition);
             // Ensure input buffers are not held or clobbered outside expected usage
             deflater.setInput(EMPTY);
             return consumed;
@@ -146,11 +156,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         }
     }
 
-    protected void preDeflate(byte[] data) {
-
-    }
-
-    protected void preDeflate(ByteBuffer data) {
+    protected void postDeflate(ByteBuffer data) {
     }
 
     @Override
