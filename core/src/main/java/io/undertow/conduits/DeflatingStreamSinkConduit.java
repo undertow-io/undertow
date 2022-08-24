@@ -167,10 +167,14 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         try {
             int total = 0;
             for (int i = offset; i < offset + length; ++i) {
-                if (srcs[i].hasRemaining()) {
-                    int ret = write(srcs[i]);
+                ByteBuffer buf = srcs[i];
+                if (buf.hasRemaining()) {
+                    int ret = write(buf);
                     total += ret;
-                    if (ret == 0) {
+                    // Must cease iteration after any buffer is not
+                    // fully exhausted, or after bytes cannot be
+                    // written.
+                    if (ret == 0 || buf.hasRemaining()) {
                         return total;
                     }
                 }
