@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
 import io.undertow.server.Connectors;
-import io.undertow.util.ImmediatePooledByteBuffer;
+import org.xnio.Buffers;
 import org.xnio.IoUtils;
 import io.undertow.connector.PooledByteBuffer;
 import org.xnio.XnioIoThread;
@@ -73,9 +73,9 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
      */
     protected PooledByteBuffer currentBuffer;
     /**
-     * there may have been some additional data that did not fit into the first buffer
+     * Buffer used to write the trailer if currentBuffer doesn't have enough space.
      */
-    private PooledByteBuffer additionalBuffer;
+    private ByteBuffer trailerBuffer;
 
     private int state = 0;
 
@@ -123,13 +123,6 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             }
             if (!src.hasRemaining()) {
                 return 0;
-            }
-            //we may already have some input, if so compress it
-            if (!deflater.needsInput()) {
-                deflateData(false);
-                if (!deflater.needsInput()) {
-                    return 0;
-                }
             }
             int initialSrcPosition = src.position();
             int initialRemaining = src.remaining();
@@ -354,14 +347,8 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                             byte[] data = getTrailer();
                             if (data != null) {
                                 Connectors.updateResponseBytesSent(exchange, data.length);
-                                if(additionalBuffer != null) {
-                                    ByteBuffer additionalByteBuffer = additionalBuffer.getBuffer();
-                                    int additionalBufferRemaining = additionalByteBuffer.remaining();
-                                    byte[] newData = new byte[additionalBufferRemaining + data.length];
-                                    additionalByteBuffer.get(newData, 0, additionalBufferRemaining);
-                                    System.arraycopy(data, 0, newData, additionalBufferRemaining, data.length);
-                                    additionalBuffer.close();
-                                    this.additionalBuffer = new ImmediatePooledByteBuffer(ByteBuffer.wrap(newData));
+                                if(trailerBuffer != null) {
+                                    throw new IllegalStateException("trailerBuffer is already set");
                                 } else if(anyAreSet(state, FLUSHING_BUFFER) && buffer.capacity() - buffer.remaining() >= data.length) {
                                     buffer.compact();
                                     buffer.put(data);
@@ -369,7 +356,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                                 } else if (data.length <= buffer.remaining() && !anyAreSet(state, FLUSHING_BUFFER)) {
                                     buffer.put(data);
                                 } else {
-                                    additionalBuffer = new ImmediatePooledByteBuffer(ByteBuffer.wrap(data));
+                                    trailerBuffer = ByteBuffer.wrap(data);
                                 }
                             }
                         }
@@ -441,41 +428,61 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
      */
     private boolean performFlushIfRequired() throws IOException {
         if (anyAreSet(state, FLUSHING_BUFFER)) {
-            final ByteBuffer[] bufs = new ByteBuffer[additionalBuffer == null ? 1 : 2];
-            long totalLength = 0;
-            bufs[0] = currentBuffer.getBuffer();
-            totalLength += bufs[0].remaining();
-            if (additionalBuffer != null) {
-                bufs[1] = additionalBuffer.getBuffer();
-                totalLength += bufs[1].remaining();
-            }
-            if (totalLength > 0) {
-                long total = 0;
-                long res = 0;
-                do {
-                    res = next.write(bufs, 0, bufs.length);
-                    total += res;
-                    if (res == 0) {
-                        return false;
-                    }
-                } while (total < totalLength);
-            }
-            IoUtils.safeClose(additionalBuffer);
-            additionalBuffer = null;
-            currentBuffer.getBuffer().clear();
-            state = state & ~FLUSHING_BUFFER;
+            return trailerBuffer == null
+                    ? performFlushIfRequiredSingleBuffer()
+                    : performFlushIfRequiredAdditionalBuffer();
         }
         return true;
     }
 
+    private boolean performFlushIfRequiredSingleBuffer() throws IOException {
+        final ByteBuffer buf =  currentBuffer.getBuffer();
+        long totalLength = buf.remaining();
+        if (totalLength > 0) {
+            int total = 0;
+            int res = 0;
+            do {
+                res = next.write(buf);
+                total += res;
+                if (res == 0) {
+                    return false;
+                }
+            } while (total < totalLength);
+        }
+        currentBuffer.getBuffer().clear();
+        state = state & ~FLUSHING_BUFFER;
+        return true;
+    }
+
+    private boolean performFlushIfRequiredAdditionalBuffer() throws IOException {
+        final ByteBuffer[] bufs = new ByteBuffer[] {
+                currentBuffer.getBuffer(),
+                trailerBuffer};
+        long totalLength = Buffers.remaining(bufs);
+        if (totalLength > 0) {
+            long total = 0;
+            long res = 0;
+            do {
+                res = next.write(bufs, 0, bufs.length);
+                total += res;
+                if (res == 0) {
+                    return false;
+                }
+            } while (total < totalLength);
+        }
+        trailerBuffer = null;
+        currentBuffer.getBuffer().clear();
+        state = state & ~FLUSHING_BUFFER;
+        return true;
+    }
 
     private StreamSinkConduit createNextChannel() {
         if (deflater.finished() && allAreSet(state, WRITTEN_TRAILER)) {
             //the deflater was fully flushed before we created the channel. This means that what is in the buffer is
             //all there is
             int remaining = currentBuffer.getBuffer().remaining();
-            if (additionalBuffer != null) {
-                remaining += additionalBuffer.getBuffer().remaining();
+            if (trailerBuffer != null) {
+                remaining += trailerBuffer.remaining();
             }
             if(!exchange.getResponseHeaders().contains(Headers.TRANSFER_ENCODING)) {
                 exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, Integer.toString(remaining));
@@ -504,17 +511,8 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             while (force || !deflater.needsInput() || (shutdown && !deflater.finished())) {
                 int count = deflater.deflate(outputBuffer, force ? Deflater.SYNC_FLUSH : Deflater.NO_FLUSH);
                 if (count != 0) {
-                    int remaining = outputBuffer.remaining();
-                    if (!deflater.needsInput()) {
-                        assert remaining == 0 : "Expected the deflater to need input";
-
-                        additionalBuffer = exchange.getConnection().getByteBufferPool().allocate();
-                        int additionalCount = deflater.deflate(additionalBuffer.getBuffer(), force ? Deflater.SYNC_FLUSH: Deflater.NO_FLUSH);
-                        count += additionalCount;
-                        additionalBuffer.getBuffer().flip();
-                    }
                     Connectors.updateResponseBytesSent(exchange, count);
-                    if (remaining == 0) {
+                    if (!outputBuffer.hasRemaining()) {
                         outputBuffer.flip();
                         this.state |= FLUSHING_BUFFER;
                         if (next == null) {
@@ -556,7 +554,6 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             deflater = null;
             pooledObject.close();
         }
-        IoUtils.safeClose(additionalBuffer);
-        additionalBuffer = null;
+        trailerBuffer = null;
     }
 }
