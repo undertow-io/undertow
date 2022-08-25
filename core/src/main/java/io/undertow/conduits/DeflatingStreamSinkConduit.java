@@ -127,9 +127,9 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             int initialSrcPosition = src.position();
             int initialRemaining = src.remaining();
             deflater.setInput(src);
-            Connectors.updateResponseBytesSent(exchange, 0 - initialRemaining);
             deflateData(false);
             int consumed = initialRemaining - src.remaining();
+            Connectors.updateResponseBytesSent(exchange, -consumed);
             int endSrcPosition = src.position();
             int srcLimit = src.limit();
             // Reset the buffer to original values with a limit based on what has
