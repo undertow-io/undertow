@@ -81,9 +81,7 @@ public class GzipStreamSinkConduit extends DeflatingStreamSinkConduit {
 
     @Override
     protected void postDeflate(ByteBuffer data) {
-        int position = data.position();
         crc.update(data);
-        data.position(position);
     }
 
     @Override
