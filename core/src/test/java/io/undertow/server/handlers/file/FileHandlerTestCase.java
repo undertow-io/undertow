@@ -18,14 +18,13 @@
 
 package io.undertow.server.handlers.file;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
@@ -142,16 +141,17 @@ public class FileHandlerTestCase {
     }
 
     @Test
-    public void testFileTransferLargeFile() throws IOException, URISyntaxException {
+    public void testFileTransferLargeFile() throws IOException {
         TestHttpClient client = new TestHttpClient();
-        Path tmp = Paths.get(System.getProperty("java.io.tmpdir"));
-        StringBuilder message = new StringBuilder();
-        for(int i = 0; i < 100000; ++i) {
-            message.append("Hello World");
-        }
+        Path tmp = Paths.get("target", "testtmp").toAbsolutePath();
+        Files.createDirectories(tmp);
+        String message = "Hello World".repeat(100000);
         Path large = Files.createTempFile(tmp, null, ".txt");
         try {
-            Files.copy(new ByteArrayInputStream(message.toString().getBytes(StandardCharsets.UTF_8)), large, StandardCopyOption.REPLACE_EXISTING);
+            Files.write(
+                    large,
+                    message.getBytes(StandardCharsets.UTF_8),
+                    StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE, StandardOpenOption.SYNC);
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(tmp, 1))
@@ -160,14 +160,21 @@ public class FileHandlerTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/" + large.getFileName().toString());
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(
+                    String.format("Failed to get file '%s' with request '%s'", large.toAbsolutePath(), get),
+                    StatusCodes.OK,
+                    result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             Header[] headers = result.getHeaders("Content-Type");
             Assert.assertEquals("text/plain", headers[0].getValue());
-            Assert.assertTrue(response, response.equals(message.toString()));
-
+            Assert.assertTrue(response, response.equals(message));
         } finally {
             client.getConnectionManager().shutdown();
+            try {
+                Files.delete(large);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
