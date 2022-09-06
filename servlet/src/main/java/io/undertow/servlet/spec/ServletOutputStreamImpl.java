@@ -553,6 +553,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
     @Override
     public void transferFrom(FileChannel source) throws IOException {
+        transferFrom(source, source.position(), source.size() - source.position());
+    }
+
+    @Override
+    public void transferFrom(FileChannel source, long startPosition, long count) throws IOException {
         if (anyAreSet(state, FLAG_CLOSED) || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
@@ -564,12 +569,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             if (channel == null) {
                 channel = servletRequestContext.getExchange().getResponseChannel();
             }
-            long position = source.position();
-            long count = source.size() - position;
-            if (count > remainingContentLength) {
-                count = remainingContentLength;
-            }
-            Channels.transferBlocking(channel, source, position, count);
+            Channels.transferBlocking(channel, source, startPosition, count);
             updateWritten(count);
         } else {
             setFlags(FLAG_WRITE_STARTED);
@@ -577,25 +577,23 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
             long pos = 0;
             try {
-                long size = Math.min (source.size(), remainingContentLength);
-                pos = source.position();
+                long end = pos + count;
+                pos = startPosition;
 
-                while (size - pos > 0) {
-                    long ret = channel.transferFrom(pendingFile, pos, size - pos);
+                while (end - pos > 0) {
+                    long ret = channel.transferFrom(pendingFile, pos, end - pos);
                     if (ret <= 0) {
                         clearFlags(FLAG_READY);
                         pendingFile = source;
-                        source.position(pos);
                         channel.resumeWrites();
                         return;
                     }
                     pos += ret;
                 }
             } finally {
-                updateWrittenAsync(pos - source.position());
+                updateWrittenAsync(pos - startPosition);
             }
         }
-
     }
 
 
