@@ -18,43 +18,44 @@
 
 package io.undertow.protocols.alpn;
 
-import java.util.Arrays;
 import javax.net.ssl.SSLEngine;
-
-import io.undertow.protocols.ssl.ALPNHackSSLEngine;
+import javax.net.ssl.SSLParameters;
 
 /**
- * Open listener adaptor for ALPN connections that uses the SSLExplorer based approach and hack into the JDK8
- * SSLEngine via reflection.
+ * Open listener adaptor for ALPN connections that use the Modular JDK API
+ * <p>
+ * Not a proper open listener as such, but more a mechanism for selecting between them
  *
  * @author Stuart Douglas
  */
-public class JDK8HackAlpnProvider implements ALPNProvider {
+public class ModularJdkAlpnProvider implements ALPNProvider {
 
     @Override
-    public boolean isEnabled(SSLEngine sslEngine) {
-        return ALPNHackSSLEngine.isEnabled(sslEngine);
+    public boolean isEnabled(final SSLEngine sslEngine) {
+        return true;
     }
 
     @Override
-    public SSLEngine setProtocols(SSLEngine engine, String[] protocols) {
-        ALPNHackSSLEngine newEngine = engine instanceof ALPNHackSSLEngine ? (ALPNHackSSLEngine) engine : new ALPNHackSSLEngine(engine);
-        newEngine.setApplicationProtocols(Arrays.asList(protocols));
-        return newEngine;
+    public SSLEngine setProtocols(final SSLEngine engine, final String[] protocols) {
+        SSLParameters sslParameters = engine.getSSLParameters();
+        sslParameters.setApplicationProtocols(protocols);
+        engine.setSSLParameters(sslParameters);
+        return engine;
     }
 
     @Override
-    public String getSelectedProtocol(SSLEngine engine) {
-        return ((ALPNHackSSLEngine) engine).getSelectedApplicationProtocol();
+    public String getSelectedProtocol(final SSLEngine engine) {
+        return engine.getApplicationProtocol();
     }
 
     @Override
     public int getPriority() {
-        return 300;
+        return 200;
     }
 
     @Override
     public String toString() {
-        return "JDK8AlpnProvider";
+        return "ModularJdkAlpnProvider";
     }
+
 }
