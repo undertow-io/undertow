@@ -229,6 +229,8 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
             if(newSession != null) {
                 return newSession;
             }
+        } else {
+            return null;
         }
         String sessionId = config.findSessionId(serverExchange);
         InMemorySessionManager.SessionImpl session = (SessionImpl) getSession(sessionId);
