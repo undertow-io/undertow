@@ -149,7 +149,7 @@ public class FileHandlerTestCase {
         for(int i = 0; i < 100000; ++i) {
             message.append("Hello World");
         }
-        Path large = Files.createTempFile(null, ".txt");
+        Path large = Files.createTempFile(tmp, null, ".txt");
         try {
             Files.copy(new ByteArrayInputStream(message.toString().getBytes(StandardCharsets.UTF_8)), large, StandardCopyOption.REPLACE_EXISTING);
             DefaultServer.setRootHandler(new CanonicalPathHandler()
