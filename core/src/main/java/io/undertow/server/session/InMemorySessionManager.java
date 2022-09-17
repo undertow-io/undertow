@@ -642,17 +642,21 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
         @Override
         public String changeSessionId(final HttpServerExchange exchange, final SessionConfig config) {
-            final String oldId = sessionId;
-            String newId = sessionManager.createAndSaveNewID(this);
-            this.sessionId = newId;
-            if(!invalid) {
-                config.setSessionId(exchange, this.getId());
-            }
-            sessionManager.sessions.remove(oldId);
-            sessionManager.sessionListeners.sessionIdChanged(this, oldId);
-            UndertowLogger.SESSION_LOGGER.debugf("Changing session id %s to %s", oldId, newId);
+            synchronized(SessionImpl.this) {
+                if (invalidationStarted) {
+                    return null;
+                } else {
+                    final String oldId = sessionId;
+                    String newId = sessionManager.createAndSaveNewID(this);
+                    this.sessionId = newId;
+                    config.setSessionId(exchange, this.getId());
+                    sessionManager.sessions.remove(oldId);
+                    sessionManager.sessionListeners.sessionIdChanged(this, oldId);
+                    UndertowLogger.SESSION_LOGGER.debugf("Changing session id %s to %s", oldId, newId);
 
-            return newId;
+                    return newId;
+                }
+            }
         }
 
         private synchronized void destroy() {
