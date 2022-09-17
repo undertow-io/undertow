@@ -103,7 +103,7 @@ class ServletPathMatchesData {
 
         private final Map<String, ServletChain> exactPathMatches = new HashMap<>();
 
-        private final SubstringMap<PathMatch> prefixMatches = new SubstringMap<PathMatch>();
+        private final SubstringMap<PathMatch> prefixMatches = new SubstringMap<>();
 
         private final Map<String, ServletChain> nameMatches = new HashMap<>();
 

@@ -181,7 +181,7 @@ public class AjpRequestParser {
         ATTRIBUTES[11] = SSL_KEY_SIZE;
         ATTRIBUTES[12] = SECRET;
         ATTRIBUTES[13] = STORED_METHOD;
-        ATTR_SET = new HashSet<String>(Arrays.asList(ATTRIBUTES));
+        ATTR_SET = new HashSet<>(Arrays.asList(ATTRIBUTES));
     }
 
     public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean allowEncodedSlash, boolean allowUnescapedCharactersInUrl) {
@@ -279,12 +279,12 @@ public class AjpRequestParser {
                         exchange.setRequestPath(res);
                         exchange.setRelativePath(res);
                     } else {
-                        final StringBuffer resBuffer = new StringBuffer();
+                        final StringBuilder resBuilder = new StringBuilder();
                         int pathParamParsingIndex = 0;
                         try {
                             do {
                                 final String url = result.value.substring(pathParamParsingIndex, colon);
-                                resBuffer.append(decode(url, result.containsUrlCharacters));
+                                resBuilder.append(decode(url, result.containsUrlCharacters));
                                 pathParamParsingIndex = colon + 1 + URLUtils.parsePathParams(result.value.substring(colon + 1), exchange, encoding, doDecode && result.containsUrlCharacters, maxParameters);
                                 colon = result.value.indexOf(';', pathParamParsingIndex + 1);
                             } while (pathParamParsingIndex < result.value.length() && colon != -1);
@@ -294,9 +294,9 @@ public class AjpRequestParser {
                         }
                         if (pathParamParsingIndex < result.value.length()) {
                             final String url = result.value.substring(pathParamParsingIndex);
-                            resBuffer.append(decode(url, result.containsUrlCharacters));
+                            resBuilder.append(decode(url, result.containsUrlCharacters));
                         }
-                        final String res = resBuffer.toString();
+                        final String res = resBuilder.toString();
                         if(result.containsUnencodedCharacters) {
                             exchange.setRequestURI(res);
                         } else {

@@ -279,8 +279,8 @@ public class UndertowXnioSsl extends XnioSsl {
         engine.setEnableSessionCreation(optionMap.get(Options.SSL_ENABLE_SESSION_CREATION, true));
         final Sequence<String> cipherSuites = optionMap.get(Options.SSL_ENABLED_CIPHER_SUITES);
         if (cipherSuites != null) {
-            final Set<String> supported = new HashSet<String>(Arrays.asList(engine.getSupportedCipherSuites()));
-            final List<String> finalList = new ArrayList<String>();
+            final Set<String> supported = new HashSet<>(Arrays.asList(engine.getSupportedCipherSuites()));
+            final List<String> finalList = new ArrayList<>();
             for (String name : cipherSuites) {
                 if (supported.contains(name)) {
                     finalList.add(name);
@@ -290,8 +290,8 @@ public class UndertowXnioSsl extends XnioSsl {
         }
         final Sequence<String> protocols = optionMap.get(Options.SSL_ENABLED_PROTOCOLS);
         if (protocols != null) {
-            final Set<String> supported = new HashSet<String>(Arrays.asList(engine.getSupportedProtocols()));
-            final List<String> finalList = new ArrayList<String>();
+            final Set<String> supported = new HashSet<>(Arrays.asList(engine.getSupportedProtocols()));
+            final List<String> finalList = new ArrayList<>();
             for (String name : protocols) {
                 if (supported.contains(name)) {
                     finalList.add(name);

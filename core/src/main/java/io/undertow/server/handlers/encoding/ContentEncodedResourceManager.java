@@ -133,7 +133,7 @@ public class ContentEncodedResourceManager {
             targetFileChannel = FileChannel.open(tempTarget, StandardOpenOption.READ, StandardOpenOption.WRITE);
             sourceFileChannel = FileChannel.open(file, StandardOpenOption.READ);
 
-            StreamSinkConduit conduit = encoding.getEncoding().getResponseWrapper().wrap(new ImmediateConduitFactory<StreamSinkConduit>(new FileConduitTarget(targetFileChannel, exchange)), exchange);
+            StreamSinkConduit conduit = encoding.getEncoding().getResponseWrapper().wrap(new ImmediateConduitFactory<>(new FileConduitTarget(targetFileChannel, exchange)), exchange);
             final ConduitStreamSinkChannel targetChannel = new ConduitStreamSinkChannel(null, conduit);
             long transferred = sourceFileChannel.transferTo(0, resource.getContentLength(), targetChannel);
             targetChannel.shutdownWrites();

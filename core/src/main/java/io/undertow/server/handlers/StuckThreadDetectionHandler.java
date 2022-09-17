@@ -66,7 +66,7 @@ public class StuckThreadDetectionHandler implements HttpHandler {
      * are stuck (caused by a long monitor interval)
      */
     private final ConcurrentHashMap<Long, MonitoredThread> activeThreads =
-            new ConcurrentHashMap<Long, MonitoredThread>();
+            new ConcurrentHashMap<>();
     /**
      *
      */

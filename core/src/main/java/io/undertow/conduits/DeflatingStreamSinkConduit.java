@@ -102,11 +102,11 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     }
 
     public static ObjectPool<Deflater> newInstanceDeflaterPool(int deflateLevel) {
-        return new NewInstanceObjectPool<Deflater>(() -> new Deflater(deflateLevel, true), Deflater::end);
+        return new NewInstanceObjectPool<>(() -> new Deflater(deflateLevel, true), Deflater::end);
     }
 
     public static ObjectPool<Deflater> simpleDeflaterPool(int poolSize, int deflateLevel) {
-        return new SimpleObjectPool<Deflater>(poolSize, () -> new Deflater(deflateLevel, true), Deflater::reset, Deflater::end);
+        return new SimpleObjectPool<>(poolSize, () -> new Deflater(deflateLevel, true), Deflater::reset, Deflater::end);
     }
 
 

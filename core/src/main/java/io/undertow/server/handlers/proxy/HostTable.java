@@ -44,7 +44,7 @@ public class HostTable<H> {
         if(hosts.containsKey(host)) {
             throw UndertowMessages.MESSAGES.hostAlreadyRegistered(host);
         }
-        hosts.put(host, new CopyOnWriteArraySet<Target>());
+        hosts.put(host, new CopyOnWriteArraySet<>());
         return this;
     }
 

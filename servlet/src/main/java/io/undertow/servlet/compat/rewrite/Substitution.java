@@ -117,7 +117,7 @@ public class Substitution {
 
     public void parse(Map<String, RewriteMap> maps) {
 
-        ArrayList<SubstitutionElement> elements = new ArrayList<SubstitutionElement>();
+        ArrayList<SubstitutionElement> elements = new ArrayList<>();
         int pos = 0;
         int percentPos = 0;
         int dollarPos = 0;
@@ -241,7 +241,7 @@ public class Substitution {
      * @return
      */
     public String evaluate(Matcher rule, Matcher cond, Resolver resolver) {
-        StringBuffer buf = new StringBuffer();
+        StringBuilder buf = new StringBuilder();
         for (int i = 0; i < elements.length; i++) {
             buf.append(elements[i].evaluate(rule, cond, resolver));
         }
