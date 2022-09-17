@@ -139,6 +139,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
             buffer = queue.poll();
             if (buffer != null) {
                 currentQueueLengthUpdater.decrementAndGet(this);
+                //buffer.clear();
             }
         }
         if (buffer == null) {
@@ -258,7 +259,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         public ByteBuffer getBuffer() {
             final ByteBuffer tmp = this.buffer;
             //UNDERTOW-2072
-            if (referenceCountUpdater.addAndGet(this, 0) == 0 || tmp == null) {
+            if (referenceCount == 0 || tmp == null) {
                 throw UndertowMessages.MESSAGES.bufferAlreadyFreed();
             }
             return tmp;
@@ -272,11 +273,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
                 if (leakDetector != null) {
                     leakDetector.closed = true;
                 }
-                if (tmp != null) {
-                    tmp.position(0);
-                    tmp.limit(0);
-                    pool.freeInternal(tmp);
-                }
+                pool.freeInternal(tmp);
             }
         }
 
