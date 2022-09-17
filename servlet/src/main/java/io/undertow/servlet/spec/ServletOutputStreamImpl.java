@@ -579,12 +579,8 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         }
         buffer.flip();
         while (buffer.hasRemaining()) {
-            if (writeFinal) {
-                channel.writeFinal(buffer);
-            } else {
-                channel.write(buffer);
-            }
-            if (buffer.hasRemaining()) {
+            int result = writeFinal ? channel.writeFinal(buffer) : channel.write(buffer);
+            if (result == 0) {
                 channel.awaitWritable();
             }
         }
