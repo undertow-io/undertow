@@ -881,6 +881,13 @@ public class ServletContextImpl implements ServletContext {
                 exchange.putAttachment(sessionAttachmentKey, httpSession);
             } else if (create) {
 
+                if (exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletResponse().isCommitted()) {
+                    if (!this.deployment.getDeploymentInfo().isOrphanSessionAllowed()) {
+                        throw UndertowServletMessages.MESSAGES.sessionCreationAfterResponseCommittedNotAllowed();
+                    }
+                    UndertowServletLogger.REQUEST_LOGGER.debug("Servlet container configured to permit session creation after response was committed. This can result in a memory leak if session has no timeout.");
+                }
+
                 String existing = c.findSessionId(exchange);
                 Boolean isRequestedSessionIdSaved = exchange.getAttachment(HttpServletRequestImpl.REQUESTED_SESSION_ID_SET);
                 if (isRequestedSessionIdSaved == null || !isRequestedSessionIdSaved) {
