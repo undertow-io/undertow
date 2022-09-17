@@ -99,6 +99,7 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
     }
 
     @Override
+    @Deprecated(since="2.2.3", forRemoval=false)
     public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException, RenegotiationRequiredException {
         if (unverified != null) {
             throw unverified;
@@ -115,7 +116,7 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
                   renegotiationRequiredException = RENEGOTIATION_REQUIRED_EXCEPTION;
                   throw renegotiationRequiredException;
               }
-            } catch (IOException e1) {
+            } catch (IOException ioe) {
             	// ignore, will not actually happen
             }
             unverified = PEER_UNVERIFIED_EXCEPTION;
