@@ -233,6 +233,15 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         }
     }
 
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            close();
+        } finally {
+            super.finalize();
+        }
+    }
+
     private static class DefaultPooledBuffer implements PooledByteBuffer {
 
         private final DefaultByteBufferPool pool;
