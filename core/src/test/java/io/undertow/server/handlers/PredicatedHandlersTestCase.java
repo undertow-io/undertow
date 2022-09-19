@@ -121,4 +121,28 @@ public class PredicatedHandlersTestCase {
         }
     }
 
+    @Test
+    public void testRewriteContext() throws IOException {
+        DefaultServer.setRootHandler(
+                Handlers.predicates(
+
+                        PredicatedHandlersParser.parse(
+                                        "path( foo ) -> rewrite( bar )", getClass().getClassLoader()), new HttpHandler() {
+                            @Override
+                            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                exchange.getResponseSender().send(exchange.getRelativePath());
+                            }
+                        }));
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo");
+
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("/bar", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }
