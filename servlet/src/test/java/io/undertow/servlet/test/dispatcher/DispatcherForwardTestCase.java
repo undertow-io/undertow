@@ -255,4 +255,21 @@ public class DispatcherForwardTestCase {
             client.getConnectionManager().shutdown();
         }
     }
+
+    @Test
+    public void testIncludesUrlInPathParameters() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
+            get.setHeader("forward", "/path?url=http://test.com");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            // Path parameters should not be canonicalized
+            Assert.assertEquals("pathInfo:null queryString:url=http://test.com servletPath:/path requestUri:/servletContext/path", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }
