@@ -66,7 +66,7 @@ public class SessionCookieConfig extends CookieAttributes<SessionCookieConfig> i
 
     @Override
     public String findSessionId(final HttpServerExchange exchange) {
-        final Cookie cookie = exchange.getRequestCookie(cookieName);
+        final Cookie cookie = exchange.getRequestCookie(cookieName, getPath());
         if (cookie != null) {
             UndertowLogger.SESSION_LOGGER.tracef("Found session cookie session id %s on %s", cookie, exchange);
             return cookie.getValue();
