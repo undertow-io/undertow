@@ -54,7 +54,7 @@ public class Certificates {
         builder.append(END_CERT);
         return builder.toString();
     }
-    
+
     private Certificates() {
     }
 }

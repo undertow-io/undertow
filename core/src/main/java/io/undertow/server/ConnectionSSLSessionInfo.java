@@ -116,9 +116,9 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
                   renegotiationRequiredException = RENEGOTIATION_REQUIRED_EXCEPTION;
                   throw renegotiationRequiredException;
               }
-            } catch (IOException ioe) {
-            	// ignore, will not actually happen
-            }
+          } catch (IOException ioe) {
+              // ignore, will not actually happen
+          }
             unverified = PEER_UNVERIFIED_EXCEPTION;
             throw unverified;
         }
