@@ -25,6 +25,11 @@ import org.xnio.Option;
  */
 public class UndertowOptions {
     /**
+     *  The default read timeout to be used by read operations that absolutely require a timeout. Used only when both
+     *   READ_TIMEOUT and IDLE_TIMEOUT are not used.
+     */
+    public static final int DEFAULT_READ_TIMEOUT = 600000;
+    /**
      * The maximum size in bytes of a http request header.
      */
     public static final Option<Integer> MAX_HEADER_SIZE = Option.simple(UndertowOptions.class, "MAX_HEADER_SIZE", Integer.class);
@@ -368,7 +373,6 @@ public class UndertowOptions {
      *
      */
     public static final Option<Boolean> TRACK_ACTIVE_REQUESTS = Option.simple(UndertowOptions.class, "TRACK_ACTIVE_REQUESTS", Boolean.class);
-
 
     private UndertowOptions() {
 
