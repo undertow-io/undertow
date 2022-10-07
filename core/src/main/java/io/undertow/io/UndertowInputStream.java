@@ -30,9 +30,13 @@ import org.xnio.channels.StreamSourceChannel;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 
+import static io.undertow.UndertowLogger.REQUEST_IO_LOGGER;
+import static io.undertow.UndertowOptions.IDLE_TIMEOUT;
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
+import static org.xnio.Options.READ_TIMEOUT;
 
 /**
  * Input stream that reads from the underlying channel. This stream delays creation
@@ -44,6 +48,7 @@ public class UndertowInputStream extends InputStream {
 
     private final StreamSourceChannel channel;
     private final ByteBufferPool bufferPool;
+    private final int readTimeout;
 
     /**
      * If this stream is ready for a read
@@ -61,6 +66,24 @@ public class UndertowInputStream extends InputStream {
             this.channel = new EmptyStreamSourceChannel(exchange.getIoThread());
         }
         this.bufferPool = exchange.getConnection().getByteBufferPool();
+        Integer readTimeout = null;
+        try {
+            readTimeout = this.channel.getOption(READ_TIMEOUT);
+            final Integer idleTimeout = this.channel.getOption(IDLE_TIMEOUT);
+            if (readTimeout == null || readTimeout <= 0)
+                readTimeout = idleTimeout;
+            else if (idleTimeout != null && idleTimeout > 0) {
+                readTimeout = idleTimeout;
+            }
+        } catch (IOException e) {
+            // we just log the exception at this point, because a getOption that throws IOException indicates that
+            // the socket is closed or the channel is closed... we will defer any error treatment to the read attempt,
+            // if there is really an actual error (notice that a read attempt from a closed channel will just return -1;
+            // but if there is an actual IO error, the channel will throw the IOException, and that one will require proper
+            // treatment)
+            REQUEST_IO_LOGGER.ioException(e);
+        }
+        this.readTimeout = readTimeout == null || readTimeout <= 0? io.undertow.UndertowOptions.DEFAULT_READ_TIMEOUT : readTimeout;
     }
 
     @Override
@@ -106,12 +129,14 @@ public class UndertowInputStream extends InputStream {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
             pooled = bufferPool.allocate();
 
-            int res = Channels.readBlocking(channel, pooled.getBuffer());
+            int res = Channels.readBlocking(channel, pooled.getBuffer(), readTimeout, TimeUnit.MILLISECONDS);
             pooled.getBuffer().flip();
             if (res == -1) {
                 state |= FLAG_FINISHED;
                 pooled.close();
                 pooled = null;
+            } else if (res == 0) {
+                throw io.undertow.UndertowMessages.MESSAGES.readTimedOut(readTimeout);
             }
         }
     }
