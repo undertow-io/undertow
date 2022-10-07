@@ -23,6 +23,8 @@ import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
+import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
+import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
 import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
@@ -32,12 +34,14 @@ import io.undertow.server.XnioByteBufferPool;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
+import org.xnio.Options;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 
 import org.xnio.Pool;
 import org.xnio.StreamConnection;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Set;
@@ -119,6 +123,22 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
         Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
         if (idleTimeout != null && idleTimeout > 0) {
             http2Channel.setIdleTimeout(idleTimeout);
+        }
+        try {
+            Integer readTimeout = channel.getOption(Options.READ_TIMEOUT);
+            if (readTimeout != null && readTimeout > 0) {
+                channel.getSourceChannel().setConduit(new ReadTimeoutStreamSourceConduit(channel.getSourceChannel().getConduit(), channel, this));
+            }
+        } catch (IOException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+        }
+        try {
+            Integer writeTimeout = channel.getOption(Options.WRITE_TIMEOUT);
+            if (writeTimeout != null && writeTimeout > 0) {
+                channel.getSinkChannel().setConduit(new WriteTimeoutStreamSinkConduit(channel.getSinkChannel().getConduit(), channel, this));
+            }
+        } catch (IOException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
         }
         if(statisticsEnabled) {
             channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), connectorStatistics.sentAccumulator()));
