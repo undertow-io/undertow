@@ -162,7 +162,7 @@
                                     io.undertow.servlet*;version=${project.version};-noimport:=true
                                 </Export-Package>
                                 <Import-Package>
-                                    javax.annotation.security;version="[1.2,3)",
+                                    jakarta.annotation.security;version="[2.0,3)",
                                     !sun.*,
                                     *
                                 </Import-Package>

@@ -35,7 +35,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <version.karaf.plugin>4.2.10</version.karaf.plugin>
+        <version.karaf.plugin>4.4.1</version.karaf.plugin>
     </properties>
 
     <dependencies>
@@ -105,7 +105,7 @@
                                 <descriptor>file:${project.build.directory}/classes/features.xml</descriptor>
                             </descriptors>
                             <distribution>org.apache.karaf.features:framework</distribution>
-                            <javase>1.8</javase>
+                            <javase>11</javase>
                             <framework>
                                 <feature>framework</feature>
                             </framework>
