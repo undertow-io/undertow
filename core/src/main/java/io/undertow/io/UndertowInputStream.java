@@ -72,7 +72,7 @@ public class UndertowInputStream extends InputStream {
             final Integer idleTimeout = this.channel.getOption(IDLE_TIMEOUT);
             if (readTimeout == null || readTimeout <= 0)
                 readTimeout = idleTimeout;
-            else if (idleTimeout != null && idleTimeout > 0) {
+            else if (idleTimeout != null && idleTimeout > 0 && idleTimeout < readTimeout) {
                 readTimeout = idleTimeout;
             }
         } catch (IOException e) {
