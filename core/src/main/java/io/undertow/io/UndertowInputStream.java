@@ -32,6 +32,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
 import static io.undertow.UndertowLogger.REQUEST_IO_LOGGER;
+import static io.undertow.UndertowOptions.DEFAULT_READ_TIMEOUT;
 import static io.undertow.UndertowOptions.IDLE_TIMEOUT;
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
@@ -82,7 +83,7 @@ public class UndertowInputStream extends InputStream {
             // treatment)
             REQUEST_IO_LOGGER.ioException(e);
         }
-        this.readTimeout = readTimeout == null || readTimeout <= 0? io.undertow.UndertowOptions.DEFAULT_READ_TIMEOUT : readTimeout;
+        this.readTimeout = readTimeout == null || readTimeout <= 0? DEFAULT_READ_TIMEOUT : readTimeout;
     }
 
     @Override
