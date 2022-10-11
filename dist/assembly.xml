@@ -22,7 +22,7 @@
                 <include>org.jboss.xnio:xnio-api</include>
                 <include>org.jboss.xnio:xnio-nio</include>
                 <include>org.jboss.logging:jboss-logging</include>
-                <include>org.jboss.spec.javax.servlet:jboss-servlet-api_3.1_spec</include>
+                <include>jakarta.servlet:jakarta.servlet-api</include>
             </includes>
             <outputDirectory>lib</outputDirectory>
         </dependencySet>

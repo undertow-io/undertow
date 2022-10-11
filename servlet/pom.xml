@@ -25,12 +25,12 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>2.3.0.Beta2-SNAPSHOT</version>
+        <version>2.3.0.Final-SNAPSHOT</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-servlet</artifactId>
-    <version>2.3.0.Beta2-SNAPSHOT</version>
+    <version>2.3.0.Final-SNAPSHOT</version>
     <name>Undertow Servlet</name>
 
     <properties>
@@ -162,7 +162,7 @@
                                     io.undertow.servlet*;version=${project.version};-noimport:=true
                                 </Export-Package>
                                 <Import-Package>
-                                    javax.annotation.security;version="[1.2,3)",
+                                    jakarta.annotation.security;version="[2.0,3)",
                                     !sun.*,
                                     *
                                 </Import-Package>
