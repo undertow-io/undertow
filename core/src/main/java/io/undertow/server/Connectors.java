@@ -147,8 +147,12 @@ public class Connectors {
             System.arraycopy(buffers, 0, newArray, 0, buffers.length);
         } else {
             newArray = new PooledByteBuffer[existing.length + buffers.length];
-            System.arraycopy(existing, 0, newArray, 0, existing.length);
-            System.arraycopy(buffers, 0, newArray, existing.length, buffers.length);
+            // If there are previous buffers we are re-buffering data so although
+            // counterintuitive first put the new data and then the existing buffers.
+            // Example: there are buffered data with buffers A,B and A is retrieved
+            // but returned, it should be A,B again and not B,A
+            System.arraycopy(buffers, 0, newArray, 0, buffers.length);
+            System.arraycopy(existing, 0, newArray, buffers.length, existing.length);
         }
         exchange.putAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA, newArray); //todo: force some kind of wakeup?
         exchange.addExchangeCompleteListener(BufferedRequestDataCleanupListener.INSTANCE);
