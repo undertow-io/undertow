@@ -946,8 +946,9 @@ public class ServletContextImpl implements ServletContext {
                         boolean found = false;
                         for (String deploymentName : deployment.getServletContainer().listDeployments()) {
                             DeploymentManager deployment = this.deployment.getServletContainer().getDeployment(deploymentName);
-                            if (deployment != null) {
-                                if (deployment.getDeployment().getSessionManager().getSession(existing) != null) {
+                            if (deployment != null && deployment.getDeployment() != null) {
+                                SessionManager sm = deployment.getDeployment().getSessionManager();
+                                if (sm != null && sm.getSession(existing) != null) {
                                     found = true;
                                     break;
                                 }
