@@ -448,10 +448,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                     loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER)
+                        .setMaxQueueSize(20)
                         .addHost(new URI("ajp", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null));
                     ProxyHandler proxyHandler = ProxyHandler.builder()
                         .setProxyClient(loadBalancingProxyClient)
-                        .setMaxRequestTime(120000)
+                        .setMaxRequestTime(60000)
                         .setNext(HANDLE_404)
                         .setReuseXForwarded(true)
                         .build();
@@ -470,10 +471,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                 proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                 loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER)
+                    .setMaxQueueSize(20)
                     .addHost(new URI("h2", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new UndertowXnioSsl(xnio, OptionMap.EMPTY, SSL_BUFFER_POOL, clientContext), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
                 ProxyHandler proxyHandler = ProxyHandler.builder()
                     .setProxyClient(loadBalancingProxyClient)
-                    .setMaxRequestTime(120000)
+                    .setMaxRequestTime(60000)
                     .setNext(HANDLE_404)
                     .setReuseXForwarded(true)
                     .build();
@@ -491,10 +493,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                 proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                 loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER)
+                        .setMaxQueueSize(20)
                         .addHost(new URI(h2cUpgrade ? "http" : "h2c-prior", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, null, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
                 ProxyHandler proxyHandler = ProxyHandler.builder()
                     .setProxyClient(loadBalancingProxyClient)
-                    .setMaxRequestTime(30000)
+                    .setMaxRequestTime(60000)
                     .setNext(HANDLE_404)
                     .setReuseXForwarded(true)
                     .build();
@@ -514,10 +517,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                 proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                 loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER)
+                    .setMaxQueueSize(20)
                     .addHost(new URI("https", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), clientSsl);
                 ProxyHandler proxyHandler = ProxyHandler.builder()
                     .setProxyClient(loadBalancingProxyClient)
-                    .setMaxRequestTime(30000)
+                    .setMaxRequestTime(60000)
                     .setNext(HANDLE_404)
                     .setReuseXForwarded(true)
                     .build();
@@ -541,10 +545,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyAcceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(proxyOpenListener));
                     proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                     loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER)
+                        .setMaxQueueSize(20)
                         .addHost(new URI("http", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null));
                     ProxyHandler proxyHandler = ProxyHandler.builder()
                         .setProxyClient(loadBalancingProxyClient)
-                        .setMaxRequestTime(30000)
+                        .setMaxRequestTime(60000)
                         .setNext(HANDLE_404)
                         .setReuseXForwarded(true)
                         .build();
@@ -891,7 +896,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         if (proxyOpenListener != null) {
             proxyOpenListener.closeConnections();
             shuttingDown = true;
-        } else if (openListener != null) {
+        }
+        if (openListener != null) {
             openListener.closeConnections();
             shuttingDown = true;
         }

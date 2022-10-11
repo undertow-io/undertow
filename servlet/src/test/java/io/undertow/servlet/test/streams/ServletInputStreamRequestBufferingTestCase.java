@@ -26,9 +26,7 @@ import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
-import org.junit.Assume;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
@@ -51,17 +49,5 @@ public class ServletInputStreamRequestBufferingTestCase extends AbstractServletI
                 new ServletInfo(ASYNC_SERVLET, AsyncInputStreamServlet.class)
                         .addMapping("/" + ASYNC_SERVLET)
                         .setAsyncSupported(true));
-    }
-
-    @Test
-    public void testAsyncServletInputStreamInParallel() throws Exception {
-        Assume.assumeFalse(DefaultServer.isH2upgrade()); // FIXME UNDERTOW-1818 bytes out of order
-        super.testAsyncServletInputStreamInParallel();
-    }
-
-    @Test
-    public void testAsyncServletInputStreamInParallelOffIoThread() throws Exception {
-        Assume.assumeFalse(DefaultServer.isH2upgrade()); // FIXME UNDERTOW-1818 bytes out of order
-        super.testAsyncServletInputStreamInParallelOffIoThread();
     }
 }
