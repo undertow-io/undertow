@@ -67,7 +67,7 @@ public class ServletInputStreamTestCase extends AbstractServletInputStreamTestCa
     public void testAsyncServletInputStreamInParallelOffIoThread() {
     }
 
-    @Override @Test @Ignore ("UNDERTOW-1927 503 result received sporadically UNDERTOW-1818 bytes out of order") // FIXME
+    @Override @Test @Ignore ("UNDERTOW-1927 503 result received sporadically") // FIXME
     public void testAsyncServletInputStreamInParallel() {
     }
 }

@@ -42,6 +42,7 @@ public class AsyncInputStreamServlet extends HttpServlet {
         final int preamble = Math.max(0, req.getIntHeader("preamble"));
         final boolean offIoThread = req.getHeader("offIoThread") != null;
         final AsyncContext context = req.startAsync();
+        context.setTimeout(60000);
 
         final ServletOutputStream outputStream = resp.getOutputStream();
         ServletInputStream inputStream = req.getInputStream();
