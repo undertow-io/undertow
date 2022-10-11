@@ -36,6 +36,8 @@ import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
 import io.undertow.util.URLUtils;
 import io.undertow.util.BadRequestException;
+import io.undertow.util.Cookies;
+
 import org.xnio.OptionMap;
 
 import static io.undertow.util.Headers.ACCEPT_CHARSET_STRING;
@@ -293,9 +295,13 @@ public abstract class HttpRequestParser {
                     handleHeaderValue(buffer, currentState, builder);
                 }
             }
+            sanitazeListTypeHeaders(builder);
+            return;
+        } else {
+            handleStateful(buffer, currentState, builder);
+            sanitazeListTypeHeaders(builder);
             return;
         }
-        handleStateful(buffer, currentState, builder);
     }
 
     private void handleStateful(ByteBuffer buffer, ParseState currentState, HttpServerExchange builder) throws BadRequestException {
@@ -355,6 +361,13 @@ public abstract class HttpRequestParser {
         }
     }
 
+    private void sanitazeListTypeHeaders(final HttpServerExchange builder) {
+        //NOTE: this should be used only for HTTP1.x
+        if(!Cookies.isCrumbsAssemplyDisabled()) {
+            Cookies.assembleCrumbs(builder.getRequestHeaders());
+        }
+        //TODO: list type headers?
+    }
 
     abstract void handleHttpVerb(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder) throws BadRequestException;
 

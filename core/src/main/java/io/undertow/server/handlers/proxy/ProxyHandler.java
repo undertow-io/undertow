@@ -52,6 +52,7 @@ import io.undertow.client.ClientResponse;
 import io.undertow.client.ContinueNotification;
 import io.undertow.client.ProxiedRequestAttachments;
 import io.undertow.client.PushCallback;
+import io.undertow.client.http2.Http2ClientConnection;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.predicate.IdempotentPredicate;
@@ -67,12 +68,14 @@ import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Certificates;
+import io.undertow.util.Cookies;
 import io.undertow.util.CopyOnWriteMap;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.NetworkUtils;
+import io.undertow.util.Protocols;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.Transfer;
@@ -578,7 +581,10 @@ public final class ProxyHandler implements HttpHandler {
                 }
             }
 
-
+            //https://www.rfc-editor.org/rfc/rfc9113#name-compressing-the-cookie-head
+            if(!Cookies.isCrumbsAssemplyDisabled() && !(clientConnection.getConnection() instanceof Http2ClientConnection)) {
+                Cookies.assembleCrumbs(outboundRequestHeaders);
+            }
             clientConnection.getConnection().sendRequest(request, new ClientCallback<ClientExchange>() {
                 @Override
                 public void completed(final ClientExchange result) {
@@ -715,6 +721,12 @@ public final class ProxyHandler implements HttpHandler {
             final HeaderMap outboundResponseHeaders = exchange.getResponseHeaders();
             exchange.setStatusCode(response.getResponseCode());
             copyHeaders(outboundResponseHeaders, inboundResponseHeaders);
+
+            //https://www.rfc-editor.org/rfc/rfc9113#name-compressing-the-cookie-head
+            //NOTE: this will be required if this is passed into app
+            if(!Cookies.isCrumbsAssemplyDisabled() && !exchange.getProtocol().equals(Protocols.HTTP_2_0)) {
+                Cookies.assembleCrumbs(outboundResponseHeaders);
+            }
 
             if (exchange.isUpgrade()) {
 
