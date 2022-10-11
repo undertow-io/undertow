@@ -343,12 +343,18 @@ public class ServletContextImpl implements ServletContext {
         if (!path.startsWith("/")) {
             throw UndertowServletMessages.MESSAGES.pathMustStartWithSlashForRequestDispatcher(path);
         }
-        final String realPath = CanonicalPathUtils.canonicalize(path, true);
-        if (realPath == null) {
+        int qsPos = path.indexOf("?");
+        final String newServletPath = qsPos != -1 ?  path.substring(0, qsPos) : path;
+        final String queryString = qsPos != -1 ? path.substring(qsPos) : "";
+
+        // Only canonicalize the servlet path
+        final String realServletPath = CanonicalPathUtils.canonicalize(newServletPath, true);
+        if (realServletPath == null) {
             // path is outside the servlet context, return null per spec
             return null;
         }
-        return new RequestDispatcherImpl(realPath, this);
+
+        return new RequestDispatcherImpl(realServletPath + queryString, this);
     }
 
     @Override
