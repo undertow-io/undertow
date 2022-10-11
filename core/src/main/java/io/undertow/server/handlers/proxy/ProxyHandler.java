@@ -25,14 +25,15 @@ import java.net.SocketAddress;
 import java.nio.channels.Channel;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import javax.net.ssl.SSLPeerUnverifiedException;
-import java.security.cert.CertificateEncodingException;
+import java.util.stream.Collectors;
 
-import io.undertow.UndertowMessages;
-import io.undertow.server.handlers.ResponseCodeHandler;
+import javax.net.ssl.SSLPeerUnverifiedException;
+
 import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -41,7 +42,9 @@ import org.xnio.IoUtils;
 import org.xnio.StreamConnection;
 import org.xnio.XnioExecutor;
 import org.xnio.channels.StreamSinkChannel;
+
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.client.ClientCallback;
@@ -63,6 +66,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
+import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.Attachable;
@@ -80,8 +84,6 @@ import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.Transfer;
 import io.undertow.util.WorkerUtils;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * An HTTP handler which proxies content to a remote server.
@@ -903,7 +905,6 @@ public final class ProxyHandler implements HttpHandler {
         private Predicate idempotentRequestPredicate = IdempotentPredicate.INSTANCE;
 
         Builder() {}
-
 
         public ProxyClient getProxyClient() {
             return proxyClient;
