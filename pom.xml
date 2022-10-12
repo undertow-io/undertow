@@ -65,7 +65,7 @@
         <version.jakarta.annotation.jakarta-annotation-api>2.1.1</version.jakarta.annotation.jakarta-annotation-api>
         <version.jakarta.servlet.jakarta-servlet-api>6.0.0</version.jakarta.servlet.jakarta-servlet-api>
         <version.jakarta.websocket.jakarta-websocket-api>2.1.0</version.jakarta.websocket.jakarta-websocket-api>
-        <version.junit>4.13</version.junit>
+        <version.junit>4.13.2</version.junit>
         <version.netty>4.1.50.Final</version.netty>
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
         <version.org.apache.httpcomponents>4.5.12</version.org.apache.httpcomponents>
