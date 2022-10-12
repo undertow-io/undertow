@@ -70,7 +70,7 @@
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
         <version.org.apache.httpcomponents>4.5.12</version.org.apache.httpcomponents>
         <version.org.jboss.classfilewriter>1.2.5.Final</version.org.jboss.classfilewriter>
-        <version.org.jboss.logging>3.4.1.Final</version.org.jboss.logging>
+        <version.org.jboss.logging>3.4.3.Final</version.org.jboss.logging>
         <version.org.jboss.logging.processor>2.2.1.Final</version.org.jboss.logging.processor>
         <version.org.jboss.logmanager>2.1.14.Final</version.org.jboss.logmanager>
         <version.xnio>3.8.7.Final</version.xnio>
