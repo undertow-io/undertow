@@ -60,24 +60,23 @@
             versions, add the artifactId or other qualifier to the property name.
             For example: <version.org.jboss.as.console>
          -->
-        <version.com.h2database>1.4.200</version.com.h2database>
-        <version.easymock>4.2</version.easymock>
-        <version.jakarta.annotation.jakarta-annotation-api>2.0.0</version.jakarta.annotation.jakarta-annotation-api>
+        <version.com.h2database>2.1.214</version.com.h2database>
+        <version.easymock>4.3</version.easymock>
+        <version.jakarta.annotation.jakarta-annotation-api>2.1.1</version.jakarta.annotation.jakarta-annotation-api>
         <version.jakarta.servlet.jakarta-servlet-api>6.0.0</version.jakarta.servlet.jakarta-servlet-api>
         <version.jakarta.websocket.jakarta-websocket-api>2.1.0</version.jakarta.websocket.jakarta-websocket-api>
-        <version.org.wildfly.extras.batavia>1.0.13.Final</version.org.wildfly.extras.batavia>
-        <version.junit>4.13</version.junit>
-        <version.netty>4.1.50.Final</version.netty>
+        <version.junit>4.13.2</version.junit>
+        <version.netty>4.1.82.Final</version.netty>
         <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
         <version.org.apache.httpcomponents>4.5.12</version.org.apache.httpcomponents>
-        <version.org.jboss.classfilewriter>1.2.4.Final</version.org.jboss.classfilewriter>
-        <version.org.jboss.logging>3.4.1.Final</version.org.jboss.logging>
+        <version.org.jboss.classfilewriter>1.2.5.Final</version.org.jboss.classfilewriter>
+        <version.org.jboss.logging>3.4.3.Final</version.org.jboss.logging>
         <version.org.jboss.logging.processor>2.2.1.Final</version.org.jboss.logging.processor>
-        <version.org.jboss.logmanager>2.1.14.Final</version.org.jboss.logmanager>
-        <version.xnio>3.8.7.Final</version.xnio>
+        <version.org.jboss.logmanager>2.1.19.Final</version.org.jboss.logmanager>
+        <version.xnio>3.8.8.Final</version.xnio>
         <!-- TODO remove this dependency once xnio upgrades to latest jboss threads -->
-        <version.org.jboss.threads>3.1.0.Final</version.org.jboss.threads>
-        <version.org.wildfly.common>1.5.4.Final</version.org.wildfly.common>
+        <version.org.jboss.threads>3.5.0.Final</version.org.jboss.threads>
+        <version.org.wildfly.common>1.6.0.Final</version.org.wildfly.common>
         <version.org.wildfly.client-config>1.0.1.Final</version.org.wildfly.client-config>
 
         <!-- jacoco -->
@@ -290,30 +289,6 @@
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
                     <version>${version.bundle.plugin}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.wildfly.extras.batavia</groupId>
-                    <artifactId>transformer-tools-mvn</artifactId>
-                    <version>${version.org.wildfly.extras.batavia}</version>
-                    <executions>
-                        <execution>
-                            <id>transform-sources</id>
-                            <phase>generate-sources</phase>
-                            <goals>
-                                <goal>transform-sources</goal>
-                            </goals>
-                            <configuration>
-                                <source-project>${jakarta.transformer.input.dir}</source-project>
-                            </configuration>
-                        </execution>
-                    </executions>
-                    <dependencies>
-                        <dependency>
-                            <groupId>org.wildfly.extras.batavia</groupId>
-                            <artifactId>transformer-impl-eclipse</artifactId>
-                            <version>${version.org.wildfly.extras.batavia}</version>
-                        </dependency>
-                    </dependencies>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -555,18 +530,6 @@
                 <artifactId>jmh-generator-annprocess</artifactId>
                 <version>${version.jmh}</version>
                 <scope>provided</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>org.wildfly.extras.batavia</groupId>
-                <artifactId>transformer-api</artifactId>
-                <version>${version.org.wildfly.extras.batavia}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.wildfly.extras.batavia</groupId>
-                <artifactId>transformer-impl-eclipse</artifactId>
-                <version>${version.org.wildfly.extras.batavia}</version>
             </dependency>
 
         </dependencies>
