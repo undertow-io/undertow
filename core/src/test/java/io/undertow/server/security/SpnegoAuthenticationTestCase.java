@@ -28,7 +28,6 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.StatusCodes;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -44,6 +43,7 @@ import org.junit.runner.RunWith;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
@@ -128,7 +128,7 @@ public class SpnegoAuthenticationTestCase extends AuthenticationTestBase {
                             // FlexBase64.decode() returns byte buffer, which can contain backend array of greater size.
                             // when on such ByteBuffer is called array(), it returns the underlying byte array including the 0 bytes
                             // at the end, which makes the token invalid. => using Base64 mime decoder, which returnes directly properly sized byte[].
-                            token = Base64.getMimeDecoder().decode(ArrayUtils.subarray(headerBytes, NEGOTIATE.toString().length() + 1, headerBytes.length));
+                            token = Base64.getMimeDecoder().decode(Arrays.copyOfRange(headerBytes, NEGOTIATE.toString().length() + 1, headerBytes.length));
                         }
 
                         if (result.getStatusLine().getStatusCode() == StatusCodes.OK) {
