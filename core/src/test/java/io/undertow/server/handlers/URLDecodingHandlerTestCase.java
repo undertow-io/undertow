@@ -23,15 +23,16 @@ import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.RoutingHandler;
+import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.PathTemplateMatch;
-import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author Carter Kozak
@@ -162,6 +163,6 @@ public class URLDecodingHandlerTestCase {
 
     private static String getResponseString(CloseableHttpResponse response) throws IOException {
         Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-        return IOUtils.toString(response.getEntity().getContent(), "UTF-8");
+        return HttpClientUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8);
     }
 }

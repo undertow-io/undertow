@@ -21,10 +21,10 @@ package io.undertow.server.handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
-import org.apache.commons.io.IOUtils;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.AbstractHttpEntity;
 import org.junit.Assert;
@@ -71,7 +71,7 @@ public class BlockingReadTimeoutHandlerTestCase {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 try {
-                    IOUtils.copyLarge(exchange.getInputStream(), STUB_OUTPUT_STREAM);
+                    HttpClientUtils.transfer(exchange.getInputStream(), STUB_OUTPUT_STREAM);
                     exchange.getOutputStream().write("COMPLETED".getBytes(StandardCharsets.UTF_8));
                 } catch (IOException e) {
                     exception = e;
