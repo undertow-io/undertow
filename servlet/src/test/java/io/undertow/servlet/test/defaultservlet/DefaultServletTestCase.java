@@ -274,6 +274,30 @@ public class DefaultServletTestCase {
     }
 
     @Test
+    public void testAccessToMetaInfSubDirResource() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo/meta-inf/notsecret");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testAccessToWebInfSubDirResource() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo/web-inf/notsecret");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
     public void testDirectoryListing() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
