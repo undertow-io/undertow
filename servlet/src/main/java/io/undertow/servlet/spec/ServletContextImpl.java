@@ -115,6 +115,7 @@ public class ServletContextImpl implements ServletContext {
     private final ConcurrentMap<String, Object> attributes;
     private final SessionCookieConfigImpl sessionCookieConfig;
     private final AttachmentKey<HttpSessionImpl> sessionAttachmentKey = AttachmentKey.create(HttpSessionImpl.class);
+    public static final AttachmentKey<ServletContextImpl> contextAttachmentKey = AttachmentKey.create(ServletContextImpl.class);
     private volatile Set<SessionTrackingMode> sessionTrackingModes = new HashSet<>(Arrays.asList(new SessionTrackingMode[]{SessionTrackingMode.COOKIE, SessionTrackingMode.URL}));
     private volatile Set<SessionTrackingMode> defaultSessionTrackingModes = new HashSet<>(Arrays.asList(new SessionTrackingMode[]{SessionTrackingMode.COOKIE, SessionTrackingMode.URL}));
     private volatile SessionConfig sessionConfig;
@@ -982,6 +983,7 @@ public class ServletContextImpl implements ServletContext {
 
                 try {
                     if (httpSession == null) {
+                        exchange.putAttachment(contextAttachmentKey, this);
                         final Session newSession = sessionManager.createSession(exchange, c);
                         httpSession = SecurityActions.forSession(newSession, this, true);
                         exchange.putAttachment(sessionAttachmentKey, httpSession);

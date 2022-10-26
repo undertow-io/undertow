@@ -32,6 +32,7 @@ import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
+import io.undertow.servlet.spec.ServletContextImpl;
 
 /**
  * Class that bridges between Undertow native session listeners and servlet ones.
@@ -60,7 +61,10 @@ public class SessionListenerBridge implements SessionListener {
 
     @Override
     public void sessionCreated(final Session session, final HttpServerExchange exchange) {
-        final HttpSessionImpl httpSession = SecurityActions.forSession(session, servletContext, true);
+        ServletContext sc = servletContext;
+        if (servletContext instanceof ServletContextImpl)
+            sc = exchange.removeAttachment(((ServletContextImpl) servletContext).contextAttachmentKey);
+        final HttpSessionImpl httpSession = SecurityActions.forSession(session, sc, true);
         applicationListeners.sessionCreated(httpSession);
     }
 
