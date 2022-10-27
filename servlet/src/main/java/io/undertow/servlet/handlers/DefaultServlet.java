@@ -176,16 +176,16 @@ public class DefaultServlet extends HttpServlet {
             }
             return;
         } else if (resource.isDirectory()) {
-            if ("css".equals(req.getQueryString())) {
-                resp.setContentType("text/css");
-                resp.getWriter().write(DirectoryUtils.Blobs.FILE_CSS);
-                return;
-            } else if ("js".equals(req.getQueryString())) {
-                resp.setContentType("application/javascript");
-                resp.getWriter().write(DirectoryUtils.Blobs.FILE_JS);
-                return;
-            }
             if (directoryListingEnabled) {
+                if ("css".equals(req.getQueryString())) {
+                    resp.setContentType("text/css");
+                    resp.getWriter().write(DirectoryUtils.Blobs.FILE_CSS);
+                    return;
+                } else if ("js".equals(req.getQueryString())) {
+                    resp.setContentType("application/javascript");
+                    resp.getWriter().write(DirectoryUtils.Blobs.FILE_JS);
+                    return;
+                }
                 resp.setContentType("text/html");
                 StringBuilder output = DirectoryUtils.renderDirectoryListing(req.getRequestURI(), resource);
                 resp.getWriter().write(output.toString());

@@ -40,8 +40,11 @@ import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -100,6 +103,62 @@ public class FileHandlerTestCase {
     }
 
     @Test
+    public void testDirectoryListing() throws IOException, URISyntaxException {
+        TestHttpClient client = new TestHttpClient();
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        try {
+            DefaultServer.setRootHandler(new CanonicalPathHandler()
+                    .setNext(new PathHandler()
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 1))
+                                    .setDirectoryListingEnabled(true))));
+
+            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path/"))) {
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                Assert.assertNotNull(result.getFirstHeader(Headers.CONTENT_TYPE_STRING));
+                MatcherAssert.assertThat(result.getFirstHeader(Headers.CONTENT_TYPE_STRING).getValue(), CoreMatchers.startsWith("text/html"));
+                MatcherAssert.assertThat(HttpClientUtils.readResponse(result), CoreMatchers.containsString("page.html"));
+            }
+            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path/?js"))) {
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                Assert.assertNotNull(result.getFirstHeader(Headers.CONTENT_TYPE_STRING));
+                MatcherAssert.assertThat(result.getFirstHeader(Headers.CONTENT_TYPE_STRING).getValue(), CoreMatchers.startsWith("application/javascript"));
+                MatcherAssert.assertThat(HttpClientUtils.readResponse(result), CoreMatchers.containsString("growit()"));
+            }
+            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path/?css"))) {
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                Assert.assertNotNull(result.getFirstHeader(Headers.CONTENT_TYPE_STRING));
+                MatcherAssert.assertThat(result.getFirstHeader(Headers.CONTENT_TYPE_STRING).getValue(), CoreMatchers.startsWith("text/css"));
+                MatcherAssert.assertThat(HttpClientUtils.readResponse(result), CoreMatchers.containsString("data:image/png;base64"));
+            }
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testNoDirectoryListing() throws IOException, URISyntaxException {
+        TestHttpClient client = new TestHttpClient();
+        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+        try {
+            DefaultServer.setRootHandler(new CanonicalPathHandler()
+                    .setNext(new PathHandler()
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 1)))));
+
+            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path"))) {
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
+            }
+            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path?js"))) {
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
+            }
+            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path?css"))) {
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
+            }
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
     public void testDotSuffix() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
@@ -117,6 +176,7 @@ public class FileHandlerTestCase {
             client.getConnectionManager().shutdown();
         }
     }
+
     @Test
     public void testFileTransfer() throws IOException, URISyntaxException {
         TestHttpClient client = new TestHttpClient();
