@@ -42,9 +42,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.Set;
 
 /**
  * Parser for the undertow-handlers.conf file.
@@ -160,6 +162,8 @@ public class PredicatedHandlersParser {
             throw error(contents, token.getPosition(), "no handler named " + token.getToken() + " known handlers are " + handlerBuilders.keySet());
         }
         Map<String, Object> parameters = new HashMap<>();
+        Set<String> requiredParameters = builder.requiredParameters();
+        requiredParameters = requiredParameters == null? Collections.emptySet() : new HashSet<>(requiredParameters);
 
         for(Map.Entry<String, Node> val : node.getValues().entrySet()) {
             String name = val.getKey();
@@ -180,6 +184,10 @@ public class PredicatedHandlersParser {
             } else {
                 throw error(contents, val.getValue().getToken().getPosition(), "unexpected node " + val.getValue());
             }
+            requiredParameters.remove(name);
+        }
+        if (!requiredParameters.isEmpty()) {
+            throw error(contents, token.getPosition(), "required parameters " + requiredParameters + " not provided for handler " + builder.name());
         }
         return builder.build(parameters);
     }
@@ -216,6 +224,8 @@ public class PredicatedHandlersParser {
             throw error(contents, token.getPosition(), "no predicate named " + token.getToken() + " known predicates are " + handlerBuilders.keySet());
         }
         Map<String, Object> parameters = new HashMap<>();
+        Set<String> requiredParameters = builder.requiredParameters();
+        requiredParameters = requiredParameters == null? Collections.emptySet() : new HashSet<>(requiredParameters);
 
         for(Map.Entry<String, Node> val : node.getValues().entrySet()) {
             String name = val.getKey();
@@ -236,6 +246,10 @@ public class PredicatedHandlersParser {
             } else {
                 throw error(contents, val.getValue().getToken().getPosition(), "unexpected node " + val.getValue());
             }
+            requiredParameters.remove(name);
+        }
+        if (!requiredParameters.isEmpty()) {
+            throw error(contents, token.getPosition(), "required parameters " + requiredParameters + " not provided for predicate " + builder.name());
         }
         return builder.build(parameters);
     }
@@ -614,10 +628,15 @@ public class PredicatedHandlersParser {
         while (pos < string.length()) {
             char c = string.charAt(pos);
             if (currentStringDelim != 0) {
-                if (c == currentStringDelim && current.charAt(current.length() - 1) != '\\') {
-                    ret.add(new Token(current.toString(), pos));
-                    current.setLength(0);
-                    currentStringDelim = 0;
+                if (c == currentStringDelim) {
+                    if (current.length() > 0 && current.charAt(current.length() - 1) == '\\') {
+                        current.setLength(current.length() - 1);
+                        current.append(c);
+                    } else {
+                        ret.add(new Token(current.toString(), pos));
+                        current.setLength(0);
+                        currentStringDelim = 0;
+                    }
                 } else if (c == '\n' || c == '\r') {
                     ret.add(new Token(current.toString(), pos));
                     current.setLength(0);

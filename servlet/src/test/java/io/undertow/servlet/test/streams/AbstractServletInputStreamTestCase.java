@@ -59,6 +59,7 @@ public abstract class AbstractServletInputStreamTestCase {
     public static final String BLOCKING_SERVLET = "blockingInput";
     public static final String ASYNC_SERVLET = "asyncInput";
     public static final String ASYNC_EAGER_SERVLET = "asyncEagerInput";
+    private static final int CONCURRENCY = Math.min(20, 4 * Runtime.getRuntime().availableProcessors());
 
     @Test
     public void testBlockingServletInputStream() {
@@ -117,7 +118,7 @@ public abstract class AbstractServletInputStreamTestCase {
             builder.append(HELLO_WORLD);
         }
         String message = builder.toString();
-        runTestParallel(20, message, ASYNC_SERVLET, false, false);
+        runTestParallel(CONCURRENCY, message, ASYNC_SERVLET, false, false);
     }
 
     @Test
@@ -127,7 +128,7 @@ public abstract class AbstractServletInputStreamTestCase {
             builder.append(HELLO_WORLD);
         }
         String message = builder.toString();
-        runTestParallel(20, message, ASYNC_SERVLET, false, true);
+        runTestParallel(CONCURRENCY, message, ASYNC_SERVLET, false, true);
     }
 
     @Test

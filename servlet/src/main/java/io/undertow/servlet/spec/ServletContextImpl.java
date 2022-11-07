@@ -344,12 +344,18 @@ public class ServletContextImpl implements ServletContext {
         if (!path.startsWith("/")) {
             throw UndertowServletMessages.MESSAGES.pathMustStartWithSlashForRequestDispatcher(path);
         }
-        final String realPath = CanonicalPathUtils.canonicalize(path, true);
-        if (realPath == null) {
+        int qsPos = path.indexOf("?");
+        final String newServletPath = qsPos != -1 ?  path.substring(0, qsPos) : path;
+        final String queryString = qsPos != -1 ? path.substring(qsPos) : "";
+
+        // Only canonicalize the servlet path
+        final String realServletPath = CanonicalPathUtils.canonicalize(newServletPath, true);
+        if (realServletPath == null) {
             // path is outside the servlet context, return null per spec
             return null;
         }
-        return new RequestDispatcherImpl(realPath, this);
+
+        return new RequestDispatcherImpl(realServletPath + queryString, this);
     }
 
     @Override
@@ -958,8 +964,9 @@ public class ServletContextImpl implements ServletContext {
                         boolean found = false;
                         for (String deploymentName : deployment.getServletContainer().listDeployments()) {
                             DeploymentManager deployment = this.deployment.getServletContainer().getDeployment(deploymentName);
-                            if (deployment != null) {
-                                if (deployment.getDeployment().getSessionManager().getSession(existing) != null) {
+                            if (deployment != null && deployment.getDeployment() != null) {
+                                SessionManager sm = deployment.getDeployment().getSessionManager();
+                                if (sm != null && sm.getSession(existing) != null) {
                                     found = true;
                                     break;
                                 }
@@ -973,10 +980,18 @@ public class ServletContextImpl implements ServletContext {
                     }
                 }
 
-                if (httpSession == null) {
-                    final Session newSession = sessionManager.createSession(exchange, c);
-                    httpSession = SecurityActions.forSession(newSession, this, true);
-                    exchange.putAttachment(sessionAttachmentKey, httpSession);
+                try {
+                    if (httpSession == null) {
+                        final Session newSession = sessionManager.createSession(exchange, c);
+                        httpSession = SecurityActions.forSession(newSession, this, true);
+                        exchange.putAttachment(sessionAttachmentKey, httpSession);
+                    }
+                } catch (IllegalStateException e) {
+                    session = sessionManager.getSession(exchange, c);
+                    if (session != null) {
+                        httpSession = SecurityActions.forSession(session, this, false);
+                        exchange.putAttachment(sessionAttachmentKey, httpSession);
+                    }
                 }
             }
         }

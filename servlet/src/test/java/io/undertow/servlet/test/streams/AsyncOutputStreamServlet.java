@@ -45,6 +45,7 @@ public class AsyncOutputStreamServlet extends HttpServlet {
         final AtomicInteger count = new AtomicInteger();
 
         final AsyncContext context = req.startAsync();
+        context.setTimeout(60000);
         final ServletOutputStream outputStream = resp.getOutputStream();
         if(preable) {
             for(int i = 0; i < reps; ++i) {
