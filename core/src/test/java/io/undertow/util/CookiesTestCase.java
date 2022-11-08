@@ -18,15 +18,19 @@
 
 package io.undertow.util;
 
+import io.undertow.server.MultiValueHashListStorage;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.testutils.category.UnitTest;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
@@ -108,8 +112,8 @@ public class CookiesTestCase {
     }
     @Test
     public void testRequestCookieDomainPathVersion() {
-        Map<String, Cookie> cookies = Cookies.parseRequestCookies(1, false, Arrays.asList(
-                "CUSTOMER=WILE_E_COYOTE; $Domain=LOONEY_TUNES; $Version=1; $Path=/"));
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(4, false, Arrays.asList(
+                "$Version=1; CUSTOMER=WILE_E_COYOTE; $Domain=LOONEY_TUNES; $Path=/"), LegacyCookieSupport.COMMA_IS_SEPARATOR, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0, false);
 
         // RFC 6265 treats the domain, path and version attributes of an RFC 2109 cookie as a separate cookies
         Assert.assertTrue(cookies.containsKey("$Domain"));
@@ -126,15 +130,12 @@ public class CookiesTestCase {
 
     @Test
     public void testMultipleRequestCookies() {
-        Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, false, Arrays.asList(
-                "CUSTOMER=WILE_E_COYOTE; $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"));
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(5, false, Arrays.asList(
+                "CUSTOMER=WILE_E_COYOTE; $Version=1;SHIPPING=FEDEX; $Domain=LOONEY_TUNES; $Path=/"));
 
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertEquals("CUSTOMER", cookie.getName());
         Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
-        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
-        Assert.assertEquals(1, cookie.getVersion());
-        Assert.assertEquals("/", cookie.getPath());
 
         cookie = cookies.get("SHIPPING");
         Assert.assertEquals("SHIPPING", cookie.getName());
@@ -157,7 +158,7 @@ public class CookiesTestCase {
 
     @Test
     public void testEmptyCookieNames() {
-        Map<String, Cookie> cookies = Cookies.parseRequestCookies(4, false, Arrays.asList("=foo; CUSTOMER=WILE_E_COYOTE=THE_COYOTE; =foobar; SHIPPING=FEDEX; =bar"));
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(5, false, Arrays.asList("=foo; CUSTOMER=WILE_E_COYOTE=THE_COYOTE; =foobar; SHIPPING=FEDEX; =bar"));
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertNotNull(cookie);
         Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
@@ -166,7 +167,7 @@ public class CookiesTestCase {
         Assert.assertEquals("FEDEX", cookie.getValue());
         cookie = cookies.get("");
         Assert.assertNotNull(cookie);
-        Assert.assertEquals("foo", cookie.getValue());
+        Assert.assertEquals("bar", cookie.getValue());
     }
 
     @Test
@@ -224,7 +225,7 @@ public class CookiesTestCase {
     }
 
     @Test
-    public void testHttpSeparaterInV0CookieValue() {
+    public void testHttpSeparatorInV0CookieValue() {
         Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, false, Arrays.asList("CUSTOMER=WILE_E COYOTE; SHIPPING=FEDEX" ), true, false);
         Assert.assertEquals(2, cookies.size());
         Cookie cookie = cookies.get("CUSTOMER");
@@ -320,19 +321,19 @@ public class CookiesTestCase {
 
     @Test
     public void testQuotedEscapedStringInRequestCookie() {
-        Map<String, Cookie> cookies = Cookies.parseRequestCookies(3, false, Arrays.asList(
-                    "Customer=\"WILE_\\\"E_\\\"COYOTE\"; $Version=\"1\"; $Path=\"/acme\";"
-                    + " SHIPPING=\"FEDEX\\\\\"; foo=\"\\\""));
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(5, false, Arrays.asList(
+                "Customer=\"WILE_\\\"E_\\\"COYOTE\"; $Version=\"1\"; SHIPPING=\"FEDEX\\\\\"; $Path=\"/acme\";"
+                + "foo=\"\\\""));
 
         Cookie cookie = cookies.get("Customer");
         Assert.assertEquals("Customer", cookie.getName());
         Assert.assertEquals("WILE_\"E_\"COYOTE", cookie.getValue()); // backslash escapled double quotes in the value
-        Assert.assertEquals("/acme", cookie.getPath());
-        Assert.assertEquals(1, cookie.getVersion());
 
         cookie = cookies.get("SHIPPING");
         Assert.assertEquals("SHIPPING", cookie.getName());
         Assert.assertEquals("FEDEX\\\\", cookie.getValue()); // backslash escapled backslash in the value
+        Assert.assertEquals("/acme", cookie.getPath());
+        Assert.assertEquals(1, cookie.getVersion());
 
         cookie = cookies.get("foo");
         Assert.assertEquals("foo", cookie.getName());
@@ -343,17 +344,14 @@ public class CookiesTestCase {
     public void testSimpleJSONObjectInRequestCookies() {
         // allowEqualInValue and allowHttpSepartorsV0 needs to be enabled to handle this cookie
         // Also, commaIsSeperator needs to be set to false
-        Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, true, Arrays.asList(
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(5, true, Arrays.asList(
                 "CUSTOMER={\"v1\":1, \"id\":\"some_unique_id\", \"c\":\"http://www.google.com?q=love me\"};"
-                + " $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"), false, true);
+                + " $Version=1; SHIPPING=FEDEX; $Domain=LOONEY_TUNES; $Path=/"), false, true);
 
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertEquals("CUSTOMER", cookie.getName());
         Assert.assertEquals("{\"v1\":1, \"id\":\"some_unique_id\", \"c\":\"http://www.google.com?q=love me\"}",
                cookie.getValue());
-        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
-        Assert.assertEquals(1, cookie.getVersion());
-        Assert.assertEquals("/", cookie.getPath());
 
         cookie = cookies.get("SHIPPING");
         Assert.assertEquals("SHIPPING", cookie.getName());
@@ -367,17 +365,14 @@ public class CookiesTestCase {
     public void testQuotedJSONObjectInRequestCookies() {
         // allowEqualInValue and allowHttpSepartorsV0 needs to be enabled to handle this cookie
         // Also, commaIsSeperator needs to be set to false
-        Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, true, Arrays.asList(
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(5, true, Arrays.asList(
                 "CUSTOMER=\"{\\\"v1\\\":1, \\\"id\\\":\\\"some_unique_id\\\", \\\"c\\\":\\\"http://www.google.com?q=love me\\\"}\";"
-                + " $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"), false, true);
+                + " $Version=1; SHIPPING=FEDEX; $Domain=LOONEY_TUNES; $Path=/"), false, true);
 
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertEquals("CUSTOMER", cookie.getName());
         Assert.assertEquals("{\"v1\":1, \"id\":\"some_unique_id\", \"c\":\"http://www.google.com?q=love me\"}",
                cookie.getValue());
-        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
-        Assert.assertEquals(1, cookie.getVersion());
-        Assert.assertEquals("/", cookie.getPath());
 
         cookie = cookies.get("SHIPPING");
         Assert.assertEquals("SHIPPING", cookie.getName());
@@ -391,12 +386,13 @@ public class CookiesTestCase {
     public void testComplexJSONObjectInRequestCookies() {
         // allowHttpSepartorsV0 needs to be enabled to handle this cookie
         // Also, commaIsSeperator needs to be set to false
-        Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, false, Arrays.asList(
+        //TODO: this values dont seem correct
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(5, false, Arrays.asList(
                 "CUSTOMER={ \"accounting\" : [ { \"firstName\" : \"John\", \"lastName\" : \"Doe\", \"age\" : 23 },"
                 + " { \"firstName\" : \"Mary\",  \"lastName\" : \"Smith\", \"age\" : 32 }], "
                 + "\"sales\" : [ { \"firstName\" : \"Sally\", \"lastName\" : \"Green\", \"age\" : 27 }, "
                 + "{ \"firstName\" : \"Jim\", \"lastName\" : \"Galley\", \"age\" : 41 } ] };"
-                + " $Domain=LOONEY_TUNES; $Version=1; $Path=/; SHIPPING=FEDEX"), false, true);
+                + " $Version=1; SHIPPING=FEDEX; $Domain=LOONEY_TUNES; $Path=/"), false, true);
 
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertEquals("CUSTOMER", cookie.getName());
@@ -405,9 +401,6 @@ public class CookiesTestCase {
                 + "\"sales\" : [ { \"firstName\" : \"Sally\", \"lastName\" : \"Green\", \"age\" : 27 }, "
                 + "{ \"firstName\" : \"Jim\", \"lastName\" : \"Galley\", \"age\" : 41 } ] }",
                cookie.getValue());
-        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
-        Assert.assertEquals(1, cookie.getVersion());
-        Assert.assertEquals("/", cookie.getPath());
 
         cookie = cookies.get("SHIPPING");
         Assert.assertEquals("SHIPPING", cookie.getName());
@@ -522,4 +515,72 @@ public class CookiesTestCase {
         Rfc6265CookieSupport.validateDomain(cookie.getDomain());
     }
 
+    @Test
+    public void testMultipleRFC6265() {
+        final MultiValueHashListStorage<String, Cookie> parsedCookies = new MultiValueHashListStorage<>();
+        //NOTE undertow does not allow duplicates and RFC6265 treat stray RFC 2109 entities like cookies on its own.
+        final List<String> toParse = Arrays.asList("CUSTOMER=JOE; CUSTOMER=MONICA; $Path=/");
+        Cookies.parseRequestCookies(4, false, toParse,parsedCookies);
+        Assert.assertEquals(2, parsedCookies.size());
+        List<Cookie> lst = parsedCookies.get("CUSTOMER");
+        Assert.assertEquals(1, lst.size());
+        Cookie cookie = lst.get(0);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("MONICA", cookie.getValue());
+        lst = parsedCookies.get("$Path");
+        Assert.assertEquals(1, lst.size());
+        cookie = lst.get(0);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals("$Path", cookie.getName());
+        Assert.assertEquals("/", cookie.getValue());
+    }
+
+    @Test
+    public void testMultipleRFC2109() {
+        final MultiValueHashListStorage<String, Cookie> parsedCookies = new MultiValueHashListStorage<>();
+        final List<String> toParse = Arrays.asList("$Version=1; CUSTOMER=JOE; $Path=/acme; CUSTOMER=MONICA; $Path=/; $Domain=my_oh_my; NO=META");
+        Cookies.parseRequestCookies(8, false, toParse,parsedCookies);
+        Assert.assertEquals(""+parsedCookies,6, parsedCookies.size());
+        List<Cookie> lst = parsedCookies.get("CUSTOMER");
+        Assert.assertEquals(2, lst.size());
+        Cookie cookie = lst.get(0);
+        Assert.assertEquals(1, cookie.getVersion());
+        Assert.assertEquals("/acme", cookie.getPath());
+        Assert.assertEquals(null, cookie.getDomain());
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("JOE", cookie.getValue());
+        cookie = lst.get(1);
+        Assert.assertEquals(1, cookie.getVersion());
+        Assert.assertEquals("/", cookie.getPath());
+        Assert.assertEquals("my_oh_my", cookie.getDomain());
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("MONICA", cookie.getValue());
+        lst = parsedCookies.get("$Path");
+        //1 - cause undertow does not allow duplicates, so first instance of $Path will be removed
+        Assert.assertEquals(1, lst.size());
+        cookie = lst.get(0);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals("$Path", cookie.getName());
+        Assert.assertEquals("/", cookie.getValue());
+        lst = parsedCookies.get("$Version");
+        Assert.assertEquals(1, lst.size());
+        cookie = lst.get(0);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals("$Version", cookie.getName());
+        Assert.assertEquals("1", cookie.getValue());
+        lst = parsedCookies.get("$Domain");
+        Assert.assertEquals(1, lst.size());
+        cookie = lst.get(0);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals("$Domain", cookie.getName());
+        Assert.assertEquals("my_oh_my", cookie.getValue());
+        lst = parsedCookies.get("NO");
+        Assert.assertEquals(1, lst.size());
+        cookie = lst.get(0);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals(null, cookie.getDomain());
+        Assert.assertEquals("NO", cookie.getName());
+        Assert.assertEquals("META", cookie.getValue());
+    }
 }
