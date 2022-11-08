@@ -235,7 +235,7 @@ public class CookieImpl implements Cookie {
 
     @Override
     public final String toString() {
-        return "{CookieImpl@" + System.identityHashCode(this) + " name=" + getName() + " path=" + getPath() + " domain=" + getDomain() + "}";
+        return "{CookieImpl@" + System.identityHashCode(this) + " name=" + getName() + " path=" + getPath() + " domain=" + getDomain()  + " value=" + getValue()+"}";
     }
 
 }
