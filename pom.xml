@@ -78,6 +78,7 @@
         <version.org.jboss.threads>3.5.0.Final</version.org.jboss.threads>
         <version.org.wildfly.common>1.6.0.Final</version.org.wildfly.common>
         <version.org.wildfly.client-config>1.0.1.Final</version.org.wildfly.client-config>
+        <version.com.google.guava>31.1-jre</version.com.google.guava>
 
         <!-- jacoco -->
         <version.org.jacoco>0.7.9</version.org.jacoco>
@@ -387,6 +388,12 @@
                 <groupId>org.jboss.classfilewriter</groupId>
                 <artifactId>jboss-classfilewriter</artifactId>
                 <version>${version.org.jboss.classfilewriter}</version>
+            </dependency>
+
+			<dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${version.com.google.guava}</version>
             </dependency>
 
             <dependency>

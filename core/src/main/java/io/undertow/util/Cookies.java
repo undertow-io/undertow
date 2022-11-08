@@ -25,12 +25,13 @@ import io.undertow.server.handlers.CookieImpl;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
 
 /**
  * Class that contains utility methods for dealing with cookies.
@@ -210,7 +211,7 @@ public class Cookies {
     public static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies) {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, LegacyCookieSupport.COMMA_IS_SEPARATOR);
     }
-
+    @Deprecated(since="2.3.1", forRemoval=true)
     public static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies) {
         parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, LegacyCookieSupport.COMMA_IS_SEPARATOR);
     }
@@ -228,34 +229,41 @@ public class Cookies {
         if (cookies == null) {
             return new TreeMap<>();
         }
-        final Set<Cookie> parsedCookies = new HashSet<>();
+        final ArrayListMultimap<String, Cookie> parsedCookies = ArrayListMultimap.create();
         for (String cookie : cookies) {
-            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0);
+            parseCookies(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0);
         }
 
         final Map<String, Cookie> retVal = new TreeMap<>();
-        for (Cookie cookie : parsedCookies) {
-            retVal.put(cookie.getName(), cookie);
+        for (Cookie cookie : parsedCookies.values()) {
+            if(!retVal.containsKey(cookie.getName()))
+                retVal.put(cookie.getName(), cookie);
         }
         return retVal;
     }
 
-    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
+    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> retVal, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
         if (cookies != null) {
+            final ArrayListMultimap<String, Cookie> parsedCookies = ArrayListMultimap.create();
             for (String cookie : cookies) {
-                parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0);
+                parseCookies(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0);
+            }
+            for(String key:parsedCookies.keySet()) {
+                final Cookie c = parsedCookies.get(key).get(0);
+                retVal.add(c);
             }
         }
     }
 
-    private static void parseCookie(final String cookie, final Set<Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
+    public static void parseCookies(final String cookie, final Multimap<String,Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
         int state = 0;
         String name = null;
         int start = 0;
         boolean containsEscapedQuotes = false;
-        int cookieCount = parsedCookies.size();
-        final Map<String, String> cookies = new HashMap<>();
-        final Map<String, String> additional = new HashMap<>();
+        CookieJar cookieJar = new CookieJar();
+        cookieJar.parsedCookies = parsedCookies;
+        cookieJar.maxCookies = maxCookies;
+        //current cookie to which $ will apply.
         for (int i = 0; i < cookie.length(); ++i) {
             char c = cookie.charAt(i);
             switch (state) {
@@ -276,7 +284,7 @@ public class Cookies {
                         state = 2;
                     } else if (c == ';' || (commaIsSeperator && c == ',')) {
                         if(name != null) {
-                            cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                          createCookie(name, cookie.substring(start, i), cookieJar);
                         } else if(UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
                             UndertowLogger.REQUEST_LOGGER.trace("Ignoring invalid cookies in header " + cookie);
                         }
@@ -288,7 +296,7 @@ public class Cookies {
                 case 2: {
                     //extract value
                     if (c == ';' || (commaIsSeperator && c == ',')) {
-                        cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        createCookie(name, cookie.substring(start, i), cookieJar);
                         state = 0;
                         start = i + 1;
                     } else if (c == '"' && start == i) { //only process the " if it is the first character
@@ -297,7 +305,7 @@ public class Cookies {
                         start = i + 1;
                     } else if (c == '=') {
                         if (!allowEqualInValue && !allowHttpSepartorsV0) {
-                            cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                            createCookie(name, cookie.substring(start, i), cookieJar);
                             state = 4;
                             start = i + 1;
                         }
@@ -306,7 +314,7 @@ public class Cookies {
                         // However, "<hostcontroller-name>:<server-name>" (e.g. master:node1) is added as jvmRoute (instance-id) by default in WildFly domain mode.
                         // Though ":" is http separator, we allow it by default. Because, when Undertow runs as a proxy server (mod_cluster),
                         // we need to handle jvmRoute containing ":" in the request cookie value correctly to maintain the sticky session.
-                        cookieCount = createCookie(name, cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        createCookie(name, cookie.substring(start, i), cookieJar);
                         state = 4;
                         start = i + 1;
                     }
@@ -315,7 +323,7 @@ public class Cookies {
                 case 3: {
                     //extract quoted value
                     if (c == '"') {
-                        cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), cookieJar);
                         state = 0;
                         start = i + 1;
                     }
@@ -346,59 +354,64 @@ public class Cookies {
             }
         }
         if (state == 2) {
-            createCookie(name, cookie.substring(start), maxCookies, cookieCount, cookies, additional);
+            createCookie(name, cookie.substring(start), cookieJar);
+        }
+    }
+
+    private static void createCookie(String name, String value, CookieJar cookieJar) {
+        if (cookieJar.parsedCookies.size() > cookieJar.maxCookies) {
+            throw UndertowMessages.MESSAGES.tooManyCookies(cookieJar.maxCookies);
         }
 
-        for (final Map.Entry<String, String> entry : cookies.entrySet()) {
-            Cookie c = new CookieImpl(entry.getKey(), entry.getValue());
-            String domain = additional.get(DOMAIN);
-            if (domain != null) {
-                c.setDomain(domain);
+        if (!name.isEmpty() && name.charAt(0) == '$') {
+            if(name.equals(VERSION)) {
+                cookieJar.version = Integer.parseInt(value);
+                //Theoretically this should happen only once at the start
+                Cookie c = new CookieImpl(VERSION, value);
+                cookieJar.parsedCookies.put(c.getName(), c);
+            } else if(cookieJar.currentCookie != null) {
+                applyAdditional(cookieJar, name, value);
             }
-            String version = additional.get(VERSION);
-            if (version != null) {
-                c.setVersion(Integer.parseInt(version));
-            }
-            String path = additional.get(PATH);
-            if (path != null) {
-                c.setPath(path);
-            }
-            parsedCookies.add(c);
-        }
-
-        // RFC 6265 treats the domain, path and version attributes of an RFC 2109 cookie as a separate cookies
-        for (final Map.Entry<String, String> entry : additional.entrySet()) {
-            if (DOMAIN.equals(entry.getKey())) {
-                Cookie c = new CookieImpl(DOMAIN, entry.getValue());
-                parsedCookies.add(c);
-            } else if (PATH.equals(entry.getKey())) {
-                Cookie c = new CookieImpl(PATH, entry.getValue());
-                parsedCookies.add(c);
-            } else if (VERSION.equals(entry.getKey())) {
-                Cookie c = new CookieImpl(VERSION, entry.getValue());
-                parsedCookies.add(c);
+            return;
+        } else {
+            if(cookieJar.currentCookie == null) {
+                cookieJar.currentCookie = new CookieImpl(name, value);
+                cookieJar.parsedCookies.put(cookieJar.currentCookie.getName(), cookieJar.currentCookie);
+                applyAdditional(cookieJar, name, value);
+                return;
+            } else {
+                cookieJar.currentCookie = new CookieImpl(name, value);
+                cookieJar.parsedCookies.put(cookieJar.currentCookie.getName(), cookieJar.currentCookie);
+                applyAdditional(cookieJar, name, value);
+                return;
             }
         }
     }
 
-    private static int createCookie(final String name, final String value, int maxCookies, int cookieCount,
-            final Map<String, String> cookies, final Map<String, String> additional) {
-        if (!name.isEmpty() && name.charAt(0) == '$') {
-            if(additional.containsKey(name)) {
-                return cookieCount;
+    private static void applyAdditional( final CookieJar cookieJar, final String name, final String value) {
+        if (cookieJar.version != -1) {
+            // rfc2109 - add metadata to
+            // RFC 6265 treats the domain, path and version attributes of an RFC 2109 cookie as a separate cookies
+            if (cookieJar.currentCookie != null) {
+                cookieJar.currentCookie.setVersion(cookieJar.version);
+
+
+                if (name.equals(DOMAIN)) {
+                    cookieJar.currentCookie.setDomain(value);
+                    Cookie c = new CookieImpl(DOMAIN, value);
+                    cookieJar.parsedCookies.put(c.getName(), c);
+                    return;
+                }
+
+                if (name.equals(PATH)) {
+                    cookieJar.currentCookie.setPath(value);
+                    Cookie c = new CookieImpl(PATH, value);
+                    cookieJar.parsedCookies.put(c.getName(), c);
+                    return;
+                }
             }
-            additional.put(name, value);
-            return cookieCount;
-        } else {
-            if (cookieCount == maxCookies) {
-                throw UndertowMessages.MESSAGES.tooManyCookies(maxCookies);
-            }
-            if(cookies.containsKey(name)) {
-                return cookieCount;
-            }
-            cookies.put(name, value);
-            return ++cookieCount;
         }
+        return;
     }
 
     private static String unescapeDoubleQuotes(final String value) {
@@ -494,5 +507,13 @@ public class Cookies {
     }
     private Cookies() {
 
+    }
+
+    private static class CookieJar {
+        //Currently parsed cookie, if V1, all $ will be applied to it, until
+        private CookieImpl currentCookie;
+        private int maxCookies;
+        private int version = -1;
+        private Multimap<String, Cookie> parsedCookies;
     }
 }

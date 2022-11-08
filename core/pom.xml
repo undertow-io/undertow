@@ -89,6 +89,10 @@
             <scope>provided</scope>
         </dependency>
 
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+		</dependency>
         <!-- Test dependencies -->
 
         <dependency>
