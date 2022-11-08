@@ -22,21 +22,21 @@ import java.util.Iterator;
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-final class DelegatingIterable<E> implements Iterable<E> {
+final class DelegatingIterable<E,V> implements Iterable<V> {
 
-    private final Iterable<E> delegate;
+    private final MultiValueHashListStorage<E,V> delegate;
 
-    DelegatingIterable(final Iterable<E> delegate) {
+    DelegatingIterable(final MultiValueHashListStorage<E,V> delegate) {
         this.delegate = delegate;
     }
 
-    Iterable<E> getDelegate() {
+    MultiValueHashListStorage<E,V> getDelegate() {
         return delegate;
     }
 
     @Override
-    public Iterator<E> iterator() {
-        return new ReadOnlyIterator(delegate.iterator());
+    public Iterator<V> iterator() {
+        return delegate.valuesIterator();
     }
 
 }
