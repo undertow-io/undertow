@@ -206,6 +206,7 @@ public class ServletCookieAdaptor implements Cookie {
         result = 37 * result + (getName() == null ? 0 : getName().hashCode());
         result = 37 * result + (getPath() == null ? 0 : getPath().hashCode());
         result = 37 * result + (getDomain() == null ? 0 : getDomain().hashCode());
+        //result = 37 * result + (getValue() == null ? 0 : getValue().hashCode());
         return result;
     }
 
@@ -223,6 +224,10 @@ public class ServletCookieAdaptor implements Cookie {
         // compare domains
         if (getDomain() == null && o.getDomain() != null) return false;
         if (getDomain() != null && !getDomain().equals(o.getDomain())) return false;
+
+        //value
+//        if (getValue() == null && o.getValue() != null) return false;
+//        if (getValue() != null && !getValue().equals(o.getValue())) return false;
         // same cookie
         return true;
     }
@@ -234,7 +239,7 @@ public class ServletCookieAdaptor implements Cookie {
 
     @Override
     public final String toString() {
-        return "{ServletCookieAdaptor@" + System.identityHashCode(this) + " name=" + getName() + " path=" + getPath() + " domain=" + getDomain() + "}";
+        return "{ServletCookieAdaptor@" + System.identityHashCode(this) + " name=" + getName() + " path=" + getPath() + " domain=" + getDomain() + " value=" + getValue()+"}";
     }
 
 }
