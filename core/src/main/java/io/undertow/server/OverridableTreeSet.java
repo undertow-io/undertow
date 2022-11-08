@@ -22,6 +22,7 @@ import java.util.TreeSet;
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
+@Deprecated(since="2.3.1", forRemoval=true)
 final class OverridableTreeSet<T> extends TreeSet<T> {
     @Override
     public boolean add(final T o) {
