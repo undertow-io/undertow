@@ -149,5 +149,7 @@ public class SessionListenerBridge implements SessionListener {
 
     @Override
     public void sessionIdChanged(Session session, String oldSessionId) {
+        final HttpSessionImpl httpSession = SecurityActions.forSession(session, servletContext, true);
+        applicationListeners.httpSessionIdChanged(httpSession, oldSessionId);
     }
 }
