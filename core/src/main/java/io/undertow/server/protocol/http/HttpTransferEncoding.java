@@ -155,7 +155,7 @@ class HttpTransferEncoding {
             return !(connectionHeader != null && Headers.CLOSE.equalToString(connectionHeader));
         } else if (exchange.isHttp10()) {
             if (connectionHeader != null) {
-                if (Headers.KEEP_ALIVE.equals(new HttpString(connectionHeader))) {
+                if (Headers.KEEP_ALIVE.equalToString(connectionHeader)) {
                     return true;
                 }
             }

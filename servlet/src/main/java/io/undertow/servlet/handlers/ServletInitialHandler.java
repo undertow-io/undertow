@@ -40,6 +40,7 @@ import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
@@ -238,10 +239,10 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         }
     }
 
-    private boolean isMultiPartExchange(final HttpServerExchange exhange) {
+    private boolean isMultiPartExchange(final HttpServerExchange exchange) {
         //NOTE: should this include Range response?
-        final HeaderValues contentTypeHeaders = exhange.getRequestHeaders().get("Content-Type");
-        if(contentTypeHeaders != null && contentTypeHeaders.size() >0) {
+        final HeaderValues contentTypeHeaders = exchange.getRequestHeaders().get(Headers.CONTENT_TYPE);
+        if (contentTypeHeaders != null && !contentTypeHeaders.isEmpty()) {
             return contentTypeHeaders.getFirst().startsWith("multipart");
         } else {
             return false;
