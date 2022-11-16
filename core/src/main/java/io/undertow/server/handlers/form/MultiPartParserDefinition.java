@@ -372,7 +372,6 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             }
         }
 
-
         public List<Path> getCreatedFiles() {
             return createdFiles;
         }
@@ -395,6 +394,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                             }
                         }
                     }
+                    files.clear();
                 }
             });
 
