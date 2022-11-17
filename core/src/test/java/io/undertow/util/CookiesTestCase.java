@@ -24,9 +24,12 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import com.google.common.collect.ArrayListMultimap;
+
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
@@ -132,9 +135,6 @@ public class CookiesTestCase {
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertEquals("CUSTOMER", cookie.getName());
         Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
-//        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
-//        Assert.assertEquals(1, cookie.getVersion());
-//        Assert.assertEquals("/", cookie.getPath());
 
         cookie = cookies.get("SHIPPING");
         Assert.assertEquals("SHIPPING", cookie.getName());
@@ -327,8 +327,6 @@ public class CookiesTestCase {
         Cookie cookie = cookies.get("Customer");
         Assert.assertEquals("Customer", cookie.getName());
         Assert.assertEquals("WILE_\"E_\"COYOTE", cookie.getValue()); // backslash escapled double quotes in the value
-        //Assert.assertEquals("/acme", cookie.getPath());
-        //Assert.assertEquals(1, cookie.getVersion());
 
         cookie = cookies.get("SHIPPING");
         Assert.assertEquals("SHIPPING", cookie.getName());
@@ -353,9 +351,6 @@ public class CookiesTestCase {
         Assert.assertEquals("CUSTOMER", cookie.getName());
         Assert.assertEquals("{\"v1\":1, \"id\":\"some_unique_id\", \"c\":\"http://www.google.com?q=love me\"}",
                cookie.getValue());
-//        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
-//        Assert.assertEquals(1, cookie.getVersion());
-//        Assert.assertEquals("/", cookie.getPath());
 
         cookie = cookies.get("SHIPPING");
         Assert.assertEquals("SHIPPING", cookie.getName());
@@ -377,9 +372,6 @@ public class CookiesTestCase {
         Assert.assertEquals("CUSTOMER", cookie.getName());
         Assert.assertEquals("{\"v1\":1, \"id\":\"some_unique_id\", \"c\":\"http://www.google.com?q=love me\"}",
                cookie.getValue());
-//        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
-//        Assert.assertEquals(1, cookie.getVersion());
-//        Assert.assertEquals("/", cookie.getPath());
 
         cookie = cookies.get("SHIPPING");
         Assert.assertEquals("SHIPPING", cookie.getName());
@@ -408,9 +400,6 @@ public class CookiesTestCase {
                 + "\"sales\" : [ { \"firstName\" : \"Sally\", \"lastName\" : \"Green\", \"age\" : 27 }, "
                 + "{ \"firstName\" : \"Jim\", \"lastName\" : \"Galley\", \"age\" : 41 } ] }",
                cookie.getValue());
-//        Assert.assertEquals("LOONEY_TUNES", cookie.getDomain());
-//        Assert.assertEquals(1, cookie.getVersion());
-//        Assert.assertEquals("/", cookie.getPath());
 
         cookie = cookies.get("SHIPPING");
         Assert.assertEquals("SHIPPING", cookie.getName());
@@ -510,4 +499,78 @@ public class CookiesTestCase {
         Rfc6265CookieSupport.validateDomain(cookie.getDomain());
     }
 
+    @Test
+    public void testMultipleRFC6265() {
+        final ArrayListMultimap<String, Cookie> parsedCookies = ArrayListMultimap.create();
+        final List<String> toParse = Arrays.asList("CUSTOMER=JOE; CUSTOMER=MONICA; $Path=/");
+        Cookies.parseRequestCookies(4, false, toParse,parsedCookies);
+        Assert.assertEquals(3, parsedCookies.size());
+        List<Cookie> lst = parsedCookies.get("CUSTOMER");
+        Assert.assertEquals(2, lst.size());
+        Cookie cookie = lst.get(0);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("JOE", cookie.getValue());
+        cookie = lst.get(1);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("MONICA", cookie.getValue());
+        lst = parsedCookies.get("$Path");
+        Assert.assertEquals(1, lst.size());
+        cookie = lst.get(0);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals("$Path", cookie.getName());
+        Assert.assertEquals("/", cookie.getValue());
+    }
+
+    @Test
+    public void testMultipleRFC2109() {
+        final ArrayListMultimap<String, Cookie> parsedCookies = ArrayListMultimap.create();
+        final List<String> toParse = Arrays.asList("$Version=1; CUSTOMER=JOE; $Path=/acme; CUSTOMER=MONICA; $Path=/; $Domain=my_oh_my; NO=META");
+        Cookies.parseRequestCookies(8, false, toParse,parsedCookies);
+        Assert.assertEquals(7, parsedCookies.size());
+        List<Cookie> lst = parsedCookies.get("CUSTOMER");
+        Assert.assertEquals(2, lst.size());
+        Cookie cookie = lst.get(0);
+        Assert.assertEquals(1, cookie.getVersion());
+        Assert.assertEquals("/acme", cookie.getPath());
+        Assert.assertEquals(null, cookie.getDomain());
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("JOE", cookie.getValue());
+        cookie = lst.get(1);
+        Assert.assertEquals(1, cookie.getVersion());
+        Assert.assertEquals("/", cookie.getPath());
+        Assert.assertEquals("my_oh_my", cookie.getDomain());
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("MONICA", cookie.getValue());
+        lst = parsedCookies.get("$Path");
+        Assert.assertEquals(2, lst.size());
+        cookie = lst.get(0);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals("$Path", cookie.getName());
+        Assert.assertEquals("/acme", cookie.getValue());
+        cookie = lst.get(1);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals("$Path", cookie.getName());
+        Assert.assertEquals("/", cookie.getValue());
+        lst = parsedCookies.get("$Version");
+        Assert.assertEquals(1, lst.size());
+        cookie = lst.get(0);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals("$Version", cookie.getName());
+        Assert.assertEquals("1", cookie.getValue());
+        lst = parsedCookies.get("$Domain");
+        Assert.assertEquals(1, lst.size());
+        cookie = lst.get(0);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals("$Domain", cookie.getName());
+        Assert.assertEquals("my_oh_my", cookie.getValue());
+        lst = parsedCookies.get("NO");
+        Assert.assertEquals(1, lst.size());
+        cookie = lst.get(0);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals(null, cookie.getDomain());
+        Assert.assertEquals("NO", cookie.getName());
+        Assert.assertEquals("META", cookie.getValue());
+    }
 }

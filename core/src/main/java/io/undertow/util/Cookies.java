@@ -211,8 +211,13 @@ public class Cookies {
     public static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies) {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, LegacyCookieSupport.COMMA_IS_SEPARATOR);
     }
+
     @Deprecated(since="2.3.1", forRemoval=true)
     public static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies) {
+        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, LegacyCookieSupport.COMMA_IS_SEPARATOR);
+    }
+
+    public static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Multimap<String, Cookie> parsedCookies) {
         parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, LegacyCookieSupport.COMMA_IS_SEPARATOR);
     }
 
@@ -221,10 +226,16 @@ public class Cookies {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0);
     }
 
+    @Deprecated(since="2.3.1", forRemoval=true)
     static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean commaIsSeperator) {
         parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0);
     }
 
+    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Multimap<String, Cookie> parsedCookies, boolean commaIsSeperator) {
+        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0);
+    }
+
+    @Deprecated(since="2.3.1", forRemoval=true)
     static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
         if (cookies == null) {
             return new TreeMap<>();
@@ -251,6 +262,14 @@ public class Cookies {
             for(String key:parsedCookies.keySet()) {
                 final Cookie c = parsedCookies.get(key).get(0);
                 retVal.add(c);
+            }
+        }
+    }
+
+    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Multimap<String, Cookie> parsedCookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
+        if (cookies != null) {
+            for (String cookie : cookies) {
+                parseCookies(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0);
             }
         }
     }
@@ -367,46 +386,37 @@ public class Cookies {
             if(name.equals(VERSION)) {
                 cookieJar.version = Integer.parseInt(value);
                 //Theoretically this should happen only once at the start
-                Cookie c = new CookieImpl(VERSION, value);
-                cookieJar.parsedCookies.put(c.getName(), c);
+                applyAdditional(cookieJar, name, value);
             } else if(cookieJar.currentCookie != null) {
                 applyAdditional(cookieJar, name, value);
             }
             return;
         } else {
-            if(cookieJar.currentCookie == null) {
-                cookieJar.currentCookie = new CookieImpl(name, value);
-                cookieJar.parsedCookies.put(cookieJar.currentCookie.getName(), cookieJar.currentCookie);
-                applyAdditional(cookieJar, name, value);
-                return;
-            } else {
-                cookieJar.currentCookie = new CookieImpl(name, value);
-                cookieJar.parsedCookies.put(cookieJar.currentCookie.getName(), cookieJar.currentCookie);
-                applyAdditional(cookieJar, name, value);
-                return;
-            }
+            cookieJar.currentCookie = new CookieImpl(name, value);
+            cookieJar.parsedCookies.put(cookieJar.currentCookie.getName(), cookieJar.currentCookie);
+            applyAdditional(cookieJar, name, value);
+            return;
         }
     }
 
     private static void applyAdditional( final CookieJar cookieJar, final String name, final String value) {
-        if (cookieJar.version != -1) {
+        // RFC 6265 treats the domain, path and version attributes of an RFC 2109 cookie as a separate cookies
+        if(!name.isEmpty() && name.charAt(0) == '$') {
+            Cookie c = new CookieImpl(name, value);
+            cookieJar.parsedCookies.put(c.getName(), c);
+        }
+        if (cookieJar.version == 1) {
             // rfc2109 - add metadata to
-            // RFC 6265 treats the domain, path and version attributes of an RFC 2109 cookie as a separate cookies
             if (cookieJar.currentCookie != null) {
                 cookieJar.currentCookie.setVersion(cookieJar.version);
 
-
                 if (name.equals(DOMAIN)) {
                     cookieJar.currentCookie.setDomain(value);
-                    Cookie c = new CookieImpl(DOMAIN, value);
-                    cookieJar.parsedCookies.put(c.getName(), c);
                     return;
                 }
 
                 if (name.equals(PATH)) {
                     cookieJar.currentCookie.setPath(value);
-                    Cookie c = new CookieImpl(PATH, value);
-                    cookieJar.parsedCookies.put(c.getName(), c);
                     return;
                 }
             }

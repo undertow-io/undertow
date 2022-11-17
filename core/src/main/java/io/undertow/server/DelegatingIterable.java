@@ -19,24 +19,26 @@ package io.undertow.server;
 
 import java.util.Iterator;
 
+import com.google.common.collect.Multimap;
+
 /**
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-final class DelegatingIterable<E> implements Iterable<E> {
+final class DelegatingIterable<E,V> implements Iterable<V> {
 
-    private final Iterable<E> delegate;
+    private final Multimap<E,V> delegate;
 
-    DelegatingIterable(final Iterable<E> delegate) {
+    DelegatingIterable(final Multimap<E,V> delegate) {
         this.delegate = delegate;
     }
 
-    Iterable<E> getDelegate() {
+    Multimap<E,V> getDelegate() {
         return delegate;
     }
 
     @Override
-    public Iterator<E> iterator() {
-        return new ReadOnlyIterator(delegate.iterator());
+    public Iterator<V> iterator() {
+        return new ReadOnlyIterator(delegate.values().iterator());
     }
 
 }
