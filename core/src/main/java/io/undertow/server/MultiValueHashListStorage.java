@@ -132,7 +132,7 @@ public final class MultiValueHashListStorage<K, V> {
         storage.clear();
     }
 
-    private static class DefaultIterator<K, V> implements Iterator<V> {
+    private static final class DefaultIterator<K, V> implements Iterator<V> {
 
         private final Iterator<Entry<K, ArrayList<V>>> storageSource;
         private Iterator<V> perKeySource;
