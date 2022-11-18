@@ -155,7 +155,7 @@
             </And>
             <And>
                 <Class name="io.undertow.util.Cookies"/>
-                <Method name="parseCookie"/>
+                <Method name="parseCookies"/>
             </And>
             <And>
                 <Class name="io.undertow.util.PathTemplate"/>
