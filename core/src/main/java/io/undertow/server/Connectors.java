@@ -32,10 +32,12 @@ import io.undertow.util.ParameterLimitException;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.URLUtils;
 import io.undertow.connector.PooledByteBuffer;
+import org.xnio.OptionMap;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -447,13 +449,33 @@ public class Connectors {
             throw new RuntimeException(e);
         }
     }
-        /**
-         * Sets the request path and query parameters, decoding to the requested charset.
-         *
-         * @param exchange    The exchange
-         * @param encodedPath        The encoded path
-         * @param charset     The charset
-         */
+
+    /**
+     * Sets the request path and query parameters, decoding to the requested charset.
+     * All the options are retrieved from the exchange undertow options.
+     *
+     * @param exchange The exchange
+     * @param encodedPath The encoded path to decode
+     * @param decodeBuffer The decode buffer to use
+     * @throws ParameterLimitException
+     */
+    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, StringBuilder decodeBuffer) throws ParameterLimitException {
+        final OptionMap options = exchange.getConnection().getUndertowOptions();
+        setExchangeRequestPath(exchange, encodedPath,
+                options.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name()),
+                options.get(UndertowOptions.DECODE_URL, true),
+                options.get(UndertowOptions.ALLOW_ENCODED_SLASH, false),
+                decodeBuffer,
+                options.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS));
+    }
+
+    /**
+     * Sets the request path and query parameters, decoding to the requested charset.
+     *
+     * @param exchange    The exchange
+     * @param encodedPath The encoded path
+     * @param charset     The charset
+     */
     public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean allowEncodedSlash, StringBuilder decodeBuffer, int maxParameters) throws ParameterLimitException {
         boolean requiresDecode = false;
         final StringBuilder pathBuilder = new StringBuilder();
