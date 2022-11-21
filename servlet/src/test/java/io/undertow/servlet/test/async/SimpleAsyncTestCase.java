@@ -25,6 +25,7 @@ import io.undertow.servlet.api.ServletStackTraces;
 import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.servlet.test.util.MessageServlet;
+import io.undertow.servlet.test.util.ParameterEchoServlet;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -33,6 +34,8 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -102,7 +105,13 @@ public class SimpleAsyncTestCase {
                         .addMapping("/errorlistener"),
                 servlet("dispatch", AsyncDispatchServlet.class)
                         .setAsyncSupported(true)
-                        .addMapping("/dispatch"),
+                        .addMapping("/dispatch").addMapping("/dispatch/*").addMapping("*.dispatch"),
+                servlet("asyncPath", AsyncDispatchPathTestServlet.class)
+                        .setAsyncSupported(true)
+                        .addMapping("/pathinfo").addMapping("/pathinfo/*").addMapping("*.info"),
+                servlet("parameterEcho", ParameterEchoServlet.class)
+                        .setAsyncSupported(true)
+                        .addMapping("/echo-parameters"),
                 servlet("doubleCompleteServlet", AsyncDoubleCompleteServlet.class)
                         .setAsyncSupported(true)
                         .addMapping("/double-complete"),
@@ -230,6 +239,81 @@ public class SimpleAsyncTestCase {
             Assert.assertNotEquals("Date thread-local was not found", SimpleDateThreadLocalAsyncServlet.NULL_THREAD_LOCAL, response);
             final Date date = SimpleDateThreadLocalAsyncServlet.parseDate(response);
             Assert.assertTrue("Date thread-local is not in range", date.compareTo(start) >= 0 && date.compareTo(new Date()) <= 0);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testDispatchAttributes() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?n1=v1&n2=v2");
+            get.setHeader("dispatch", "/pathinfo");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("wrapped: pathInfo:null queryString:n1=v1&n2=v2 servletPath:/pathinfo requestUri:/servletContext/pathinfo\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.request_uri:/servletContext/dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.context_path:/servletContext\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.servlet_path:/dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.path_info:null\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.query_string:n1=v1&n2=v2\r\n"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testDispatchAttributesEncoded() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch/dis%25patch?n1=v%251&n2=v2");
+            get.setHeader("dispatch", "/pathinfo/path%25info?n3=v%253");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("wrapped: pathInfo:/path%info queryString:n3=v%253 servletPath:/pathinfo requestUri:/servletContext/pathinfo/path%25info\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.request_uri:/servletContext/dispatch/dis%25patch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.context_path:/servletContext\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.servlet_path:/dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.path_info:/dis%patch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.query_string:n1=v%251&n2=v2\r\n"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testDispatchAttributesEncodedExtension() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dis%25patch.dispatch?n1=v%251&n2=v2");
+            get.setHeader("dispatch", "/path%25info.info?n3=v%253");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("wrapped: pathInfo:null queryString:n3=v%253 servletPath:/path%info.info requestUri:/servletContext/path%25info.info\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.request_uri:/servletContext/dis%25patch.dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.context_path:/servletContext\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.servlet_path:/dis%patch.dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.path_info:null\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.query_string:n1=v%251&n2=v2\r\n"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testDispatchParametersAreMerged() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?param1=v11&param1=v12");
+            get.setHeader("dispatch", "/echo-parameters?param1=v13&param1=v14");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("wrapped: param1='v13,v14,v11,v12'", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
