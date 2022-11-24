@@ -32,6 +32,7 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.MessageFilter;
 import io.undertow.servlet.test.util.MessageServlet;
+import io.undertow.servlet.test.util.ParameterEchoServlet;
 import io.undertow.servlet.test.util.PathTestServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
@@ -43,6 +44,8 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 
 import io.undertow.testutils.TestHttpClient;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -73,10 +76,16 @@ public class DispatcherIncludeTestCase {
                                 .addMapping("/include"))
                 .addServlet(
                         new ServletInfo("dispatcher", IncludeServlet.class)
-                                .addMapping("/dispatch"))
+                                .addMapping("/dispatch").addMapping("/dispatch/*").addMapping("*.dispatch"))
                 .addServlet(
                         new ServletInfo("pathTest", PathTestServlet.class)
                                 .addMapping("/path"))
+                .addServlet(
+                        new ServletInfo("pathIncludeTest", IncludePathTestServlet.class)
+                                .addMapping("/path-include").addMapping("/path-include/*").addMapping("*.includeinfo"))
+                .addServlet(
+                        new ServletInfo("parameterEcho", ParameterEchoServlet.class)
+                                .addMapping("/echo-parameters"))
                 .addFilter(
                         new FilterInfo("notIncluded", MessageFilter.class)
                                 .addInitParam(MessageFilter.MESSAGE, "Not Included"))
@@ -177,6 +186,81 @@ public class DispatcherIncludeTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(IncludeServlet.MESSAGE + "pathInfo:null queryString:a=b servletPath:/dispatch requestUri:/servletContext/dispatch", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testAttributes() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?n1=v1&n2=v2");
+            get.setHeader("include", "/path-include?url=http://test.com");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString(IncludeServlet.MESSAGE + "pathInfo:null queryString:n1=v1&n2=v2 servletPath:/dispatch requestUri:/servletContext/dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.request_uri:/servletContext/path-include\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.context_path:/servletContext\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.servlet_path:/path-include\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.path_info:null\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.query_string:url=http://test.com\r\n"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testAttributesEncoded() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch/dis%25patch?n1=v1&n2=v%252");
+            get.setHeader("include", "/path-include/path%25include?n2=v%253");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString(IncludeServlet.MESSAGE + "pathInfo:/dis%patch queryString:n1=v1&n2=v%252 servletPath:/dispatch requestUri:/servletContext/dispatch/dis%25patch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.request_uri:/servletContext/path-include/path%25include\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.context_path:/servletContext\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.servlet_path:/path-include\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.path_info:/path%include\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.query_string:n2=v%253\r\n"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testAttributesEncodedExtension() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dis%25patch.dispatch?n1=v1&n2=v%252");
+            get.setHeader("include", "/path%25include.includeinfo?n2=v%253");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString(IncludeServlet.MESSAGE + "pathInfo:null queryString:n1=v1&n2=v%252 servletPath:/dis%patch.dispatch requestUri:/servletContext/dis%25patch.dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.request_uri:/servletContext/path%25include.includeinfo\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.context_path:/servletContext\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.servlet_path:/path%include.includeinfo\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.path_info:null\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.query_string:n2=v%253\r\n"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testParametersAreMerged() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?param1=v11&param1=v12");
+            get.setHeader("include", "/echo-parameters?param1=v13&param1=v14");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(IncludeServlet.MESSAGE + "param1='v13,v14,v11,v12'", response);
         } finally {
             client.getConnectionManager().shutdown();
         }

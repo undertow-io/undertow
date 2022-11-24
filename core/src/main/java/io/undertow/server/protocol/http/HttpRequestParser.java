@@ -619,7 +619,7 @@ public abstract class HttpRequestParser {
                 handleParsedParam(param, stringBuilder.substring(pos), exchange, urlDecodeRequired, state);
                 final String path = stringBuilder.toString();
                 // the canonicalPathStart should be the current length to not add anything to it
-                parsePathComplete(state, exchange, path.length(), state.parseState, urlDecodeRequired, path);
+                parsePathComplete(state, exchange, path.length(), state.parseState, state.urlDecodeRequired, path);
                 state.state = ParseState.VERSION;
                 state.nextQueryParam = null;
                 if (next == '?') {

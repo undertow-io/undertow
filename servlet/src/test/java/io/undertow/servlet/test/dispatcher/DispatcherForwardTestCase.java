@@ -30,6 +30,7 @@ import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.MessageFilter;
 import io.undertow.servlet.test.util.MessageServlet;
+import io.undertow.servlet.test.util.ParameterEchoServlet;
 import io.undertow.servlet.test.util.PathTestServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
@@ -95,10 +96,16 @@ public class DispatcherForwardTestCase {
                                 .addMapping("/forward"))
                 .addServlet(
                         new ServletInfo("dispatcher", ForwardServlet.class)
-                                .addMapping("/dispatch"))
+                                .addMapping("/dispatch").addMapping("/dispatch/*").addMapping("*.dispatch"))
                 .addServlet(
                         new ServletInfo("pathTest", PathTestServlet.class)
                                 .addMapping("/path"))
+                .addServlet(
+                        new ServletInfo("pathForwardTest", ForwardPathTestServlet.class)
+                                .addMapping("/path-forward").addMapping("/path-forward/*").addMapping("*.forwardinfo"))
+                .addServlet(
+                        new ServletInfo("parameterEcho", ParameterEchoServlet.class)
+                                .addMapping("/echo-parameters"))
                 .addFilter(
                         new FilterInfo("notforwarded", MessageFilter.class)
                                 .addInitParam(MessageFilter.MESSAGE, "Not forwarded"))
@@ -268,6 +275,96 @@ public class DispatcherForwardTestCase {
             // Path parameters should not be canonicalized
             Assert.assertEquals("pathInfo:null queryString:url=http://test.com servletPath:/path requestUri:/servletContext/path", response);
 
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testAttributes() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?n1=v1&n2=v2");
+            get.setHeader("forward", "/path-forward");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("pathInfo:null queryString:n1=v1&n2=v2 servletPath:/path-forward requestUri:/servletContext/path-forward\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.request_uri:/servletContext/dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.context_path:/servletContext\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.servlet_path:/dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.path_info:null\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.query_string:n1=v1&n2=v2\r\n"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testAttributesEncoded() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch/dispatch%25info?n1=v%251&n2=v%252");
+            get.setHeader("forward", "/path-forward/path%25info?n3=V%253");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("pathInfo:/path%info queryString:n3=V%253 servletPath:/path-forward requestUri:/servletContext/path-forward/path%25info\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.request_uri:/servletContext/dispatch/dispatch%25info\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.context_path:/servletContext\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.servlet_path:/dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.path_info:/dispatch%info\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.query_string:n1=v%251&n2=v%252\r\n"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testAttributesEncodedExtension() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dis%25patch/dispatch%25info.dispatch?n1=v%251&n2=v%252");
+            get.setHeader("forward", "/to%25forward/path%25info.forwardinfo?n3=V%253");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("pathInfo:null queryString:n3=V%253 servletPath:/to%forward/path%info.forwardinfo requestUri:/servletContext/to%25forward/path%25info.forwardinfo\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.request_uri:/servletContext/dis%25patch/dispatch%25info.dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.context_path:/servletContext\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.servlet_path:/dis%patch/dispatch%info.dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.path_info:null\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.query_string:n1=v%251&n2=v%252\r\n"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testParametersAreMerged() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?param1=v11&param1=v12");
+            get.setHeader("forward", "/echo-parameters?param1=v13&param1=v14");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("param1='v13,v14,v11,v12'", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testParametersAreMergedButNotDuplicated() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?param1=v11&param1=v12");
+            get.setHeader("forward", "/echo-parameters?param1=v11&param1=v13&param1=v14");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("param1='v11,v13,v14,v12'", response);
         } finally {
             client.getConnectionManager().shutdown();
         }

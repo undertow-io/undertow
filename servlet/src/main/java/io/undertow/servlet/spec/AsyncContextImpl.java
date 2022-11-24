@@ -21,9 +21,7 @@ package io.undertow.servlet.spec;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -61,8 +59,10 @@ import io.undertow.servlet.api.ServletDispatcher;
 import io.undertow.servlet.handlers.ServletDebugPageHandler;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.util.DispatchUtils;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.Headers;
+import io.undertow.util.ParameterLimitException;
 import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.WorkerUtils;
@@ -219,53 +219,15 @@ public class AsyncContextImpl implements AsyncContext {
 
         HttpServletRequestImpl requestImpl = servletRequestContext.getOriginalRequest();
         HttpServletResponseImpl responseImpl = servletRequestContext.getOriginalResponse();
-        final HttpServerExchange exchange = requestImpl.getExchange();
 
-        exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).setDispatcherType(DispatcherType.ASYNC);
-
-        requestImpl.setAttribute(ASYNC_REQUEST_URI, requestImpl.getOriginalRequestURI());
-        requestImpl.setAttribute(ASYNC_CONTEXT_PATH, requestImpl.getOriginalContextPath());
-        requestImpl.setAttribute(ASYNC_SERVLET_PATH, requestImpl.getOriginalServletPath());
-        requestImpl.setAttribute(ASYNC_QUERY_STRING, requestImpl.getOriginalQueryString());
-
-        String newQueryString = "";
-        int qsPos = path.indexOf("?");
-        String newServletPath = path;
-        if (qsPos != -1) {
-            newQueryString = newServletPath.substring(qsPos + 1);
-            newServletPath = newServletPath.substring(0, qsPos);
+        ServletPathMatch info;
+        try {
+            info = DispatchUtils.dispatchAsync(path, requestImpl, responseImpl, (ServletContextImpl) context);
+        } catch (ParameterLimitException e) {
+            throw new IllegalStateException(e);
         }
-        String newRequestUri = context.getContextPath() + newServletPath;
-
-        //todo: a more efficient impl
-        Map<String, Deque<String>> newQueryParameters = new HashMap<>();
-        for (String part : newQueryString.split("&")) {
-            String name = part;
-            String value = "";
-            int equals = part.indexOf('=');
-            if (equals != -1) {
-                name = part.substring(0, equals);
-                value = part.substring(equals + 1);
-            }
-            Deque<String> queue = newQueryParameters.get(name);
-            if (queue == null) {
-                newQueryParameters.put(name, queue = new ArrayDeque<>(1));
-            }
-            queue.add(value);
-        }
-        requestImpl.setQueryParameters(newQueryParameters);
-
-        requestImpl.getExchange().setRelativePath(newServletPath);
-        requestImpl.getExchange().setQueryString(newQueryString);
-        requestImpl.getExchange().setRequestPath(newRequestUri);
-        requestImpl.getExchange().setRequestURI(newRequestUri);
-        requestImpl.setServletContext((ServletContextImpl) context);
-        responseImpl.setServletContext((ServletContextImpl) context);
 
         Deployment deployment = requestImpl.getServletContext().getDeployment();
-        ServletPathMatch info = deployment.getServletPaths().getServletHandlerByPath(newServletPath);
-        requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(info);
-
         dispatchAsyncRequest(deployment.getServletDispatcher(), info, exchange);
     }
 
