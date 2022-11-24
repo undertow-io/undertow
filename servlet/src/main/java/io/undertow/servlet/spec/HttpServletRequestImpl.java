@@ -18,7 +18,6 @@
 
 package io.undertow.servlet.spec;
 
-import io.undertow.UndertowOptions;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
@@ -55,7 +54,6 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
@@ -288,29 +286,16 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getPathInfo() {
-        final ServletPathMatch match = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletPathMatch();
-        return match != null ? decodeURL(match.getRemaining()) : null;
-    }
-
-    private String decodeURL(final String s) {
-        try {
-            return s != null && s.length() > 0 ? URLDecoder.decode(s, getURLEncoding()) : s;
-        } catch (UnsupportedEncodingException ignored) {
-            throw new IllegalStateException(); // cannot happen
+        ServletPathMatch match = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletPathMatch();
+        if (match != null) {
+            return match.getRemaining();
         }
-    }
-
-    private String getURLEncoding() {
-        return exchange.getConnection().getUndertowOptions().get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
+        return null;
     }
 
     @Override
     public String getPathTranslated() {
-        ServletPathMatch match = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletPathMatch();
-        if (match != null) {
-            return getRealPath(match.getRemaining());
-        }
-        return null;
+        return getRealPath(getPathInfo());
     }
 
     @Override
@@ -428,8 +413,11 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getServletPath() {
-        final ServletPathMatch match = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletPathMatch();
-        return match != null ? decodeURL(match.getMatched()) : "";
+        ServletPathMatch match = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletPathMatch();
+        if (match != null) {
+            return match.getMatched();
+        }
+        return "";
     }
 
     @Override
@@ -1168,11 +1156,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if(uri != null) {
             return uri;
         }
-        ServletPathMatch match = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletPathMatch();
-        if (match != null) {
-            return match.getMatched();
-        }
-        return "";
+        return getServletPath();
     }
 
     public String getOriginalPathInfo() {
@@ -1184,11 +1168,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if(uri != null) {
             return uri;
         }
-        ServletPathMatch match = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletPathMatch();
-        if (match != null) {
-            return match.getRemaining();
-        }
-        return null;
+        return getPathInfo();
     }
 
     public String getOriginalContextPath() {
