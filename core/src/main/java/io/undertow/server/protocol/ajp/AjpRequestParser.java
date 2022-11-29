@@ -512,7 +512,7 @@ public class AjpRequestParser {
                 if(decodeBuffer == null) {
                     decodeBuffer = new StringBuilder();
                 }
-                return URLUtils.decode(url, this.encoding, allowEncodedSlash, false, decodeBuffer);
+                return URLUtils.decode(url, this.encoding, !allowEncodedSlash, false, decodeBuffer);
             } catch (Exception e) {
                 throw UndertowMessages.MESSAGES.failedToDecodeURL(url, encoding, e);
             }

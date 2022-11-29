@@ -46,28 +46,10 @@ public class EncodedEncodedSlashTestCase {
         });
     }
 
-    @Test
-    public void testSlashNotDecoded() throws Exception {
-
-        final TestHttpClient client = new TestHttpClient();
-        try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/%2f%5c");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("/%2f%5c", HttpClientUtils.readResponse(result));
-
-        } finally {
-            client.getConnectionManager().shutdown();
-        }
-    }
-
-
     @Test @ProxyIgnore
     public void testSlashDecoded() throws Exception {
 
         final TestHttpClient client = new TestHttpClient();
-        OptionMap old = DefaultServer.getUndertowOptions();
-        DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true));
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/%2f%5c");
             HttpResponse result = client.execute(get);
@@ -75,6 +57,31 @@ public class EncodedEncodedSlashTestCase {
             Assert.assertEquals("//\\", HttpClientUtils.readResponse(result));
 
         } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+
+    @Test
+    public void testSlashNotDecoded() throws Exception {
+
+        final TestHttpClient client = new TestHttpClient();
+        final OptionMap old = DefaultServer.getUndertowOptions();
+        final OptionMap oldProxy = DefaultServer.getProxyOptions();
+        if(oldProxy != null) {
+            DefaultServer.setProxyOptions(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true));
+        }
+        DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true));
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/%2f%5c");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            Assert.assertEquals("/%2f%5c", HttpClientUtils.readResponse(result));
+
+        } finally {
+            if(oldProxy != null) {
+                DefaultServer.setProxyOptions(oldProxy);
+            }
             DefaultServer.setUndertowOptions(old);
             client.getConnectionManager().shutdown();
         }

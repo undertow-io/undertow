@@ -537,10 +537,10 @@ public abstract class HttpRequestParser {
                 exchange.setQueryString(queryString);
                 if (nextQueryParam == null) {
                     if (queryParamPos != stringBuilder.length()) {
-                        exchange.addQueryParam(decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true, true), "");
+                        exchange.addQueryParam(decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, false, true), "");
                     }
                 } else {
-                    exchange.addQueryParam(nextQueryParam, decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true, true));
+                    exchange.addQueryParam(nextQueryParam, decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, false, true));
                 }
                 state.state = ParseState.VERSION;
                 state.stringBuilder.setLength(0);
@@ -555,7 +555,7 @@ public abstract class HttpRequestParser {
                 if (decode && (next == '+' || next == '%' || next > 127)) { //+ is only a whitespace substitute in the query part of the URL
                     urlDecodeRequired = true;
                 } else if (next == '=' && nextQueryParam == null) {
-                    nextQueryParam = decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true, true);
+                    nextQueryParam = decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, false, true);
                     urlDecodeRequired = false;
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&' && nextQueryParam == null) {
@@ -563,7 +563,7 @@ public abstract class HttpRequestParser {
                         throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
                     }
                     if (queryParamPos != stringBuilder.length()) {
-                        exchange.addQueryParam(decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true, true), "");
+                        exchange.addQueryParam(decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, false, true), "");
                     }
                     urlDecodeRequired = false;
                     queryParamPos = stringBuilder.length() + 1;
@@ -571,7 +571,7 @@ public abstract class HttpRequestParser {
                     if (++mapCount >= maxParameters) {
                         throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
                     }
-                    exchange.addQueryParam(nextQueryParam, decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true, true));
+                    exchange.addQueryParam(nextQueryParam, decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, false, true));
                     urlDecodeRequired = false;
                     queryParamPos = stringBuilder.length() + 1;
                     nextQueryParam = null;
@@ -589,7 +589,7 @@ public abstract class HttpRequestParser {
 
     private String decode(final String value, boolean urlDecodeRequired, ParseState state, final boolean allowEncodedSlash, final boolean formEncoded) {
         if (urlDecodeRequired) {
-            return URLUtils.decode(value, charset, allowEncodedSlash, formEncoded, state.decodeBuffer);
+            return URLUtils.decode(value, charset, !allowEncodedSlash, formEncoded, state.decodeBuffer);
         } else {
             return value;
         }
@@ -645,7 +645,7 @@ public abstract class HttpRequestParser {
                     urlDecodeRequired = true;
                 }
                 if ((next == '=' || (next == ',' && this.allowIDLessMatrixParams)) && param == null) {
-                    param = decode(stringBuilder.substring(pos), urlDecodeRequired, state, true, true);
+                    param = decode(stringBuilder.substring(pos), urlDecodeRequired, state, false, true);
                     urlDecodeRequired = false;
                     pos = stringBuilder.length() + 1;
                 } else if (next == ';') {
@@ -672,9 +672,9 @@ public abstract class HttpRequestParser {
 
     private void handleParsedParam(String paramName, String parameterValue, HttpServerExchange exchange, boolean urlDecodeRequired, ParseState state) throws BadRequestException {
         if (paramName == null) {
-            exchange.addPathParam(decode(parameterValue, urlDecodeRequired, state, true, true), "");
+            exchange.addPathParam(decode(parameterValue, urlDecodeRequired, state, false, true), "");
         } else {  // path param already parsed so parse and add the value
-            exchange.addPathParam(paramName, decode(parameterValue, urlDecodeRequired, state, true, true));
+            exchange.addPathParam(paramName, decode(parameterValue, urlDecodeRequired, state, false, true));
         }
     }
 
