@@ -76,10 +76,10 @@ public class URLDecodingHandler implements HttpHandler {
     }
 
     private static void decodePath(HttpServerExchange exchange, String charset, StringBuilder sb) {
-        final boolean decodeSlash = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
-        exchange.setRequestPath(URLUtils.decode(exchange.getRequestPath(), charset, decodeSlash, false, sb));
-        exchange.setRelativePath(URLUtils.decode(exchange.getRelativePath(), charset, decodeSlash, false, sb));
-        exchange.setResolvedPath(URLUtils.decode(exchange.getResolvedPath(), charset, decodeSlash, false, sb));
+        final boolean allowEncodedSlash = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
+        exchange.setRequestPath(URLUtils.decode(exchange.getRequestPath(), charset, !allowEncodedSlash, false, sb));
+        exchange.setRelativePath(URLUtils.decode(exchange.getRelativePath(), charset, !allowEncodedSlash, false, sb));
+        exchange.setResolvedPath(URLUtils.decode(exchange.getResolvedPath(), charset, !allowEncodedSlash, false, sb));
     }
 
     private static void decodeQueryString(HttpServerExchange exchange, String charset, StringBuilder sb) {

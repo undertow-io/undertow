@@ -520,6 +520,8 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @param requestPath the request URI path
      */
     public HttpServerExchange setRequestPath(final String requestPath) {
+        if(requestPath!= null && requestPath.equals("//\\"))
+            new Exception().printStackTrace();
         this.requestPath = requestPath;
         return this;
     }

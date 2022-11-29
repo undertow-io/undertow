@@ -464,7 +464,7 @@ public class Connectors {
                 String part;
                 String encodedPart = encodedPath.substring(currentPathPartIndex, i);
                 if (requiresDecode) {
-                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash,false, decodeBuffer);
+                    part = URLUtils.decode(encodedPart, charset, !allowEncodedSlash,false, decodeBuffer);
                 } else {
                     part = encodedPart;
                 }
@@ -481,7 +481,7 @@ public class Connectors {
                 String part;
                 String encodedPart = encodedPath.substring(currentPathPartIndex, i);
                 if (requiresDecode) {
-                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash, false, decodeBuffer);
+                    part = URLUtils.decode(encodedPart, charset, !allowEncodedSlash, false, decodeBuffer);
                 } else {
                     part = encodedPart;
                 }
@@ -497,7 +497,7 @@ public class Connectors {
         String part;
         String encodedPart = encodedPath.substring(currentPathPartIndex);
         if (requiresDecode) {
-            part = URLUtils.decode(encodedPart, charset, allowEncodedSlash, false, decodeBuffer);
+            part = URLUtils.decode(encodedPart, charset, !allowEncodedSlash, false, decodeBuffer);
         } else {
             part = encodedPart;
         }
