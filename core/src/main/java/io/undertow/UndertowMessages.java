@@ -26,6 +26,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.RequestTooBigException;
 import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import io.undertow.util.UrlDecodeException;
@@ -647,4 +648,6 @@ public interface UndertowMessages {
     @Message(id = 208, value = "Failed to allocate resource")
     IOException failedToAllocateResource();
 
+    @Message(id = 209, value = "Exchange '%s' already has body or is blocking.")
+    IOException exhangeBlockingOrBlocking(final HttpServerExchange e);
 }
