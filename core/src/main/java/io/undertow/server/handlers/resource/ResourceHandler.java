@@ -165,7 +165,7 @@ public class ResourceHandler implements HttpHandler {
 
     private void serveResource(final HttpServerExchange exchange, final boolean sendContent) throws Exception {
 
-        if (DirectoryUtils.sendRequestedBlobs(exchange)) {
+        if (directoryListingEnabled && DirectoryUtils.sendRequestedBlobs(exchange)) {
             return;
         }
 

@@ -881,8 +881,8 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 requiresListenerInvocation = true;
             }
             if (dataToUnwrap != null) {
-                //if there is no data in the buffer we just free it
-                if (!dataToUnwrap.getBuffer().hasRemaining()) {
+                //if there is no data in the buffer or closed while unwrapping we just free it
+                if (!dataToUnwrap.getBuffer().hasRemaining() || anyAreSet(state, FLAG_CLOSED)) {
                     dataToUnwrap.close();
                     dataToUnwrap = null;
                     state &= ~FLAG_DATA_TO_UNWRAP;
@@ -987,9 +987,9 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
             throw e;
         } finally {
-            //this can be cleared if the channel is fully closed
+            //this can be cleared if the channel is fully closed or no data remaining
             if(wrappedData != null) {
-                if (!wrappedData.getBuffer().hasRemaining()) {
+                if (!wrappedData.getBuffer().hasRemaining() || anyAreSet(state, FLAG_CLOSED)) {
                     wrappedData.close();
                     wrappedData = null;
                 }

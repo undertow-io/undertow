@@ -2014,9 +2014,15 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public void close() throws IOException {
             try {
-                getInputStream().close();
+                // close the input stream if open or force closing if the request is incomplete
+                if (inputStream != null || !exchange.isRequestComplete()) {
+                    getInputStream().close();
+                }
             } finally {
-                getOutputStream().close();
+                // same for the output stream
+                if (outputStream != null || !exchange.isResponseComplete()) {
+                    getOutputStream().close();
+                }
             }
         }
 
