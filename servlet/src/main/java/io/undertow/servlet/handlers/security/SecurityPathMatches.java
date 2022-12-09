@@ -184,6 +184,19 @@ public class SecurityPathMatches {
                 transport(currentMatch, role.transportGuaranteeType);
                 currentMatch.constraints.add(new SingleConstraintMatch(role.emptyRoleSemantic, role.roles));
             }
+        } else if(denyUncoveredHttpMethods) {
+            if(exact.perMethodRequiredRoles.size() == 0) {
+                // 13.8.4. When HTTP methods are not enumerated within a security-constraint, the protections defined by the
+                // constraint apply to the complete set of HTTP (extension) methods.
+                currentMatch.uncovered = false;
+                currentMatch.constraints.add(new SingleConstraintMatch(SecurityInfo.EmptyRoleSemantic.PERMIT, new HashSet<>()));
+            } else if(exact.perMethodRequiredRoles.size() > 0) {
+                //at this point method is null, but there is match, above if will be triggered for default path, we need to flip it?
+                currentMatch.uncovered = true;
+                //NOTE: ?
+                currentMatch.constraints.clear();
+                currentMatch.constraints.add(new SingleConstraintMatch(SecurityInfo.EmptyRoleSemantic.DENY, new HashSet<>()));
+            }
         }
         for (ExcludedMethodRoles excluded : exact.excludedMethodRoles) {
             if (!excluded.methods.contains(method)) {
