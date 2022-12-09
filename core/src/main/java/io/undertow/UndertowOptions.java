@@ -325,6 +325,13 @@ public class UndertowOptions {
      */
     public static final Option<Boolean> SSL_USER_CIPHER_SUITES_ORDER = Option.simple(UndertowOptions.class, "SSL_USER_CIPHER_SUITES_ORDER", Boolean.class);
 
+    /**
+     * This option forces {@link io.undertow.protocols.ssl.UndertowXnioSsl} to use a specific
+     * name as the {@link javax.net.ssl.SNIHostName} for a client connection. If the option is
+     * not set, the URL hostname is used when available (for URLs that do not use the IP address).
+     * The option can be useful when connecting via IP but want to set a SNI hostname value.
+     */
+    public static final Option<String> SSL_SNI_HOSTNAME = Option.simple(UndertowOptions.class, "SSL_SNI_HOSTNAME", String.class);
 
     public static final Option<Boolean> ALLOW_UNESCAPED_CHARACTERS_IN_URL = Option.simple(UndertowOptions.class,"ALLOW_UNESCAPED_CHARACTERS_IN_URL", Boolean.class);
 
