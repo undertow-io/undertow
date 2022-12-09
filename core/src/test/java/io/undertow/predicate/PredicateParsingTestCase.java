@@ -141,4 +141,5 @@ public class PredicateParsingTestCase {
             throw new RuntimeException("String " + string, ex);
         }
     }
+
 }

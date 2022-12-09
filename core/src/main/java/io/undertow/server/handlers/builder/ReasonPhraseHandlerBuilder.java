@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2023 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ package io.undertow.server.handlers.builder;
 
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.ResponseCodeHandler;
+import io.undertow.server.handlers.ReasonPhraseHandler;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -28,18 +28,18 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * @author Stuart Douglas
+ * @author <a href="mailto:bbaranow@redhat.com">Bartosz Baranowski</a>
  */
-public class ResponseCodeHandlerBuilder implements HandlerBuilder {
+public class ReasonPhraseHandlerBuilder implements HandlerBuilder {
     @Override
     public String name() {
-        return "response-code";
+        return "reason-phrase";
     }
 
     @Override
     public Map<String, Class<?>> parameters() {
         Map<String, Class<?>> parameters = new HashMap<>();
-        parameters.put("value", Integer.class);
+        parameters.put("value", String.class);
         return parameters;
     }
 
@@ -57,17 +57,12 @@ public class ResponseCodeHandlerBuilder implements HandlerBuilder {
 
     @Override
     public HandlerWrapper build(final Map<String, Object> config) {
-        final Integer value = (Integer) config.get("value");
+        final String value = (String) config.get("value");
         return new HandlerWrapper() {
             @Override
             public HttpHandler wrap(HttpHandler handler) {
-                return new ResponseCodeHandler(handler, value);
+                return new ReasonPhraseHandler(handler, value);
             }
         };
-    }
-
-    @Override
-    public int priority() {
-        return 0;
     }
 }
