@@ -643,4 +643,7 @@ public interface UndertowMessages {
 
     @Message(id = 206, value = "Path '%s' is not a directory")
     IOException pathElementIsRegularFile(Path path);
+
+    @Message(id = 207, value = "Invalid SNI hostname '%s'")
+    IllegalArgumentException invalidSniHostname(String hostNameValue, @Cause Throwable t);
 }
