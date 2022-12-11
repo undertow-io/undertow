@@ -68,6 +68,7 @@ import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
 import static org.xnio.IoUtils.safeClose;
+import static io.undertow.UndertowMessages.MESSAGES;
 
 /**
  * @author Stuart Douglas
@@ -454,7 +455,13 @@ public class UndertowXnioSsl extends XnioSsl {
             hostnameValue = destination.getHostString();
         }
         if (hostnameValue != null) {
-            params.setServerNames(Collections.singletonList(new SNIHostName(hostnameValue)));
+            SNIHostName sniHostName = null;
+            try {
+                sniHostName = new SNIHostName(hostnameValue);
+            } catch (IllegalArgumentException e) {
+                throw MESSAGES.invalidSniHostname(hostnameValue, e);
+            }
+            params.setServerNames(Collections.singletonList(sniHostName));
         }
     }
 
