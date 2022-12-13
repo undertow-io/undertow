@@ -75,17 +75,27 @@ public class SecurityPathMatches {
      * @return <code>true</code> If no security path information has been defined
      */
     public boolean isEmpty() {
-        return defaultPathSecurityInformation.excludedMethodRoles.isEmpty() &&
-                defaultPathSecurityInformation.perMethodRequiredRoles.isEmpty() &&
-                defaultPathSecurityInformation.defaultRequiredRoles.isEmpty() &&
+        return isDefaultPathSecurityEmpty() &&
                 exactPathRoleInformation.isEmpty() &&
                 prefixPathRoleInformation.isEmpty() &&
                 extensionRoleInformation.isEmpty();
     }
 
+    // the default security is applied to all http methods of the application
+    private boolean isDefaultPathSecurityEmpty() {
+        return defaultPathSecurityInformation.excludedMethodRoles.isEmpty() &&
+                defaultPathSecurityInformation.perMethodRequiredRoles.isEmpty() &&
+                defaultPathSecurityInformation.defaultRequiredRoles.isEmpty();
+    }
+
     public SecurityPathMatch getSecurityInfo(final String path, final String method) {
         RuntimeMatch currentMatch = new RuntimeMatch();
-        handleMatch(method, defaultPathSecurityInformation, currentMatch);
+        // skip the default path security if it is empty
+        // not only this saves cycles, it also prevents deny uncovered http methods algorithm
+        // from misinterpreting an empty default security as a forbids all
+        if (!isDefaultPathSecurityEmpty()) {
+            handleMatch(method, defaultPathSecurityInformation, currentMatch);
+        }
         PathSecurityInformation match = exactPathRoleInformation.get(path);
         PathSecurityInformation extensionMatch = null;
         if (match != null) {
