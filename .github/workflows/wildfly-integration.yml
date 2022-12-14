@@ -1,0 +1,122 @@
+# This workflow will build a Java project with Maven
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
+
+name: WildFly Integration
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  build-all:
+    name: Compile (no tests) with JDK 11
+    runs-on: ubuntu-latest
+    steps:
+    - uses: n1hility/cancel-previous-runs@v2
+      with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/cache@v1
+      with:
+        path: ~/.m2/repository
+        key: m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+            m2-
+    - uses: actions/checkout@v2
+    - name: Set up JDK 11
+      uses: joschi/setup-jdk@v2
+      with:
+        java-version: 11
+    - name: Generate settings.xml for Maven Builds
+      uses: whelk-io/maven-settings-xml-action@v20
+      with:
+        repositories: '[{ "id": "jboss", "name": "JBoss", "url": "https://repository.jboss.org/nexus/content/groups/public" }]'
+    - name: Print Version
+      run: mvn -v
+    - name: Build
+      run: mvn -U -B -fae -DskipTests -Dfindbugs clean install
+    - name: Tar Maven Repo
+      shell: bash
+      run: tar -czf maven-repo.tgz -C ~ .m2/repository
+    - name: Persist Maven Repo
+      uses: actions/upload-artifact@v1
+      with:
+        name: maven-repo
+        path: maven-repo.tgz
+    - uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: surefire-reports-build
+        path: |
+          **/surefire*-reports/*.txt
+          **/*.dump*
+
+  test-matrix:
+    name: JDK ${{ matrix.jdk }} - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs: build-all
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        jdk: [11, 17]
+    steps:
+    - name: Update hosts - linux
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        cat /etc/hosts
+        sudo bash -c "echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' > /etc/hosts"
+        sudo bash -c "echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> /etc/hosts"
+        sudo sysctl -w fs.file-max=2097152
+    - name: Update hosts - windows
+      if: matrix.os == 'windows-latest'
+      run: |
+        type %SystemRoot%\System32\drivers\etc\hosts
+        echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' >	%SystemRoot%\System32\drivers\etc\hosts
+        echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> %SystemRoot%\System32\drivers\etc\hosts
+      shell: cmd
+    - uses: n1hility/cancel-previous-runs@v2
+      with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Host information
+      run: |
+       hostname || true
+    - uses: actions/checkout@v2
+    - name: Download Maven Repo
+      uses: actions/download-artifact@v1
+      with:
+        name: maven-repo
+        path: .
+    - name: Extract Maven Repo
+      shell: bash
+      run: tar -xzf maven-repo.tgz -C ~
+    - name: Set up JDK ${{ matrix.java }}
+      uses: joschi/setup-jdk@v2
+      with:
+        java-version: ${{ matrix.jdk }}
+    - name: Generate settings.xml for Maven Builds
+      uses: whelk-io/maven-settings-xml-action@v20
+      with:
+        repositories: '[{ "id": "jboss", "name": "JBoss", "url": "https://repository.jboss.org/nexus/content/groups/public" }]'
+    - name: Print Version
+      run: mvn -v
+    - name: Build Undertow
+      run: |
+         mvn -U -B -fae -DskipTests -Dfindbugs clean install
+         echo "UNDERTOW_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)" >> $GITHUB_ENV
+    - name: Build WildFly Core
+      shell: bash
+      run: |
+        cd ..
+        gh repo clone wildfly/wildfly-core
+        cd wildfly-core
+        sed -i "s/<version.io.undertow>.*<\/version.io.undertow>/<version.io.undertow>${{ env.UNDERTOW_VERSION }}<\/version.io.undertow>/" pom.xml
+        mvn clean install
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: surefire-reports-${{ matrix.jdk }}-${{ matrix.os }}
+        path: |
+          **/surefire*-reports/*.txt
+          **/*.dump*
