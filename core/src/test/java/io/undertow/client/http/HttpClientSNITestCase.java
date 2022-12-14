@@ -183,7 +183,7 @@ public class HttpClientSNITestCase {
         // connect using the IP, no SNI expected
         final ClientConnection connection = client.connect(new URI("https://" + hostname + ":" + ADDRESS.getPort()), worker,
                 new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.createClientSslContext()),
-                DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+                DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, "")).get();
         try {
             connection.getIoThread().execute(() -> {
                 final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(SNI);
@@ -244,7 +244,7 @@ public class HttpClientSNITestCase {
         // connect using hostname but add option to another hostname, SNI expected to the forced one
         final ClientConnection connection = client.connect(new URI("https://" + address.getHostName() + ":" + ADDRESS.getPort()), worker,
                 new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.createClientSslContext()),
-                DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.SSL_SNI_HOSTNAME, "server")).get();
+                DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.SSL_SNI_HOSTNAME, "server", UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, "")).get();
         try {
             connection.getIoThread().execute(() -> {
                 final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(SNI);
