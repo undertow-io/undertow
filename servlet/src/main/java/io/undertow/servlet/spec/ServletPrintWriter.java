@@ -22,6 +22,7 @@ import javax.servlet.DispatcherType;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
@@ -228,13 +229,16 @@ public class ServletPrintWriter {
     }
 
     private static int writeAndFlushAscii(ServletOutputStreamImpl outputStream, ByteBuffer buffer, char[] chars, int start, int end) throws IOException {
+        final ByteOrder order = buffer.order();
         int i = start;
         while (i < end) {
             final int bufferPos = buffer.position();
             final int bufferRemaining = buffer.remaining();
             final int sRemaining = end - i;
             final int remaining = Math.min(sRemaining, bufferRemaining);
-            final int written = setAscii(buffer, bufferPos, chars, i, remaining);
+            final int written = order == ByteOrder.LITTLE_ENDIAN ?
+                    setAsciiLE(buffer, bufferPos, chars, i, remaining) :
+                    setAsciiBE(buffer, bufferPos, chars, i, remaining);
             i += written;
             buffer.position(bufferPos + written);
             if (!buffer.hasRemaining()) {
@@ -248,13 +252,82 @@ public class ServletPrintWriter {
         return i;
     }
 
-    private static int setAscii(ByteBuffer buffer, int out, char[] chars, int off, int len) {
-        for (int i = 0; i < len; i++) {
-            final char c = chars[off + i];
-            if (c > 127) {
-                return i;
+    private static int setAsciiLE(ByteBuffer buffer, int out, char[] chars, int off, int len) {
+        final int longRounds = len >>> 3;
+        for (int i = 0; i < longRounds; i++) {
+            final char c0 = chars[off];
+            final char c1 = chars[off + 1];
+            final char c2 = chars[off + 2];
+            final char c3 = chars[off + 3];
+            final char c4 = chars[off + 4];
+            final char c5 = chars[off + 5];
+            final char c6 = chars[off + 6];
+            final char c7 = chars[off + 7];
+            if (c7 > 127 || c6 > 127 || c5 > 127 || c4 > 127 ||
+                    c3 > 127 || c2 > 127 || c1 > 127 || c0 > 127) {
+                return i << 3;
             }
-            buffer.put(out + i, (byte) c);
+            final long leBatch = (((long) (c7) << 56) |
+                    ((long) (c6 & 0xff) << 48) |
+                    ((long) (c5 & 0xff) << 40) |
+                    ((long) (c4 & 0xff) << 32) |
+                    ((long) (c3 & 0xff) << 24) |
+                    ((long) (c2 & 0xff) << 16) |
+                    ((long) (c1 & 0xff) << 8) |
+                    ((long) (c0 & 0xff)));
+            buffer.putLong(out, leBatch);
+            out += Long.BYTES;
+            off += Long.BYTES;
+        }
+        final int byteRounds = len & 7;
+        if (byteRounds > 0) {
+            for (int i = 0; i < byteRounds; i++) {
+                final char c = chars[off + i];
+                if (c > 127) {
+                    return (longRounds << 3) + i;
+                }
+                buffer.put(out + i, (byte) c);
+            }
+        }
+        return len;
+    }
+
+    private static int setAsciiBE(ByteBuffer buffer, int out, char[] chars, int off, int len) {
+        final int longRounds = len >>> 3;
+        for (int i = 0; i < longRounds; i++) {
+            final char c0 = chars[off];
+            final char c1 = chars[off + 1];
+            final char c2 = chars[off + 2];
+            final char c3 = chars[off + 3];
+            final char c4 = chars[off + 4];
+            final char c5 = chars[off + 5];
+            final char c6 = chars[off + 6];
+            final char c7 = chars[off + 7];
+            if (c7 > 127 || c6 > 127 || c5 > 127 || c4 > 127 ||
+                    c3 > 127 || c2 > 127 || c1 > 127 || c0 > 127) {
+                return i << 3;
+            }
+            final long leBatch = (((long) (c0) << 56) |
+                    ((long) (c1 & 0xff) << 48) |
+                    ((long) (c2 & 0xff) << 40) |
+                    ((long) (c3 & 0xff) << 32) |
+                    ((long) (c4 & 0xff) << 24) |
+                    ((long) (c5 & 0xff) << 16) |
+                    ((long) (c6 & 0xff) << 8) |
+                    ((long) (c7 & 0xff)));
+            buffer.putLong(out, leBatch);
+            out += Long.BYTES;
+            off += Long.BYTES;
+        }
+        final int byteRounds = len & 7;
+        if (byteRounds > 0) {
+            for (int i = 0; i < byteRounds; i++) {
+                final char c = chars[off + i];
+                if (c > 127) {
+                    return (longRounds << 3) + i;
+                }
+                buffer.put(out + i, (byte) c);
+            }
         }
         return len;
     }
@@ -296,13 +369,16 @@ public class ServletPrintWriter {
     }
 
     private static int writeAndFlushAscii(ServletOutputStreamImpl outputStream, ByteBuffer buffer, String s, int start, int end) throws IOException {
+        final ByteOrder order = buffer.order();
         int i = start;
         while (i < end) {
             final int bufferPos = buffer.position();
             final int bufferRemaining = buffer.remaining();
             final int sRemaining = end - i;
             final int remaining = Math.min(sRemaining, bufferRemaining);
-            final int written = setAscii(buffer, bufferPos, s, i, remaining);
+            final int written = order == ByteOrder.LITTLE_ENDIAN ?
+                    setAsciiLE(buffer, bufferPos, s, i, remaining) :
+                    setAsciiBE(buffer, bufferPos, s, i, remaining);
             i += written;
             buffer.position(bufferPos + written);
             if (!buffer.hasRemaining()) {
@@ -316,13 +392,82 @@ public class ServletPrintWriter {
         return i;
     }
 
-    private static int setAscii(ByteBuffer buffer, int out, String s, int off, int len) {
-        for (int i = 0; i < len; i++) {
-            final char c = s.charAt(off + i);
-            if (c > 127) {
-                return i;
+    private static int setAsciiLE(ByteBuffer buffer, int out, String s, int off, int len) {
+        final int longRounds = len >>> 3;
+        for (int i = 0; i < longRounds; i++) {
+            final char c0 = s.charAt(off);
+            final char c1 = s.charAt(off + 1);
+            final char c2 = s.charAt(off + 2);
+            final char c3 = s.charAt(off + 3);
+            final char c4 = s.charAt(off + 4);
+            final char c5 = s.charAt(off + 5);
+            final char c6 = s.charAt(off + 6);
+            final char c7 = s.charAt(off + 7);
+            if (c7 > 127 || c6 > 127 || c5 > 127 || c4 > 127 ||
+                    c3 > 127 || c2 > 127 || c1 > 127 || c0 > 127) {
+                return i << 3;
             }
-            buffer.put(out + i, (byte) c);
+            final long leBatch = (((long) (c7) << 56) |
+                    ((long) (c6 & 0xff) << 48) |
+                    ((long) (c5 & 0xff) << 40) |
+                    ((long) (c4 & 0xff) << 32) |
+                    ((long) (c3 & 0xff) << 24) |
+                    ((long) (c2 & 0xff) << 16) |
+                    ((long) (c1 & 0xff) << 8) |
+                    ((long) (c0 & 0xff)));
+            buffer.putLong(out, leBatch);
+            out += Long.BYTES;
+            off += Long.BYTES;
+        }
+        final int byteRounds = len & 7;
+        if (byteRounds > 0) {
+            for (int i = 0; i < byteRounds; i++) {
+                final char c = s.charAt(off + i);
+                if (c > 127) {
+                    return (longRounds << 3) + i;
+                }
+                buffer.put(out + i, (byte) c);
+            }
+        }
+        return len;
+    }
+
+    private static int setAsciiBE(ByteBuffer buffer, int out, String s, int off, int len) {
+        final int longRounds = len >>> 3;
+        for (int i = 0; i < longRounds; i++) {
+            final char c0 = s.charAt(off);
+            final char c1 = s.charAt(off + 1);
+            final char c2 = s.charAt(off + 2);
+            final char c3 = s.charAt(off + 3);
+            final char c4 = s.charAt(off + 4);
+            final char c5 = s.charAt(off + 5);
+            final char c6 = s.charAt(off + 6);
+            final char c7 = s.charAt(off + 7);
+            if (c7 > 127 || c6 > 127 || c5 > 127 || c4 > 127 ||
+                    c3 > 127 || c2 > 127 || c1 > 127 || c0 > 127) {
+                return i << 3;
+            }
+            final long leBatch = (((long) (c0) << 56) |
+                    ((long) (c1 & 0xff) << 48) |
+                    ((long) (c2 & 0xff) << 40) |
+                    ((long) (c3 & 0xff) << 32) |
+                    ((long) (c4 & 0xff) << 24) |
+                    ((long) (c5 & 0xff) << 16) |
+                    ((long) (c6 & 0xff) << 8) |
+                    ((long) (c7 & 0xff)));
+            buffer.putLong(out, leBatch);
+            out += Long.BYTES;
+            off += Long.BYTES;
+        }
+        final int byteRounds = len & 7;
+        if (byteRounds > 0) {
+            for (int i = 0; i < byteRounds; i++) {
+                final char c = s.charAt(off + i);
+                if (c > 127) {
+                    return (longRounds << 3) + i;
+                }
+                buffer.put(out + i, (byte) c);
+            }
         }
         return len;
     }
