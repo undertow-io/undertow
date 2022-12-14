@@ -207,33 +207,14 @@ public class ServletPrintWriter {
                 }
                 //fast path, basically we are hoping this is ascii only
                 int remaining = buffer.remaining();
-                boolean ok = true;
-                //so we have a pure ascii buffer, just write it out and skip all the encoder cost
-
                 int end = off + len;
-                int i = off;
-                int flushPos = i + remaining;
-                while (ok && i < end) {
-                    int realEnd = Math.min(end, flushPos);
-                    for (; i < realEnd; ++i) {
-                        char c = buf[i];
-                        if (c > 127) {
-                            ok = false;
-                            break;
-                        } else {
-                            buffer.put((byte) c);
-                        }
-                    }
-                    if (i == flushPos) {
-                        outputStream.flushInternal();
-                        flushPos = i + buffer.remaining();
-                    }
-                }
+                //so we have a pure ascii buffer, just write it out and skip all the encoder cost
+                final int sPos = writeAndFlushAscii(outputStream, buffer, buf, off, off + len);
                 outputStream.updateWritten(remaining - buffer.remaining());
-                if (ok) {
+                if (sPos == end) {
                     return;
                 }
-                final CharBuffer cb = CharBuffer.wrap(buf, i, len - (i - off));
+                final CharBuffer cb = CharBuffer.wrap(buf, sPos, len - (sPos - off));
                 write(cb);
                 return;
             } catch (IOException e) {
@@ -244,6 +225,38 @@ public class ServletPrintWriter {
         }
         final CharBuffer cb = CharBuffer.wrap(buf, off, len);
         write(cb);
+    }
+
+    private static int writeAndFlushAscii(ServletOutputStreamImpl outputStream, ByteBuffer buffer, char[] chars, int start, int end) throws IOException {
+        int i = start;
+        while (i < end) {
+            final int bufferPos = buffer.position();
+            final int bufferRemaining = buffer.remaining();
+            final int sRemaining = end - i;
+            final int remaining = Math.min(sRemaining, bufferRemaining);
+            final int written = setAscii(buffer, bufferPos, chars, i, remaining);
+            i += written;
+            buffer.position(bufferPos + written);
+            if (!buffer.hasRemaining()) {
+                outputStream.flushInternal();
+            }
+            // we have given up with the fast path? slow path NOW!
+            if (written < remaining) {
+                return i;
+            }
+        }
+        return i;
+    }
+
+    private static int setAscii(ByteBuffer buffer, int out, char[] chars, int off, int len) {
+        for (int i = 0; i < len; i++) {
+            final char c = chars[off + i];
+            if (c > 127) {
+                return i;
+            }
+            buffer.put(out + i, (byte) c);
+        }
+        return len;
     }
 
     public void write(final char[] buf) {
@@ -261,30 +274,15 @@ public class ServletPrintWriter {
                 }
                 //fast path, basically we are hoping this is ascii only
                 int remaining = buffer.remaining();
-                boolean ok = true;
-                //so we have a pure ascii buffer, just write it out and skip all the encoder cost
-
                 int end = off + len;
-                int i = off;
-                int fpos = i + remaining;
-                for (; i < end; ++i) {
-                    if (i == fpos) {
-                        outputStream.flushInternal();
-                        fpos = i + buffer.remaining();
-                    }
-                    char c = s.charAt(i);
-                    if (c > 127) {
-                        ok = false;
-                        break;
-                    }
-                    buffer.put((byte) c);
-                }
+                //so we have a pure ascii buffer, just write it out and skip all the encoder cost
+                final int sPos = writeAndFlushAscii(outputStream, buffer, s, off, off + len);
                 outputStream.updateWritten(remaining - buffer.remaining());
-                if (ok) {
+                if (sPos == end) {
                     return;
                 }
                 //wrap(String, off, len) acts wrong in the presence of multi byte characters
-                final CharBuffer cb = CharBuffer.wrap(s.toCharArray(), i, len - (i - off));
+                final CharBuffer cb = CharBuffer.wrap(s.toCharArray(), sPos, len - (sPos - off));
                 write(cb);
                 return;
             } catch (IOException e) {
@@ -295,6 +293,38 @@ public class ServletPrintWriter {
         }
         final CharBuffer cb = CharBuffer.wrap(s, off, off + len);
         write(cb);
+    }
+
+    private static int writeAndFlushAscii(ServletOutputStreamImpl outputStream, ByteBuffer buffer, String s, int start, int end) throws IOException {
+        int i = start;
+        while (i < end) {
+            final int bufferPos = buffer.position();
+            final int bufferRemaining = buffer.remaining();
+            final int sRemaining = end - i;
+            final int remaining = Math.min(sRemaining, bufferRemaining);
+            final int written = setAscii(buffer, bufferPos, s, i, remaining);
+            i += written;
+            buffer.position(bufferPos + written);
+            if (!buffer.hasRemaining()) {
+                outputStream.flushInternal();
+            }
+            // we have given up with the fast path? slow path NOW!
+            if (written < remaining) {
+                return i;
+            }
+        }
+        return i;
+    }
+
+    private static int setAscii(ByteBuffer buffer, int out, String s, int off, int len) {
+        for (int i = 0; i < len; i++) {
+            final char c = s.charAt(off + i);
+            if (c > 127) {
+                return i;
+            }
+            buffer.put(out + i, (byte) c);
+        }
+        return len;
     }
 
     public void write(final String s) {
