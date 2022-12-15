@@ -75,23 +75,17 @@ public class SecurityPathMatches {
      * @return <code>true</code> If no security path information has been defined
      */
     public boolean isEmpty() {
-        return isDefaultPathSecurityEmpty() &&
+        return defaultPathSecurityInformation.excludedMethodRoles.isEmpty() &&
+                defaultPathSecurityInformation.perMethodRequiredRoles.isEmpty() &&
+                defaultPathSecurityInformation.defaultRequiredRoles.isEmpty() &&
                 exactPathRoleInformation.isEmpty() &&
                 prefixPathRoleInformation.isEmpty() &&
                 extensionRoleInformation.isEmpty();
     }
 
-    public boolean isDefaultPathSecurityEmpty() {
-        return defaultPathSecurityInformation.excludedMethodRoles.isEmpty() &&
-                defaultPathSecurityInformation.perMethodRequiredRoles.isEmpty() &&
-                defaultPathSecurityInformation.defaultRequiredRoles.isEmpty();
-    }
-
     public SecurityPathMatch getSecurityInfo(final String path, final String method) {
         RuntimeMatch currentMatch = new RuntimeMatch();
-        if (!isDefaultPathSecurityEmpty()) {
-            handleMatch(method, defaultPathSecurityInformation, currentMatch);
-        }
+        handleMatch(method, defaultPathSecurityInformation, currentMatch);
         PathSecurityInformation match = exactPathRoleInformation.get(path);
         PathSecurityInformation extensionMatch = null;
         if (match != null) {
