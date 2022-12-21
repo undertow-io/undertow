@@ -53,7 +53,7 @@ public class AsciiEncoders {
                         chars[off + 5] << 16 |
                         chars[off + 7];
                 if (((batch1 | batch2) & 0xff80_ff80_ff80_ff80L) != 0) {
-                    return i;
+                    return i << 3;
                 }
                 final long batch = (batch1 << 8) | batch2;
                 buffer.putLong(out, batch);
