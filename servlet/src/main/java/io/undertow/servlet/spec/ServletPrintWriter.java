@@ -264,9 +264,7 @@ public class ServletPrintWriter {
             if (((batch1 | batch2) & 0xff80_ff80_ff80_ff80L) != 0) {
                 return i << 3;
             }
-            final long maskedBatch1 = (batch1 & 0x007f_007f_007f_007fL) << 8;
-            final long maskedBatch2 = batch2 & 0x007f_007f_007f_007fL;
-            final long batch = maskedBatch1 | maskedBatch2;
+            final long batch = (batch1 << 8) | batch2;
             buffer.putLong(out, batch);
             out += Long.BYTES;
             off += Long.BYTES;
@@ -356,9 +354,7 @@ public class ServletPrintWriter {
             if (((batch1 | batch2) & 0xff80_ff80_ff80_ff80L) != 0) {
                 return i << 3;
             }
-            final long maskedBatch1 = (batch1 & 0x007f_007f_007f_007fL) << 8L;
-            final long maskedBatch2 = batch2 & 0x007f_007f_007f_007fL;
-            final long batch = maskedBatch1 | maskedBatch2;
+            final long batch = (batch1 << 8) | batch2;
             buffer.putLong(out, batch);
             out += Long.BYTES;
             off += Long.BYTES;
