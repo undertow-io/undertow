@@ -45,8 +45,9 @@ public class MimeMappings {
         defaultMappings.put("jpe", "image/jpeg");
         defaultMappings.put("jpeg", "image/jpeg");
         defaultMappings.put("bmp", "image/bmp");
-        defaultMappings.put("js", "application/javascript");
+        defaultMappings.put("webp", "image/webp");
         defaultMappings.put("png", "image/png");
+        defaultMappings.put("js", "application/javascript");
         defaultMappings.put("java", "text/plain");
         defaultMappings.put("body", "text/html");
         defaultMappings.put("rtx", "text/richtext");
