@@ -44,6 +44,7 @@ public class ParserResumeTestCase {
     public static final HttpRequestParser PARSER = HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true));
 
     final ParseState context = new ParseState(10);
+
     @Test
     public void testMethodSplit() {
         byte[] in = DATA.getBytes();
@@ -54,6 +55,31 @@ public class ParserResumeTestCase {
                 throw new RuntimeException("Test failed at split " + i, e);
             }
         }
+    }
+
+    @Test
+    public void testMatrixParamSplit() throws BadRequestException {
+        String data = "GET http://host/path;hoge=fuga;foo=bar HTTP/1.1\n\n";
+        byte[] in = data.getBytes();
+
+        context.reset();
+        HttpServerExchange exchange = new HttpServerExchange(null);
+        ByteBuffer buffer = ByteBuffer.wrap(in);
+        buffer.limit(data.indexOf("fuga") + 2); // resume in the middle of a parameter value
+        PARSER.handle(buffer, context, exchange);
+
+        buffer.limit(data.indexOf("bar") + 2); // resume in the middle of a parameter value
+        PARSER.handle(buffer, context, exchange);
+
+        buffer.limit(buffer.capacity());
+        PARSER.handle(buffer, context, exchange);
+
+        Assert.assertEquals("/path", exchange.getRequestPath());
+        Assert.assertEquals(2, exchange.getPathParameters().size());
+        Assert.assertTrue(exchange.getPathParameters().containsKey("hoge"));
+        Assert.assertTrue(exchange.getPathParameters().containsKey("foo"));
+        Assert.assertEquals("fuga", exchange.getPathParameters().get("hoge").getFirst());
+        Assert.assertEquals("bar", exchange.getPathParameters().get("foo").getFirst());
     }
 
     @Test
@@ -72,6 +98,17 @@ public class ParserResumeTestCase {
         }
         Assert.assertEquals(oldLimit, buffer.limit() + 4);
         runAssertions(result);
+    }
+
+    private HttpServerExchange resume(final int split, byte[] in) throws BadRequestException {
+        context.reset();
+        HttpServerExchange result = new HttpServerExchange(null);
+        ByteBuffer buffer = ByteBuffer.wrap(in);
+        buffer.limit(split);
+        PARSER.handle(buffer, context, result);
+        buffer.limit(buffer.capacity());
+        PARSER.handle(buffer, context, result);
+        return result;
     }
 
     private void testResume(final int split, byte[] in) throws BadRequestException {
