@@ -408,9 +408,11 @@ public abstract class HttpRequestParser {
             } else if (next == ';') {
                 state.parseState = parseState;
                 state.urlDecodeRequired = urlDecodeRequired;
-                state.pos = canonicalPathStart;
                 // store at canonical path the partial path parsed up until here
                 state.canonicalPath.append(stringBuilder.substring(canonicalPathStart));
+                state.stringBuilder.append(";");
+                // set position to end of path (possibly start of parameter name)
+                state.pos = state.stringBuilder.length();
                 // handle the path parameters
                 handlePathParameters(buffer, state, exchange);
                 // if state is PATH, it means that handlePathParameters found a / after parsing path parameters
@@ -586,8 +588,7 @@ public abstract class HttpRequestParser {
         boolean urlDecodeRequired = state.urlDecodeRequired;
         String param = state.nextQueryParam;
         final StringBuilder stringBuilder = state.stringBuilder;
-        stringBuilder.append(";");
-        int pos = stringBuilder.length();
+        int pos = state.pos;
 
         //so this is a bit funky, because it not only deals with parsing, but
         //also deals with URL decoding the query parameters as well, while also
