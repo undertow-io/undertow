@@ -2,7 +2,6 @@ package io.undertow.benchmarks;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 public class AsciiEncoders {
 
