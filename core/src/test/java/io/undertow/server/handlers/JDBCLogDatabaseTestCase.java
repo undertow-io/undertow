@@ -85,8 +85,8 @@ public class JDBCLogDatabaseTestCase {
                     " virtualHost VARCHAR(64)," +
                     " method VARCHAR(8)," +
                     " query VARCHAR(255) NOT NULL," +
-                    " status SMALLINT UNSIGNED NOT NULL," +
-                    " bytes INT UNSIGNED NOT NULL," +
+                    " status SMALLINT NOT NULL," +
+                    " bytes INT NOT NULL," +
                     " referer VARCHAR(128)," +
                     " userAgent VARCHAR(128)," +
                     " PRIMARY KEY (id)" +
@@ -150,7 +150,9 @@ public class JDBCLogDatabaseTestCase {
                 statement = conn.createStatement();
                 ResultSet resultDatabase = statement.executeQuery("SELECT * FROM PUBLIC.ACCESS;");
                 resultDatabase.next();
-                Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), resultDatabase.getString(logHandler.getRemoteHostField()));
+                // for some reason H2 database version 2 is filling in extra blanks in the remote host field. So, even though
+                // Undertow sets "127.0.0.1", h2 database is witing "127.0.0.1      " (length 15), so, just trim it
+                Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), resultDatabase.getString(logHandler.getRemoteHostField()).trim());
                 Assert.assertEquals("5", resultDatabase.getString(logHandler.getBytesField()));
                 Assert.assertEquals("200", resultDatabase.getString(logHandler.getStatusField()));
                 client.getConnectionManager().shutdown();

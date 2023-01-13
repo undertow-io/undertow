@@ -196,9 +196,6 @@ public abstract class DetachableStreamSourceChannel implements StreamSourceChann
     }
 
     public <T> T getOption(final Option<T> option) throws IOException {
-        if (isFinished()) {
-            throw UndertowMessages.MESSAGES.streamIsClosed();
-        }
         return delegate.getOption(option);
     }
 
