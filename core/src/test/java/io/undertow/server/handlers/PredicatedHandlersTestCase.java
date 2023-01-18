@@ -19,6 +19,7 @@
 package io.undertow.server.handlers;
 
 import io.undertow.Handlers;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser;
@@ -121,4 +122,16 @@ public class PredicatedHandlersTestCase {
         }
     }
 
+    @Test
+    public void testSetHeader() throws Exception {
+        HandlerWrapper predicate = PredicatedHandlersParser.parseHandler("set(attribute='%{o,test-header}', value='foo\\'bar')", PredicatedHandlersTestCase.class.getClassLoader());
+        HttpServerExchange e = new HttpServerExchange(null);
+        SetAttributeHandler handler = (SetAttributeHandler) predicate.wrap(new HttpHandler() {
+            @Override
+            public void handleRequest(HttpServerExchange exchange) throws Exception {
+            }
+        });
+        handler.handleRequest(e);
+        Assert.assertEquals("foo'bar",e.getResponseHeaders().get("test-header").getFirst());
+    }
 }
