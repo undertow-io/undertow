@@ -629,16 +629,9 @@ public class PredicatedHandlersParser {
             char c = string.charAt(pos);
             if (currentStringDelim != 0) {
                 if (c == currentStringDelim) {
-                    if (current.length() > 0) {
-                        if (current.charAt(current.length() - 1) != '\\') {
-                            ret.add(new Token(current.toString(), pos));
-                            current.setLength(0);
-                            currentStringDelim = 0;
-                        } else {
-                            // previous '\\' escaped delimiter, replace escape with current char
-                            current.deleteCharAt(current.length() - 1);
-                            current.append(c);
-                        }
+                    if (current.length() > 0 && current.charAt(current.length() - 1) == '\\') {
+                        current.setLength(current.length() - 1);
+                        current.append(c);
                     } else {
                         ret.add(new Token(current.toString(), pos));
                         current.setLength(0);
