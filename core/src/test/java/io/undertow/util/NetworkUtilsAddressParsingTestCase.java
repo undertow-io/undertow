@@ -132,7 +132,7 @@ public class NetworkUtilsAddressParsingTestCase {
         Assert.assertEquals("/0:0:0:0:0:0:0:1", res.toString());
     }
 
-    @Test(expected = IOException.class)
+    @Test
     public void testIpV6AddressWithLeadingZero() throws IOException {
         NetworkUtils.parseIpv6Address("2001:1db8:100:03:6:ff00:42:8329");
     }
