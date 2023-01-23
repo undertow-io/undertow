@@ -173,6 +173,7 @@ public abstract class HttpRequestParser {
 
     private static final boolean[] ALLOWED_TARGET_CHARACTER = new boolean[256];
 
+    private static final String ID_LESS_MATRIX_PARAMS_PROPERTY = "io.undertow.server.protocol.http.Parser.ID_LESS_MATRIX_PARAMS_PROPERTY";
     static {
         try {
             HTTP = "HTTP/1.".getBytes("ASCII");
