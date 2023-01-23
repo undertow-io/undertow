@@ -217,7 +217,7 @@ public abstract class HttpRequestParser {
         charset = options.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
         maxCachedHeaderSize = options.get(UndertowOptions.MAX_CACHED_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_CACHED_HEADER_SIZE);
         this.allowUnescapedCharactersInUrl = options.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
-        this.allowIDLessMatrixParams = Boolean.parseBoolean(System.getProperty(ID_LESS_MATRIX_PARAMS_PROPERTY));
+        this.allowIDLessMatrixParams = options.get(UndertowOptions.ALLOW_ID_LESS_MATRIX_PARAMETERS, UndertowOptions.DEFAULT_ALLOW_ID_LESS_MATRIX_PARAMETERS);
     }
 
     public static final HttpRequestParser instance(final OptionMap options) {
