@@ -151,7 +151,7 @@ public class HttpClientSNITestCase {
 
         // connect using the hostname, SNI expected
         final ClientConnection connection = client.connect(new URI("https://" + address.getHostName() + ":" + ADDRESS.getPort()), worker,
-                new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()),
+                new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.createClientSslContext()),
                 DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
         try {
             connection.getIoThread().execute(() -> {
@@ -182,7 +182,7 @@ public class HttpClientSNITestCase {
 
         // connect using the IP, no SNI expected
         final ClientConnection connection = client.connect(new URI("https://" + hostname + ":" + ADDRESS.getPort()), worker,
-                new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()),
+                new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.createClientSslContext()),
                 DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
         try {
             connection.getIoThread().execute(() -> {
@@ -213,7 +213,7 @@ public class HttpClientSNITestCase {
 
         // connect using IP but adding hostname via option, SNI expected to the forced one
         final ClientConnection connection = client.connect(new URI("https://" + hostname + ":" + ADDRESS.getPort()), worker,
-                new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()),
+                new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.createClientSslContext()),
                 DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.SSL_SNI_HOSTNAME, address.getHostName())).get();
         try {
             connection.getIoThread().execute(() -> {
@@ -243,7 +243,7 @@ public class HttpClientSNITestCase {
 
         // connect using hostname but add option to another hostname, SNI expected to the forced one
         final ClientConnection connection = client.connect(new URI("https://" + address.getHostName() + ":" + ADDRESS.getPort()), worker,
-                new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()),
+                new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.createClientSslContext()),
                 DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.SSL_SNI_HOSTNAME, "server")).get();
         try {
             connection.getIoThread().execute(() -> {
