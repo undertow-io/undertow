@@ -117,10 +117,24 @@ public class UndertowOptions {
      * this is disabled by default.
      * <p>
      * Defaults to false
-     *
+     * <p>
      * See <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2007-0450">CVE-2007-0450</a>
+     * @deprecated - this option was interpreted improperly.
+     * @See {@link #DECODE_SLASH}
      */
     public static final Option<Boolean> ALLOW_ENCODED_SLASH = Option.simple(UndertowOptions.class, "ALLOW_ENCODED_SLASH", Boolean.class);
+
+    /**
+     * If a request comes in with encoded / characters (i.e. %2F), will these be decoded.
+     * <p>
+     * This can cause security problems if a front end proxy does not perform the same decoding, and as a result
+     * this is disabled by default.
+     * <p>
+     * If this option is set explicitly, the {@link #ALLOW_ENCODED_SLASH} is ignored. Should default to <b>true</b>
+     * <p>
+     * See <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2007-0450">CVE-2007-0450</a>
+     */
+    public static final Option<Boolean> DECODE_SLASH = Option.simple(UndertowOptions.class, "DECODE_SLASH", Boolean.class);
 
     /**
      * If this is true then the parser will decode the URL and query parameters using the selected character encoding (UTF-8 by default). If this is false they will
