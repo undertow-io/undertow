@@ -164,7 +164,7 @@ public abstract class HttpRequestParser {
 
     private final int maxParameters;
     private final int maxHeaders;
-    private final boolean allowEncodedSlash;
+    private final boolean slashDecodingFlag;
     private final boolean decode;
     private final String charset;
     private final int maxCachedHeaderSize;
@@ -212,7 +212,7 @@ public abstract class HttpRequestParser {
     public HttpRequestParser(OptionMap options) {
         maxParameters = options.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS);
         maxHeaders = options.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS);
-        allowEncodedSlash = options.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
+        slashDecodingFlag = URLUtils.getSlashDecodingFlag(options);
         decode = options.get(UndertowOptions.DECODE_URL, true);
         charset = options.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
         maxCachedHeaderSize = options.get(UndertowOptions.MAX_CACHED_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_CACHED_HEADER_SIZE);
@@ -474,7 +474,7 @@ public abstract class HttpRequestParser {
             exchange.setRelativePath("/");
             exchange.setRequestURI(path, true);
         } else if (parseState < HOST_DONE && state.canonicalPath.length() == 0) {
-            String decodedPath = decode(path, urlDecodeRequired, state, allowEncodedSlash, false);
+            String decodedPath = decode(path, urlDecodeRequired, state, slashDecodingFlag, false);
             exchange.setRequestPath(decodedPath);
             exchange.setRelativePath(decodedPath);
             exchange.setRequestURI(path, false);
@@ -497,7 +497,7 @@ public abstract class HttpRequestParser {
 
     private void handleFullUrl(ParseState state, HttpServerExchange exchange, int canonicalPathStart, boolean urlDecodeRequired, String path, int parseState) {
         state.canonicalPath.append(path.substring(canonicalPathStart));
-        String thePath = decode(state.canonicalPath.toString(), urlDecodeRequired, state, allowEncodedSlash, false);
+        String thePath = decode(state.canonicalPath.toString(), urlDecodeRequired, state, slashDecodingFlag, false);
         exchange.setRequestPath(thePath);
         exchange.setRelativePath(thePath);
         exchange.setRequestURI(path, parseState == HOST_DONE);
@@ -587,9 +587,9 @@ public abstract class HttpRequestParser {
         state.mapCount = mapCount;
     }
 
-    private String decode(final String value, boolean urlDecodeRequired, ParseState state, final boolean allowEncodedSlash, final boolean formEncoded) {
+    private String decode(final String value, boolean urlDecodeRequired, ParseState state, final boolean slashDecodingFlag, final boolean formEncoded) {
         if (urlDecodeRequired) {
-            return URLUtils.decode(value, charset, allowEncodedSlash, formEncoded, state.decodeBuffer);
+            return URLUtils.decode(value, charset, slashDecodingFlag, formEncoded, state.decodeBuffer);
         } else {
             return value;
         }
