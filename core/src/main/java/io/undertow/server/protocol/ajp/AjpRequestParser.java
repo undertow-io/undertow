@@ -74,7 +74,7 @@ public class AjpRequestParser {
 
     private final String encoding;
     private final boolean doDecode;
-    private final boolean allowEncodedSlash;
+    private final boolean slashDecodingFlag;
     private final int maxParameters;
     private final int maxHeaders;
     private StringBuilder decodeBuffer;
@@ -184,16 +184,16 @@ public class AjpRequestParser {
         ATTR_SET = new HashSet<>(Arrays.asList(ATTRIBUTES));
     }
 
-    public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean allowEncodedSlash, boolean allowUnescapedCharactersInUrl) {
-        this(encoding, doDecode, maxParameters, maxHeaders, allowEncodedSlash, allowUnescapedCharactersInUrl, null);
+    public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean slashDecodingFlag, boolean allowUnescapedCharactersInUrl) {
+        this(encoding, doDecode, maxParameters, maxHeaders, slashDecodingFlag, allowUnescapedCharactersInUrl, null);
     }
 
-    public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean allowEncodedSlash, boolean allowUnescapedCharactersInUrl, String allowedRequestAttributesPattern) {
+    public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean slashDecodingFlag, boolean allowUnescapedCharactersInUrl, String allowedRequestAttributesPattern) {
         this.encoding = encoding;
         this.doDecode = doDecode;
         this.maxParameters = maxParameters;
         this.maxHeaders = maxHeaders;
-        this.allowEncodedSlash = allowEncodedSlash;
+        this.slashDecodingFlag = slashDecodingFlag;
         this.allowUnescapedCharactersInUrl = allowUnescapedCharactersInUrl;
         if (allowedRequestAttributesPattern != null && !allowedRequestAttributesPattern.isEmpty()) {
             this.allowedRequestAttributesPattern = Pattern.compile(allowedRequestAttributesPattern);
@@ -512,7 +512,7 @@ public class AjpRequestParser {
                 if(decodeBuffer == null) {
                     decodeBuffer = new StringBuilder();
                 }
-                return URLUtils.decode(url, this.encoding, allowEncodedSlash, false, decodeBuffer);
+                return URLUtils.decode(url, this.encoding, slashDecodingFlag, false, decodeBuffer);
             } catch (Exception e) {
                 throw UndertowMessages.MESSAGES.failedToDecodeURL(url, encoding, e);
             }

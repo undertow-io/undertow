@@ -52,6 +52,8 @@ import io.undertow.util.Methods;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
+import io.undertow.util.URLUtils;
+
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -78,7 +80,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
     private final String encoding;
     private final boolean decode;
     private final StringBuilder decodeBuffer = new StringBuilder();
-    private final boolean allowEncodingSlash;
+    private final boolean slashDecodingFlag;
     private final int bufferSize;
     private final int maxParameters;
     private final boolean recordRequestStartTime;
@@ -92,7 +94,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         this.bufferSize = bufferSize;
         this.connectorStatistics = connectorStatistics;
         this.maxEntitySize = undertowOptions.get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
-        this.allowEncodingSlash = undertowOptions.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
+        this.slashDecodingFlag = URLUtils.getSlashDecodingFlag(undertowOptions);
         this.decode = undertowOptions.get(UndertowOptions.DECODE_URL, true);
         this.maxParameters = undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS);
         this.recordRequestStartTime = undertowOptions.get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
@@ -190,7 +192,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         }
 
         try {
-            Connectors.setExchangeRequestPath(exchange, path, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
+            Connectors.setExchangeRequestPath(exchange, path, encoding, decode, slashDecodingFlag, decodeBuffer, maxParameters);
         } catch (ParameterLimitException e) {
             //this can happen if max parameters is exceeded
             UndertowLogger.REQUEST_IO_LOGGER.debug("Failed to set request path", e);
@@ -241,7 +243,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         Connectors.terminateRequest(exchange);
         String uri = exchange.getQueryString().isEmpty() ? initial.getRequestURI() : initial.getRequestURI() + '?' + exchange.getQueryString();
         try {
-            Connectors.setExchangeRequestPath(exchange, uri, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
+            Connectors.setExchangeRequestPath(exchange, uri, encoding, decode, slashDecodingFlag, decodeBuffer, maxParameters);
         } catch (ParameterLimitException e) {
             exchange.setStatusCode(StatusCodes.BAD_REQUEST);
             exchange.endExchange();

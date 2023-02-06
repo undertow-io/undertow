@@ -444,7 +444,8 @@ public class Connectors {
     @Deprecated
     public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean allowEncodedSlash, StringBuilder decodeBuffer) {
         try {
-            setExchangeRequestPath(exchange, encodedPath, charset, decode, allowEncodedSlash, decodeBuffer, exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS));
+            final boolean slashDecodingFlag = URLUtils.getSlashDecodingFlag(allowEncodedSlash, exchange.getConnection().getUndertowOptions().get(UndertowOptions.DECODE_SLASH));
+            setExchangeRequestPath(exchange, encodedPath, charset, decode, slashDecodingFlag, decodeBuffer, exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS));
         } catch (ParameterLimitException e) {
             throw new RuntimeException(e);
         }
@@ -461,10 +462,11 @@ public class Connectors {
      */
     public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, StringBuilder decodeBuffer) throws ParameterLimitException {
         final OptionMap options = exchange.getConnection().getUndertowOptions();
+        boolean slashDecodingFlag = URLUtils.getSlashDecodingFlag(options);
         setExchangeRequestPath(exchange, encodedPath,
                 options.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name()),
                 options.get(UndertowOptions.DECODE_URL, true),
-                options.get(UndertowOptions.ALLOW_ENCODED_SLASH, false),
+                slashDecodingFlag,
                 decodeBuffer,
                 options.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS));
     }
@@ -476,7 +478,7 @@ public class Connectors {
      * @param encodedPath The encoded path
      * @param charset     The charset
      */
-    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean allowEncodedSlash, StringBuilder decodeBuffer, int maxParameters) throws ParameterLimitException {
+    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean decodeSlashFlag, StringBuilder decodeBuffer, int maxParameters) throws ParameterLimitException {
         boolean requiresDecode = false;
         final StringBuilder pathBuilder = new StringBuilder();
         int currentPathPartIndex = 0;
@@ -486,7 +488,7 @@ public class Connectors {
                 String part;
                 String encodedPart = encodedPath.substring(currentPathPartIndex, i);
                 if (requiresDecode) {
-                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash,false, decodeBuffer);
+                    part = URLUtils.decode(encodedPart, charset, decodeSlashFlag,false, decodeBuffer);
                 } else {
                     part = encodedPart;
                 }
@@ -503,7 +505,7 @@ public class Connectors {
                 String part;
                 String encodedPart = encodedPath.substring(currentPathPartIndex, i);
                 if (requiresDecode) {
-                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash, false, decodeBuffer);
+                    part = URLUtils.decode(encodedPart, charset, decodeSlashFlag, false, decodeBuffer);
                 } else {
                     part = encodedPart;
                 }
@@ -519,7 +521,7 @@ public class Connectors {
         String part;
         String encodedPart = encodedPath.substring(currentPathPartIndex);
         if (requiresDecode) {
-            part = URLUtils.decode(encodedPart, charset, allowEncodedSlash, false, decodeBuffer);
+            part = URLUtils.decode(encodedPart, charset, decodeSlashFlag, false, decodeBuffer);
         } else {
             part = encodedPart;
         }
