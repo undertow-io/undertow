@@ -192,11 +192,20 @@ public class SecurityPathMatches {
             }
         } else if (denyUncoveredHttpMethods) {
             if (exact.perMethodRequiredRoles.size() == 0) {
-                // 13.8.4. When HTTP methods are not enumerated within a security-constraint, the protections defined by the
-                // constraint apply to the complete set of HTTP (extension) methods.
-                currentMatch.uncovered = false;
-                currentMatch.constraints.add(new SingleConstraintMatch(SecurityInfo.EmptyRoleSemantic.PERMIT, new HashSet<>()));
-            } else {
+                if (exact.excludedMethodRoles.isEmpty()) {
+                    // 13.8.4. When HTTP methods are not enumerated within a security-constraint, the protections defined by the
+                    // constraint apply to the complete set of HTTP (extension) methods.
+                    currentMatch.uncovered = false;
+                } else {
+                    for (ExcludedMethodRoles excluded : exact.excludedMethodRoles) {
+                        if (!excluded.methods.contains(method)) {
+                            currentMatch.uncovered = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (currentMatch.uncovered) {
                 //at this point method info is null, but there is match, above if will be triggered for default path, we need to flip it?
                 // keep currentMatch.uncovered value as true (this is the value that is initially set)
                 currentMatch.constraints.clear();
