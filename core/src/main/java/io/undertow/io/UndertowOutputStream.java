@@ -272,11 +272,18 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
      * {@inheritDoc}
      */
     public void flush() throws IOException {
-        if (anyAreSet(state, FLAG_CLOSED)) {
-            throw UndertowMessages.MESSAGES.streamIsClosed();
-        }
+        boolean closed = anyAreSet(state, FLAG_CLOSED);
         if (buffer != null && buffer.position() != 0) {
+            if (closed) {
+                throw UndertowMessages.MESSAGES.streamIsClosed();
+            }
             writeBufferBlocking(false);
+        } else if (closed) {
+            // No-op if flush is called with no buffered data on a closed channel.
+            // This stream closes itself when a Content-Length is provided, once sufficient
+            // bytes have been written -- a flush following the last write is entirely
+            // reasonable.
+            return;
         }
         if (channel == null) {
             channel = exchange.getResponseChannel();
