@@ -373,7 +373,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         this.written += len;
         long contentLength = servletRequestContext.getOriginalResponse().getContentLength();
         if (contentLength != -1 && this.written >= contentLength) {
-            close();
+            flushInternal();
         }
     }
 
