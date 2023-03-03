@@ -43,6 +43,7 @@ public class ForwardPathTestServlet extends HttpServlet {
             out.println("jakarta.servlet.forward.servlet_path:" + req.getAttribute("jakarta.servlet.forward.servlet_path"));
             out.println("jakarta.servlet.forward.path_info:" + req.getAttribute("jakarta.servlet.forward.path_info"));
             out.println("jakarta.servlet.forward.query_string:" + req.getAttribute("jakarta.servlet.forward.query_string"));
+            out.println("jakarta.servlet.forward.mapping:" + req.getAttribute("jakarta.servlet.forward.mapping"));
         }
     }
 }
