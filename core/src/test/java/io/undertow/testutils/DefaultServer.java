@@ -954,6 +954,24 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         }
     }
 
+    public static OptionMap getProxyOptions() {
+        if (proxyOpenListener != null) {
+            return proxyOpenListener.getUndertowOptions();
+        } else {
+            return null;
+        }
+    }
+
+    public static void setProxyOptions(final OptionMap options) {
+        OptionMap.Builder builder = OptionMap.builder().addAll(options);
+        builder = builder.set(UndertowOptions.BUFFER_PIPELINED_DATA, true);
+
+        if (proxyOpenListener != null) {
+            proxyOpenListener.setUndertowOptions(builder.getMap());
+            proxyOpenListener.closeConnections();
+        }
+    }
+
     public static void setServerOptions(final OptionMap options) {
         serverOptionMapBuilder = OptionMap.builder().addAll(options);
     }
