@@ -301,10 +301,6 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         if(anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             return;
         }
-        if (this.chunkleft != 0) {
-            UndertowLogger.REQUEST_IO_LOGGER.debugf("Channel closed mid-chunk");
-            next.truncateWrites();
-        }
         if (!anyAreSet(state, FLAG_FIRST_DATA_WRITTEN)) {
             //if no data was actually sent we just remove the transfer encoding header, and set content length 0
             //TODO: is this the best way to do it?
@@ -312,12 +308,28 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             responseHeaders.put(Headers.CONTENT_LENGTH, "0"); //according to the spec we don't actually need this, but better to be safe
             responseHeaders.remove(Headers.TRANSFER_ENCODING);
             state |= FLAG_NEXT_SHUTDOWN | FLAG_WRITES_SHUTDOWN;
+            try {
+                flush();
+            } catch (IOException ignore) {
+                // just log it at debug level, this is nothing but an attempt to flush the last bytes
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(ignore);
+            }
             if(anyAreSet(state, CONF_FLAG_PASS_CLOSE)) {
                 next.terminateWrites();
             }
         } else {
             createLastChunk(false);
             state |= FLAG_WRITES_SHUTDOWN;
+            try {
+                flush();
+            } catch (IOException ignore) {
+                // just log it at debug level, this is nothing but an attempt to flush the last bytes
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(ignore);
+            }
+        }
+        if (this.chunkleft != 0) {
+            UndertowLogger.REQUEST_IO_LOGGER.debugf("Channel closed mid-chunk");
+            next.truncateWrites();
         }
     }
 
