@@ -360,7 +360,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
             }
         }
 
-        int host = hostSelector.selectHost(hosts);
+        int host = hostSelector.selectHost(hosts, exchange);
 
         final int startHost = host; //if the all hosts have problems we come back to this one
         Host full = null;
@@ -473,7 +473,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
 
     public interface HostSelector {
 
-        int selectHost(Host[] availableHosts);
+        int selectHost(Host[] availableHosts, HttpServerExchange exchange);
     }
 
     static class RoundRobinHostSelector implements HostSelector {
@@ -481,7 +481,7 @@ public class LoadBalancingProxyClient implements ProxyClient {
         private final AtomicInteger currentHost = new AtomicInteger(0);
 
         @Override
-        public int selectHost(Host[] availableHosts) {
+        public int selectHost(Host[] availableHosts, HttpServerExchange exchange) {
             return currentHost.incrementAndGet() % availableHosts.length;
         }
     }
