@@ -99,6 +99,7 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
         long expireTimeVar = expireTime;
         if (expireTimeVar != -1 && currentTime > expireTimeVar) {
             this.expireTime = -1;
+            connection.getSinkChannel().shutdownWrites();
             IoUtils.safeClose(connection);
             throw new ClosedChannelException();
         }
