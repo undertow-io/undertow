@@ -355,6 +355,10 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             clientCallback.failed(UndertowClientMessages.MESSAGES.closedConnectionState());
             return;
         }
+        if (anyAreSet(state, CLOSE_REQ | CLOSED)) {
+            clientCallback.failed(new ClosedChannelException());
+            return;
+        }
         final HttpClientExchange httpClientExchange = new HttpClientExchange(clientCallback, request, this);
         boolean ssl = this.connection instanceof SslConnection;
         if(!ssl && !http2Tried && options.get(UndertowOptions.ENABLE_HTTP2, UndertowOptions.DEFAULT_ENABLE_HTTP2) && !request.getRequestHeaders().contains(Headers.UPGRADE)) {
