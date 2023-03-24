@@ -57,6 +57,7 @@ public interface UndertowClientMessages {
     @Message(id = 1032, value = "Unknown transfer encoding %s")
     IOException unknownTransferEncoding(String transferEncodingString);
 
+    @Deprecated (forRemoval = true)
     @Message(id = 1033, value = "Invalid connection state")
     IOException invalidConnectionState();
 
@@ -74,4 +75,11 @@ public interface UndertowClientMessages {
 
     @Message(id = 1038, value = "Received invalid AJP chunk %s with response already complete")
     IOException receivedInvalidChunk(byte prefix);
+
+    @Message(id = 1039, value = "Invalid connection state: upgrade")
+    IOException invalidUpgradeConnectionState();
+
+    @Message(id = 1040, value = "Invalid connection state: close")
+    IOException invalidCloseConnectionState();
+
 }

@@ -348,8 +348,12 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             http2Delegate.sendRequest(request, clientCallback);
             return;
         }
-        if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED | CLOSE_REQ | CLOSED)) {
-            clientCallback.failed(UndertowClientMessages.MESSAGES.invalidConnectionState());
+        if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED)) {
+            clientCallback.failed(UndertowClientMessages.MESSAGES.invalidUpgradeConnectionState());
+            return;
+        }
+        if (anyAreSet(state, CLOSE_REQ | CLOSED)) {
+            clientCallback.failed(UndertowClientMessages.MESSAGES.invalidCloseConnectionState());
             return;
         }
         final HttpClientExchange httpClientExchange = new HttpClientExchange(clientCallback, request, this);
