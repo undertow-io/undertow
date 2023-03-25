@@ -323,7 +323,7 @@ public class UndertowXnioSsl extends XnioSsl {
             sslParameters.setUseCipherSuitesOrder(true);
             engine.setSSLParameters(sslParameters);
         }
-        final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, null);
+        final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM);
         if (endpointIdentificationAlgorithm != null) {
             SSLParameters sslParameters = engine.getSSLParameters();
             sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
@@ -484,7 +484,7 @@ public class UndertowXnioSsl extends XnioSsl {
                 SSLEngine sslEngine = JsseSslUtils.createSSLEngine(sslContext, optionMap, destination);
                 SSLParameters params = sslEngine.getSSLParameters();
                 setSNIHostName(destination, optionMap, params);
-                final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, null);
+                final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM);
                 if (endpointIdentificationAlgorithm != null) {
                     params.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
                 }
