@@ -1280,14 +1280,16 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
             if(anyAreSet(state, FLAG_READS_RESUMED) && (unwrappedData != null || anyAreSet(state, FLAG_DATA_TO_UNWRAP))) {
                 if(anyAreSet(state, FLAG_READ_CLOSED)) {
-                    if(unwrappedData != null) {
-                        unwrappedData.close();
+                    synchronized (SslConduit.this) {
+                        if (unwrappedData != null) {
+                            unwrappedData.close();
+                        }
+                        if (dataToUnwrap != null) {
+                            dataToUnwrap.close();
+                        }
+                        unwrappedData = null;
+                        dataToUnwrap = null;
                     }
-                    if(dataToUnwrap != null) {
-                        dataToUnwrap.close();
-                    }
-                    unwrappedData = null;
-                    dataToUnwrap = null;
                 } else {
                     //there is data in the buffers so we do a wakeup
                     //as we may not get an actual read notification
