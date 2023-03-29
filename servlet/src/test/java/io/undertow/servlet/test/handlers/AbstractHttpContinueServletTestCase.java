@@ -82,8 +82,16 @@ public abstract class AbstractHttpContinueServletTestCase {
 
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.EXPECTATION_FAILED, result.getStatusLine().getStatusCode());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            }
         }
     }
 
@@ -105,8 +113,16 @@ public abstract class AbstractHttpContinueServletTestCase {
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(message, HttpClientUtils.readResponse(result));
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            }
         }
     }
 
@@ -127,8 +143,16 @@ public abstract class AbstractHttpContinueServletTestCase {
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("", HttpClientUtils.readResponse(result));
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            }
         }
     }
 
@@ -148,8 +172,16 @@ public abstract class AbstractHttpContinueServletTestCase {
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals("", HttpClientUtils.readResponse(result));
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            }
         }
     }
 
@@ -176,8 +208,17 @@ public abstract class AbstractHttpContinueServletTestCase {
             HttpResponse result = client.execute(post);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Assert.assertEquals(message, HttpClientUtils.readResponse(result));
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
+
         } finally {
-            client.getConnectionManager().shutdown();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            }
         }
     }
 
@@ -200,6 +241,7 @@ public abstract class AbstractHttpContinueServletTestCase {
                 outputStream.write(b.toByteArray());
                 outputStream.close();
             } catch (IOException e) {
+                e.printStackTrace();
                 throw new RuntimeException(e);
             }
         }

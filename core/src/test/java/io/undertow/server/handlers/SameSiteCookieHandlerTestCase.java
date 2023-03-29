@@ -60,9 +60,18 @@ public class SameSiteCookieHandlerTestCase {
             Header header = result.getFirstHeader("set-cookie");
             Assert.assertEquals("foo=bar; SameSite=Strict", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 
@@ -85,9 +94,18 @@ public class SameSiteCookieHandlerTestCase {
             Header header = result.getFirstHeader("set-cookie");
             Assert.assertEquals("foo=bar; SameSite=Lax", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 
@@ -110,9 +128,18 @@ public class SameSiteCookieHandlerTestCase {
             Header header = result.getFirstHeader("set-cookie");
             Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 
@@ -135,9 +162,18 @@ public class SameSiteCookieHandlerTestCase {
             Header header = result.getFirstHeader("set-cookie");
             Assert.assertEquals("foo=bar", header.getValue()); // invalid mode is ignored
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 
@@ -160,9 +196,18 @@ public class SameSiteCookieHandlerTestCase {
             Header header = result.getFirstHeader("set-cookie");
             Assert.assertEquals("foo=bar; SameSite=Lax", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 
@@ -186,9 +231,18 @@ public class SameSiteCookieHandlerTestCase {
             Header header = result.getFirstHeader("set-cookie");
             Assert.assertEquals("foo=bar; SameSite=Lax", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 
@@ -211,9 +265,18 @@ public class SameSiteCookieHandlerTestCase {
             Header header = result.getFirstHeader("set-cookie");
             Assert.assertEquals("foo=bar", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 
@@ -248,9 +311,18 @@ public class SameSiteCookieHandlerTestCase {
                 }
             }
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 
@@ -286,9 +358,18 @@ public class SameSiteCookieHandlerTestCase {
                 }
             }
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 
@@ -313,9 +394,18 @@ public class SameSiteCookieHandlerTestCase {
             Header header = result.getFirstHeader("set-cookie");
             Assert.assertEquals("foo=bar", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 
@@ -340,9 +430,18 @@ public class SameSiteCookieHandlerTestCase {
             Header header = result.getFirstHeader("set-cookie");
             Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 
@@ -367,9 +466,18 @@ public class SameSiteCookieHandlerTestCase {
             Header header = result.getFirstHeader("set-cookie");
             Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 
@@ -402,9 +510,18 @@ public class SameSiteCookieHandlerTestCase {
             Header header = result.getFirstHeader("set-cookie");
             Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 
@@ -427,9 +544,18 @@ public class SameSiteCookieHandlerTestCase {
             Header header = result.getFirstHeader("set-cookie");
             Assert.assertEquals("foo=bar; SameSite=None", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
         } finally {
-            client.getConnectionManager().shutdown();
-            DefaultServer.stopSSLServer();
+            try {
+                client.getConnectionManager().shutdown();
+            } catch (RuntimeException | Error e) {
+                e.printStackTrace();
+                throw e;
+            } finally {
+                DefaultServer.stopSSLServer();
+            }
         }
     }
 

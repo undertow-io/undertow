@@ -179,6 +179,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     private final Runnable runReadListenerCommand = new Runnable() {
         @Override
         public void run() {
+            ROOT_LOGGER.info(SslConduit.this + " invoking readReadyHandler");
             final int count = readListenerInvocationCount;
             try {
                 readReadyHandler.readReady();
@@ -237,6 +238,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
         resumeReads(false);
     }
+
     @Override
     public void suspendReads() {
         state &= ~FLAG_READS_RESUMED;
@@ -643,13 +645,13 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
 
         state |= FLAG_READ_CLOSED | FLAG_ENGINE_INBOUND_SHUTDOWN | FLAG_READ_SHUTDOWN;
-        if(anyAreSet(state, FLAG_WRITE_CLOSED)) {
+        if (anyAreSet(state, FLAG_WRITE_CLOSED)) {
             closed();
         }
-        if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ)) {
+        if (anyAreSet(state, FLAG_WRITE_REQUIRES_READ)) {
             notifyWriteClosed();
         }
-        if(runListener) {
+        if (runListener) {
             runReadListener(false);
         }
     }
@@ -895,7 +897,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     dataToUnwrap = null;
                     state &= ~FLAG_DATA_TO_UNWRAP;
                 } else if (allAreClear(state, FLAG_DATA_TO_UNWRAP)) {
-                    ROOT_LOGGER.info(this + ": I am just compacting the buffer, there is data to unwrap: " + dataToUnwrap);
+                    ROOT_LOGGER.info(this + ": I am just compacting the buffer, there is no data to unwrap: " + dataToUnwrap);
                     //if there is not enough data in the buffer we compact it to make room for more
                     dataToUnwrap.getBuffer().compact();
                 } else {
@@ -1243,9 +1245,11 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
         @Override
         public void readReady() {
-            if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ) && anyAreSet(state, FLAG_WRITES_RESUMED | FLAG_READS_RESUMED) && !anyAreSet(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
+            ROOT_LOGGER.info(this + " at read ready");
+            if (anyAreSet(state, FLAG_WRITE_REQUIRES_READ) && anyAreSet(state, FLAG_WRITES_RESUMED | FLAG_READS_RESUMED) && !anyAreSet(state, FLAG_ENGINE_INBOUND_SHUTDOWN)) {
                 try {
                     invokingReadListenerHandshake = true;
+                    ROOT_LOGGER.info(this + " doing handshake");
                     doHandshake();
                 } catch (IOException e) {
                     REQUEST_LOGGER.ioException(e);
@@ -1257,7 +1261,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     invokingReadListenerHandshake = false;
                 }
 
-                if(!anyAreSet(state, FLAG_READS_RESUMED) && !allAreSet(state, FLAG_WRITE_REQUIRES_READ | FLAG_WRITES_RESUMED)) {
+                if (!anyAreSet(state, FLAG_READS_RESUMED) && !allAreSet(state, FLAG_WRITE_REQUIRES_READ | FLAG_WRITES_RESUMED)) {
                     delegate.getSourceChannel().suspendReads();
                 }
             }
@@ -1267,28 +1271,35 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             int initialUnwrapped = -1;
             if (anyAreSet(state, FLAG_READS_RESUMED)) {
                 if (delegateHandler == null) {
+                    ROOT_LOGGER.info(SslConduit.this + " delegateHandler is null!");
                     final ChannelListener<? super ConduitStreamSourceChannel> readListener = connection.getSourceChannel().getReadListener();
                     if (readListener == null) {
+                        ROOT_LOGGER.info(SslConduit.this + " readListener is null!");
                         suspendReads();
                     } else {
-                        if(anyAreSet(state, FLAG_DATA_TO_UNWRAP)) {
+                        if (anyAreSet(state, FLAG_DATA_TO_UNWRAP)) {
                             initialDataToUnwrap = dataToUnwrap.getBuffer().remaining();
                         }
-                        if(unwrappedData != null) {
+                        if (unwrappedData != null) {
                             initialUnwrapped = unwrappedData.getBuffer().remaining();
                         }
+                        ROOT_LOGGER.info(SslConduit.this + " readListener is being invoked " + readListener);
                         ChannelListeners.invokeChannelListener(connection.getSourceChannel(), readListener);
-                        if(anyAreSet(state, FLAG_DATA_TO_UNWRAP) && initialDataToUnwrap == dataToUnwrap.getBuffer().remaining()) {
+                        if (anyAreSet(state, FLAG_DATA_TO_UNWRAP) && initialDataToUnwrap == dataToUnwrap.getBuffer().remaining()) {
                             noProgress = true;
-                        } else if(unwrappedData != null && unwrappedData.getBuffer().remaining() == initialUnwrapped) {
+                        } else if (unwrappedData != null && unwrappedData.getBuffer().remaining() == initialUnwrapped) {
                             noProgress = true;
                         }
+                        ROOT_LOGGER.info(SslConduit.this + " after invoking readListener");
                     }
                 } else {
+                    ROOT_LOGGER.info(SslConduit.this + " invoking delegateHandler");
                     delegateHandler.readReady();
+                    ROOT_LOGGER.info(SslConduit.this + " invoked delegateHandler");
                 }
             }
-            if(anyAreSet(state, FLAG_READS_RESUMED) && (unwrappedData != null || anyAreSet(state, FLAG_DATA_TO_UNWRAP))) {
+            ROOT_LOGGER.info(SslConduit.this + " about to run several checks for last next steps before concluding readReady");
+            if (anyAreSet(state, FLAG_READS_RESUMED) && (unwrappedData != null || anyAreSet(state, FLAG_DATA_TO_UNWRAP))) {
                 if(anyAreSet(state, FLAG_READ_CLOSED)) {
                     synchronized (SslConduit.this) {
                         if (unwrappedData != null) {

@@ -26,6 +26,8 @@ import org.junit.runner.RunWith;
 
 import java.io.IOException;
 
+import static io.undertow.servlet.UndertowServletLogger.ROOT_LOGGER;
+
 /**
  * @author Stuart Douglas
  */
@@ -50,6 +52,12 @@ public class HttpContinueSslServletTestCase extends AbstractHttpContinueServletT
 
     @After
     public void after() throws IOException {
-        DefaultServer.stopSSLServer();
+        ROOT_LOGGER.info ("At after, about to stop the SSL server and clean up the resources");
+        try {
+            DefaultServer.stopSSLServer();
+        } catch (IOException | RuntimeException | Error e) {
+            e.printStackTrace();
+            throw e;
+        }
     }
 }
