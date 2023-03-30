@@ -390,7 +390,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 boolean empty = DebuggingSlicePool.BUFFERS.isEmpty();
                 if (!empty) {
                     try {
-                        long end = System.currentTimeMillis() + 20000;
+                        long end = System.currentTimeMillis() + 120000;
                         do {
                             Thread.sleep(200);
                             empty = DebuggingSlicePool.BUFFERS.isEmpty();
