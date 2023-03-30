@@ -24,6 +24,9 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -101,6 +104,8 @@ import org.xnio.ssl.XnioSsl;
 import static io.undertow.server.handlers.ResponseCodeHandler.HANDLE_404;
 import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
 import static io.undertow.testutils.StopServerWithExternalWorkerUtils.waitWorkerRunnableCycle;
+import static java.util.Arrays.*;
+import static java.util.stream.Collectors.*;
 import static org.xnio.Options.SSL_CLIENT_AUTH_MODE;
 import static org.xnio.SslClientAuthMode.REQUESTED;
 
@@ -399,6 +404,11 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                         throw new RuntimeException(e);
                     }
                     if (!empty) {
+                        // dump the threads, if one thread is holding from closing che channel
+                        // after 2 minutes, we need to see what it is doing
+                        ThreadMXBean bean = ManagementFactory.getThreadMXBean();
+                        ThreadInfo[] infos = bean.dumpAllThreads(true, true);
+                        System.out.println(stream(infos).map(Object::toString).collect(joining()));
                         for (DebuggingSlicePool.DebuggingBuffer b : DebuggingSlicePool.BUFFERS) {
                             b.getAllocationPoint().printStackTrace();
                             notifier.fireTestFailure(new Failure(description, new RuntimeException("Buffer Leak " + b.getLabel(), b.getAllocationPoint())));
