@@ -122,6 +122,9 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
     void setResponse(ClientResponse response) {
         this.response = response;
         if (responseCallback != null) {
+            try {
+                Thread.sleep(500);
+                } catch(InterruptedException e) {}
             this.responseCallback.completed(this);
         }
     }
