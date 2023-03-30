@@ -1418,6 +1418,8 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 ", wrappedData=" + wrappedData +
                 ", dataToUnwrap=" + dataToUnwrap +
                 ", unwrappedData=" + unwrappedData +
+                ", delegate=" + this.delegate +
+                ", delegate=" + this.delegate.getSourceChannel() +
                 '}';
     }
 
