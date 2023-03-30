@@ -999,7 +999,8 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     private SSLEngineResult wrapAndFlip(ByteBuffer[] userBuffers, int off, int len) throws IOException {
         SSLEngineResult result = null;
-        while (result == null || (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP && result.getStatus() != SSLEngineResult.Status.BUFFER_OVERFLOW)) {
+        while (result == null || (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP
+                && result.getStatus() != SSLEngineResult.Status.BUFFER_OVERFLOW && !engine.isInboundDone())) {
             if (userBuffers == null) {
                 result = engine.wrap(EMPTY_BUFFER, wrappedData.getBuffer());
             } else {
@@ -1275,14 +1276,16 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             }
             if(anyAreSet(state, FLAG_READS_RESUMED) && (unwrappedData != null || anyAreSet(state, FLAG_DATA_TO_UNWRAP))) {
                 if(anyAreSet(state, FLAG_READ_CLOSED)) {
-                    if(unwrappedData != null) {
-                        unwrappedData.close();
+                    synchronized (SslConduit.this) {
+                        if (unwrappedData != null) {
+                            unwrappedData.close();
+                        }
+                        if (dataToUnwrap != null) {
+                            dataToUnwrap.close();
+                        }
+                        unwrappedData = null;
+                        dataToUnwrap = null;
                     }
-                    if(dataToUnwrap != null) {
-                        dataToUnwrap.close();
-                    }
-                    unwrappedData = null;
-                    dataToUnwrap = null;
                 } else {
                     //there is data in the buffers so we do a wakeup
                     //as we may not get an actual read notification
