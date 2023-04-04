@@ -951,6 +951,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             if (loadBalancingProxyClient != null) {
                 loadBalancingProxyClient.closeCurrentConnections();
             }
+            waitWorkerRunnableCycle(worker);
         }
     }
 
@@ -969,6 +970,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         if (proxyOpenListener != null) {
             proxyOpenListener.setUndertowOptions(builder.getMap());
             proxyOpenListener.closeConnections();
+            waitWorkerRunnableCycle(worker);
         }
     }
 
