@@ -21,6 +21,7 @@ package io.undertow.server.handlers.proxy;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.RejectedExecutionException;
 
 import io.undertow.Undertow;
 import io.undertow.UndertowLogger;
@@ -84,7 +85,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                 final XnioWorker worker = server1.getWorker();
                 server1.stop();
                 // if stop did not shutdown the worker, we need to run the latch to prevent a Address already in use (UNDERTOW-1960)
-                if (worker != null && !worker.isShutdown()) {
+                if (worker != null && !worker.isTerminated()) {
                     countDown++;
                     worker1 = worker;
                 }
@@ -95,7 +96,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                     final XnioWorker worker = server2.getWorker();
                     server2.stop();
                     // if stop did not shutdown the worker, we need to run the latch to prevent a Address already in use (UNDERTOW-1960)
-                    if (worker != null && !worker.isShutdown() && worker != worker1) {
+                    if (worker != null && !worker.isTerminated() && worker != worker1) {
                         worker2 = worker;
                         countDown ++;
                     }
@@ -104,8 +105,21 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                 if (countDown != 0) {
                     // TODO this is needed solely for ssl servers; replace this by the mechanism described in UNDERTOW-1648 once it is implemented
                     final CountDownLatch latch = new CountDownLatch(countDown);
-                    if (worker1 != null) worker1.getIoThread().execute(latch::countDown);
-                    if (worker2 != null) worker2.getIoThread().execute(latch::countDown);
+                    if (worker1 != null) {
+                        try {
+                            worker1.getIoThread().execute(latch::countDown);
+                        } catch (RejectedExecutionException e) {
+                            latch.countDown();
+                        }
+                    }
+                    if (worker2 != null) {
+                        try {
+                            worker2.getIoThread().execute(latch::countDown);
+                        } catch (RejectedExecutionException e) {
+                            latch.countDown();
+                        }
+
+                    }
                     try {
                         latch.await();
                         //double protection, we need to guarantee that the servers have stopped, and some environments seem to need a small delay to re-bind the socket
