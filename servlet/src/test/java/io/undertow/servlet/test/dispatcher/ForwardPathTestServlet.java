@@ -43,6 +43,7 @@ public class ForwardPathTestServlet extends HttpServlet {
             out.println("javax.servlet.forward.servlet_path:" + req.getAttribute("javax.servlet.forward.servlet_path"));
             out.println("javax.servlet.forward.path_info:" + req.getAttribute("javax.servlet.forward.path_info"));
             out.println("javax.servlet.forward.query_string:" + req.getAttribute("javax.servlet.forward.query_string"));
+            out.println("javax.servlet.forward.mapping:" + req.getAttribute("javax.servlet.forward.mapping"));
         }
     }
 }
