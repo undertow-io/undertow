@@ -818,6 +818,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 this.unwrappedData = unwrappedData;
             }
 
+            ROOT_LOGGER.info(this + " this is my result at doUnwrap: " + result);
             if (result.getStatus() == SSLEngineResult.Status.CLOSED) {
                 if(dataToUnwrap != null) {
                     ROOT_LOGGER.info(this + ": I am closing and clearing7: " + dataToUnwrap);
@@ -881,6 +882,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 //we ignore this
                 REQUEST_LOGGER.debug("Exception closing SSLConduit after exception in doUnwrap", ex);
             }
+            e.printStackTrace();
             throw e;
         } finally {
             boolean requiresListenerInvocation = false; //if there is data in the buffer and reads are resumed we should re-run the listener
@@ -952,7 +954,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         }
         try {
             SSLEngineResult result = wrapAndFlip(userBuffers, off, len);
-
+            ROOT_LOGGER.info(this + " this is my result at doWrap: " + result);
             if (result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
                 throw new IOException("underflow"); // unexpected result
             } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
