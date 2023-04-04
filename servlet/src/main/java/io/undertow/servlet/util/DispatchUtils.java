@@ -30,6 +30,7 @@ import java.util.Deque;
 import java.util.Map;
 
 import static jakarta.servlet.AsyncContext.ASYNC_CONTEXT_PATH;
+import static jakarta.servlet.AsyncContext.ASYNC_MAPPING;
 import static jakarta.servlet.AsyncContext.ASYNC_PATH_INFO;
 import static jakarta.servlet.AsyncContext.ASYNC_QUERY_STRING;
 import static jakarta.servlet.AsyncContext.ASYNC_REQUEST_URI;
@@ -41,11 +42,13 @@ import static jakarta.servlet.RequestDispatcher.ERROR_REQUEST_URI;
 import static jakarta.servlet.RequestDispatcher.ERROR_SERVLET_NAME;
 import static jakarta.servlet.RequestDispatcher.ERROR_STATUS_CODE;
 import static jakarta.servlet.RequestDispatcher.FORWARD_CONTEXT_PATH;
+import static jakarta.servlet.RequestDispatcher.FORWARD_MAPPING;
 import static jakarta.servlet.RequestDispatcher.FORWARD_PATH_INFO;
 import static jakarta.servlet.RequestDispatcher.FORWARD_QUERY_STRING;
 import static jakarta.servlet.RequestDispatcher.FORWARD_REQUEST_URI;
 import static jakarta.servlet.RequestDispatcher.FORWARD_SERVLET_PATH;
 import static jakarta.servlet.RequestDispatcher.INCLUDE_CONTEXT_PATH;
+import static jakarta.servlet.RequestDispatcher.INCLUDE_MAPPING;
 import static jakarta.servlet.RequestDispatcher.INCLUDE_PATH_INFO;
 import static jakarta.servlet.RequestDispatcher.INCLUDE_QUERY_STRING;
 import static jakarta.servlet.RequestDispatcher.INCLUDE_REQUEST_URI;
@@ -86,6 +89,7 @@ public final class DispatchUtils {
             requestImpl.setAttribute(FORWARD_SERVLET_PATH, requestImpl.getServletPath());
             requestImpl.setAttribute(FORWARD_PATH_INFO, requestImpl.getPathInfo());
             requestImpl.setAttribute(FORWARD_QUERY_STRING, requestImpl.getQueryString());
+            requestImpl.setAttribute(FORWARD_MAPPING, requestImpl.getHttpServletMapping());
         }
 
         final String newRequestPath = assignRequestPath(path, requestImpl, servletContext, false);
@@ -119,6 +123,7 @@ public final class DispatchUtils {
         requestImpl.setAttribute(INCLUDE_CONTEXT_PATH, servletContext.getContextPath());
         requestImpl.setAttribute(INCLUDE_SERVLET_PATH, pathMatch.getMatched());
         requestImpl.setAttribute(INCLUDE_PATH_INFO, pathMatch.getRemaining());
+        requestImpl.setAttribute(INCLUDE_MAPPING, pathMatch.getMappingMatch());
         return pathMatch;
     }
 
@@ -148,6 +153,7 @@ public final class DispatchUtils {
             requestImpl.setAttribute(FORWARD_SERVLET_PATH, requestImpl.getServletPath());
             requestImpl.setAttribute(FORWARD_PATH_INFO, requestImpl.getPathInfo());
             requestImpl.setAttribute(FORWARD_QUERY_STRING, requestImpl.getQueryString());
+            requestImpl.setAttribute(FORWARD_MAPPING, requestImpl.getHttpServletMapping());
         }
         // specific attributes for error
         requestImpl.setAttribute(ERROR_REQUEST_URI, requestImpl.getRequestURI());
@@ -193,6 +199,7 @@ public final class DispatchUtils {
         requestImpl.setAttribute(ASYNC_SERVLET_PATH, requestImpl.getOriginalServletPath());
         requestImpl.setAttribute(ASYNC_PATH_INFO, requestImpl.getOriginalPathInfo());
         requestImpl.setAttribute(ASYNC_QUERY_STRING, requestImpl.getOriginalQueryString());
+        requestImpl.setAttribute(ASYNC_MAPPING, requestImpl.getHttpServletMapping());
 
         final String newRequestPath = assignRequestPath(path, requestImpl, servletContext, false);
         final ServletPathMatch pathMatch = servletContext.getDeployment().getServletPaths().getServletHandlerByPath(newRequestPath);

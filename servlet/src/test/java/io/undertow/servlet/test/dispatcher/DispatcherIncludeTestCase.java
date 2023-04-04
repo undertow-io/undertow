@@ -18,11 +18,6 @@
 
 package io.undertow.servlet.test.dispatcher;
 
-import java.io.IOException;
-
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.ServletException;
-
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -30,6 +25,7 @@ import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
+import io.undertow.servlet.test.dispatcher.util.DispatcherUtil;
 import io.undertow.servlet.test.util.MessageFilter;
 import io.undertow.servlet.test.util.MessageServlet;
 import io.undertow.servlet.test.util.ParameterEchoServlet;
@@ -38,18 +34,23 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletException;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
-
-import io.undertow.testutils.TestHttpClient;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
+
+import static org.junit.Assert.assertEquals;
+import static org.wildfly.common.Assert.assertTrue;
 
 /**
  * @author Stuart Douglas
@@ -86,6 +87,12 @@ public class DispatcherIncludeTestCase {
                 .addServlet(
                         new ServletInfo("parameterEcho", ParameterEchoServlet.class)
                                 .addMapping("/echo-parameters"))
+                .addServlet(
+                        new ServletInfo("/dispatchServletInclude", DispatcherIncludeServlet.class)
+                                .addMapping("/dispatchServletInclude"))
+                .addServlet(
+                        new ServletInfo("/next", NextServlet.class)
+                                .addMapping("/next"))
                 .addFilter(
                         new FilterInfo("notIncluded", MessageFilter.class)
                                 .addInitParam(MessageFilter.MESSAGE, "Not Included"))
@@ -114,9 +121,9 @@ public class DispatcherIncludeTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
             get.setHeader("include", "/include");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "Path!Name!included", response);
+            assertEquals(IncludeServlet.MESSAGE + "Path!Name!included", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -130,9 +137,9 @@ public class DispatcherIncludeTestCase {
             get.setHeader("include", "include");
             get.setHeader("name", "true");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "Name!included", response);
+            assertEquals(IncludeServlet.MESSAGE + "Name!included", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -145,9 +152,9 @@ public class DispatcherIncludeTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
             get.setHeader("include", "/snippet.html");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "SnippetText", response);
+            assertEquals(IncludeServlet.MESSAGE + "SnippetText", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -160,9 +167,9 @@ public class DispatcherIncludeTestCase {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
             post.setHeader("include", "/snippet.html");
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "SnippetText", response);
+            assertEquals(IncludeServlet.MESSAGE + "SnippetText", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -176,16 +183,16 @@ public class DispatcherIncludeTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?a=b");
             get.setHeader("include", "/path");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "pathInfo:null queryString:a=b servletPath:/dispatch requestUri:/servletContext/dispatch", response);
+            assertEquals(IncludeServlet.MESSAGE + "pathInfo:null queryString:a=b servletPath:/dispatch requestUri:/servletContext/dispatch", response);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?a=b");
             get.setHeader("include", "/path?foo=bar");
             result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "pathInfo:null queryString:a=b servletPath:/dispatch requestUri:/servletContext/dispatch", response);
+            assertEquals(IncludeServlet.MESSAGE + "pathInfo:null queryString:a=b servletPath:/dispatch requestUri:/servletContext/dispatch", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -198,7 +205,7 @@ public class DispatcherIncludeTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?n1=v1&n2=v2");
             get.setHeader("include", "/path-include?url=http://test.com");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             MatcherAssert.assertThat(response, CoreMatchers.containsString(IncludeServlet.MESSAGE + "pathInfo:null queryString:n1=v1&n2=v2 servletPath:/dispatch requestUri:/servletContext/dispatch\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.request_uri:/servletContext/path-include\r\n"));
@@ -218,7 +225,7 @@ public class DispatcherIncludeTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch/dis%25patch?n1=v1&n2=v%252");
             get.setHeader("include", "/path-include/path%25include?n2=v%253");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             MatcherAssert.assertThat(response, CoreMatchers.containsString(IncludeServlet.MESSAGE + "pathInfo:/dis%patch queryString:n1=v1&n2=v%252 servletPath:/dispatch requestUri:/servletContext/dispatch/dis%25patch\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.request_uri:/servletContext/path-include/path%25include\r\n"));
@@ -226,6 +233,7 @@ public class DispatcherIncludeTestCase {
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.servlet_path:/path-include\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.path_info:/path%include\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.query_string:n2=v%253\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.mapping:"));
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -238,7 +246,7 @@ public class DispatcherIncludeTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dis%25patch.dispatch?n1=v1&n2=v%252");
             get.setHeader("include", "/path%25include.includeinfo?n2=v%253");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             MatcherAssert.assertThat(response, CoreMatchers.containsString(IncludeServlet.MESSAGE + "pathInfo:null queryString:n1=v1&n2=v%252 servletPath:/dis%patch.dispatch requestUri:/servletContext/dis%25patch.dispatch\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.request_uri:/servletContext/path%25include.includeinfo\r\n"));
@@ -246,6 +254,7 @@ public class DispatcherIncludeTestCase {
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.servlet_path:/path%include.includeinfo\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.path_info:null\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.query_string:n2=v%253\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.mapping:"));
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -258,9 +267,28 @@ public class DispatcherIncludeTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?param1=v11&param1=v12");
             get.setHeader("include", "/echo-parameters?param1=v13&param1=v14");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(IncludeServlet.MESSAGE + "param1='v13,v14,v11,v12'", response);
+            assertEquals(IncludeServlet.MESSAGE + "param1='v13,v14,v11,v12'", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+    @Test
+    public void testDisptacherServletInclude() throws IOException, InterruptedException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatchServletInclude");
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            //UNDERTOW-2245 javax.servlet.forward.mapping request attribute is not available in servlets forwarded with RequestDispatcher
+
+            assertTrue(DispatcherUtil.containsWord(response,"jakarta.servlet.include.context_path"));
+            assertTrue(DispatcherUtil.containsWord(response,"jakarta.servlet.include.servlet_path"));
+            assertTrue(DispatcherUtil.containsWord(response,"jakarta.servlet.include.request_uri"));
+            assertTrue(DispatcherUtil.containsWord(response,"jakarta.servlet.include.mapping"));
+
         } finally {
             client.getConnectionManager().shutdown();
         }

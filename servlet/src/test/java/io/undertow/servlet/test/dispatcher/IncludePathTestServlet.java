@@ -43,6 +43,7 @@ public class IncludePathTestServlet extends HttpServlet {
             out.println("jakarta.servlet.include.servlet_path:" + req.getAttribute("jakarta.servlet.include.servlet_path"));
             out.println("jakarta.servlet.include.path_info:" + req.getAttribute("jakarta.servlet.include.path_info"));
             out.println("jakarta.servlet.include.query_string:" + req.getAttribute("jakarta.servlet.include.query_string"));
+            out.println("jakarta.servlet.include.mapping:" + req.getAttribute("jakarta.servlet.include.mapping"));
         }
     }
 }
