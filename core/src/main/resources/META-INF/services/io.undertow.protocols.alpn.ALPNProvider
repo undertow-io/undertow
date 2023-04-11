@@ -16,6 +16,5 @@
 #  limitations under the License.
 #
 
-io.undertow.protocols.alpn.JettyAlpnProvider
 io.undertow.protocols.alpn.ModularJdkAlpnProvider
 io.undertow.protocols.alpn.OpenSSLAlpnProvider
