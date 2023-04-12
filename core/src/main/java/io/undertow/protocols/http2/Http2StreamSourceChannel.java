@@ -18,20 +18,20 @@
 
 package io.undertow.protocols.http2;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import org.xnio.Bits;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
 import io.undertow.UndertowLogger;
 import io.undertow.connector.PooledByteBuffer;
-import org.xnio.IoUtils;
-import org.xnio.channels.StreamSinkChannel;
-
 import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
+import org.xnio.Bits;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.channels.StreamSinkChannel;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 
 /**
  * @author Stuart Douglas
@@ -92,6 +92,7 @@ public class Http2StreamSourceChannel extends AbstractHttp2StreamSourceChannel i
                 }
             }
         } else if(parser instanceof Http2HeadersParser) {
+            this.headers.putAll(((Http2HeadersParser) parser).getHeaderMap());
             if(trailersHandler != null) {
                 trailersHandler.handleTrailers(((Http2HeadersParser) parser).getHeaderMap());
             }

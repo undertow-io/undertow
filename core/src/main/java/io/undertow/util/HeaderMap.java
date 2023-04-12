@@ -29,6 +29,7 @@ import java.util.NoSuchElementException;
  * An optimized array-backed header map.
  *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
+ * @author Flavia Rainone
  */
 public final class HeaderMap implements Iterable<HeaderValues> {
 
@@ -766,6 +767,18 @@ public final class HeaderMap implements Iterable<HeaderValues> {
         final HeaderValues entry = getOrCreateEntry(headerName);
         entry.clear();
         entry.addAll(headerValues);
+        return this;
+    }
+
+    public HeaderMap putAll(HeaderMap headerMap) {
+        if (headerMap == null) {
+            throw new IllegalArgumentException("headerMap is null");
+        }
+        if (headerMap.headerNames != null) {
+            for (HttpString headerName: headerMap.headerNames) {
+                putAll(headerName, headerMap.getEntry(headerName));
+            }
+        }
         return this;
     }
 
