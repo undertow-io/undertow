@@ -49,7 +49,6 @@ import io.undertow.UndertowOptions;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.protocols.alpn.ALPNManager;
 import io.undertow.protocols.alpn.ALPNProvider;
-import io.undertow.protocols.alpn.JettyAlpnProvider;
 import io.undertow.protocols.ssl.SNIContextMatcher;
 import io.undertow.protocols.ssl.SNISSLContext;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
@@ -1051,11 +1050,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             //so we can't tell that ALPN is enabled or now
             SSLEngine engine = getClientSSLContext().createSSLEngine();
             ALPNProvider provider = ALPNManager.INSTANCE.getProvider(engine);
-            if (provider instanceof JettyAlpnProvider) {
-                alpnEnabled = System.getProperty("alpn-boot-string") != null;
-            } else {
-                alpnEnabled = provider != null;
-            }
+            alpnEnabled = provider != null;
         }
         return alpnEnabled;
     }
