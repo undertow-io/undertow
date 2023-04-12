@@ -18,7 +18,6 @@
 
 package io.undertow.protocols.http2;
 
-import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
 import io.undertow.server.protocol.framed.FrameHeaderData;
@@ -39,7 +38,6 @@ import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_WINDOW_UPDATE;
 import static io.undertow.protocols.http2.Http2Channel.HEADERS_FLAG_END_HEADERS;
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
-import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 
 /**
@@ -213,7 +211,7 @@ class Http2FrameHeaderParser implements FrameHeaderData {
 
     @Override
     public AbstractFramedStreamSourceChannel<?, ?, ?> getExistingChannel() {
-        Http2StreamSourceChannel http2StreamSourceChannel;
+        final Http2StreamSourceChannel http2StreamSourceChannel;
         if (type == FRAME_TYPE_DATA ||
                 type == Http2Channel.FRAME_TYPE_CONTINUATION ||
                 type == Http2Channel.FRAME_TYPE_PRIORITY ) {
@@ -233,15 +231,8 @@ class Http2FrameHeaderParser implements FrameHeaderData {
             }
             return http2StreamSourceChannel;
         } else if(type == FRAME_TYPE_HEADERS) {
-            //headers can actually be a trailer
-
-            Http2StreamSourceChannel channel = http2Channel.getIncomingStream(streamId);
+            final Http2StreamSourceChannel channel = http2Channel.getIncomingStream(streamId);
             if(channel != null) {
-                if(anyAreClear(flags, Http2Channel.HEADERS_FLAG_END_STREAM)) {
-                    //this is a protocol error
-                    UndertowLogger.REQUEST_IO_LOGGER.debug("Received HTTP/2 trailers header without end stream set");
-                    http2Channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
-                }
                 if (!channel.isHeadersEndStream() && allAreSet(flags, Http2Channel.HEADERS_FLAG_END_HEADERS | Http2Channel.HEADERS_FLAG_END_STREAM)) {
                     http2Channel.removeStreamSource(streamId);
                 }
