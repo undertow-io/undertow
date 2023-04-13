@@ -187,7 +187,7 @@ public class DefaultServlet extends HttpServlet {
                     return;
                 }
                 resp.setContentType("text/html");
-                StringBuilder output = DirectoryUtils.renderDirectoryListing(req.getRequestURI(), resource);
+                StringBuilder output = DirectoryUtils.renderDirectoryListing(exchange, req.getRequestURI(), resource);
                 resp.getWriter().write(output.toString());
             } else {
                 resp.sendError(StatusCodes.FORBIDDEN);
