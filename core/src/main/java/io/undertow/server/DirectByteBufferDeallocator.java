@@ -22,7 +22,10 @@ public final class DirectByteBufferDeallocator {
 
     static {
         String versionString = System.getProperty("java.specification.version");
-        if(versionString.startsWith("1.")) {
+        if(versionString.equals("0.9")) {
+            //android hardcoded
+            versionString = "11";
+        } else if(versionString.startsWith("1.")) {
             versionString = versionString.substring(2);
         }
         int version = Integer.parseInt(versionString);
