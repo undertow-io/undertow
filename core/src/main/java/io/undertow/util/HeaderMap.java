@@ -762,10 +762,10 @@ public final class HeaderMap implements Iterable<HeaderValues> {
 
     public HeaderMap putAll(HeaderMap headerMap) {
         checkNotNullParam("headerMap", headerMap);
-        if (headerMap.headerNames != null) {
-            for (HttpString headerName: headerMap.headerNames) {
-                putAll(headerName, headerMap.getEntry(headerName));
-            }
+        final Iterator<HeaderValues> iterator = headerMap.iterator();
+        while (iterator.hasNext()) {
+            final HeaderValues headerValues = iterator.next();
+            putAll(headerValues.getHeaderName(), headerValues);
         }
         return this;
     }
