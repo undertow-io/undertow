@@ -33,7 +33,6 @@ import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSessionContext;
-import javax.security.cert.X509Certificate;
 
 import io.undertow.UndertowMessages;
 
@@ -255,10 +254,6 @@ class SNISSLEngine extends SSLEngine {
 
             public Certificate[] getLocalCertificates() {
                 return null;
-            }
-
-            public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
-                throw new UnsupportedOperationException();
             }
 
             public Principal getPeerPrincipal() throws SSLPeerUnverifiedException {
