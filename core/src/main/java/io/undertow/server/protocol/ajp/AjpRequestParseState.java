@@ -128,8 +128,6 @@ class AjpRequestParseState {
             return new BasicSSLSessionInfo(sessionId, cypher, cert, keySize);
         } catch (CertificateException e) {
             return null;
-        } catch (javax.security.cert.CertificateException e) {
-            return null;
         }
     }
 
