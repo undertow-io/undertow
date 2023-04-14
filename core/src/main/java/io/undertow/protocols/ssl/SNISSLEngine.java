@@ -17,8 +17,6 @@ package io.undertow.protocols.ssl;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.security.Principal;
-import java.security.cert.Certificate;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -30,9 +28,7 @@ import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
-import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSessionContext;
 
 import io.undertow.UndertowMessages;
 
@@ -204,98 +200,12 @@ class SNISSLEngine extends SSLEngine {
         private final SNIContextMatcher selector;
         private final AtomicInteger flags = new AtomicInteger(FL_SESSION_CRE);
         private final Function<SSLContext, SSLEngine> engineFunction;
-        private int packetBufferSize = SNISSLExplorer.RECORD_HEADER_SIZE;
         private String[] enabledSuites;
         private String[] enabledProtocols;
-
-        private final SSLSession handshakeSession = new SSLSession() {
-            public byte[] getId() {
-                throw new UnsupportedOperationException();
-            }
-
-            public SSLSessionContext getSessionContext() {
-                throw new UnsupportedOperationException();
-            }
-
-            public long getCreationTime() {
-                throw new UnsupportedOperationException();
-            }
-
-            public long getLastAccessedTime() {
-                throw new UnsupportedOperationException();
-            }
-
-            public void invalidate() {
-                throw new UnsupportedOperationException();
-            }
-
-            public boolean isValid() {
-                return false;
-            }
-
-            public void putValue(final String s, final Object o) {
-                throw new UnsupportedOperationException();
-            }
-
-            public Object getValue(final String s) {
-                return null;
-            }
-
-            public void removeValue(final String s) {
-            }
-
-            public String[] getValueNames() {
-                throw new UnsupportedOperationException();
-            }
-
-            public Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
-                throw new UnsupportedOperationException();
-            }
-
-            public Certificate[] getLocalCertificates() {
-                return null;
-            }
-
-            public Principal getPeerPrincipal() throws SSLPeerUnverifiedException {
-                throw new UnsupportedOperationException();
-            }
-
-            public Principal getLocalPrincipal() {
-                throw new UnsupportedOperationException();
-            }
-
-            public String getCipherSuite() {
-                throw new UnsupportedOperationException();
-            }
-
-            public String getProtocol() {
-                throw new UnsupportedOperationException();
-            }
-
-            public String getPeerHost() {
-                return SNISSLEngine.this.getPeerHost();
-            }
-
-            public int getPeerPort() {
-                return SNISSLEngine.this.getPeerPort();
-            }
-
-            public int getPacketBufferSize() {
-                return packetBufferSize;
-            }
-
-            public int getApplicationBufferSize() {
-                throw new UnsupportedOperationException();
-            }
-        };
 
         InitialState(final SNIContextMatcher selector, final Function<SSLContext, SSLEngine> engineFunction) {
             this.selector = selector;
             this.engineFunction = engineFunction;
-        }
-
-        public SSLSession getHandshakeSession() {
-            return handshakeSession;
         }
 
         public SSLEngineResult wrap(final ByteBuffer[] srcs, final int offset, final int length, final ByteBuffer dst) throws SSLException {
@@ -307,12 +217,10 @@ class SNISSLEngine extends SSLEngine {
             final int mark = src.position();
             try {
                 if (src.remaining() < SNISSLExplorer.RECORD_HEADER_SIZE) {
-                    packetBufferSize = SNISSLExplorer.RECORD_HEADER_SIZE;
                     return UNDERFLOW_UNWRAP;
                 }
                 final int requiredSize = SNISSLExplorer.getRequiredSize(src);
                 if (src.remaining() < requiredSize) {
-                    packetBufferSize = requiredSize;
                     return UNDERFLOW_UNWRAP;
                 }
                 List<SNIServerName> names = SNISSLExplorer.explore(src);
