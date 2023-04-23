@@ -18,6 +18,7 @@
 
 package io.undertow.server.protocol.http;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
@@ -133,7 +134,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         try {
             assert state != STATE_BODY;
             if (state == STATE_BUF_FLUSH) {
-                buffer = pooledBuffer.getBuffer();
+                buffer = getOrAllocateBuffer();//pooledBuffer.getBuffer();
                 do {
                     long res = 0;
                     ByteBuffer[] data;
@@ -162,6 +163,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 } while (buffer.hasRemaining());
                 return STATE_BODY;
             } else if (state != STATE_START) {
+                buffer = getOrAllocateBuffer();
                 return processStatefulWrite(state, userData, pos, length);
             }
             // make sure that headers are written only once. if
@@ -234,6 +236,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                             this.charIndex = 0;
                             this.state = STATE_HDR_NAME;
                             buffer.flip();
+                            UndertowLogger.ROOT_LOGGER.info("WRITING " + header);
                             return processStatefulWrite(STATE_HDR_NAME, userData, pos, length);
                         }
                         header.appendTo(buffer);
@@ -249,6 +252,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                             this.charIndex = 0;
                             this.state = STATE_HDR_VAL;
                             buffer.flip();
+                            UndertowLogger.ROOT_LOGGER.info("WRITING2 " + header);
                             return processStatefulWrite(STATE_HDR_VAL, userData, pos, length);
                         }
                         writeString(buffer, string);
@@ -325,6 +329,17 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         }
     }
 
+    private ByteBuffer getOrAllocateBuffer() {
+        // allocate pooled buffer
+        if (pooledBuffer == null) {
+            pooledBuffer = pool.allocate();
+        }
+        // set the state after successfully allocating... so in case something goes bad
+        // we don't have a dangling flag that won't be cleared at the finally block
+        this.state |= POOLED_BUFFER_IN_USE;
+        return pooledBuffer.getBuffer();
+    }
+
     private static void writeString(ByteBuffer buffer, String string) {
         int length = string.length();
         for (int charIndex = 0; charIndex < length; charIndex++) {
@@ -344,6 +359,10 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
      */
     private int processStatefulWrite(int state, final Object userData, int pos, int len) throws IOException {
         ByteBuffer buffer = pooledBuffer.getBuffer();
+        // set the state after successfully allocating... so in case something goes bad
+        // we don't have a dangling flag that won't be cleared at the finally block
+        this.state |= POOLED_BUFFER_IN_USE;
+
         long fiCookie = this.fiCookie;
         int valueIdx = this.valueIdx;
         int charIndex = this.charIndex;
@@ -367,6 +386,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
             switch (state) {
                 case STATE_HDR_NAME: {
                     final HttpString headerName = headerValues.getHeaderName();
+                    //UndertowLogger.ROOT_LOGGER.info("PROCESSING " + headerName);
                     length = headerName.length();
                     while (charIndex < length) {
                         if (buffer.hasRemaining()) {
