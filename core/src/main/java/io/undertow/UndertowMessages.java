@@ -647,4 +647,7 @@ public interface UndertowMessages {
     @Message(id = 207, value = "Invalid SNI hostname '%s'")
     IllegalArgumentException invalidSniHostname(String hostNameValue, @Cause Throwable t);
 
+    @Message(id = 208, value = "Failed to allocate resource")
+    IOException failedToAllocateResource();
+
 }
