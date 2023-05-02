@@ -135,4 +135,9 @@ public interface UndertowServletLogger extends BasicLogger {
 
     @Message(id = 15023, value = "This Context has been already destroyed")
     IllegalStateException contextDestroyed();
+
+    @LogMessage(level = ERROR)
+    @Message(id = 15024, value = "Servlet %s init() method in web application %s threw exception")
+    void failedToLoad(String servletName, String appName, @Cause Throwable t);
+
 }
