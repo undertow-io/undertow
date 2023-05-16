@@ -578,6 +578,7 @@ public abstract class AbstractFramedStreamSourceChannel<C extends AbstractFramed
                             this.data = processFrameData(frameData, frameDataRemaining - currentDataOriginalSize == 0);
                         } catch (Throwable e) {
                             frameData.close();
+                            this.data.close();
                             UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(e));
                             markStreamBroken();
                         }
