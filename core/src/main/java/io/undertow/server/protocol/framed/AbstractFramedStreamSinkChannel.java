@@ -36,6 +36,7 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
+import org.xnio.Options;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
@@ -65,11 +66,18 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
      */
     private static final int AWAIT_WRITABLE_TIMEOUT;
 
+    /**
+     * Extra timeout to make sure the flush has actually timed out
+     */
+    private static final int FUZZ_FACTOR = 50;
+
+
     static {
         final int defaultAwaitWritableTimeout = 600000;
         int await_writable_timeout = AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("io.undertow.await_writable_timeout", defaultAwaitWritableTimeout));
         AWAIT_WRITABLE_TIMEOUT = await_writable_timeout > 0? await_writable_timeout : defaultAwaitWritableTimeout;
     }
+
     private static final PooledByteBuffer EMPTY_BYTE_BUFFER = new ImmediatePooledByteBuffer(ByteBuffer.allocateDirect(0));
 
     private final C channel;
@@ -77,6 +85,21 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private final ChannelListener.SimpleSetter<S> closeSetter = new ChannelListener.SimpleSetter<>();
 
     private final Object lock = new Object();
+
+    /**
+     * handle to control the time we are waiting for flushing.
+     */
+    private volatile XnioExecutor.Key handle = null;
+
+    /**
+     * Expiration time for flushing the frame.
+     */
+    private volatile long flushExpirationTime = -1;
+
+    /**
+     * The timeout runnable to use for the handle.
+     */
+    private final TimeoutRunnable timeoutRunnable;
 
     /**
      * the state variable, this must only be access by the thread that 'owns' the channel
@@ -128,6 +151,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     protected AbstractFramedStreamSinkChannel(C channel) {
         this.channel = channel;
+        this.timeoutRunnable = new TimeoutRunnable(this);
     }
 
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
@@ -286,7 +310,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void awaitWritable() throws IOException {
-        awaitWritable(AWAIT_WRITABLE_TIMEOUT, TimeUnit.MILLISECONDS);
+        awaitWritable(getAwaitWritableTimeout(), TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -301,13 +325,8 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             if (readyForFlush) {
                 try {
                     waiterCount++;
-                    final long initialTime = System.currentTimeMillis();
-                    long timeoutInMillis = timeUnit.toMillis(l);
-                    long remainingTimeout = timeoutInMillis;
-                    //we need to re-check after incrementing the waiters count
-                    while(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken && remainingTimeout > 0) {
-                        lock.wait(remainingTimeout);
-                        remainingTimeout = timeoutInMillis - (System.currentTimeMillis() - initialTime);
+                    if(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken) {
+                        lock.wait(timeUnit.toMillis(l));
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -462,12 +481,24 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     /**
-     * Return the timeout used by awaitWritable.
+     * Return the timeout used by awaitWritable and flush tasks. First the
+     * channel write timeout is read and if not set the default
+     * AWAIT_WRITABLE_TIMEOUT.
      *
      * @return the awaitWritable timeout, in milliseconds
      */
     protected long getAwaitWritableTimeout() {
-        return AWAIT_WRITABLE_TIMEOUT;
+        Integer timeout = null;
+        try {
+            timeout = getChannel().getOption(Options.WRITE_TIMEOUT);
+        } catch (IOException e) {
+            // should never happen, ignoring
+        }
+        if (timeout != null && timeout > 0) {
+            return timeout;
+        } else {
+            return AWAIT_WRITABLE_TIMEOUT;
+        }
     }
 
     @Override
@@ -556,6 +587,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                     header.getByteBuffer().close();
                     header = null;
                 }
+                removeHandle();
             }
             channelForciblyClosed();
             //we need to wake up/invoke the write listener
@@ -582,6 +614,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if(isFirstDataWritten()) {
             getChannel().markWritesBroken(null);
         }
+        removeHandle();
         wakeupWaiters();
     }
 
@@ -639,6 +672,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                         // it as false; and do not reset it to false later on
                         // (queueFinalFrame() will set readyForFlush to true and will do so iff readyForFlush is false)
                         resetReadyForFlush = readyForFlush = false;
+                        flushExpirationTime = -1;
                         queueFinalFrame();
                     }
                 } else if (header.isAnotherFrameRequired()) {
@@ -655,6 +689,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 }
                 if (channelClosed) {
                     fullyFlushed = true;
+                    removeHandle();
                     if (body != null) {
                         body.close();
                         body = null;
@@ -669,6 +704,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
                 if (resetReadyForFlush) {
                     readyForFlush = false;
+                    flushExpirationTime = -1;
                 }
 
                 if (isWriteResumed() && !channelClosed) {
@@ -714,6 +750,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 ChannelListeners.invokeChannelListener(getIoThread(), (S) this, closeListener);
             }
         } finally {
+            removeHandle();
             if(header != null) {
                 if( header.getByteBuffer() != null) {
                     header.getByteBuffer().close();
@@ -757,5 +794,86 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     public boolean isBufferFull() {
         return bufferFull;
+    }
+
+    private void removeHandle() {
+        if (handle != null) {
+            synchronized (lock) {
+                if (handle != null) {
+                    handle.remove();
+                    handle = null;
+                }
+            }
+        }
+    }
+
+    private void addHandle(long timeout) {
+        synchronized (lock) {
+            if (handle == null) {
+                handle = getChannel().getIoThread().executeAfter(timeoutRunnable, timeout + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
+            }
+        }
+    }
+
+    /**
+     * Adds the timeout task waiting for flushing. The task is assigned and
+     * not removed until executed or closing the frame. This method is called
+     * by {@link io.undertow.server.protocol.framed.AbstractFramedChannel} when
+     * the frame is held by the frame priority to avoid hangs.
+     */
+    void addReadyForFlushTask() {
+        synchronized (lock) {
+            final long timeout = this.getAwaitWritableTimeout();
+            flushExpirationTime = System.currentTimeMillis() + timeout;
+            // set the handle to avoid wait forever for flushing
+            addHandle(timeout);
+        }
+    }
+
+    /**
+     * Runnable used to execute the timeout and avoid hangs if the other
+     * end does not read the data and the flush is not performed. The task once
+     * added is never removed until executed or the frame is finally closed.
+     * Therefore the task can:
+     * <ol>
+     * <li>Do nothing if the frame was flushed or frame is closed/broken.</li>
+     * <li>Re-schedule the task if the expiration time was extended.</li>
+     * <li>Forcibly close the frame if timeout expired without flushing.</li>
+     * </ol>
+     */
+    private static class TimeoutRunnable implements Runnable {
+
+        private final AbstractFramedStreamSinkChannel channel;
+
+        TimeoutRunnable(AbstractFramedStreamSinkChannel channel) {
+            this.channel = channel;
+        }
+
+        @Override
+        public void run() {
+            long currentTime = System.currentTimeMillis();
+
+            synchronized (channel.lock) {
+                channel.handle = null;
+                final long flushExpirationTime = channel.flushExpirationTime;
+                if (flushExpirationTime < 0 || !channel.isReadyForFlush() || !channel.isOpen() || channel.isBroken()) {
+                    // the channel does not need to check for timeout
+                    return;
+                } else if (currentTime < flushExpirationTime) {
+                    // timeout has been re-scheduled
+                    channel.addHandle(flushExpirationTime - currentTime);
+                    return;
+                }
+            }
+
+            // Reaching this point the flush has been waiting more than the timeout => terminate it
+            UndertowLogger.REQUEST_IO_LOGGER.noFrameflushInTimeout(channel.getAwaitWritableTimeout());
+            try {
+                channel.channelForciblyClosed();
+            } catch (IOException e) {
+                UndertowLogger.REQUEST_IO_LOGGER.debugf(e, "Exception closing the framed sink channel because of timeout");
+                channel.markBroken();
+            }
+        }
     }
 }

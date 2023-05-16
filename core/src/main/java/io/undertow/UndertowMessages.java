@@ -635,9 +635,6 @@ public interface UndertowMessages {
     @Message(id = 203, value = "Invalid ACL entry")
     IllegalArgumentException invalidACLAddress(@Cause Exception e);
 
-    @Message(id = 204, value = "Out of flow control window: no WINDOW_UPDATE received from peer within %s miliseconds")
-    IOException noWindowUpdate(long timeoutMiliseconds);
-
     @Message(id = 205, value = "Path is not a directory '%s'")
     IOException pathNotADirectory(Path path);
 
