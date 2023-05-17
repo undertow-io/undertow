@@ -1630,6 +1630,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             return this;
         }
         if(responseChannel != null) {
+            responseChannel.suspendWrites();
             responseChannel.responseDone();
         }
         this.state = oldVal | FLAG_RESPONSE_TERMINATED;

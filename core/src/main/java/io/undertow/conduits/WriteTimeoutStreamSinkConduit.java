@@ -225,6 +225,12 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
     @Override
     public void suspendWrites() {
         super.suspendWrites();
+
+        // Reset the expireTime - we don't want to keep counting if the writes has been suspended. The expireTime will be set
+        // again during next write. This is applies for instance for remoting connections which are effectively single HTTP
+        // request, but server is suspending and resuming writes during subsequent remoting calls.
+        expireTime = -1;
+
         XnioExecutor.Key handle = this.handle;
         if(handle != null) {
             handle.remove();
