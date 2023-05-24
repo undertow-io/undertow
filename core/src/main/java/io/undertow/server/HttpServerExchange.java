@@ -207,7 +207,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private String resolvedPath = "";
 
     /**
-     * the query string
+     * the query string - percent encoded
      */
     private String queryString = "";
     /**
