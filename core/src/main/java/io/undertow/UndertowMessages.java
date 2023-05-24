@@ -654,4 +654,9 @@ public interface UndertowMessages {
     @Message(id = 210, value = "Buffer content underflow for exchange '%s', buffer '%s'")
     IOException bufferUnderflow(HttpServerExchange exchange, ByteBuffer buf);
 
+    // 211 placeholder
+
+    @Message(id = 212, value = "Failed to encode query string '%s' with '%s' encoding.")
+    IllegalArgumentException failedToEncodeQueryString(String q, String e);
+
 }
