@@ -273,7 +273,7 @@ public class SimpleAsyncTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            MatcherAssert.assertThat(response, CoreMatchers.containsString("wrapped: pathInfo:/path%info queryString:n3=v%253 servletPath:/pathinfo requestUri:/servletContext/pathinfo/path%25info\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("wrapped: pathInfo:/path%info queryString:n1=v%251&n2=v2&n3=v%253 servletPath:/pathinfo requestUri:/servletContext/pathinfo/path%25info\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.request_uri:/servletContext/dispatch/dis%25patch\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.context_path:/servletContext\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.servlet_path:/dispatch\r\n"));
@@ -293,7 +293,7 @@ public class SimpleAsyncTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            MatcherAssert.assertThat(response, CoreMatchers.containsString("wrapped: pathInfo:null queryString:n3=v%253 servletPath:/path%info.info requestUri:/servletContext/path%25info.info\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("wrapped: pathInfo:null queryString:n1=v%251&n2=v2&n3=v%253 servletPath:/path%info.info requestUri:/servletContext/path%25info.info\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.request_uri:/servletContext/dis%25patch.dispatch\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.context_path:/servletContext\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.async.servlet_path:/dis%patch.dispatch\r\n"));

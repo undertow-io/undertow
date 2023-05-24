@@ -245,7 +245,7 @@ public class DispatcherForwardTestCase {
             result = client.execute(get);
             assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            assertEquals("pathInfo:null queryString:foo=bar servletPath:/path requestUri:/servletContext/path", response);
+            assertEquals("pathInfo:null queryString:a=b&foo=bar servletPath:/path requestUri:/servletContext/path", response);
             latch.await(30, TimeUnit.SECONDS);
             //UNDERTOW-327 and UNDERTOW-1599 - make sure that the access log includes the original path and query string
             assertEquals("GET /servletContext/dispatch?a=b " + protocol + " /servletContext/dispatch /dispatch", message);
@@ -277,12 +277,12 @@ public class DispatcherForwardTestCase {
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
-            get.setHeader("forward", "/path?url=http://test.com");
+            get.setHeader("forward", "/path?url=http%3A%2F%2Ftest.com");
             HttpResponse result = client.execute(get);
             assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
             // Path parameters should not be canonicalized
-            assertEquals("pathInfo:null queryString:url=http://test.com servletPath:/path requestUri:/servletContext/path", response);
+            assertEquals("pathInfo:null queryString:url=http%3A%2F%2Ftest.com servletPath:/path requestUri:/servletContext/path", response);
 
         } finally {
             client.getConnectionManager().shutdown();
@@ -319,7 +319,7 @@ public class DispatcherForwardTestCase {
             HttpResponse result = client.execute(get);
             assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            MatcherAssert.assertThat(response, CoreMatchers.containsString("pathInfo:/path%info queryString:n3=V%253 servletPath:/path-forward requestUri:/servletContext/path-forward/path%25info\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("pathInfo:/path%info queryString:n1=v%251&n2=v%252&n3=V%253 servletPath:/path-forward requestUri:/servletContext/path-forward/path%25info\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.request_uri:/servletContext/dispatch/dispatch%25info\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.context_path:/servletContext\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.servlet_path:/dispatch\r\n"));
@@ -340,7 +340,7 @@ public class DispatcherForwardTestCase {
             HttpResponse result = client.execute(get);
             assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            MatcherAssert.assertThat(response, CoreMatchers.containsString("pathInfo:null queryString:n3=V%253 servletPath:/to%forward/path%info.forwardinfo requestUri:/servletContext/to%25forward/path%25info.forwardinfo\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("pathInfo:null queryString:n1=v%251&n2=v%252&n3=V%253 servletPath:/to%forward/path%info.forwardinfo requestUri:/servletContext/to%25forward/path%25info.forwardinfo\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.request_uri:/servletContext/dis%25patch/dispatch%25info.dispatch\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.context_path:/servletContext\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.servlet_path:/dis%patch/dispatch%info.dispatch\r\n"));

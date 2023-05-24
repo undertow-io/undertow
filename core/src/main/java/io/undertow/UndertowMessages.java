@@ -647,4 +647,7 @@ public interface UndertowMessages {
     @Message(id = 208, value = "Failed to allocate resource")
     IOException failedToAllocateResource();
 
+    @Message(id = 209, value = "Failed to encode query string '%s' with '%s' encoding.")
+    IllegalArgumentException failedToEncodeQueryString(final String q, final String e);
+
 }
