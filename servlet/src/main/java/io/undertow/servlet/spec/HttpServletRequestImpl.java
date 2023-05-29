@@ -48,6 +48,24 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.LocaleUtils;
 
+import javax.servlet.AsyncContext;
+import javax.servlet.DispatcherType;
+import javax.servlet.MultipartConfigElement;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletRequestWrapper;
+import javax.servlet.ServletResponse;
+import javax.servlet.ServletResponseWrapper;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletMapping;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import javax.servlet.http.HttpUpgradeHandler;
+import javax.servlet.http.Part;
+import javax.servlet.http.PushBuilder;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -72,24 +90,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import javax.servlet.AsyncContext;
-import javax.servlet.DispatcherType;
-import javax.servlet.MultipartConfigElement;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletException;
-import javax.servlet.ServletInputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletRequestWrapper;
-import javax.servlet.ServletResponse;
-import javax.servlet.ServletResponseWrapper;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletMapping;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpUpgradeHandler;
-import javax.servlet.http.Part;
-import javax.servlet.http.PushBuilder;
 
 /**
  * The http servlet request implementation. This class is not thread safe
@@ -238,37 +238,41 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             match = src.getServletPathMatch();
         }
         String matchValue;
-        switch (match.getMappingMatch()) {
-            case EXACT:
-                matchValue = match.getMatched();
-                if(matchValue.startsWith("/")) {
-                    matchValue = matchValue.substring(1);
-                }
-                break;
-            case DEFAULT:
-            case CONTEXT_ROOT:
-                matchValue = "";
-                break;
-            case PATH:
-                matchValue = match.getRemaining();
-                if (matchValue == null) {
+        if (match != null) {
+            switch (match.getMappingMatch()) {
+                case EXACT:
+                    matchValue = match.getMatched();
+                    if (matchValue.startsWith("/")) {
+                        matchValue = matchValue.substring(1);
+                    }
+                    break;
+                case DEFAULT:
+                case CONTEXT_ROOT:
                     matchValue = "";
-                } else if (matchValue.startsWith("/")) {
-                    matchValue = matchValue.substring(1);
-                }
-                break;
-            case EXTENSION:
-                String matched = match.getMatched();
-                String matchString = match.getMatchString();
-                int startIndex = matched.startsWith("/") ? 1 : 0;
-                int endIndex = matched.length() - matchString.length() + 1;
-                matchValue = matched.substring(startIndex, endIndex);
-                break;
-            default:
-                matchValue = match.getRemaining();
+                    break;
+                case PATH:
+                    matchValue = match.getRemaining();
+                    if (matchValue == null) {
+                        matchValue = "";
+                    } else if (matchValue.startsWith("/")) {
+                        matchValue = matchValue.substring(1);
+                    }
+                    break;
+                case EXTENSION:
+                    String matched = match.getMatched();
+                    String matchString = match.getMatchString();
+                    int startIndex = matched.startsWith("/") ? 1 : 0;
+                    int endIndex = matched.length() - matchString.length() + 1;
+                    matchValue = matched.substring(startIndex, endIndex);
+                    break;
+                default:
+                    matchValue = match.getRemaining();
+            }
+            return new MappingImpl(matchValue, match.getMatchString(), match.getMappingMatch(), match.getServletChain().getManagedServlet().getServletInfo().getName());
         }
-        return new MappingImpl(matchValue, match.getMatchString(), match.getMappingMatch(), match.getServletChain().getManagedServlet().getServletInfo().getName());
-    }
+        else
+            return null;
+        }
 
     @Override
     public int getIntHeader(final String name) {
