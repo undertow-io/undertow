@@ -48,6 +48,25 @@ import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.LocaleUtils;
+import jakarta.servlet.AsyncContext;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletConnection;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletRequestWrapper;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.ServletResponseWrapper;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletMapping;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpUpgradeHandler;
+import jakarta.servlet.http.Part;
+import jakarta.servlet.http.PushBuilder;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -74,25 +93,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import jakarta.servlet.AsyncContext;
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.MultipartConfigElement;
-import jakarta.servlet.RequestDispatcher;
-import jakarta.servlet.ServletConnection;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletInputStream;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletRequestWrapper;
-import jakarta.servlet.ServletResponse;
-import jakarta.servlet.ServletResponseWrapper;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletMapping;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-import jakarta.servlet.http.HttpUpgradeHandler;
-import jakarta.servlet.http.Part;
-import jakarta.servlet.http.PushBuilder;
 
 /**
  * The http servlet request implementation. This class is not thread safe
@@ -241,37 +241,41 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             match = src.getServletPathMatch();
         }
         String matchValue;
-        switch (match.getMappingMatch()) {
-            case EXACT:
-                matchValue = match.getMatched();
-                if(matchValue.startsWith("/")) {
-                    matchValue = matchValue.substring(1);
-                }
-                break;
-            case DEFAULT:
-            case CONTEXT_ROOT:
-                matchValue = "";
-                break;
-            case PATH:
-                matchValue = match.getRemaining();
-                if (matchValue == null) {
+        if (match != null) {
+            switch (match.getMappingMatch()) {
+                case EXACT:
+                    matchValue = match.getMatched();
+                    if (matchValue.startsWith("/")) {
+                        matchValue = matchValue.substring(1);
+                    }
+                    break;
+                case DEFAULT:
+                case CONTEXT_ROOT:
                     matchValue = "";
-                } else if (matchValue.startsWith("/")) {
-                    matchValue = matchValue.substring(1);
-                }
-                break;
-            case EXTENSION:
-                String matched = match.getMatched();
-                String matchString = match.getMatchString();
-                int startIndex = matched.startsWith("/") ? 1 : 0;
-                int endIndex = matched.length() - matchString.length() + 1;
-                matchValue = matched.substring(startIndex, endIndex);
-                break;
-            default:
-                matchValue = match.getRemaining();
+                    break;
+                case PATH:
+                    matchValue = match.getRemaining();
+                    if (matchValue == null) {
+                        matchValue = "";
+                    } else if (matchValue.startsWith("/")) {
+                        matchValue = matchValue.substring(1);
+                    }
+                    break;
+                case EXTENSION:
+                    String matched = match.getMatched();
+                    String matchString = match.getMatchString();
+                    int startIndex = matched.startsWith("/") ? 1 : 0;
+                    int endIndex = matched.length() - matchString.length() + 1;
+                    matchValue = matched.substring(startIndex, endIndex);
+                    break;
+                default:
+                    matchValue = match.getRemaining();
+            }
+            return new MappingImpl(matchValue, match.getMatchString(), match.getMappingMatch(), match.getServletChain().getManagedServlet().getServletInfo().getName());
         }
-        return new MappingImpl(matchValue, match.getMatchString(), match.getMappingMatch(), match.getServletChain().getManagedServlet().getServletInfo().getName());
-    }
+        else
+            return null;
+        }
 
     @Override
     public int getIntHeader(final String name) {
