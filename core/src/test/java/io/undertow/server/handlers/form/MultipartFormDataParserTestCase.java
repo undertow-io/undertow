@@ -33,12 +33,15 @@ import java.util.Map;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.FormBodyPart;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.junit.Assert;
@@ -342,6 +345,37 @@ public class MultipartFormDataParserTestCase {
         } finally {
             file.delete();
             client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testLargeContentWithoutFileNameWithSmallFileSizeThreshold() throws Exception {
+        DefaultServer.setRootHandler(new BlockingHandler(createInMemoryReadingHandler(10)));
+        File file = new File("tmp_upload_file.txt");
+        try (TestHttpClient client = new TestHttpClient()) {
+            file.createNewFile();
+            // 32 kb content, which exceeds default fieldSizeThreshold, the FormData.FormValue will be a FileItem
+            writeLargeFileContent(file, 0x4000 * 2);
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
+            HttpEntity entity = MultipartEntityBuilder.create()
+                    .addTextBody("formValue", "myValue", ContentType.TEXT_PLAIN)
+                    .addBinaryBody("file", Files.newInputStream(file.toPath()))
+                    .build();
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String resp = HttpClientUtils.readResponse(result);
+
+            Map<String, String> parsedResponse = parse(resp);
+
+            Assert.assertEquals("false", parsedResponse.get("in_memory"));
+            Assert.assertEquals(DigestUtils.md5Hex(Files.newInputStream(file.toPath())), parsedResponse.get("hash"));
+            Assert.assertTrue(parsedResponse.get("file_name").startsWith("undertow"));
+            Assert.assertTrue(parsedResponse.get("file_name").endsWith("upload"));
+        } finally {
+            if (!file.delete()) {
+                file.deleteOnExit();
+            }
         }
     }
 
