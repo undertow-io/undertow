@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Enumeration;
 import java.util.TreeSet;
 
+import io.undertow.util.Headers;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -37,10 +38,23 @@ import io.undertow.util.FileUtils;
  */
 public class MultiPartServlet extends HttpServlet {
 
+    private final boolean getParam;
+    public MultiPartServlet() {
+        super();
+        this.getParam = false;
+    }
+
+    public MultiPartServlet(boolean getParam) {
+        super();
+        this.getParam = getParam;
+    }
+
     @Override
     protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         try {
             Collection<Part> parts = req.getParts();
+            resp.setContentType("text/plain; charset=UTF-8");
+            resp.setCharacterEncoding("UTF-8");
             PrintWriter writer = resp.getWriter();
             writer.println("PARAMS:");
             writer.println("parameter count: " + req.getParameterMap().size());
@@ -52,9 +66,28 @@ public class MultiPartServlet extends HttpServlet {
                 Collection<String> headerNames = new TreeSet<>(part.getHeaderNames());
                 for (String header : headerNames) {
                     writer.println(header + ": " + part.getHeader(header));
+                    if (header.equals(Headers.CONTENT_DISPOSITION_STRING)) {
+                        final String parameterValue = part.getHeader(header);
+                        String parameterName = parameterValue.substring(parameterValue.indexOf("name=") + "name=\"".length());
+                        parameterName = parameterName.substring(0, parameterName.indexOf('\"'));
+                        final String[] values = req.getParameterValues(parameterName);
+                        if (values != null) {
+                            for (String value: values) {
+                                writer.println("value: " + value);
+                            }
+                        }
+                    }
                 }
                 writer.println("size: " + part.getSize());
                 writer.println("content: " + FileUtils.readFile(part.getInputStream()));
+            }
+            if (getParam) {
+                Enumeration<String> paramNames = req.getParameterNames();
+                while (paramNames.hasMoreElements()) {
+                    String name = paramNames.nextElement();
+                    writer.println("param name: " + name);
+                    writer.println("param value: " + req.getParameter(name));
+                }
             }
         } catch (Exception e) {
             resp.getWriter().write("EXCEPTION: " + e.getClass());

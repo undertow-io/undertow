@@ -24,21 +24,21 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.io.Charsets;
-import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.FormBodyPart;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.junit.Assert;
@@ -184,7 +184,7 @@ public class MultipartFormDataParserTestCase {
             entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
 
             File uploadfile = new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile());
-            FormBodyPart filePart = new FormBodyPart("file", new FileBody(uploadfile, "τεστ", "application/octet-stream", Charsets.UTF_8.toString()));
+            FormBodyPart filePart = new FormBodyPart("file", new FileBody(uploadfile, "τεστ", "application/octet-stream", StandardCharsets.UTF_8.toString()));
             filePart.addField("Content-Disposition", "form-data; name=\"file\"; filename*=\"utf-8''%CF%84%CE%B5%CF%83%CF%84.txt\"");
             entity.addPart(filePart);
 
@@ -230,9 +230,7 @@ public class MultipartFormDataParserTestCase {
 
             private String stream2String(FormData.FormValue file) throws IOException {
                 try (InputStream is = file.getFileItem().getInputStream()) {
-                    StringWriter sw = new StringWriter();
-                    IOUtils.copy(is, sw, "UTF-8");
-                    return sw.toString();
+                    return HttpClientUtils.toString(is, StandardCharsets.UTF_8);
                 }
             }
 
@@ -342,6 +340,36 @@ public class MultipartFormDataParserTestCase {
         } finally {
             file.delete();
             client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testLargeContentWithoutFileNameWithSmallFileSizeThreshold() throws Exception {
+        DefaultServer.setRootHandler(new BlockingHandler(createInMemoryReadingHandler(10)));
+        File file = new File("tmp_upload_file.txt");
+        try (TestHttpClient client = new TestHttpClient()) {
+            file.createNewFile();
+            // 32 kb content, which exceeds default fieldSizeThreshold, the FormData.FormValue will be a FileItem
+            writeLargeFileContent(file, 0x4000 * 2);
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
+            HttpEntity entity = MultipartEntityBuilder.create()
+                    .addTextBody("formValue", "myValue", ContentType.TEXT_PLAIN)
+                    .addBinaryBody("file", Files.newInputStream(file.toPath()))
+                    .build();
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String resp = HttpClientUtils.readResponse(result);
+
+            Map<String, String> parsedResponse = parse(resp);
+
+            Assert.assertEquals("false", parsedResponse.get("in_memory"));
+            Assert.assertEquals(DigestUtils.md5Hex(Files.newInputStream(file.toPath())), parsedResponse.get("hash"));
+            Assert.assertEquals(parsedResponse.get("file_name"), "null");
+        } finally {
+            if (!file.delete()) {
+                file.deleteOnExit();
+            }
         }
     }
 
