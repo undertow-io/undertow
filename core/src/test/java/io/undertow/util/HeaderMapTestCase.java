@@ -108,4 +108,15 @@ public final class HeaderMapTestCase {
         assertEquals("a", headerMap.getFirst("Link"));
         assertEquals("b", headerMap.getFirst("Rest"));
     }
+
+    // Test for UNDERTOW-2276
+    @Test
+    public void testContainsAfterClear() {
+        HeaderMap headerMap = new HeaderMap();
+        HttpString header = Headers.HOST;
+        headerMap.put(header, "a");
+        headerMap.get(header).clear();
+        assertFalse(headerMap.contains(header));
+        assertFalse(headerMap.contains(header.toString()));
+    }
 }
