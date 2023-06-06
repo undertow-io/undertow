@@ -130,6 +130,17 @@ public class NetworkUtilsAddressParsingTestCase {
             Assert.assertEquals(((byte)(parts[i])), res.getAddress()[i * 2 + 1]);
         }
         Assert.assertEquals("/0:0:0:0:0:0:0:1", res.toString());
+
+        addressString = "1::";
+        res = NetworkUtils.parseIpv6Address(addressString);
+        Assert.assertTrue(res instanceof Inet6Address);
+
+        parts = new int[]{0x1, 0, 0, 0, 0, 0, 0, 0};
+        for(int i = 0 ; i < parts.length; ++i) {
+            Assert.assertEquals(((byte)(parts[i]>>8)), res.getAddress()[i * 2]);
+            Assert.assertEquals(((byte)(parts[i])), res.getAddress()[i * 2 + 1]);
+        }
+        Assert.assertEquals("/1:0:0:0:0:0:0:0", res.toString());
     }
 
     @Test
@@ -172,4 +183,8 @@ public class NetworkUtilsAddressParsingTestCase {
         NetworkUtils.parseIpv6Address(":2001:1db8:100:3:6:ff00:42:8329");
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void testIpV6AddressEndsWithDoubleColon() throws IOException {
+        NetworkUtils.parseIpv6Address("1::1::");
+    }
 }
