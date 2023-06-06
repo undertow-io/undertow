@@ -141,20 +141,21 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (len < 1) {
             return;
         }
+        int finalLength = (int) Math.min(len, remainingContentLength());
 
         if (listener == null) {
             ByteBuffer buffer = buffer();
-            if (buffer.remaining() < len) {
-                writeTooLargeForBuffer(b, off, len, buffer);
+            if (buffer.remaining() < finalLength) {
+                writeTooLargeForBuffer(b, off, finalLength, buffer);
             } else {
-                buffer.put(b, off, len);
+                buffer.put(b, off, finalLength);
                 if (buffer.remaining() == 0) {
                     writeBufferBlocking(false);
                 }
             }
-            updateWritten(len);
+            updateWritten(finalLength);
         } else {
-            writeAsync(b, off, len);
+            writeAsync(b, off, finalLength);
         }
     }
 
@@ -236,6 +237,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (anyAreClear(state, FLAG_READY)) {
             throw UndertowServletMessages.MESSAGES.streamNotReady();
         }
+        len = (int) Math.min(len, remainingContentLength());
         //even though we are in async mode we are still buffering
         try {
             ByteBuffer buffer = buffer();
@@ -285,6 +287,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (len < 1) {
             return;
         }
+        len = (int) Math.min(len, remainingContentLength());
 
         if (listener == null) {
             //if we have received the exact amount of content write it out in one go
@@ -374,7 +377,15 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         }
     }
 
-    void updateWrittenAsync(final long len) throws IOException {
+    long remainingContentLength() throws IOException {
+        final long contentLength = servletRequestContext.getOriginalResponse().getContentLength();
+        if (contentLength != -1) {
+            return contentLength - written;
+        }
+        return Long.MAX_VALUE;
+    }
+
+    void  updateWrittenAsync(final long len) throws IOException {
         this.written += len;
         long contentLength = servletRequestContext.getOriginalResponse().getContentLength();
         if (contentLength != -1 && this.written >= contentLength) {
@@ -525,6 +536,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (anyAreSet(state, FLAG_CLOSED) || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
+        final long remainingContentLength = remainingContentLength();
         if (listener == null) {
             if (buffer != null && buffer.position() != 0) {
                 writeBufferBlocking(false);
@@ -534,6 +546,9 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             }
             long position = source.position();
             long count = source.size() - position;
+            if (count > remainingContentLength) {
+                count = remainingContentLength;
+            }
             Channels.transferBlocking(channel, source, position, count);
             updateWritten(count);
         } else {
@@ -542,7 +557,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
             long pos = 0;
             try {
-                long size = source.size();
+                long size = Math.min (source.size(), remainingContentLength);
                 pos = source.position();
 
                 while (size - pos > 0) {
