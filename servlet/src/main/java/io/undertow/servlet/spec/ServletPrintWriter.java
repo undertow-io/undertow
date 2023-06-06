@@ -164,10 +164,17 @@ public class ServletPrintWriter {
                 underflow = null;
             }
             int last = -1;
-            while (cb.hasRemaining()) {
-                int remaining = buffer.remaining();
-                CoderResult result = charsetEncoder.encode(cb, buffer, false);
-                outputStream.updateWritten(remaining - buffer.remaining());
+            long remainingContentLength = outputStream.remainingContentLength();
+            while (remainingContentLength > 0 && cb.hasRemaining()) {
+                final int remaining = buffer.remaining();
+                final CoderResult result = charsetEncoder.encode(cb, buffer, false);
+                long writtenLength = remaining - buffer.remaining();
+                if (remainingContentLength < writtenLength) {
+                    buffer.position(buffer.position() - (int) (writtenLength - remainingContentLength));
+                    writtenLength = remainingContentLength;
+                }
+                remainingContentLength -= writtenLength;
+                outputStream.updateWritten(writtenLength);
                 if (result.isOverflow() || !buffer.hasRemaining()) {
                     outputStream.flushInternal();
                     if (!buffer.hasRemaining()) {
@@ -239,6 +246,7 @@ public class ServletPrintWriter {
     private static int writeAndFlushAscii(ServletOutputStreamImpl outputStream, ByteBuffer buffer, char[] chars, int start, int end) throws IOException {
         assert buffer.order() == ByteOrder.BIG_ENDIAN;
         int i = start;
+        long remainingContentLength = outputStream.remainingContentLength();
         while (i < end) {
             final int bufferPos = buffer.position();
             final int bufferRemaining = buffer.remaining();
@@ -246,7 +254,11 @@ public class ServletPrintWriter {
             final int remaining = Math.min(sRemaining, bufferRemaining);
             final int written = setAsciiBE(buffer, bufferPos, chars, i, remaining);
             i += written;
-            buffer.position(bufferPos + written);
+            if ((remainingContentLength -= written) < 0) {
+                buffer.position(bufferPos + written + (int) remainingContentLength);
+            } else {
+                buffer.position(bufferPos + written);
+            }
             if (!buffer.hasRemaining()) {
                 outputStream.flushInternal();
             }
@@ -329,6 +341,7 @@ public class ServletPrintWriter {
     private static int writeAndFlushAscii(ServletOutputStreamImpl outputStream, ByteBuffer buffer, String s, int start, int end) throws IOException {
         assert buffer.order() == ByteOrder.BIG_ENDIAN;
         int i = start;
+        long remainingContentLength = outputStream.remainingContentLength();
         while (i < end) {
             final int bufferPos = buffer.position();
             final int bufferRemaining = buffer.remaining();
@@ -336,7 +349,11 @@ public class ServletPrintWriter {
             final int remaining = Math.min(sRemaining, bufferRemaining);
             final int written = setAsciiBE(buffer, bufferPos, s, i, remaining);
             i += written;
-            buffer.position(bufferPos + written);
+            if ((remainingContentLength -= written) < 0) {
+                buffer.position(bufferPos + written + (int) remainingContentLength);
+            } else {
+                buffer.position(bufferPos + written);
+            }
             if (!buffer.hasRemaining()) {
                 outputStream.flushInternal();
             }
