@@ -800,7 +800,7 @@ public final class HeaderMap implements Iterable<HeaderValues> {
 
     public boolean contains(HttpString headerName) {
         final HeaderValues headerValues = getEntry(headerName);
-        if (headerValues == null) {
+        if (headerValues == null || headerValues.size == 0) {
             return false;
         }
         final Object v = headerValues.value;
@@ -818,7 +818,7 @@ public final class HeaderMap implements Iterable<HeaderValues> {
 
     public boolean contains(String headerName) {
         final HeaderValues headerValues = getEntry(headerName);
-        if (headerValues == null) {
+        if (headerValues == null || headerValues.size == 0) {
             return false;
         }
         final Object v = headerValues.value;
