@@ -18,30 +18,8 @@
 
 package io.undertow.server.handlers.proxy;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.channels.Channel;
-import java.nio.charset.StandardCharsets;
-import java.security.cert.Certificate;
-import java.util.Collections;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import javax.net.ssl.SSLPeerUnverifiedException;
-import java.security.cert.CertificateEncodingException;
-
-import io.undertow.UndertowMessages;
-import io.undertow.server.handlers.ResponseCodeHandler;
-import org.jboss.logging.Logger;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.StreamConnection;
-import org.xnio.XnioExecutor;
-import org.xnio.channels.StreamSinkChannel;
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.client.ClientCallback;
@@ -52,6 +30,7 @@ import io.undertow.client.ClientResponse;
 import io.undertow.client.ContinueNotification;
 import io.undertow.client.ProxiedRequestAttachments;
 import io.undertow.client.PushCallback;
+import io.undertow.connector.ByteBufferPool;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.predicate.IdempotentPredicate;
@@ -62,6 +41,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.RenegotiationRequiredException;
 import io.undertow.server.SSLSessionInfo;
+import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.Attachable;
@@ -77,8 +57,32 @@ import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.Transfer;
 import io.undertow.util.WorkerUtils;
+import org.jboss.logging.Logger;
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.StreamConnection;
+import org.xnio.XnioExecutor;
+import org.xnio.channels.StreamSinkChannel;
+
+import javax.net.ssl.SSLPeerUnverifiedException;
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.channels.Channel;
+import java.nio.charset.StandardCharsets;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static io.undertow.client.http2.Http2ClearClientProvider.createSettingsFrame;
 
 /**
  * An HTTP handler which proxies content to a remote server.
@@ -272,14 +276,20 @@ public final class ProxyHandler implements HttpHandler {
     }
 
 
-    static void copyHeaders(final HeaderMap to, final HeaderMap from) {
+    static void copyHeaders(final HttpServerExchange exchange, final HeaderMap to, final HeaderMap from) {
         long f = from.fastIterateNonEmpty();
         HeaderValues values;
         while (f != -1L) {
             values = from.fiCurrent(f);
             if(!to.contains(values.getHeaderName())) {
-                //don't over write existing headers, normally the map will be empty, if it is not we assume it is not for a reason
-                to.putAll(values.getHeaderName(), values);
+                if (values.getHeaderName().toString().equals("HTTP2-Settings")) {
+                    final OptionMap options = exchange.getConnection().getUndertowOptions();
+                    final ByteBufferPool bufferPool = exchange.getConnection().getByteBufferPool();
+                    to.put(new HttpString("HTTP2-Settings"), createSettingsFrame(options, bufferPool));
+                } else {
+                    //don't over write existing headers, normally the map will be empty, if it is not we assume it is not for a reason
+                    to.putAll(values.getHeaderName(), values);
+                }
             }
             f = from.fiNextNonEmpty(f);
         }
@@ -445,7 +455,7 @@ public final class ProxyHandler implements HttpHandler {
                     .setMethod(exchange.getRequestMethod());
             final HeaderMap inboundRequestHeaders = exchange.getRequestHeaders();
             final HeaderMap outboundRequestHeaders = request.getRequestHeaders();
-            copyHeaders(outboundRequestHeaders, inboundRequestHeaders);
+            copyHeaders(exchange, outboundRequestHeaders, inboundRequestHeaders);
 
             if (!exchange.isPersistent()) {
                 //just because the client side is non-persistent
@@ -714,7 +724,7 @@ public final class ProxyHandler implements HttpHandler {
             final HeaderMap inboundResponseHeaders = response.getResponseHeaders();
             final HeaderMap outboundResponseHeaders = exchange.getResponseHeaders();
             exchange.setStatusCode(response.getResponseCode());
-            copyHeaders(outboundResponseHeaders, inboundResponseHeaders);
+            copyHeaders(exchange, outboundResponseHeaders, inboundResponseHeaders);
 
             if (exchange.isUpgrade()) {
 

@@ -19,6 +19,9 @@
 package io.undertow.server.handlers.resource;
 
 import io.undertow.UndertowLogger;
+import io.undertow.predicate.PathPrefixPredicate;
+import io.undertow.predicate.Predicate;
+import io.undertow.predicate.PathPrefixPredicate.PathPrefixMatchRecord;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.DateUtils;
 import io.undertow.util.ETag;
@@ -39,6 +42,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * @author Stuart Douglas
@@ -89,8 +93,18 @@ public class DirectoryUtils {
 
         return false;
     }
+    /**
+     *
+     * @param path
+     * @param resource
+     * @return
+     */
+    @Deprecated
+    public static StringBuilder renderDirectoryListing(String path, final Resource resource) {
+        return renderDirectoryListing(null, path, resource);
+    }
 
-    public static StringBuilder renderDirectoryListing(String path, Resource resource) {
+    public static StringBuilder renderDirectoryListing(final HttpServerExchange exchange, String path, final Resource resource) {
         if (!path.endsWith("/")){
             path += "/";
         }
@@ -123,12 +137,28 @@ public class DirectoryUtils {
             }
         }
 
+        String relative = null;
+        if (exchange != null) {
+            final Map<String, Object> context = exchange.getAttachment(Predicate.PREDICATE_CONTEXT);
+            if (context != null) {
+                final PathPrefixPredicate.PathPrefixMatchRecord trans = (PathPrefixMatchRecord) context
+                        .get(PathPrefixPredicate.PREFIX_MATCH_RECORD);
+                if (trans != null) {
+                    if (trans.isOverWritten()) {
+                        relative = trans.getPrefix();
+                        if (!relative.endsWith("/") && !path.startsWith("/")) {
+                            relative += "/";
+                        }
+                    }
+                }
+            }
+        }
 
         SimpleDateFormat format = new SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.US);
         int i = 0;
         if (parent != null) {
             i++;
-            builder.append("<tr class='odd'><td><a class='icon up' href='").append(parent).append("'>[..]</a></td><td>");
+            builder.append("<tr class='odd'><td><a class='icon up' href='").append(relative  == null ? parent : relative + parent).append(parent.endsWith("/") ? "" : "/").append("'>[..]</a></td><td>");
             builder.append(format.format((resource.getLastModified() == null ? new Date(0L) : resource.getLastModified())))
                     .append("</td><td>--</td></tr>\n");
         }
@@ -136,7 +166,7 @@ public class DirectoryUtils {
         for (Resource entry : resource.list()) {
             builder.append("<tr class='").append((++i & 1) == 1 ? "odd" : "even").append("'><td><a class='icon ");
             builder.append(entry.isDirectory() ? "dir" : "file");
-            builder.append("' href='").append(path).append(entry.getName()).append("'>").append(entry.getName()).append("</a></td><td>");
+            builder.append("' href='").append(relative  == null ? path : relative + path).append(entry.getName()).append(entry.isDirectory() ? "/" : "").append("'>").append(entry.getName()).append("</a></td><td>");
             builder.append(format.format((entry.getLastModified() == null) ? new Date(0L) : entry.getLastModified()))
                     .append("</td><td>");
             if (entry.isDirectory()) {
@@ -161,7 +191,7 @@ public class DirectoryUtils {
             return;
         }
 
-        StringBuilder builder = renderDirectoryListing(requestPath, resource);
+        StringBuilder builder = renderDirectoryListing(exchange, requestPath, resource);
 
         try {
             ByteBuffer output = ByteBuffer.wrap(builder.toString().getBytes(StandardCharsets.UTF_8));

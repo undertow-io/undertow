@@ -23,6 +23,8 @@ import io.undertow.UndertowMessages;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Stuart Douglas
@@ -95,7 +97,7 @@ public class NetworkUtils {
         if (startsWithColon && !addressString.startsWith("::")) {
             throw UndertowMessages.MESSAGES.invalidIpAddress(addressString);
         }
-        String[] parts = (startsWithColon ? addressString.substring(1) : addressString).split(":"); //because of the way split works we want to change a leading double colon to a single one. We have already verified that the address does not actually start with a single colon
+        String[] parts = splitIPv6(addressString);
         byte[] data = new byte[16];
         int partOffset = 0;
         boolean seenEmpty = false;
@@ -129,6 +131,27 @@ public class NetworkUtils {
         return data;
     }
 
+    private static String[] splitIPv6(final String src) {
+        final List<String> list = new ArrayList<>();
+        final int size = src.length();
+        char previous = 0;
+        final StringBuilder bits = new StringBuilder(8);
+        for(int i = 0; i<size;i++) {
+            final char current = src.charAt(i);
+             if(current != ':'){
+                bits.append(String.valueOf(current));
+            }
+
+             if(previous == current && current == ':') {
+                 list.add("");
+             } else if (((current == ':') || (i == size - 1)) && bits.length() > 0) {
+                list.add(bits.toString());
+                bits.setLength(0);
+            }
+            previous = current;
+        }
+        return list.toArray(new String[list.size()]);
+    }
     public static String toObfuscatedString(InetAddress address) {
         if (address == null) {
             return null;
