@@ -585,7 +585,11 @@ public class DeploymentManagerImpl implements DeploymentManager {
                     }
                     for (Map.Entry<Integer, List<ManagedServlet>> load : loadOnStartup.entrySet()) {
                         for (ManagedServlet servlet : load.getValue()) {
-                            servlet.createServlet();
+                            try {
+                                servlet.createServlet();
+                            } catch (ServletException e) {
+                                UndertowServletLogger.ROOT_LOGGER.failedToLoad(servlet.getServletInfo().getName(), deployment.getDeploymentInfo().getDeploymentName(), e.getCause());
+                            }
                         }
                     }
 
