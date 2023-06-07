@@ -24,6 +24,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.util.HttpString;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
@@ -31,6 +32,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,6 +64,8 @@ public class LotsOfHeadersResponseTestCase {
 
     @Test
     public void testLotsOfHeadersInResponse() throws IOException {
+        // FIXME UNDERTOW-2279
+        Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows"));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
