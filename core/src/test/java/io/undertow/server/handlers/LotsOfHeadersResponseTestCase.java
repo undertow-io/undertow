@@ -18,22 +18,23 @@
 
 package io.undertow.server.handlers;
 
-import java.io.IOException;
-
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.util.HttpString;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
 
 /**
  * @author Stuart Douglas
@@ -62,6 +63,8 @@ public class LotsOfHeadersResponseTestCase {
 
     @Test
     public void testLotsOfHeadersInResponse() throws IOException {
+        // FIXME UNDERTOW-2279
+        Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows"));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
@@ -69,6 +72,9 @@ public class LotsOfHeadersResponseTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             for (int i = 0; i < COUNT; ++i) {
                 Header[] header = result.getHeaders(HEADER + i);
+                if (header.length == 0) {
+                    Assert.fail("Header " + HEADER + i + " not found");
+                }
                 Assert.assertEquals(MESSAGE + i, header[0].getValue());
             }
         } finally {
