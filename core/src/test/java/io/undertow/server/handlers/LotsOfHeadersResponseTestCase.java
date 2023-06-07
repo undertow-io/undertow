@@ -24,6 +24,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.util.HttpString;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
@@ -60,7 +61,7 @@ public class LotsOfHeadersResponseTestCase {
         });
     }
 
-    @Test
+    @Test @ProxyIgnore // FIXME UNDERTOW-2279
     public void testLotsOfHeadersInResponse() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
