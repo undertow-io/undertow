@@ -172,6 +172,14 @@ public class LRUCache<K, V> {
         accessQueue.clear();
     }
 
+    public int getMaxEntries() {
+        return maxEntries;
+    }
+
+    public int getMaxAge() {
+        return maxAge;
+    }
+
     public static final class CacheEntry<K, V> {
 
         private static final Object CLAIM_TOKEN = new Object();

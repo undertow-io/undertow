@@ -21,9 +21,12 @@ package io.undertow.server.handlers.resource;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.handlers.cache.DirectBufferCache;
+import io.undertow.server.handlers.cache.DirectBufferCache.CacheEntry;
 import io.undertow.server.handlers.cache.LRUCache;
 
 /**
@@ -57,7 +60,9 @@ public class CachingResourceManager implements ResourceManager {
     /**
      * A cache of file metadata, such as if a file exists or not
      */
-    private final LRUCache<String, Object> cache;
+    private LRUCache<String, Object> cache;
+
+    private final ReentrantReadWriteLock cacheAccessLock = new ReentrantReadWriteLock();
 
     private int maxAge;
 
@@ -107,16 +112,30 @@ public class CachingResourceManager implements ResourceManager {
         } else {
             path = p;
         }
-        Object res = cache.get(path);
+        // ReadLock will allow multiple reads and changes, guarded by WriteLock for purge
+        final Lock readLock = this.cacheAccessLock.readLock();
+        final Lock writeLock = this.cacheAccessLock.writeLock();
+        Object res = null;
+        try {
+            readLock.lock();
+            res = cache.get(path);
+        } finally {
+            readLock.unlock();
+        }
         if (res instanceof NoResourceMarker) {
             NoResourceMarker marker = (NoResourceMarker) res;
             long nextCheck = marker.getNextCheckTime();
-            if(nextCheck > 0) {
+            if (nextCheck > 0) {
                 long time = System.currentTimeMillis();
-                if(time > nextCheck) {
+                if (time > nextCheck) {
                     marker.setNextCheckTime(time + maxAge);
-                    if(underlyingResourceManager.getResource(path) != null) {
-                        cache.remove(path);
+                    if (underlyingResourceManager.getResource(path) != null) {
+                        try {
+                            writeLock.lock();
+                            cache.remove(path);
+                        } finally {
+                            writeLock.unlock();
+                        }
                     } else {
                         return null;
                     }
@@ -131,19 +150,47 @@ public class CachingResourceManager implements ResourceManager {
             if (resource.checkStillValid()) {
                 return resource;
             } else {
-                invalidate(path);
+                try {
+                    writeLock.lock();
+                    invalidate(this.cache, path);
+                } finally {
+                    writeLock.unlock();
+                }
             }
         }
         final Resource underlying = underlyingResourceManager.getResource(path);
         if (underlying == null) {
-            if(this.maxAge != MAX_AGE_NO_CACHING) {
-                cache.add(path, new NoResourceMarker(maxAge > 0 ? System.currentTimeMillis() + maxAge : -1));
+            if (this.maxAge != MAX_AGE_NO_CACHING) {
+                try {
+                    writeLock.lock();
+                    cache.add(path, new NoResourceMarker(maxAge > 0 ? System.currentTimeMillis() + maxAge : -1));
+                } finally {
+                    writeLock.unlock();
+                }
             }
             return null;
+            // NOTE; in case of purge, no need to clear this, if there was resource, now there is none
+            // invalidete() will purge potential dataCache entry
         }
-        final CachedResource resource = new CachedResource(this, underlying, path);
-        cache.add(path, resource);
+        CachedResource resource = null;
+        try {
+            writeLock.lock();
+            resource = new CachedResource(this, underlying, path);
+            final DirectBufferCache dataCache = getDataCache();
+            if (dataCache != null) {
+                final CacheEntry o = dataCache.get(resource.getCacheKey());
+                if (o != null) {
+                    // lazy remove, #invalidate() might have not get to this point.
+                    dataCache.remove(o.key());
+                }
+            }
+
+            cache.add(path, resource);
+        } finally {
+            writeLock.unlock();
+        }
         return resource;
+
     }
 
     @Override
@@ -162,10 +209,38 @@ public class CachingResourceManager implements ResourceManager {
     }
 
     public void invalidate(String path) {
+        final Lock writeLock = this.cacheAccessLock.writeLock();
+        writeLock.lock();
+        try {
+            this.invalidate(this.cache, path);
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
+    public void invalidate() {
+        final Lock writeLock = this.cacheAccessLock.writeLock();
+        final LRUCache<String, Object> localCopy = this.cache;
+        writeLock.lock();
+        try {
+            this.cache = new LRUCache(localCopy.getMaxEntries(),localCopy.getMaxAge());
+        } finally {
+            writeLock.unlock();
+        }
+        for(String key:localCopy.keySet()) {
+            //clear dataCache while new entries are made. This can potentially
+            //remove dataCache entries, but those can be recreated.
+            this.invalidate(localCopy, key);
+        }
+        //just in case
+        localCopy.clear();
+    }
+
+    private void invalidate(LRUCache<String, Object> localCopy, String path) {
         if(path.startsWith("/")) {
             path = path.substring(1);
         }
-        Object entry = cache.remove(path);
+        Object entry = localCopy.remove(path);
         if (entry instanceof CachedResource) {
             ((CachedResource) entry).invalidate();
         }
