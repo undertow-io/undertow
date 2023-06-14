@@ -1341,6 +1341,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             return;
         }
         if (requestChannel != null) {
+            requestChannel.suspendReads();
             requestChannel.requestDone();
         }
         this.state = oldVal | FLAG_REQUEST_TERMINATED;
