@@ -198,10 +198,8 @@ public class HpackDecoder {
         }
         specifiedMemorySize = size;
         if (currentMemorySize > specifiedMemorySize) {
-            int newTableSlots = filledTableSlots;
             int tableLength = headerTable.length;
-            int newSize = currentMemorySize;
-            while (newSize > specifiedMemorySize) {
+            while (currentMemorySize > specifiedMemorySize) {
                 int clearIndex = firstSlotPosition;
                 firstSlotPosition++;
                 if (firstSlotPosition == tableLength) {
@@ -209,11 +207,9 @@ public class HpackDecoder {
                 }
                 HeaderField oldData = headerTable[clearIndex];
                 headerTable[clearIndex] = null;
-                newSize -= oldData.size;
-                newTableSlots--;
+                currentMemorySize -= oldData.size;
+                this.filledTableSlots--;
             }
-            this.filledTableSlots = newTableSlots;
-            currentMemorySize = newSize;
         }
         return true;
     }
