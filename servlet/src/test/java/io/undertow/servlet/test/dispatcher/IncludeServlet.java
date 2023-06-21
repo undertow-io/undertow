@@ -40,7 +40,11 @@ public class IncludeServlet extends HttpServlet {
         if (req.getHeader("name") != null) {
             dispatcher = req.getServletContext().getNamedDispatcher(req.getHeader("include"));
         } else {
-            dispatcher = req.getRequestDispatcher(req.getHeader("include"));
+            String include = req.getParameter("include");
+            if (include == null) {
+                include = req.getHeader("include");
+            }
+            dispatcher = req.getRequestDispatcher(include);
         }
         dispatcher.include(req, resp);
     }
