@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import io.undertow.server.protocol.http.HttpContinue;
 import org.xnio.Bits;
 import io.undertow.UndertowLogger;
 
@@ -136,6 +137,18 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
 
     HeaderMap getHeaderMap() {
         return headerMap;
+    }
+
+    boolean isContentExpected() {
+        if (HttpContinue.requiresContinueResponse(headerMap)) {
+            return true;
+        }
+        String contentLengthString = headerMap.getFirst(Headers.CONTENT_LENGTH);
+        try {
+            return contentLengthString != null ? Long.parseLong(contentLengthString) > 0 : false;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     @Override
