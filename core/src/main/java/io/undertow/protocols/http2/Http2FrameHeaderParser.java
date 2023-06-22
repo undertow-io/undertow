@@ -38,6 +38,7 @@ import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_WINDOW_UPDATE;
 import static io.undertow.protocols.http2.Http2Channel.HEADERS_FLAG_END_HEADERS;
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreClear;
 import static org.xnio.Bits.anyAreSet;
 
 /**
@@ -233,6 +234,11 @@ class Http2FrameHeaderParser implements FrameHeaderData {
         } else if(type == FRAME_TYPE_HEADERS) {
             final Http2StreamSourceChannel channel = http2Channel.getIncomingStream(streamId);
             if(channel != null) {
+                if(anyAreClear(flags, Http2Channel.HEADERS_FLAG_END_STREAM) && !((Http2HeadersParser) parser).isContentExpected()) {
+                    //this is a protocol error
+                    io.undertow.UndertowLogger.REQUEST_IO_LOGGER.debug("Received HTTP/2 trailers header without end stream set");
+                    http2Channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
+                }
                 if (!channel.isHeadersEndStream() && allAreSet(flags, Http2Channel.HEADERS_FLAG_END_HEADERS | Http2Channel.HEADERS_FLAG_END_STREAM)) {
                     http2Channel.removeStreamSource(streamId);
                 }
