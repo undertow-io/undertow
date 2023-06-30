@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.util.Date;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletException;
-
+import io.undertow.Handlers;
+import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.builder.PredicatedHandlersParser;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.FilterInfo;
@@ -53,10 +55,12 @@ import org.junit.runner.RunWith;
 
 /**
  * @author Stuart Douglas
+ * @author baranowb
  */
 @RunWith(DefaultServer.class)
 public class DefaultServletTestCase {
 
+    private static final String HEADER_SWITCH = "SwitchHeader";
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -89,8 +93,11 @@ public class DefaultServletTestCase {
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         root.addPrefixPath(builder.getContextPath(), manager.start());
-
-        DefaultServer.setRootHandler(root);
+        HttpHandler httpHandler = Handlers.predicates(
+                PredicatedHandlersParser.parse("contains[value=%{i,"+HEADER_SWITCH+"},search='enable'] -> { directory-listing(allow-listing=true)}"
+                        + "\ncontains[value=%{i,"+HEADER_SWITCH+"},search='disable'] -> { directory-listing(allow-listing=false)}",
+                        DefaultServletTestCase.class.getClassLoader()), root);
+        DefaultServer.setRootHandler(httpHandler);
     }
 
     @Test
@@ -318,6 +325,12 @@ public class DefaultServletTestCase {
                 Assert.assertNotNull(result.getFirstHeader(Headers.CONTENT_TYPE_STRING));
                 MatcherAssert.assertThat(result.getFirstHeader(Headers.CONTENT_TYPE_STRING).getValue(), CoreMatchers.startsWith("text/css"));
                 MatcherAssert.assertThat(HttpClientUtils.readResponse(result), CoreMatchers.containsString("data:image/png;base64"));
+            }
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path");
+            get.addHeader(HEADER_SWITCH, "disable");
+            try (CloseableHttpResponse result = client.execute(get);) {
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
             }
         } finally {
             client.getConnectionManager().shutdown();
