@@ -107,6 +107,7 @@
         <version.jmh>1.21</version.jmh>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
+        <maven.javadoc.plugin.quiet>true</maven.javadoc.plugin.quiet>
     </properties>
 
     <modules>
@@ -136,6 +137,7 @@
                         following setting.
                     -->
                     <doclint>none</doclint>
+                    <quiet>${maven.javadoc.plugin.quiet}</quiet>
                     <!-- @implNote is a non-standard tag and must be declared or the build will fail -->
                     <tags>
                         <tag>
