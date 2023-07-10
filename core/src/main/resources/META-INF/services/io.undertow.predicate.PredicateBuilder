@@ -14,3 +14,4 @@ io.undertow.predicate.SecurePredicate$Builder
 io.undertow.predicate.IdempotentPredicate$Builder
 io.undertow.predicate.RequestLargerThanPredicate$Builder
 io.undertow.predicate.RequestSmallerThanPredicate$Builder
+io.undertow.predicate.ip.IPMatchPredicate$Builder
