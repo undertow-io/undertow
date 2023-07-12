@@ -36,9 +36,11 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreSet;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -50,7 +52,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
 
     private final ByteBufferPool pool;
 
-    private int state = STATE_START;
+    private volatile int state = STATE_START;
 
     private Iterator<HttpString> nameIterator;
     private String string;
@@ -75,6 +77,11 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
 
     private static final int MASK_STATE         = 0x0000000F;
     private static final int FLAG_SHUTDOWN      = 0x00000010;
+    private static final int FLAG_WRITING       = 0x00000020;
+
+    private static final AtomicIntegerFieldUpdater<HttpRequestConduit> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(
+            HttpRequestConduit.class, "state");
+
 
     HttpRequestConduit(final StreamSinkConduit next, final ByteBufferPool pool, final ClientRequest request) {
         super(next);
@@ -95,6 +102,22 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
      * @throws java.io.IOException
      */
     private int processWrite(int state, final ByteBuffer userData) throws IOException {
+        return doProcessWrite(state, userData);
+    }
+
+    /**
+     * Handles writing out the header data. It can also take a byte buffer of user
+     * data, to enable both user data and headers to be written out in a single operation,
+     * which has a noticeable performance impact.
+     *
+     * It is up to the caller to note the current position of this buffer before and after they
+     * call this method, and use this to figure out how many bytes (if any) have been written.
+     * @param state
+     * @param userData
+     * @return
+     * @throws java.io.IOException
+     */
+    private int doProcessWrite(int state, final ByteBuffer userData) throws IOException {
         if (state == STATE_START) {
             pooledBuffer = pool.allocate();
         }
@@ -483,7 +506,13 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
 
     public int write(final ByteBuffer src) throws IOException {
         log.trace("write");
-        int oldState = this.state;
+        int oldState;
+        do {
+            oldState = state;
+            if (anyAreSet(oldState, FLAG_WRITING)) {
+                return 0;
+            }
+        } while (!stateUpdater.compareAndSet(this, oldState, oldState | FLAG_WRITING));
         int state = oldState & MASK_STATE;
         int alreadyWritten = 0;
         int originalRemaining = - 1;
@@ -525,7 +554,13 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         if (length == 0) {
             return 0L;
         }
-        int oldVal = state;
+        int oldVal;
+        do {
+            oldVal = state;
+            if (anyAreSet(oldVal, FLAG_WRITING)) {
+                return 0;
+            }
+        } while (!stateUpdater.compareAndSet(this, oldVal, oldVal | FLAG_WRITING));
         int state = oldVal & MASK_STATE;
         try {
             if (state != 0) {
@@ -567,7 +602,13 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         if (count == 0L) {
             return 0L;
         }
-        int oldVal = state;
+        int oldVal;
+        do {
+            oldVal = state;
+            if (anyAreSet(oldVal, FLAG_WRITING)) {
+                return 0;
+            }
+        } while (!stateUpdater.compareAndSet(this, oldVal, oldVal | FLAG_WRITING));
         int state = oldVal & MASK_STATE;
         try {
             if (state != 0) {
@@ -599,7 +640,13 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
             throughBuffer.clear().limit(0);
             return 0L;
         }
-        int oldVal = state;
+        int oldVal;
+        do {
+            oldVal = state;
+            if (anyAreSet(oldVal, FLAG_WRITING)) {
+                return 0;
+            }
+        } while (!stateUpdater.compareAndSet(this, oldVal, oldVal | FLAG_WRITING));
         int state = oldVal & MASK_STATE;
         try {
             if (state != 0) {
@@ -628,7 +675,13 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
     public boolean flush() throws IOException {
 
         log.trace("flush");
-        int oldVal = state;
+        int oldVal;
+        do {
+            oldVal = state;
+            if (anyAreSet(oldVal, FLAG_WRITING)) {
+                return false;
+            }
+        } while (!stateUpdater.compareAndSet(this, oldVal, oldVal | FLAG_WRITING));
         int state = oldVal & MASK_STATE;
         try {
             if (state != 0) {
