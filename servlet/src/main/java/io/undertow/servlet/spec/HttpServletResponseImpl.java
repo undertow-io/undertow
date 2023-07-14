@@ -23,7 +23,10 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.Charset;
+import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -84,7 +87,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     private boolean charsetSet = false; //if a content type has been set either implicitly or implicitly
     private String contentType;
-    private String charset;
+    private Charset charset;
     private Supplier<Map<String, String>> trailerSupplier;
 
     public HttpServletResponseImpl(final HttpServerExchange exchange, final ServletContextImpl servletContext) {
@@ -313,20 +316,35 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public String getCharacterEncoding() {
+        return getCharacterEncodingCharset().name();
+    }
+
+    private Charset getCharacterEncodingCharset() {
         if (charset != null) {
             return charset;
         }
         // first check, web-app context level default response encoding
-        if (servletContext.getDeployment().getDeploymentInfo().getDefaultResponseEncoding() != null) {
-            return servletContext.getDeployment().getDeploymentInfo().getDefaultResponseEncoding();
+        String encoding;
+        try {
+            if ((encoding = servletContext.getDeployment().getDeploymentInfo().getDefaultResponseEncoding()) != null) {
+                return Charset.forName(encoding);
+            }
+            // now check the container level default encoding
+            if ((encoding = servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding()) != null) {
+                return Charset.forName(encoding);
+            }
+        } catch (UnsupportedCharsetException e) {
+            // Servlet 6 clarification - UnsupportedEncodingException must be thrown
+            final UnsupportedEncodingException uee = new UnsupportedEncodingException(e.getMessage());
+            uee.initCause(e);
+            final RuntimeException re = new RuntimeException(uee);
+            re.initCause(uee);
+            throw re;
         }
-        // now check the container level default encoding
-        if (servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding() != null) {
-            return servletContext.getDeployment().getDeploymentInfo().getDefaultEncoding();
-        }
+
         // if no explicit encoding is specified, this method is supposed to return ISO-8859-1 as per the
         // expectation of this API
-        return StandardCharsets.ISO_8859_1.name();
+        return StandardCharsets.ISO_8859_1;
     }
 
     @Override
@@ -356,18 +374,19 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (writer == null) {
             if (!charsetSet) {
                 //servet 5.5
-                setCharacterEncoding(getCharacterEncoding());
+                setCharacterEncoding(getCharacterEncodingCharset());
             }
             if (responseState == ResponseState.STREAM) {
                 throw UndertowServletMessages.MESSAGES.getOutputStreamAlreadyCalled();
             }
             responseState = ResponseState.WRITER;
             createOutputStream();
-            final ServletPrintWriter servletPrintWriter = new ServletPrintWriter(servletOutputStream, getCharacterEncoding());
+            final ServletPrintWriter servletPrintWriter = new ServletPrintWriter(servletOutputStream, getCharacterEncodingCharset());
             writer = ServletPrintWriterDelegate.newInstance(servletPrintWriter);
         }
         return writer;
     }
+
 
     private void createOutputStream() {
         if (servletOutputStream == null) {
@@ -381,16 +400,26 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setCharacterEncoding(final String charset) {
+        if (charset != null && !charset.isEmpty()) {
+            try {
+                setCharacterEncoding(Charset.forName(charset));
+            } catch (IllegalCharsetNameException | UnsupportedCharsetException e) {
+            }
+        }
+    }
+
+    private void setCharacterEncoding(final Charset nextCharset) {
         if (insideInclude || responseStarted() || writer != null || isCommitted()) {
             return;
         }
-        charsetSet = charset != null;
-        this.charset = charset;
+        if ((charset == null) || (charset != null && !charset.equals(nextCharset))){
+            charsetSet = true;
+            charset = nextCharset;
+        }
         if (contentType != null) {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
         }
     }
-
     @Override
     public void setContentLength(final int len) {
         setContentLengthLong((long) len);
@@ -437,9 +466,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if(useCharset || !charsetSet) {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getHeader());
         } else if(ct.getCharset() == null) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getHeader() + "; charset=" + charset);
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getHeader() + "; charset=" + charset.name());
         }else {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getContentType() + "; charset=" + charset);
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getContentType() + "; charset=" + charset.name());
         }
     }
 
@@ -503,8 +532,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (writer != null) {
             final ServletPrintWriter servletPrintWriter;
             try {
-                servletPrintWriter = new ServletPrintWriter(servletOutputStream, getCharacterEncoding());
-            writer = ServletPrintWriterDelegate.newInstance(servletPrintWriter);
+                servletPrintWriter = new ServletPrintWriter(servletOutputStream, getCharacterEncodingCharset());
+                writer = ServletPrintWriterDelegate.newInstance(servletPrintWriter);
             } catch (UnsupportedEncodingException e) {
                 throw new RuntimeException(e); //should never happen
             }
@@ -554,7 +583,12 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
                 charset = DefaultCharsetMapping.INSTANCE.getCharset(loc);
             }
             if (charset != null) {
-                this.charset = charset;
+                try {
+                    this.charset = Charset.forName(charset);
+                } catch (IllegalArgumentException iae) {
+                    this.charset = null;
+                }
+                charsetSet = this.charset != null;
                 if (contentType != null) {
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
                 }

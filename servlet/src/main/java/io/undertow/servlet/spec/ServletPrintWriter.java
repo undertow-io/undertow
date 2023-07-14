@@ -31,6 +31,9 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Locale;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
+
 /**
  * Real servlet print writer functionality, that is not limited by extending
  * {@link java.io.PrintWriter}
@@ -43,28 +46,32 @@ public class ServletPrintWriter {
     private static final char[] EMPTY_CHAR = {};
 
     private final ServletOutputStreamImpl outputStream;
-    private final String charset;
+    private final Charset charset;
     private CharsetEncoder charsetEncoder;
     private boolean error = false;
     private boolean closed = false;
     private char[] underflow;
 
-    public ServletPrintWriter(final ServletOutputStreamImpl outputStream, final String charset) throws UnsupportedEncodingException {
+    public ServletPrintWriter(final ServletOutputStreamImpl outputStream, Charset charset) throws UnsupportedEncodingException {
         this.charset = charset;
         this.outputStream = outputStream;
 
         //for some known charset we get optimistic and hope that
         //only ascii will be output
         //in this case we can avoid creating the encoder altogether
-        if (!charset.equalsIgnoreCase("utf-8") &&
-                !charset.equalsIgnoreCase("iso-8859-1")) {
+        /*if (!charset.equalsIgnoreCase("utf-8") &&
+            !charset.equalsIgnoreCase("iso-8859-1")) {
+            createEncoder();
+        }*/
+        if (!charset.equals(UTF_8) &&
+            !charset.equals(ISO_8859_1)) {
             createEncoder();
         }
     }
 
     private void createEncoder() throws UnsupportedEncodingException {
         try {
-            this.charsetEncoder = Charset.forName(this.charset).newEncoder();
+            this.charsetEncoder = this.charset.newEncoder();
             //replace malformed and unmappable with question marks
             this.charsetEncoder.onUnmappableCharacter(CodingErrorAction.REPLACE);
             this.charsetEncoder.onMalformedInput(CodingErrorAction.REPLACE);

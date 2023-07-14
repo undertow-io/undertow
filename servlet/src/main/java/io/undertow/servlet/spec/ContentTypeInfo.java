@@ -18,17 +18,26 @@
 
 package io.undertow.servlet.spec;
 
+import java.nio.charset.Charset;
+
 /**
  * @author Stuart Douglas
  */
 class ContentTypeInfo {
     private final String header;
-    private final String charset;
+    private final Charset charset;
     private final String contentType;
 
     ContentTypeInfo(String header, String charset, String contentType) {
+        Charset charset1 = null;
         this.header = header;
-        this.charset = charset;
+        if (charset != null) {
+            try {
+                charset1 = Charset.forName(charset);
+            } catch (IllegalArgumentException iae) { // unrecognized charset
+            }
+        }
+        this.charset = charset1;
         this.contentType = contentType;
     }
 
@@ -36,7 +45,7 @@ class ContentTypeInfo {
         return header;
     }
 
-    public String getCharset() {
+    public Charset getCharset() {
         return charset;
     }
 
