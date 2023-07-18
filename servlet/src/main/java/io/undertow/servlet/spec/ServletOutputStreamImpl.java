@@ -389,21 +389,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         this.written += len;
         long contentLength = servletRequestContext.getOriginalResponse().getContentLength();
         if (contentLength != -1 && this.written >= contentLength) {
-            setFlags(FLAG_CLOSED);
-            //if buffersToWrite is set we are already flushing
-            //so we don't have to do anything
-            if (buffersToWrite == null && pendingFile == null) {
-                if (flushBufferAsync(true)) {
-                    channel.shutdownWrites();
-                    setFlags(FLAG_DELEGATE_SHUTDOWN);
-                    channel.flush();
-                    if (pooledBuffer != null) {
-                        pooledBuffer.close();
-                        buffer = null;
-                        pooledBuffer = null;
-                    }
-                }
-            }
+            servletRequestContext.getOriginalResponse().setContentFullyWritten();
         }
     }
 
