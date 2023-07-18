@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2012 Red Hat, Inc., and individual contributors
+ * Copyright 2023 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,46 +18,35 @@
 
 package io.undertow.servlet.test.response.writer;
 
+import javax.servlet.AsyncContext;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.PrintWriter;
 
 /**
- * @author Stuart Douglas
+ * Asynchronous version of {@link ResponseWriterServlet}.
+ *
+ * @author Flavia Rainone
  */
-public class ResponseWriterServlet extends HttpServlet {
-
-    public static final String CONTENT_LENGTH_FLUSH = "content-length-flush";
+public class AsyncResponseWriterServlet extends ResponseWriterServlet {
 
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
 
         String test = req.getParameter("test");
-        if (test.equals(CONTENT_LENGTH_FLUSH)) {
-            contentLengthFlush(resp);
-        } else {
+        if (!test.equals(CONTENT_LENGTH_FLUSH)) {
             throw new IllegalArgumentException("not a test " + test);
         }
-    }
-
-    protected void contentLengthFlush(HttpServletResponse resp) throws IOException {
-        int size = 10;
-
-        PrintWriter pw = resp.getWriter();
-        StringBuffer tmp = new StringBuffer(2 * size);
-        int i = 0;
-
-        pw.write("first-");
-        resp.setContentLength(size);
-        //write more data than the content length
-        while (i < 20) {
-            tmp.append("a");
-            i = i + 1;
-        }
-        pw.println(tmp);
-        resp.addHeader("not-header", "not");
+        final AsyncContext asyncContext = req.startAsync();
+        new Thread(()->{
+            try {
+                contentLengthFlush((HttpServletResponse) asyncContext.getResponse());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } finally {
+                asyncContext.complete();
+            }
+        }).start();
     }
 }
