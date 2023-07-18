@@ -81,6 +81,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private boolean ignoredFlushPerformed = false;
 
     private boolean treatAsCommitted = false;
+    // indicates that we are closing the response and no further content should be written
+    private boolean contentFullyWritten = false;
 
     private boolean charsetSet = false; //if a content type has been set either implicitly or implicitly
     private String contentType;
@@ -252,7 +254,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if(name == null) {
             throw UndertowServletMessages.MESSAGES.headerNameWasNull();
         }
-        if (insideInclude || ignoredFlushPerformed || treatAsCommitted) {
+        if (insideInclude || ignoredFlushPerformed || treatAsCommitted || contentFullyWritten) {
             return;
         }
         if(name.equals(Headers.CONTENT_TYPE) && !exchange.getResponseHeaders().contains(Headers.CONTENT_TYPE)) {
@@ -526,6 +528,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         exchange.getResponseHeaders().clear();
         exchange.setStatusCode(StatusCodes.OK);
         treatAsCommitted = false;
+        contentFullyWritten = false;
     }
 
     @Override
@@ -808,6 +811,13 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public Supplier<Map<String, String>> getTrailerFields() {
         return trailerSupplier;
+    }
+
+    /**
+     * Marks this response as closed for writing extra bytes, including the addition of headers.
+     */
+    void setContentFullyWritten() {
+        this.contentFullyWritten = true;
     }
 
 }
