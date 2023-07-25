@@ -311,8 +311,7 @@ public class ServletPathMatches {
             pathMatches.add("/*");
 
             ServletHandler managedDefaultServlet = servlets.getServletHandler(DEFAULT_SERVLET_NAME);
-            if(managedDefaultServlet == null) {
-                //we always create a default servlet, even if it is not going to have any path mappings registered
+            if (managedDefaultServlet == null) {
                 managedDefaultServlet = servlets.addServlet(new ServletInfo(DEFAULT_SERVLET_NAME, DefaultServlet.class));
             }
             defaultServlet = managedDefaultServlet;
