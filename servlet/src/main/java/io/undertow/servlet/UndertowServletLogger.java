@@ -32,6 +32,7 @@ import org.jboss.logging.annotations.MessageLogger;
 
 import static org.jboss.logging.Logger.Level.ERROR;
 import static org.jboss.logging.Logger.Level.WARN;
+import static org.jboss.logging.Logger.Level.TRACE;
 
 /**
  * log messages start at 15000
@@ -140,4 +141,7 @@ public interface UndertowServletLogger extends BasicLogger {
     @Message(id = 15024, value = "Servlet %s init() method in web application %s threw exception")
     void failedToLoad(String servletName, String appName, @Cause Throwable t);
 
+    @LogMessage(level = TRACE)
+    @Message(id = 15025, value = "IO Operation de-synchronization trace: ")
+    void ioOperationDesynchronization( @Cause Throwable t);
 }
