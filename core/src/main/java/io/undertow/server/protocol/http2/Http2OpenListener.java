@@ -134,7 +134,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
                 connections.remove(channel);
             }
         });
-        http2Channel.getReceiveSetter().set(new Http2ReceiveListener(rootHandler, getUndertowOptions(), bufferSize, connectorStatistics));
+        http2Channel.getReceiveSetter().set(new Http2ReceiveListener(rootHandler, getUndertowOptions(), bufferSize, statisticsEnabled ? connectorStatistics : null));
         http2Channel.resumeReceives();
 
     }
