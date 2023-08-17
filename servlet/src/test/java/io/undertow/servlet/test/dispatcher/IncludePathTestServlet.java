@@ -19,6 +19,9 @@ package io.undertow.servlet.test.dispatcher;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.Optional;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -45,6 +48,12 @@ public class IncludePathTestServlet extends HttpServlet {
             out.println("javax.servlet.include.query_string:" + req.getAttribute("javax.servlet.include.query_string"));
             out.println("javax.servlet.include.mapping:" + req.getAttribute("javax.servlet.include.mapping"));
 
+            StringBuilder sb = new StringBuilder();
+            for (Map.Entry<String, String[]> entry: req.getParameterMap().entrySet()) {
+                Optional<String> r = Arrays.stream(entry.getValue()).reduce((i, j) -> i + "," + j);
+                sb.append(entry.getKey()).append("=").append(r.orElse(""));
+            }
+            out.println("request params:" + sb);
         }
     }
 }

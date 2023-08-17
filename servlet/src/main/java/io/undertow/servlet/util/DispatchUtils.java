@@ -253,7 +253,7 @@ public final class DispatchUtils {
         }
         // both forward and include merge parameters by spec
         if (!fake.getQueryString().isEmpty()) {
-            requestImpl.setQueryParameters(mergeQueryParameters(fake.getQueryParameters(), exchange.getQueryParameters()));
+            requestImpl.setQueryParameters(mergeQueryParameters(fake.getQueryParameters(), requestImpl.getQueryParameters()));
         }
         return newRequestPath;
     }
