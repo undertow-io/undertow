@@ -48,6 +48,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 import static org.wildfly.common.Assert.assertTrue;
@@ -293,4 +295,28 @@ public class DispatcherIncludeTestCase {
             client.getConnectionManager().shutdown();
         }
     }
+
+    @Test
+    public void testDisptacherServletIncludeNest() throws IOException, InterruptedException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dis%25patch.dispatch?n1=v1&n2=v%252");
+            String include = URLEncoder.encode("/path%25include.includeinfo?n4=v4", StandardCharsets.UTF_8);
+            get.setHeader("include", "/servletContext/dis%25patch.dispatch?n3=v3&include=" + include);
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString(IncludeServlet.MESSAGE + "pathInfo:null queryString:n1=v1&n2=v%252 servletPath:/dis%patch.dispatch requestUri:/servletContext/dis%25patch.dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.request_uri:/servletContext/path%25include.includeinfo\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.context_path:/servletContext\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.servlet_path:/path%include.includeinfo\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.path_info:null\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.query_string:n4=v4\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.mapping:"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("request params:include=/path%25include.includeinfo?n4=v4n1=v1n2=v%2n3=v3n4=v4\r\n"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
 }
