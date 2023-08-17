@@ -96,6 +96,10 @@ jobs:
       with:
         distribution: ${{ matrix.openjdk_impl }}
         java-version: ${{ matrix.jdk }}
+    - name: Generate settings.xml for Maven Builds
+      uses: whelk-io/maven-settings-xml-action@v20
+      with:
+        repositories: '[{ "id": "jboss", "name": "JBoss", "url": "https://repository.jboss.org/nexus/content/groups/public" }]'
     - name: Print Version
       run: mvn -v
     - name: Run Tests
@@ -144,6 +148,10 @@ jobs:
       uses: joschi/setup-jdk@v2
       with:
         java-version: ${{ matrix.jdk }}
+    - name: Generate settings.xml for Maven Builds
+      uses: whelk-io/maven-settings-xml-action@v20
+      with:
+        repositories: '[{ "id": "jboss", "name": "JBoss", "url": "https://repository.jboss.org/nexus/content/groups/public" }]'
     - name: Print Version
       run: mvn -v
     - name: Run Tests
