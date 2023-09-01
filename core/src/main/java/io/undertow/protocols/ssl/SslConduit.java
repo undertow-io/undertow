@@ -170,6 +170,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
     private SslWriteReadyHandler writeReadyHandler;
     private SslReadReadyHandler readReadyHandler;
     private int readListenerInvocationCount;
+    private int outstandingTaskWaitCount;
 
     private boolean invokingReadListenerHandshake = false;
 
@@ -710,7 +711,15 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             throw new ClosedChannelException();
         }
         if(outstandingTasks > 0) {
+            if(outstandingTaskWaitCount++ == MAX_READ_LISTENER_INVOCATIONS) {
+                UndertowLogger.REQUEST_LOGGER.sslTaskLoopDetected(this);
+                IoUtils.safeClose(connection, delegate);
+                close();
+                return -1;
+            }
             return 0;
+        } else {
+            outstandingTaskWaitCount = 0;
         }
         if(anyAreSet(state, FLAG_READ_REQUIRES_WRITE)) {
             doWrap(null, 0, 0);
@@ -919,7 +928,15 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             throw new ClosedChannelException();
         }
         if(outstandingTasks > 0) {
+            if(outstandingTaskWaitCount++ == MAX_READ_LISTENER_INVOCATIONS) {
+                UndertowLogger.REQUEST_LOGGER.sslTaskLoopDetected(this);
+                IoUtils.safeClose(connection, delegate);
+                close();
+                return -1;
+            }
             return 0;
+        } else {
+            outstandingTaskWaitCount = 0;
         }
         if(anyAreSet(state, FLAG_WRITE_REQUIRES_READ)) {
             doUnwrap(null, 0, 0);
