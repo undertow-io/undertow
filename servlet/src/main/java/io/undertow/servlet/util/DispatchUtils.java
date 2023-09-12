@@ -123,7 +123,7 @@ public final class DispatchUtils {
         requestImpl.setAttribute(INCLUDE_CONTEXT_PATH, servletContext.getContextPath());
         requestImpl.setAttribute(INCLUDE_SERVLET_PATH, pathMatch.getMatched());
         requestImpl.setAttribute(INCLUDE_PATH_INFO, pathMatch.getRemaining());
-        requestImpl.setAttribute(INCLUDE_MAPPING, pathMatch.getMappingMatch());
+        requestImpl.setAttribute(INCLUDE_MAPPING, requestImpl.getHttpServletMapping());
         return pathMatch;
     }
 
