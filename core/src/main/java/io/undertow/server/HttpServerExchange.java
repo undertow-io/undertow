@@ -1198,7 +1198,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             Set<Cookie> requestCookiesParam = new OverridableTreeSet<>();
             requestCookies = new DelegatingIterable<>(requestCookiesParam);
             Cookies.parseRequestCookies(
-                    getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, 200),
+                    getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, UndertowOptions.DEFAULT_MAX_COOKIES),
                     getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false),
                     requestHeaders.get(Headers.COOKIE), requestCookiesParam);
         }
