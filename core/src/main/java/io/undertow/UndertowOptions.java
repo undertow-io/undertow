@@ -265,7 +265,7 @@ public class UndertowOptions {
     public static final Option<Boolean> HTTP2_SETTINGS_ENABLE_PUSH = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_ENABLE_PUSH", Boolean.class);
 
     /**
-     * The maximum number of concurrent
+     * The maximum number of concurrent http2 streams.
      */
     public static final Option<Integer> HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS", Integer.class);
 
