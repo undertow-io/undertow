@@ -24,6 +24,7 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.ParameterLimitException;
 import jakarta.servlet.ServletException;
 import java.util.Deque;
@@ -77,11 +78,12 @@ public final class DispatchUtils {
      * @param servletContext The servlet context
      * @return The match for the path
      * @throws ParameterLimitException parameter limit exceeded
+     * @throws BadRequestException
      */
     public static ServletPathMatch dispatchForward(final String path,
             final HttpServletRequestImpl requestImpl,
             final HttpServletResponseImpl responseImpl,
-            final ServletContextImpl servletContext) throws ParameterLimitException {
+            final ServletContextImpl servletContext) throws ParameterLimitException, BadRequestException {
         //only update if this is the first forward
         if (requestImpl.getAttribute(FORWARD_REQUEST_URI) == null) {
             requestImpl.setAttribute(FORWARD_REQUEST_URI, requestImpl.getRequestURI());
@@ -111,11 +113,12 @@ public final class DispatchUtils {
      * @param servletContext The servlet context
      * @return The match for the path
      * @throws ParameterLimitException parameter limit exceeded
+     * @throws BadRequestException
      */
     public static ServletPathMatch dispatchInclude(final String path,
             final HttpServletRequestImpl requestImpl,
             final HttpServletResponseImpl responseImpl,
-            final ServletContextImpl servletContext) throws ParameterLimitException {
+            final ServletContextImpl servletContext) throws ParameterLimitException, BadRequestException {
         final String newRequestPath = assignRequestPath(path, requestImpl, servletContext, true);
         final ServletPathMatch pathMatch = servletContext.getDeployment().getServletPaths().getServletHandlerByPath(newRequestPath);
 
@@ -140,12 +143,13 @@ public final class DispatchUtils {
      * @param servletContext The servlet context
      * @return The match for the path
      * @throws ParameterLimitException parameter limit exceeded
+     * @throws BadRequestException
      */
     public static ServletPathMatch dispatchError(final String path, final String servletName,
             final Throwable exception, final String message,
             final HttpServletRequestImpl requestImpl,
             final HttpServletResponseImpl responseImpl,
-            final ServletContextImpl servletContext) throws ParameterLimitException {
+            final ServletContextImpl servletContext) throws ParameterLimitException, BadRequestException {
         //only update if this is the first forward
         if (requestImpl.getAttribute(FORWARD_REQUEST_URI) == null) {
             requestImpl.setAttribute(FORWARD_REQUEST_URI, requestImpl.getRequestURI());
@@ -189,11 +193,12 @@ public final class DispatchUtils {
      * @param servletContext The servlet context
      * @return The match for the path
      * @throws ParameterLimitException parameter limit exceeded
+     * @throws BadRequestException
      */
     public static ServletPathMatch dispatchAsync(final String path,
             final HttpServletRequestImpl requestImpl,
             final HttpServletResponseImpl responseImpl,
-            final ServletContextImpl servletContext) throws ParameterLimitException {
+            final ServletContextImpl servletContext) throws ParameterLimitException, BadRequestException {
         requestImpl.setAttribute(ASYNC_REQUEST_URI, requestImpl.getOriginalRequestURI());
         requestImpl.setAttribute(ASYNC_CONTEXT_PATH, requestImpl.getOriginalContextPath());
         requestImpl.setAttribute(ASYNC_SERVLET_PATH, requestImpl.getOriginalServletPath());
@@ -229,7 +234,7 @@ public final class DispatchUtils {
     }
 
     private static String assignRequestPath(final String path, final HttpServletRequestImpl requestImpl,
-            final ServletContextImpl servletContext, final boolean include) throws ParameterLimitException {
+            final ServletContextImpl servletContext, final boolean include) throws ParameterLimitException, BadRequestException {
         final StringBuilder sb = new StringBuilder();
         final HttpServerExchange exchange = requestImpl.getExchange();
         // create a fake exchange to parse the path

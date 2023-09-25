@@ -43,6 +43,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.protocol.http.HttpRequestParser;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
@@ -193,7 +194,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
         try {
             Connectors.setExchangeRequestPath(exchange, path, encoding, decode, slashDecodingFlag, decodeBuffer, maxParameters);
-        } catch (ParameterLimitException e) {
+        } catch (ParameterLimitException | BadRequestException e) {
             //this can happen if max parameters is exceeded
             UndertowLogger.REQUEST_IO_LOGGER.debug("Failed to set request path", e);
             exchange.setStatusCode(StatusCodes.BAD_REQUEST);
@@ -244,7 +245,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         String uri = exchange.getQueryString().isEmpty() ? initial.getRequestURI() : initial.getRequestURI() + '?' + exchange.getQueryString();
         try {
             Connectors.setExchangeRequestPath(exchange, uri, encoding, decode, slashDecodingFlag, decodeBuffer, maxParameters);
-        } catch (ParameterLimitException e) {
+        } catch (ParameterLimitException | BadRequestException e) {
             exchange.setStatusCode(StatusCodes.BAD_REQUEST);
             exchange.endExchange();
             return;
