@@ -248,7 +248,7 @@ public class HpackDecoder {
             return readHuffmanString(length, buffer);
         }
         for (int i = 0; i < length; ++i) {
-            stringBuilder.append((char) buffer.get());
+            stringBuilder.append((char) (buffer.get() & 0xFF));
         }
         String ret = stringBuilder.toString();
         stringBuilder.setLength(0);
