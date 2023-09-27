@@ -175,8 +175,10 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         String sessionID = config.findSessionId(serverExchange);
         final SessionImpl session = new SessionImpl(this, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker(), defaultSessionTimeout);
         if (sessionID != null) {
-            if (!saveSessionID(sessionID, session))
+            if (!saveSessionID(sessionID, session)) {
+                session.destroy();
                 throw UndertowMessages.MESSAGES.sessionWithIdAlreadyExists(sessionID);
+            }
             // else: succeeded to use requested session id
         } else {
             sessionID = createAndSaveNewID(session);
