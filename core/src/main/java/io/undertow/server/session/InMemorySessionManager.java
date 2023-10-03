@@ -226,15 +226,18 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     public Session getSession(final HttpServerExchange serverExchange, final SessionConfig config) {
         if (serverExchange != null) {
             SessionImpl newSession = serverExchange.getAttachment(NEW_SESSION);
-            if(newSession != null) {
+            if (newSession != null) {
                 return newSession;
             }
-        } else {
-            return null;
         }
+
+        if (config == null) {
+            throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
+        }
+
         String sessionId = config.findSessionId(serverExchange);
         InMemorySessionManager.SessionImpl session = (SessionImpl) getSession(sessionId);
-        if(session != null && serverExchange != null) {
+        if (session != null && serverExchange != null) {
             session.requestStarted(serverExchange);
         }
         return session;
