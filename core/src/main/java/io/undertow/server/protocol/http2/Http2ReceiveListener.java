@@ -218,6 +218,15 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
      * @param initial The initial upgrade request that started the HTTP2 connection
      */
     void handleInitialRequest(HttpServerExchange initial, Http2Channel channel, byte[] data) {
+        handleInitialRequest(initial, channel, data, this.decode);
+    }
+
+    /**
+      * Handles the initial request when the exchange was started by a HTTP upgrade.
+      *
+      * @param initial The initial upgrade request that started the HTTP2 connection
+      */
+    void handleInitialRequest(HttpServerExchange initial, Http2Channel channel, byte[] data, boolean decode) {
         //we have a request
         Http2HeadersStreamSinkChannel sink = channel.createInitialUpgradeResponseStream();
         final Http2ServerConnection connection = new Http2ServerConnection(channel, sink, undertowOptions, bufferSize, rootHandler);
