@@ -77,6 +77,7 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
  * <li><b>commonobf</b> - <code>%o %l %u %t "%r" %s %b</code>
  * <li><b>combinedobf</b> -
  * <code>%o %l %u %t "%r" %s %b "%{i,Referer}" "%{i,User-Agent}"</code>
+ * <li><b>debug</b> - <code>%h %l %u %t "%r" %s %b %S %I %T</code>
  * </ul>
  * <p>
  * <p>
@@ -137,6 +138,8 @@ public class AccessLogHandler implements HttpHandler {
             return "%o %l %u %t \"%r\" %s %b";
         } else if (formatString.equals("combinedobf")) {
             return "%o %l %u %t \"%r\" %s %b \"%{i,Referer}\" \"%{i,User-Agent}\"";
+        } else if (formatString.equals("debug")) {
+            return "%h %l %u %t \"%r\" %s %b %S %I %T";
         }
         return formatString;
     }
