@@ -351,7 +351,12 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         @Override
         public void endPart() {
             if (file != null) {
-                data.add(currentName, file, fileName != null ? fileName : file.getFileName().toString(), headers);
+                 if (fileName != null) {
+                     data.add(currentName, file, fileName, headers);
+                 } else {
+                     final Path fileNamePath = file.getFileName();
+                     data.add(currentName, file, fileNamePath != null ? fileNamePath.toString() : "", headers);
+                 }
                 file = null;
                 contentBytes.reset();
                 try {
