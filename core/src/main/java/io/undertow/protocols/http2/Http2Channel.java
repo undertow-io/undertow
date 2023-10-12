@@ -43,7 +43,6 @@ import org.xnio.StreamConnection;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.ssl.SslConnection;
 
-import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
@@ -53,15 +52,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import javax.net.ssl.SSLSession;
 
 /**
  * HTTP2 channel.
@@ -131,9 +128,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     public static final int DEFAULT_MAX_FRAME_SIZE = 16384;
     public static final int MAX_FRAME_SIZE = 16777215;
     public static final int FLOW_CONTROL_MIN_WINDOW = 2;
-    // the time a discarded stream is kept at the stream cache before actually being discarded
-    // (used for handling responses to streams that were closed via rst)
-    private static final int STREAM_CACHE_EVICTION_TIME_MS = 60000;
 
 
     private Http2FrameHeaderParser frameParser;
@@ -141,15 +135,15 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private final String protocol;
 
     //local
-    private int encoderHeaderTableSize;
+    private final int encoderHeaderTableSize;
     private volatile boolean pushEnabled;
     private volatile int sendMaxConcurrentStreams = -1;
-    private volatile int receiveMaxConcurrentStreams = -1;
+    private final int receiveMaxConcurrentStreams;
     private volatile int sendConcurrentStreams = 0;
     private volatile int receiveConcurrentStreams = 0;
-    private volatile int initialReceiveWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
+    private final int initialReceiveWindowSize;
     private volatile int sendMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
-    private int receiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE;
+    private final int receiveMaxFrameSize;
     private int unackedReceiveMaxFrameSize = DEFAULT_MAX_FRAME_SIZE; //the old max frame size, this gets updated when our setting frame is acked
     private final int maxHeaders;
     private final int maxHeaderListSize;
@@ -186,7 +180,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     private final Map<AttachmentKey<?>, Object> attachments = Collections.synchronizedMap(new HashMap<AttachmentKey<?>, Object>());
 
-    private ParseTimeoutUpdater parseTimeoutUpdater;
+    private final ParseTimeoutUpdater parseTimeoutUpdater;
 
     private final Object flowControlLock = new Object();
 
@@ -202,14 +196,13 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     /**
      * How much data we have told the remote endpoint we are prepared to accept, guarded by {@link #flowControlLock}
      */
-    private volatile int receiveWindowSize = initialReceiveWindowSize;
-
-    private final StreamCache sentRstStreams = new StreamCache();
+    private volatile int receiveWindowSize;
 
 
     public Http2Channel(StreamConnection connectedStreamChannel, String protocol, ByteBufferPool bufferPool, PooledByteBuffer data, boolean clientSide, boolean fromUpgrade, OptionMap settings) {
         this(connectedStreamChannel, protocol, bufferPool, data, clientSide, fromUpgrade, true, null, settings);
     }
+
     public Http2Channel(StreamConnection connectedStreamChannel, String protocol, ByteBufferPool bufferPool, PooledByteBuffer data, boolean clientSide, boolean fromUpgrade, boolean prefaceRequired, OptionMap settings) {
         this(connectedStreamChannel, protocol, bufferPool, data, clientSide, fromUpgrade, prefaceRequired, null, settings);
     }
@@ -220,7 +213,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
         pushEnabled = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
         this.initialReceiveWindowSize = settings.get(UndertowOptions.HTTP2_SETTINGS_INITIAL_WINDOW_SIZE, DEFAULT_INITIAL_WINDOW_SIZE);
-        this.receiveMaxConcurrentStreams = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS, -1);
+        this.receiveWindowSize = initialReceiveWindowSize;
+        this.receiveMaxConcurrentStreams = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS, UndertowOptions.DEFAULT_HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS);
 
         this.protocol = protocol == null ? Http2OpenListener.HTTP2 : protocol;
         this.maxHeaders = settings.get(UndertowOptions.MAX_HEADERS, clientSide ? -1 : UndertowOptions.DEFAULT_MAX_HEADERS);
@@ -396,13 +390,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     //this is an existing stream
                     //make sure it exists
                     StreamHolder existing = currentStreams.get(frameParser.streamId);
-                    if (existing == null) {
-                        existing = sentRstStreams.find(frameParser.streamId);
-                    }
                     if(existing == null || existing.sourceClosed) {
-                        if (existing != null || sentRstStreams.find(frameParser.streamId) == null) {
-                            sendGoAway(ERROR_PROTOCOL_ERROR);
-                        }
+                        sendGoAway(ERROR_PROTOCOL_ERROR);
                         frameData.close();
                         return null;
                     } else if (existing.sourceChannel != null ){
@@ -434,13 +423,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
                 StreamHolder holder = currentStreams.get(frameParser.streamId);
                 if(holder == null) {
-                    holder = sentRstStreams.find(frameParser.streamId);
-                    if (holder != null) {
-                        holder.sourceChannel = (Http2StreamSourceChannel) channel;
-                    } else {
-                        receiveConcurrentStreamsAtomicUpdater.getAndIncrement(this);
-                        currentStreams.put(frameParser.streamId, holder = new StreamHolder((Http2StreamSourceChannel) channel));
-                    }
+                    receiveConcurrentStreamsAtomicUpdater.getAndIncrement(this);
+                    currentStreams.put(frameParser.streamId, holder = new StreamHolder((Http2StreamSourceChannel) channel));
                 } else {
                     holder.sourceChannel = (Http2StreamSourceChannel) channel;
                 }
@@ -466,9 +450,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     frameData.close();
                     return null;
                 }
-//                if(priorityTree != null) {
-//                    priorityTree.registerStream(frameParser.streamId, parser.getDependentStreamId(), parser.getWeight(), parser.isExclusive());
-//                }
                 break;
             }
             case FRAME_TYPE_RST_STREAM: {
@@ -543,13 +524,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     return null;
                 }
                 frameData.close();
-//                if(priorityTree == null) {
-//                    //we don't care, because we are the client side
-//                    //so this situation should never happen
-//                    return null;
-//                }
-//                priorityTree.priorityFrame(frameParser.streamId, parser.getStreamDependency(), parser.getWeight(), parser.isExclusive());
-//                //we don't return priority notifications, they are handled internally
+                //we don't return priority notifications, they are handled internally
                 return null;
             }
             default: {
@@ -658,12 +633,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     @Override
     protected void closeSubChannels() {
-        closeSubChannels(currentStreams);
-        closeSubChannels(sentRstStreams.getStreamHolders());
-    }
 
-    private void closeSubChannels(Map<Integer, StreamHolder> streams) {
-        for (Map.Entry<Integer, StreamHolder> e : streams.entrySet()) {
+        for (Map.Entry<Integer, StreamHolder> e : currentStreams.entrySet()) {
             StreamHolder holder = e.getValue();
             AbstractHttp2StreamSourceChannel receiver = holder.sourceChannel;
             if(receiver != null) {
@@ -700,7 +671,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         for (Http2Setting setting : settings) {
             if (setting.getId() == Http2Setting.SETTINGS_INITIAL_WINDOW_SIZE) {
                 synchronized (flowControlLock) {
-                    int old = initialSendWindowSize;
                     if (setting.getValue() > Integer.MAX_VALUE) {
                         sendGoAway(ERROR_FLOW_CONTROL_ERROR);
                         return false;
@@ -793,7 +763,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             StreamHolder holder = currentStreams.get(streamId);
             Http2StreamSinkChannel stream = holder != null ? holder.sinkChannel : null;
             if (stream == null) {
-                if (sentRstStreams.find(streamId) == null && isIdle(streamId)) {
+                if(isIdle(streamId)) {
                     sendGoAway(ERROR_PROTOCOL_ERROR);
                 }
             } else {
@@ -1141,7 +1111,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             //no point sending if the channel is closed
             return;
         }
-        sentRstStreams.store(streamId, handleRstStream(streamId));
+        handleRstStream(streamId);
         if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
             UndertowLogger.REQUEST_IO_LOGGER.debugf(new ClosedChannelException(), "Sending rststream on channel %s stream %s", this, streamId);
         }
@@ -1149,7 +1119,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         flushChannelIgnoreFailure(channel);
     }
 
-    private StreamHolder handleRstStream(int streamId) {
+    private void handleRstStream(int streamId) {
         StreamHolder holder = currentStreams.remove(streamId);
         if(holder != null) {
             if(streamId % 2 == (isClient() ? 1 : 0)) {
@@ -1164,7 +1134,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 holder.sourceChannel.rstStream();
             }
         }
-        return holder;
     }
 
     /**
@@ -1176,7 +1145,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         if (lastGoodStreamId != 0) {
             throw new IllegalStateException();
         }
-        lastGoodStreamId = 1;
+        updateStreamIdsCountersInHeaders(1);
         Http2HeadersStreamSinkChannel stream = new Http2HeadersStreamSinkChannel(this, 1);
         StreamHolder streamHolder = new StreamHolder(stream);
         streamHolder.sourceClosed = true;
@@ -1200,9 +1169,8 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     Http2StreamSourceChannel removeStreamSource(int streamId) {
         StreamHolder existing = currentStreams.get(streamId);
-        if (existing == null) {
-            existing = sentRstStreams.find(streamId);
-            return existing == null? null : existing.sourceChannel;
+        if(existing == null){
+            return null;
         }
         existing.sourceClosed = true;
         Http2StreamSourceChannel ret = existing.sourceChannel;
@@ -1221,10 +1189,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     Http2StreamSourceChannel getIncomingStream(int streamId) {
         StreamHolder existing = currentStreams.get(streamId);
         if(existing == null){
-            existing = sentRstStreams.find(streamId);
-            if (existing == null) {
-                return null;
-            }
+            return null;
         }
         return existing.sourceChannel;
     }
@@ -1275,60 +1240,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
         StreamHolder(Http2StreamSinkChannel sinkChannel) {
             this.sinkChannel = sinkChannel;
-        }
-    }
-
-    // cache that keeps track of streams until they can be evicted @see Http2Channel#RST_STREAM_EVICATION_TIME
-    private static final class StreamCache {
-        private Map<Integer, StreamHolder> streamHolders = new ConcurrentHashMap<>();
-        // entries are sorted per creation time
-        private Queue<StreamCacheEntry> entries = new ConcurrentLinkedQueue<>();
-
-        private void store(int streamId, StreamHolder streamHolder) {
-            if (streamHolder == null) {
-                return;
-            }
-            streamHolders.put(streamId, streamHolder);
-            entries.add(new StreamCacheEntry(streamId));
-        }
-        private StreamHolder find(int streamId) {
-            for (Iterator<StreamCacheEntry> iterator = entries.iterator(); iterator.hasNext();) {
-                StreamCacheEntry entry = iterator.next();
-                if (entry.shouldEvict()) {
-                    iterator.remove();
-                    StreamHolder holder = streamHolders.remove(entry.streamId);
-                    AbstractHttp2StreamSourceChannel receiver = holder.sourceChannel;
-                    if(receiver != null) {
-                        IoUtils.safeClose(receiver);
-                    }
-                    Http2StreamSinkChannel sink = holder.sinkChannel;
-                    if(sink != null) {
-                        if (sink.isWritesShutdown()) {
-                            ChannelListeners.invokeChannelListener(sink.getIoThread(), sink, ((ChannelListener.SimpleSetter) sink.getWriteSetter()).get());
-                        }
-                        IoUtils.safeClose(sink);
-                    }
-                } else break;
-            }
-            return streamHolders.get(streamId);
-        }
-
-        private Map<Integer, StreamHolder> getStreamHolders() {
-            return streamHolders;
-        }
-    }
-
-    private static class StreamCacheEntry {
-        int streamId;
-        long time;
-
-        StreamCacheEntry(int streamId) {
-            this.streamId = streamId;
-            this.time = System.currentTimeMillis();
-        }
-
-        public boolean shouldEvict() {
-            return System.currentTimeMillis() - time > STREAM_CACHE_EVICTION_TIME_MS;
         }
     }
 }
