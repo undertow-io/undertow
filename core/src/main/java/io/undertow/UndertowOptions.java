@@ -103,6 +103,8 @@ public class UndertowOptions {
     public static final Option<Integer> MAX_HEADERS = Option.simple(UndertowOptions.class, "MAX_HEADERS", Integer.class);
 
 
+    public static final int DEFAULT_MAX_COOKIES = 200;
+
     /**
      * The maximum number of cookies that will be parsed. This is used to protect against hash vulnerabilities.
      * <p>
@@ -265,7 +267,7 @@ public class UndertowOptions {
     public static final Option<Boolean> HTTP2_SETTINGS_ENABLE_PUSH = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_ENABLE_PUSH", Boolean.class);
 
     /**
-     * The maximum number of concurrent
+     * The maximum number of concurrent http2 streams.
      */
     public static final Option<Integer> HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS", Integer.class);
 
