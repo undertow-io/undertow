@@ -121,8 +121,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     public static final int DEFAULT_INITIAL_WINDOW_SIZE = 65535;
 
-    public static final int DEFAULT_MAX_CONCURRENT_STREAMS = -1;
-
     static final byte[] PREFACE_BYTES = {
             0x50, 0x52, 0x49, 0x20, 0x2a, 0x20, 0x48, 0x54,
             0x54, 0x50, 0x2f, 0x32, 0x2e, 0x30, 0x0d, 0x0a,
@@ -216,7 +214,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         pushEnabled = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
         this.initialReceiveWindowSize = settings.get(UndertowOptions.HTTP2_SETTINGS_INITIAL_WINDOW_SIZE, DEFAULT_INITIAL_WINDOW_SIZE);
         this.receiveWindowSize = initialReceiveWindowSize;
-        this.receiveMaxConcurrentStreams = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS, DEFAULT_MAX_CONCURRENT_STREAMS);
+        this.receiveMaxConcurrentStreams = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS, UndertowOptions.DEFAULT_HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS);
 
         this.protocol = protocol == null ? Http2OpenListener.HTTP2 : protocol;
         this.maxHeaders = settings.get(UndertowOptions.MAX_HEADERS, clientSide ? -1 : UndertowOptions.DEFAULT_MAX_HEADERS);
