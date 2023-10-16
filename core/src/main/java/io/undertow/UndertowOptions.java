@@ -365,6 +365,29 @@ public class UndertowOptions {
     public static final Option<String> AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN = Option.simple(UndertowOptions.class, "AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN", String.class);
 
 
+    /**
+     * Default value of {@link #RST_FRAMES_TIME_WINDOW} option.
+     */
+    public static final int DEFAULT_RST_FRAMES_TIME_WINDOW = 30000;
+    /**
+     * Default value of {@link #MAX_RST_FRAMES_PER_WINDOW} option.
+     */
+    public static final int DEFAULT_MAX_RST_FRAMES_PER_WINDOW = 200;
+
+    /**
+     * Window of time per which the number of HTTP2 RST received frames is measured, in milliseconds.
+     * If a number of RST frames bigger than {@link #MAX_RST_FRAMES_PER_WINDOW} is received during this time window,
+     * the server will send a GO_AWAY frame with error code 11 ({@code ENHANCE_YOUR_CALM}) and it will close the connection.
+     */
+    public static final Option<Integer> RST_FRAMES_TIME_WINDOW = Option.simple(UndertowOptions.class, "MAX_RST_STREAM_TIME_WINDOW", Integer.class);
+
+    /**
+     * Maximum number of HTTP2 RST frames received allowed during a time window.
+     * If a number of RST frames bigger than this limit is received during {@link #RST_FRAMES_TIME_WINDOW} milliseconds,
+     * the server will send a GO_AWAY frame with error code 11 ({@code ENHANCE_YOUR_CALM}) and it will close the connection.
+     */
+    public static final Option<Integer> MAX_RST_FRAMES_PER_WINDOW = Option.simple(UndertowOptions.class, "MAX_RST_STREAMS_PER_TIME_WINDOW", Integer.class);
+
     private UndertowOptions() {
 
     }
