@@ -241,7 +241,15 @@ public class RapidResetDDoSUnitTestCase {
 
             latch.await(200, TimeUnit.SECONDS);
 
-            Assert.assertEquals(errorExpected? rstStreamLimit + 1:totalNumberOfRequests, responses.size());
+            // server sent go away before processing and responding client frames, sometimes this happens, depends on the order of threads
+            // being executed
+            if (responses.isEmpty()) {
+                Assert.assertTrue(errorExpected);
+                Assert.assertNotNull(exception);
+                Assert.assertTrue(exception instanceof ClosedChannelException);
+                return;
+            }
+            Assert.assertEquals(errorExpected ? rstStreamLimit + 1 : totalNumberOfRequests, responses.size());
             for (final ClientResponse response : responses) {
                 final String responseBody = response.getAttachment(RESPONSE_BODY);
                 Assert.assertTrue("Unexpected response body: " + responseBody, responseBody.isEmpty() || responseBody.equals(message));
