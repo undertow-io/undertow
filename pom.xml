@@ -577,6 +577,7 @@
                             <artifactId>maven-compiler-plugin</artifactId>
                             <version>${version.compiler.plugin}</version>
                             <configuration>
+                                <release>8</release>
                                 <!-- fork is needed so compiler args can be used -->
                                 <fork>true</fork>
                                 <failOnError>false</failOnError>
