@@ -20,6 +20,7 @@ package io.undertow.server.handlers.session;
 
 import java.io.IOException;
 
+import io.undertow.UndertowMessages;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.InMemorySessionManager;
@@ -247,6 +248,32 @@ public class InMemorySessionTestCase {
             Assert.assertEquals("0", header[0].getValue());
         } finally {
             client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void inMemorySessionNoConfigTest() throws IOException {
+        try (TestHttpClient client = new TestHttpClient()) {
+            client.setCookieStore(new BasicCookieStore());
+
+            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(""), null);
+            handler.setNext(new HttpHandler() {
+                @Override
+                public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                    final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
+
+                    IllegalStateException thrown = Assert.assertThrows(IllegalStateException.class, () -> {
+                        manager.getSession(exchange, null);
+                    });
+
+                    Assert.assertEquals(UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig().getCause(), thrown.getCause());
+                    Assert.assertEquals(UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig().getMessage(), thrown.getMessage());
+                }
+            });
+            DefaultServer.setRootHandler(handler);
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
+            client.execute(get);
         }
     }
 }
