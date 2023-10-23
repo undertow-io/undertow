@@ -243,7 +243,7 @@ public class RapidResetDDoSUnitTestCase {
 
             // server sent go away before processing and responding client frames, sometimes this happens, depends on the order of threads
             // being executed
-            if (responses.isEmpty()) {
+            if (responses.size() < totalNumberOfRequests) {
                 Assert.assertTrue(errorExpected);
                 Assert.assertNotNull(exception);
                 Assert.assertTrue(exception instanceof ClosedChannelException);
