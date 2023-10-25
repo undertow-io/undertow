@@ -21,6 +21,9 @@ package io.undertow;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import org.xnio.Option;
+import org.xnio.Options;
+import org.xnio.channels.ReadTimeoutException;
+import org.xnio.channels.WriteTimeoutException;
 
 /**
  * @author Stuart Douglas
@@ -504,6 +507,18 @@ public class UndertowOptions {
      * the server will send a GO_AWAY frame with error code 11 ({@code ENHANCE_YOUR_CALM}) and it will close the connection.
      */
     public static final Option<Integer> MAX_RST_FRAMES_PER_WINDOW = Option.simple(UndertowOptions.class, "MAX_RST_STREAMS_PER_TIME_WINDOW", Integer.class);
+
+    /**
+     * Configure a read timeout for a web socket, in milliseconds. If its present it will override {@link org.xnio.Options.READ_TIMEOUT}. If the given amount of time elapses without
+     * a successful read taking place, the socket's next read will throw a {@link ReadTimeoutException}.
+     */
+    public static final Option<Integer> WEB_SOCKETS_READ_TIMEOUT = Option.simple(Options.class, "WEB_SOCKETS_READ_TIMEOUT", Integer.class);
+
+    /**
+     * Configure a write timeout for a web socket, in milliseconds. If its present it will override {@link org.xnio.Options.WRITE_TIMEOUT}. If the given amount of time elapses without
+     * a successful write taking place, the socket's next write will throw a {@link WriteTimeoutException}.
+     */
+    public static final Option<Integer> WEB_SOCKETS_WRITE_TIMEOUT = Option.simple(Options.class, "WEB_SOCKETS_WRITE_TIMEOUT", Integer.class);
 
     /**
      * Specify if matrix parameters without ID should be allowed or not. If set to 'true' '/test;param1,param2/next-path-segment' will be acceptable.
