@@ -484,4 +484,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = WARN)
     @Message(id = 5106, value = "Content mismatch for '%s'. Expected length '%s', but was '%s'.")
     void contentEntryMismatch(Object key, long indicatedSize, long written);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5107, value = "Failed to set web socket timeout.")
+    void failedToSetWSTimeout(@Cause Exception e);
 }

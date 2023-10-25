@@ -17,6 +17,8 @@
  */
 package io.undertow.websockets.core;
 
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
 import io.undertow.conduits.IdleTimeoutConduit;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
@@ -28,6 +30,8 @@ import org.xnio.ChannelListener.SimpleSetter;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
+import org.xnio.Options;
+
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
@@ -106,6 +110,20 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
         this.hasReservedOpCode = extensionFunction.hasExtensionOpCode();
         this.subProtocol = subProtocol;
         this.peerConnections = peerConnections;
+        if(options.contains(UndertowOptions.WEB_SOCKETS_READ_TIMEOUT)) {
+            try {
+                this.setOption(Options.READ_TIMEOUT, options.get(UndertowOptions.WEB_SOCKETS_READ_TIMEOUT));
+            } catch (IOException e) {
+                UndertowLogger.ROOT_LOGGER.failedToSetWSTimeout(e);
+            }
+        }
+        if(options.contains(UndertowOptions.WEB_SOCKETS_WRITE_TIMEOUT)) {
+            try {
+                this.setOption(Options.WRITE_TIMEOUT, options.get(UndertowOptions.WEB_SOCKETS_WRITE_TIMEOUT));
+            } catch (IOException e) {
+                UndertowLogger.ROOT_LOGGER.failedToSetWSTimeout(e);
+            }
+        }
         addCloseTask(new ChannelListener<WebSocketChannel>() {
             @Override
             public void handleEvent(WebSocketChannel channel) {
