@@ -468,4 +468,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = WARN)
     @Message(id = 5102, value = "Flushing waiting in a frame more than %s miliseconds. The framed channel will be forcibly closed.")
     void noFrameflushInTimeout(long timeoutMiliseconds);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5103, value = "Cache TTL set to wrong value '%sms'. Defaulting to '%sms'.")
+    void wrongCacheTTLValue(int ttl, int defaultTtl);
 }
