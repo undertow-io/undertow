@@ -59,7 +59,7 @@ public class CachingResourceManager implements ResourceManager {
      */
     private final LRUCache<String, Object> cache;
 
-    private final int maxAge;
+    private int maxAge;
 
     public CachingResourceManager(final int metadataCacheSize, final long maxFileSize, final DirectBufferCache dataCache, final ResourceManager underlyingResourceManager, final int maxAge) {
         this.maxFileSize = maxFileSize;
@@ -85,7 +85,12 @@ public class CachingResourceManager implements ResourceManager {
                     }
                 });
             } catch (Exception e) {
-                UndertowLogger.ROOT_LOGGER.couldNotRegisterChangeListener(e);
+                int errorMaxAge = this.maxAge;
+                if(!(this.maxAge > 0 || this.maxAge == CachingResourceManager.MAX_AGE_NO_CACHING)) {
+                    errorMaxAge = CachingResourceManager.MAX_AGE_NO_CACHING;
+                }
+                UndertowLogger.ROOT_LOGGER.failedToRegisterChangeListener(this.maxAge,errorMaxAge,e);
+                this.maxAge = errorMaxAge;
             }
         }
     }
