@@ -449,6 +449,20 @@ public class UndertowOptions {
     public static final Option<Integer> MAX_RST_FRAMES_PER_WINDOW = Option.simple(UndertowOptions.class, "MAX_RST_STREAMS_PER_TIME_WINDOW", Integer.class);
 
     /**
+     * Proposed default minimum size for storing content in memory before persisting to disk.
+     * The default value for {@code MEMORY_STORAGE_THRESHOLD} is 16 KB (16384 bytes).
+     */
+    public static final long DEFAULT_MEMORY_STORAGE_THRESHOLD = 0x4000;
+
+    /**
+     * The minimum size in bytes for storing content in memory before persisting to disk. If the file content exceeds
+     * the specified <i>file size threshold</i> and the <i>filename</i> is not specified in the form, the content will be stored
+     * in memory as long as its size is less than or equal to this minimum size, after which it will be persisted to disk.
+     */
+    public static final Option<Long> MEMORY_STORAGE_THRESHOLD = Option.simple(UndertowOptions.class, "MEMORY_STORAGE_THRESHOLD", Long.class);
+
+
+    /**
      * Configure a read timeout for a web socket, in milliseconds. If its present it will override {@link org.xnio.Options.READ_TIMEOUT}. If the given amount of time elapses without
      * a successful read taking place, the socket's next read will throw a {@link ReadTimeoutException}.
      */
