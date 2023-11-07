@@ -173,6 +173,27 @@ public final class WebSocketTestClient {
         }
     }
 
+    public boolean isActive() {
+        if(this.ch != null) {
+            return this.ch.isActive();
+        }
+        return false;
+    }
+
+    public boolean isOpen() {
+        if(this.ch != null) {
+            return this.ch.isOpen();
+        }
+        return false;
+    }
+
+    public boolean isWritable() {
+        if(this.ch != null) {
+            return this.ch.isWritable();
+        }
+        return false;
+    }
+
     public interface FrameListener {
         /**
          * Is called if an WebSocketFrame was received
