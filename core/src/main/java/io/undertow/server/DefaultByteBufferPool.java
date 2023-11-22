@@ -26,7 +26,9 @@ import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -39,7 +41,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  */
 public class DefaultByteBufferPool implements ByteBufferPool {
 
-    private final ThreadLocal<ThreadLocalData> threadLocalCache = new ThreadLocal<>();
+    private final ThreadLocalCache threadLocalCache = new ThreadLocalCache();
     // Access requires synchronization on the threadLocalDataList instance
     private final List<WeakReference<ThreadLocalData>> threadLocalDataList = new ArrayList<>();
     private final ConcurrentLinkedQueue<ByteBuffer> queue = new ConcurrentLinkedQueue<>();
@@ -229,6 +231,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
                     local.buffers.clear();
                 }
                 ref.clear();
+                threadLocalCache.remove(local);
             }
             threadLocalDataList.clear();
         }
@@ -332,6 +335,31 @@ public class DefaultByteBufferPool implements ByteBufferPool {
                 }
             } finally {
                 super.finalize();
+            }
+        }
+    }
+
+    // This is used instead of Java ThreadLocal class. Unlike in the ThreadLocal class, the remove() method in this
+    // class can be called by a different thread than the one that initialized the data.
+    private static class ThreadLocalCache {
+
+        Map<Thread, ThreadLocalData> localsByThread = new HashMap<>();
+
+        ThreadLocalData get() {
+            return localsByThread.get(Thread.currentThread());
+        }
+
+        void set(ThreadLocalData threadLocalData) {
+            localsByThread.put(Thread.currentThread(), threadLocalData);
+        }
+
+        void remove(ThreadLocalData threadLocalData) {
+            // Find the entry containing given data instance and remove it from the map.
+            for (Map.Entry<Thread, ThreadLocalData> entry: localsByThread.entrySet()) {
+                if (threadLocalData.equals(entry.getValue())) {
+                    localsByThread.remove(entry.getKey(), entry.getValue());
+                    break;
+                }
             }
         }
     }
