@@ -1,6 +1,6 @@
 package io.undertow.server;
 
-import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.xnio.Options;
 
@@ -8,8 +8,8 @@ import io.undertow.Undertow;
 
 public class StopTestCase {
 
-    @After
-    public void waitServerStopCompletely() {
+    @AfterClass
+    public static void waitServerStopCompletely() {
         // sleep 1 s to prevent BindException (Address already in use) when running the tests
         try {
             Thread.sleep(1000);
