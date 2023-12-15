@@ -257,23 +257,30 @@ public class InMemorySessionTestCase {
             client.setCookieStore(new BasicCookieStore());
 
             final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(""), null);
+            final Throwable[] thrown = {null};
             handler.setNext(new HttpHandler() {
                 @Override
                 public void handleRequest(final HttpServerExchange exchange) throws Exception {
                     final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
-
-                    IllegalStateException thrown = Assert.assertThrows(IllegalStateException.class, () -> {
+                    try {
                         manager.getSession(exchange, null);
-                    });
-
-                    Assert.assertEquals(UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig().getCause(), thrown.getCause());
-                    Assert.assertEquals(UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig().getMessage(), thrown.getMessage());
+                    } catch (Throwable t) {
+                        thrown[0] = t;
+                    }
                 }
             });
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             client.execute(get);
+
+            if (thrown[0] != null) {
+                Assert.assertTrue(thrown[0] instanceof IllegalStateException);
+                Assert.assertEquals(UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig().getCause(), thrown[0].getCause());
+                Assert.assertEquals(UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig().getMessage(), thrown[0].getMessage());
+            } else {
+                Assert.fail("No exception was thrown.");
+            }
         }
     }
 }
