@@ -116,6 +116,11 @@ public class PathPrefixPredicate implements Predicate {
             String[] path = (String[]) config.get("path");
             return new PathPrefixPredicate(path);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 
     public static class PathPrefixMatchRecord {
