@@ -37,6 +37,17 @@ import io.undertow.util.FileUtils;
  */
 public class MultiPartServlet extends HttpServlet {
 
+    private final boolean getParam;
+    public MultiPartServlet() {
+        super();
+        this.getParam = false;
+    }
+
+    public MultiPartServlet(boolean getParam) {
+        super();
+        this.getParam = getParam;
+    }
+
     @Override
     protected void doPost(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         try {
@@ -57,6 +68,14 @@ public class MultiPartServlet extends HttpServlet {
                 }
                 writer.println("size: " + part.getSize());
                 writer.println("content: " + FileUtils.readFile(part.getInputStream()));
+            }
+            if (getParam) {
+                Enumeration<String> paramNames = req.getParameterNames();
+                while (paramNames.hasMoreElements()) {
+                    String name = paramNames.nextElement();
+                    writer.println("param name: " + name);
+                    writer.println("param value: " + req.getParameter(name));
+                }
             }
         } catch (Exception e) {
             resp.getWriter().write("EXCEPTION: " + e.getClass());
