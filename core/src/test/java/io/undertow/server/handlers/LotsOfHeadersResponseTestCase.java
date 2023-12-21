@@ -73,7 +73,7 @@ public class LotsOfHeadersResponseTestCase {
             for (int i = 0; i < COUNT; ++i) {
                 Header[] header = result.getHeaders(HEADER + i);
                 if (header.length == 0) {
-                    Assert.fail("Header " + HEADER + i + " not found");
+                    Assert.fail("Header " + HEADER + i + " not found, there are a total of " + result.getAllHeaders().length + " headers");
                 }
                 Assert.assertEquals(MESSAGE + i, header[0].getValue());
             }
