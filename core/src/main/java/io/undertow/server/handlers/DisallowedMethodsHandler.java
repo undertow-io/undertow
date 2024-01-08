@@ -99,6 +99,11 @@ public class DisallowedMethodsHandler implements HttpHandler {
             return new Wrapper((String[]) config.get("methods"));
         }
 
+        @Override
+        public int priority() {
+            return 1;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

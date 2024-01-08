@@ -217,6 +217,11 @@ public class RequestDumpingHandler implements HttpHandler {
             return new Wrapper();
         }
 
+        @Override
+        public int priority() {
+            return 1;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

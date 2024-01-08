@@ -240,6 +240,11 @@ public class PredicatesHandler implements HttpHandler {
                 }
             };
         }
+
+        @Override
+        public int priority() {
+            return 1;
+        }
     }
 
     public static final class RestartHandlerBuilder implements HandlerBuilder {
@@ -295,6 +300,11 @@ public class PredicatesHandler implements HttpHandler {
                     };
                 }
             };
+        }
+
+        @Override
+        public int priority() {
+            return 1;
         }
     }
 
