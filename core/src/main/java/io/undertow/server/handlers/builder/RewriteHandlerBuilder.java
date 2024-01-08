@@ -103,6 +103,11 @@ public class RewriteHandlerBuilder implements HandlerBuilder {
         };
     }
 
+    @Override
+    public int priority() {
+        return 0;
+    }
+
     private String normalize(final String readAttribute) {
         if (readAttribute.startsWith("/")) {
             return readAttribute;
