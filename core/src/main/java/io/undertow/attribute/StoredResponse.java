@@ -66,6 +66,11 @@ public class StoredResponse implements ExchangeAttribute {
             if(contentType.startsWith("text/")) {
                 return StandardCharsets.ISO_8859_1.displayName();
             }
+            // json has no charset param: https://www.iana.org/assignments/media-types/application/json
+            // the default is UTF-8: https://www.rfc-editor.org/rfc/rfc7158#section-8.1 & https://www.rfc-editor.org/rfc/rfc8259#section-8.1
+            if(contentType.equals("application/json")) {
+                return StandardCharsets.UTF_8.name();
+            }
             return null;
         }
         return null;
