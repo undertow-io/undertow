@@ -92,6 +92,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 /**
@@ -110,6 +112,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     private final HttpServerExchange exchange;
     private final ServletContextImpl originalServletContext;
+    private final Lock asyncContextLock;
     private ServletContextImpl servletContext;
 
     private Map<String, Object> attributes = null;
@@ -119,8 +122,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     private Cookie[] cookies;
     private List<Part> parts = null;
-    private volatile boolean asyncStarted = false;
-    private volatile AsyncContextImpl asyncContext = null;
+    // Guarded by asyncContextLock
+    private boolean asyncStarted = false;
+    // Guarded by asyncContextLock
+    private AsyncContextImpl asyncContext = null;
     private Map<String, Deque<String>> queryParameters;
     private FormData parsedFormData;
     private RuntimeException formParsingException;
@@ -132,6 +137,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         this.exchange = exchange;
         this.servletContext = servletContext;
         this.originalServletContext = servletContext;
+        asyncContextLock = new ReentrantLock();
     }
 
     public HttpServerExchange getExchange() {
@@ -1072,12 +1078,18 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     public AsyncContext startAsync() throws IllegalStateException {
         if (!isAsyncSupported()) {
             throw UndertowServletMessages.MESSAGES.startAsyncNotAllowed();
-        } else if (asyncStarted) {
-            throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
-        asyncStarted = true;
-        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        return asyncContext = new AsyncContextImpl(exchange, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), servletRequestContext, false, asyncContext);
+        try {
+            asyncContextLock.lock();
+            if (asyncStarted) {
+                throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
+            }
+            asyncStarted = true;
+            final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+            return asyncContext = new AsyncContextImpl(exchange, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), servletRequestContext, false, asyncContext);
+        } finally {
+            asyncContextLock.unlock();
+        }
     }
 
     @Override
@@ -1097,18 +1109,29 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
         if (!isAsyncSupported()) {
             throw UndertowServletMessages.MESSAGES.startAsyncNotAllowed();
-        } else if (asyncStarted) {
-            throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
-        asyncStarted = true;
-        servletRequestContext.setServletRequest(servletRequest);
-        servletRequestContext.setServletResponse(servletResponse);
-        return asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse, servletRequestContext, true, asyncContext);
+        try {
+            asyncContextLock.lock();
+            if (asyncStarted) {
+                throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
+            }
+            asyncStarted = true;
+            servletRequestContext.setServletRequest(servletRequest);
+            servletRequestContext.setServletResponse(servletResponse);
+            return asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse, servletRequestContext, true, asyncContext);
+        } finally {
+            asyncContextLock.unlock();
+        }
     }
 
     @Override
     public boolean isAsyncStarted() {
-        return asyncStarted;
+        try {
+            asyncContextLock.lock();
+            return asyncStarted;
+        } finally {
+            asyncContextLock.unlock();
+        }
     }
 
     @Override
@@ -1121,11 +1144,21 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         if (!isAsyncStarted()) {
             throw UndertowServletMessages.MESSAGES.asyncNotStarted();
         }
-        return asyncContext;
+        try {
+            asyncContextLock.lock();
+            return asyncContext;
+        } finally {
+            asyncContextLock.unlock();
+        }
     }
 
     public AsyncContextImpl getAsyncContextInternal() {
-        return asyncContext;
+        try {
+            asyncContextLock.lock();
+            return asyncContext;
+        } finally {
+            asyncContextLock.unlock();
+        }
     }
 
     @Override
@@ -1150,7 +1183,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     void asyncRequestDispatched() {
-        asyncStarted = false;
+        try {
+            asyncContextLock.lock();
+            asyncStarted = false;
+        } finally {
+            asyncContextLock.unlock();
+        }
     }
 
     public String getOriginalRequestURI() {
