@@ -61,6 +61,11 @@ public class RequestEncodingHandler implements HttpHandler {
             // Nested handlers or even servlet filters may implement logic to decode encoded request data.
             // Since the data is no longer encoded, we remove the encoding header.
             exchange.getRequestHeaders().remove(Headers.CONTENT_ENCODING);
+            final String encodedContentLength = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+            if(encodedContentLength != null) {
+                exchange.getRequestHeaders().remove(Headers.CONTENT_LENGTH);
+                exchange.getRequestHeaders().put(Headers.X_CONTENT_LENGTH, encodedContentLength);
+            }
         }
         next.handleRequest(exchange);
     }
