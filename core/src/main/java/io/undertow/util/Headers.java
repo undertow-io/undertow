@@ -114,6 +114,7 @@ public final class Headers {
     public static final String VIA_STRING = "Via";
     public static final String WARNING_STRING = "Warning";
     public static final String WWW_AUTHENTICATE_STRING = "WWW-Authenticate";
+    public static final String X_CONTENT_LENGTH_STRING = "X-Content-Length";
     public static final String X_CONTENT_TYPE_OPTIONS_STRING = "X-Content-Type-Options";
     public static final String X_DISABLE_PUSH_STRING = "X-Disable-Push";
     public static final String X_FORWARDED_FOR_STRING = "X-Forwarded-For";
@@ -123,7 +124,6 @@ public final class Headers {
     public static final String X_FORWARDED_SERVER_STRING = "X-Forwarded-Server";
     public static final String X_FRAME_OPTIONS_STRING = "X-Frame-Options";
     public static final String X_XSS_PROTECTION_STRING = "X-Xss-Protection";
-
     // Header names
 
     public static final HttpString ACCEPT = new HttpString(ACCEPT_STRING, 1);
@@ -200,15 +200,16 @@ public final class Headers {
     public static final HttpString VIA = new HttpString(VIA_STRING, 72);
     public static final HttpString WARNING = new HttpString(WARNING_STRING, 73);
     public static final HttpString WWW_AUTHENTICATE = new HttpString(WWW_AUTHENTICATE_STRING, 74);
-    public static final HttpString X_CONTENT_TYPE_OPTIONS = new HttpString(X_CONTENT_TYPE_OPTIONS_STRING, 75);
-    public static final HttpString X_DISABLE_PUSH = new HttpString(X_DISABLE_PUSH_STRING, 76);
-    public static final HttpString X_FORWARDED_FOR = new HttpString(X_FORWARDED_FOR_STRING, 77);
-    public static final HttpString X_FORWARDED_HOST = new HttpString(X_FORWARDED_HOST_STRING, 78);
-    public static final HttpString X_FORWARDED_PORT = new HttpString(X_FORWARDED_PORT_STRING, 79);
-    public static final HttpString X_FORWARDED_PROTO = new HttpString(X_FORWARDED_PROTO_STRING, 80);
-    public static final HttpString X_FORWARDED_SERVER = new HttpString(X_FORWARDED_SERVER_STRING, 81);
-    public static final HttpString X_FRAME_OPTIONS = new HttpString(X_FRAME_OPTIONS_STRING, 82);
-    public static final HttpString X_XSS_PROTECTION = new HttpString(X_XSS_PROTECTION_STRING, 83);
+    public static final HttpString X_CONTENT_LENGTH = new HttpString(X_CONTENT_LENGTH_STRING, 75);
+    public static final HttpString X_CONTENT_TYPE_OPTIONS = new HttpString(X_CONTENT_TYPE_OPTIONS_STRING, 76);
+    public static final HttpString X_DISABLE_PUSH = new HttpString(X_DISABLE_PUSH_STRING, 77);
+    public static final HttpString X_FORWARDED_FOR = new HttpString(X_FORWARDED_FOR_STRING, 78);
+    public static final HttpString X_FORWARDED_HOST = new HttpString(X_FORWARDED_HOST_STRING, 79);
+    public static final HttpString X_FORWARDED_PORT = new HttpString(X_FORWARDED_PORT_STRING, 80);
+    public static final HttpString X_FORWARDED_PROTO = new HttpString(X_FORWARDED_PROTO_STRING, 81);
+    public static final HttpString X_FORWARDED_SERVER = new HttpString(X_FORWARDED_SERVER_STRING, 82);
+    public static final HttpString X_FRAME_OPTIONS = new HttpString(X_FRAME_OPTIONS_STRING, 83);
+    public static final HttpString X_XSS_PROTECTION = new HttpString(X_XSS_PROTECTION_STRING, 84);
     // Content codings
 
     public static final HttpString COMPRESS = new HttpString("compress");
