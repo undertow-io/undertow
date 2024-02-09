@@ -30,6 +30,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 
@@ -100,6 +101,9 @@ public class BlockingReceiverImpl implements Receiver {
             return;
         }
         String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        if(contentLengthString == null) {
+            contentLengthString = exchange.getRequestHeaders().getFirst(Headers.X_CONTENT_LENGTH);
+        }
         long contentLength;
         final ByteArrayOutputStream sb;
         if (contentLengthString != null) {
@@ -124,7 +128,12 @@ public class BlockingReceiverImpl implements Receiver {
             while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
                 sb.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), s);
             }
-            callback.handle(exchange, sb.toString(charset.name()));
+            final String message = sb.toString(charset.name());
+            final HeaderMap requestHeaders = exchange.getRequestHeaders();
+            if(requestHeaders.contains(Headers.X_CONTENT_LENGTH) && !requestHeaders.contains(Headers.CONTENT_LENGTH)) {
+                requestHeaders.put(Headers.CONTENT_LENGTH, message.length());
+            }
+            callback.handle(exchange, message);
         } catch (IOException e) {
             error.error(exchange, e);
         }
@@ -150,6 +159,9 @@ public class BlockingReceiverImpl implements Receiver {
             return;
         }
         String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        if(contentLengthString == null) {
+            contentLengthString = exchange.getRequestHeaders().getFirst(Headers.X_CONTENT_LENGTH);
+        }
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
@@ -201,6 +213,9 @@ public class BlockingReceiverImpl implements Receiver {
             return;
         }
         String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        if(contentLengthString == null) {
+            contentLengthString = exchange.getRequestHeaders().getFirst(Headers.X_CONTENT_LENGTH);
+        }
         long contentLength;
         final ByteArrayOutputStream sb;
         if (contentLengthString != null) {
@@ -225,7 +240,12 @@ public class BlockingReceiverImpl implements Receiver {
             while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
                 sb.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), s);
             }
-            callback.handle(exchange, sb.toByteArray());
+            final byte[] message = sb.toByteArray();
+            final HeaderMap requestHeaders = exchange.getRequestHeaders();
+            if(requestHeaders.contains(Headers.X_CONTENT_LENGTH) && !requestHeaders.contains(Headers.CONTENT_LENGTH)) {
+                requestHeaders.put(Headers.CONTENT_LENGTH, message.length);
+            }
+            callback.handle(exchange, message);
         } catch (IOException e) {
             error.error(exchange, e);
         }
@@ -251,6 +271,9 @@ public class BlockingReceiverImpl implements Receiver {
             return;
         }
         String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        if(contentLengthString == null) {
+            contentLengthString = exchange.getRequestHeaders().getFirst(Headers.X_CONTENT_LENGTH);
+        }
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
