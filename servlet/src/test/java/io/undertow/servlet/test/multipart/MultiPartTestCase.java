@@ -126,6 +126,7 @@ public class MultiPartTestCase {
                     "filename: null\r\n" +
                     "content-type: null\r\n" +
                     "Content-Disposition: form-data; name=\"formValue\"\r\n" +
+                    "value: myValue\r\n" +
                     "size: 7\r\n" +
                     "content: myValue\r\n" +
                     "name: file\r\n" +
@@ -163,6 +164,7 @@ public class MultiPartTestCase {
                     "filename: null\r\n" +
                     "content-type: null\r\n" +
                     "Content-Disposition: form-data; name=\"formValue\"\r\n" +
+                    "value: myValue\r\n" +
                     "size: 7\r\n" +
                     "content: myValue\r\n" +
                     "name: file\r\n" +
@@ -242,6 +244,7 @@ public class MultiPartTestCase {
                     "filename: null\r\n" +
                     "content-type: text/plain; charset=UTF-8\r\n" +
                     "Content-Disposition: form-data; name=\"formValue\"\r\n" +
+                    "value: " + "myValue" + '\u00E5' + "\r\n" +
                     "Content-Transfer-Encoding: 8bit\r\n" +
                     "Content-Type: text/plain; charset=UTF-8\r\n" +
                     "size: 9\r\n" +
@@ -275,6 +278,7 @@ public class MultiPartTestCase {
                     "filename: null\r\n" +
                     "content-type: null\r\n" +
                     "Content-Disposition: form-data; name=\"formValue\"\r\n" +
+                    "value: " + myValue + "\r\n" +
                     "size: " + myValue.getBytes(StandardCharsets.UTF_8).length + "\r\n" +
                     "content: " + myValue + "\r\n" +
                     "name: file\r\n" +
