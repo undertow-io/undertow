@@ -94,6 +94,7 @@ public class AccessLogFileWithUnescapedCharactersTestCase {
         //old = DefaultServer.getUndertowOptions();
         DefaultServer.setUndertowOptions(
                 OptionMap.create(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true));
+        DefaultServer.setServerOptions(OptionMap.create(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/helloworld/한글이름_test.html?param=한글이름_ahoy");
@@ -107,7 +108,8 @@ public class AccessLogFileWithUnescapedCharactersTestCase {
             logReceiver.awaitWrittenForTest();
             String written = new String(Files.readAllBytes(logFileName));
             System.out.println("Look, this is written:\n" + written);
-            Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " \"GET " + "/helloworld/한글이름_test.html?param=한글이름_ahoy HTTP/1.1\" 200 5" + System.lineSeparator(), written);
+            final String protocolVersion = DefaultServer.isH2()? "HTTP/2.0" : result.getProtocolVersion().toString();
+            Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " \"GET " + "/helloworld/한글이름_test.html?param=한글이름_ahoy " + protocolVersion + "\" 200 5" + System.lineSeparator(), written);
         } finally {
             client.getConnectionManager().shutdown();
         }

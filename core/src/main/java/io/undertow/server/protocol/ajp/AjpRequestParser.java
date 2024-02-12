@@ -269,11 +269,13 @@ public class AjpRequestParser {
                     int colon = result.value.indexOf(';');
                     if (colon == -1) {
                         String res = decode(result.value, result.containsUrlCharacters);
-                        if(result.containsUnencodedCharacters) {
+                        if(result.containsUnencodedCharacters || result.containsUrlCharacters) {
                             //we decode if the URL was non-compliant, and contained incorrectly encoded characters
                             //there is not really a 'correct' thing to do in this situation, but this seems the least incorrect
                             exchange.setRequestURI(res);
-                        } else {
+                        } /*else if (allowUnescapedCharactersInUrl) {
+
+                        } */else {
                             exchange.setRequestURI(result.value);
                         }
                         exchange.setRequestPath(res);
@@ -297,7 +299,7 @@ public class AjpRequestParser {
                             resBuilder.append(decode(url, result.containsUrlCharacters));
                         }
                         final String res = resBuilder.toString();
-                        if(result.containsUnencodedCharacters) {
+                        if(result.containsUnencodedCharacters || result.containsUrlCharacters || allowUnescapedCharactersInUrl) {
                             exchange.setRequestURI(res);
                         } else {
                             exchange.setRequestURI(result.value);
@@ -447,7 +449,7 @@ public class AjpRequestParser {
                             state.state = AjpRequestParseState.READING_ATTRIBUTES;
                             return;
                         }
-                        if(resultHolder.containsUnencodedCharacters) {
+                        if(resultHolder.containsUnencodedCharacters || (resultHolder.containsUrlCharacters && allowUnescapedCharactersInUrl)) {
                             result = decode(resultHolder.value, true);
                             decodingAlreadyDone = true;
                         } else {
@@ -583,8 +585,8 @@ public class AjpRequestParser {
                 return new StringHolder(null, false, false, false);
             }
             byte c = buf.get();
-            if(type == StringType.QUERY_STRING && (c == '+' || c == '%' || c < 0 )) {
-                if (c < 0) {
+            if(type == StringType.QUERY_STRING && (c == '+' || c == '%' || c < 0 || c > 127 )) {
+                if (c < 0 || c > 127) {
                     if (!allowUnescapedCharactersInUrl) {
                         throw new BadRequestException();
                     } else {
@@ -592,7 +594,7 @@ public class AjpRequestParser {
                     }
                 }
                 containsUrlCharacters = true;
-            } else if(type == StringType.URL && (c == '%' || c < 0 )) {
+            } else if(type == StringType.URL && (c == '%' || c < 0 || c > 127 )) {
                 if(c < 0 ) {
                     if(!allowUnescapedCharactersInUrl) {
                         throw new BadRequestException();

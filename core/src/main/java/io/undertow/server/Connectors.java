@@ -505,7 +505,7 @@ public class Connectors {
                 part = pathBuilder.toString();
                 exchange.setRequestPath(part);
                 exchange.setRelativePath(part);
-                if(requiresDecode && allowUnescapedCharactersInUrl) {
+                if(requiresDecode && allowUnescapedCharactersInUrl && exchange.isUpgrade()) {
                     final String uri = URLUtils.decode(encodedPath.substring(0, i), charset, decodeSlashFlag,false, decodeBuffer);
                     exchange.setRequestURI(uri);
                 } else {
