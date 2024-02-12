@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.Part;
 
+import io.undertow.util.Headers;
 import io.undertow.util.FileUtils;
 
 /**
@@ -65,6 +66,17 @@ public class MultiPartServlet extends HttpServlet {
                 Collection<String> headerNames = new TreeSet<>(part.getHeaderNames());
                 for (String header : headerNames) {
                     writer.println(header + ": " + part.getHeader(header));
+                    if (header.equals(Headers.CONTENT_DISPOSITION_STRING)) {
+                        final String parameterValue = part.getHeader(header);
+                        String parameterName = parameterValue.substring(parameterValue.indexOf("name=") + "name=\"".length());
+                        parameterName = parameterName.substring(0, parameterName.indexOf('\"'));
+                        final String[] values = req.getParameterValues(parameterName);
+                        if (values != null) {
+                            for (String value: values) {
+                                writer.println("value: " + value);
+                            }
+                        }
+                    }
                 }
                 writer.println("size: " + part.getSize());
                 writer.println("content: " + FileUtils.readFile(part.getInputStream()));

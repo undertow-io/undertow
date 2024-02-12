@@ -126,6 +126,7 @@ public class MultiPartTestCase {
                     "filename: null\r\n" +
                     "content-type: null\r\n" +
                     "Content-Disposition: form-data; name=\"formValue\"\r\n" +
+                    "value: myValue\r\n" +
                     "size: 7\r\n" +
                     "content: myValue\r\n" +
                     "name: file\r\n" +
@@ -163,6 +164,7 @@ public class MultiPartTestCase {
                     "filename: null\r\n" +
                     "content-type: null\r\n" +
                     "Content-Disposition: form-data; name=\"formValue\"\r\n" +
+                    "value: myValue\r\n" +
                     "size: 7\r\n" +
                     "content: myValue\r\n" +
                     "name: file\r\n" +
@@ -235,17 +237,18 @@ public class MultiPartTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
 
-            Assert.assertEquals("PARAMS:\n" +
-                    "parameter count: 1\n" +
-                    "parameter name count: 1\n" +
-                    "name: formValue\n" +
-                    "filename: null\n" +
-                    "content-type: text/plain; charset=UTF-8\n" +
-                    "Content-Disposition: form-data; name=\"formValue\"\n" +
-                    "Content-Transfer-Encoding: 8bit\n" +
-                    "Content-Type: text/plain; charset=UTF-8\n" +
-                    "size: 9\n" +
-                    "content: myValue\u00E5\n", response);
+            Assert.assertEquals("PARAMS:\r\n" +
+                    "parameter count: 1\r\n" +
+                    "parameter name count: 1\r\n" +
+                    "name: formValue\r\n" +
+                    "filename: null\r\n" +
+                    "content-type: text/plain; charset=UTF-8\r\n" +
+                    "Content-Disposition: form-data; name=\"formValue\"\r\n" +
+                    "value: " + "myValue" + '\u00E5' + "\r\n" +
+                    "Content-Transfer-Encoding: 8bit\r\n" +
+                    "Content-Type: text/plain; charset=UTF-8\r\n" +
+                    "size: 9\r\n" +
+                    "content: myValue\u00E5\r\n", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -275,6 +278,7 @@ public class MultiPartTestCase {
                     "filename: null\r\n" +
                     "content-type: null\r\n" +
                     "Content-Disposition: form-data; name=\"formValue\"\r\n" +
+                    "value: " + myValue + "\r\n" +
                     "size: " + myValue.getBytes(StandardCharsets.UTF_8).length + "\r\n" +
                     "content: " + myValue + "\r\n" +
                     "name: file\r\n" +
