@@ -14,6 +14,10 @@ public class AddMultipartServetListener implements ServletContextListener {
         ServletRegistration.Dynamic reg = sce.getServletContext().addServlet("added", new MultiPartServlet());
         reg.addMapping("/added");
         reg.setMultipartConfig(new MultipartConfigElement(System.getProperty("java.io.tmpdir")));
+
+        reg = sce.getServletContext().addServlet("getParam", new MultiPartServlet(true));
+        reg.addMapping("/getParam");
+        reg.setMultipartConfig(new MultipartConfigElement(System.getProperty("java.io.tmpdir")));
     }
 
     @Override
