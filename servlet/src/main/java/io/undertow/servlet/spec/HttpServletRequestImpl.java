@@ -1075,9 +1075,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         } else if (asyncStarted) {
             throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
-        asyncStarted = true;
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        return asyncContext = new AsyncContextImpl(exchange, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), servletRequestContext, false, asyncContext);
+        asyncContext = new AsyncContextImpl(exchange, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), servletRequestContext, false, asyncContext);
+        asyncStarted = true;
+        return asyncContext;
     }
 
     @Override
@@ -1100,10 +1101,11 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         } else if (asyncStarted) {
             throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
-        asyncStarted = true;
         servletRequestContext.setServletRequest(servletRequest);
         servletRequestContext.setServletResponse(servletResponse);
-        return asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse, servletRequestContext, true, asyncContext);
+        asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse, servletRequestContext, true, asyncContext);
+        asyncStarted = true;
+        return asyncContext;
     }
 
     @Override
