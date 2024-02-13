@@ -206,7 +206,9 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
         this.sink = delegate.getSinkChannel().getConduit();
         this.source = delegate.getSourceChannel().getConduit();
         this.engine = engine;
-        this.delegatedTaskExecutor = delegatedTaskExecutor;
+        // if delegatedTaskExecutor is the same as delegate.getWorker, don't set it (see handshake task execution below,
+        // we need to pick a thread that is different from the current thread running or run the handshake task immediately at the same thread)
+        this.delegatedTaskExecutor = this.delegate.getWorker() != delegatedTaskExecutor? delegatedTaskExecutor : null;
         this.bufferPool = bufferPool;
         delegate.getSourceChannel().getConduit().setReadReadyHandler(readReadyHandler = new SslReadReadyHandler(null));
         delegate.getSinkChannel().getConduit().setWriteReadyHandler(writeReadyHandler = new SslWriteReadyHandler(null));
@@ -1173,7 +1175,16 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                     }
                 };
                 try {
-                    getDelegatedTaskExecutor().execute(wrappedTask);
+                    // we want to pick a thread different from the one we are running, to prevent starvation scenarios
+                    // for example where we repeatedly attempt to write or read but are stuck waiting on a handshake task
+                    // and the handshake task rarely has the chance to run because it needs the read/write thread to complete execution
+                    // so, if io thread (read and write thread) is the same as current thread, and getDelegatedTaskExecutor will delegate
+                    // execution to the same set of threads we are currently at, just run the handshake task right away to prevent blocking
+                    if (delegate.getIoThread().equals(Thread.currentThread()) && delegatedTaskExecutor == null) {
+                        wrappedTask.run();
+                    } else {
+                        getDelegatedTaskExecutor().execute(wrappedTask);
+                    }
                 } catch (RejectedExecutionException e) {
                     UndertowLogger.REQUEST_IO_LOGGER.sslEngineDelegatedTaskRejected(e);
                     IoUtils.safeClose(connection);
