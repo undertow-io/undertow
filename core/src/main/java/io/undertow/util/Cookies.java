@@ -316,6 +316,9 @@ public class Cookies {
                         cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         state = 0;
                         start = i + 1;
+                    } else if (c == ';' || (commaIsSeperator && c == ',')) {
+                        state = 0;
+                        start = i + 1;
                     }
                     // Skip the next double quote char '"' when it is escaped by backslash '\' (i.e. \") inside the quoted value
                     if (c == '\\' && (i + 1 < cookie.length()) && cookie.charAt(i + 1) == '"') {

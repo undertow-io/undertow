@@ -449,6 +449,21 @@ public class CookiesTestCase {
         Assert.assertNull(cookie.getSameSiteMode());
     }
 
+    @Test
+    public void testNoDoubleQuoteTermination() {
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(4, false, Arrays.asList("CUSTOMER=\"WILE_E_COYOTE\"; BAD=\"X; SHIPPING=FEDEX"), true);
+        Assert.assertEquals(2, cookies.size());
+        Cookie cookie = cookies.get("CUSTOMER");
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+        cookie = cookies.get("BAD");
+        Assert.assertNull(cookie);
+        cookie = cookies.get("SHIPPING");
+        Assert.assertEquals("SHIPPING", cookie.getName());
+        Assert.assertEquals("FEDEX", cookie.getValue());
+        Assert.assertNotNull(cookie);
+    }
+
     // RFC6265 allows US-ASCII characters excluding CTLs, whitespace,
     // double quote, comma, semicolon and backslash as cookie value.
     // This does not change even if value is quoted.
