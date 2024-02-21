@@ -388,6 +388,10 @@ public abstract class HttpRequestParser {
     private static final int IN_PATH = 4;
     private static final int HOST_DONE = 5;
 
+    private static final int PATH_SEGMENT_START = 0;
+    private static final int PATH_DOT_SEGMENT = 1;
+    private static final int PATH_NON_DOT_SEGMENT = 2;
+
     /**
      * Parses a path value
      *
@@ -402,6 +406,8 @@ public abstract class HttpRequestParser {
         int parseState = state.parseState;
         int canonicalPathStart = state.pos;
         boolean urlDecodeRequired = state.urlDecodeRequired;
+
+        int pathSubState = 0;
 
         while (buffer.hasRemaining()) {
             char next = (char) (buffer.get() & 0xFF);
@@ -426,6 +432,11 @@ public abstract class HttpRequestParser {
                 state.urlDecodeRequired = urlDecodeRequired;
                 // store at canonical path the partial path parsed up until here
                 state.canonicalPath.append(stringBuilder.substring(canonicalPathStart));
+                if (parseState == IN_PATH && pathSubState == PATH_DOT_SEGMENT) {
+                    // Inside a dot-segment (".", ".."), we don't want to allow removal of the ';' character from
+                    // the path. This is to avoid path traversal issues - "/..;" should not be treated as "/..".
+                    state.canonicalPath.append(";");
+                }
                 state.stringBuilder.append(";");
                 // set position to end of path (possibly start of parameter name)
                 state.pos = state.stringBuilder.length();
@@ -459,6 +470,18 @@ public abstract class HttpRequestParser {
                 } else if (next == '/' && parseState != HOST_DONE) {
                     parseState = IN_PATH;
                 }
+
+                // This is helper state that tracks if the parser is currently in a path dot-segment (".", "..") or not.
+                if (parseState == IN_PATH) {
+                    if (next == '/') {
+                        pathSubState = PATH_SEGMENT_START;
+                    } else if (next == '.' && (pathSubState == PATH_SEGMENT_START || pathSubState == PATH_DOT_SEGMENT)) {
+                        pathSubState = PATH_DOT_SEGMENT;
+                    } else {
+                        pathSubState = PATH_NON_DOT_SEGMENT;
+                    }
+                }
+
                 stringBuilder.append(next);
             }
 

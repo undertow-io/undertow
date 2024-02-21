@@ -142,6 +142,7 @@ class ParseState {
         this.leftOver = 0;
         this.urlDecodeRequired = false;
         this.stringBuilder.setLength(0);
+        this.canonicalPath.setLength(0);
         this.nextHeader = null;
         this.nextQueryParam = null;
         this.mapCount = 0;
