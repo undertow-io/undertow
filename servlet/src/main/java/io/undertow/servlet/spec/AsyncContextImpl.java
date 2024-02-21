@@ -60,6 +60,7 @@ import io.undertow.servlet.handlers.ServletDebugPageHandler;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.util.DispatchUtils;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.ParameterLimitException;
@@ -223,7 +224,7 @@ public class AsyncContextImpl implements AsyncContext {
         ServletPathMatch info;
         try {
             info = DispatchUtils.dispatchAsync(path, requestImpl, responseImpl, (ServletContextImpl) context);
-        } catch (ParameterLimitException e) {
+        } catch (ParameterLimitException | BadRequestException e) {
             throw new IllegalStateException(e);
         }
 
