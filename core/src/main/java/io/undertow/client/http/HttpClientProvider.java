@@ -36,7 +36,6 @@ import org.xnio.XnioWorker;
 import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.AccessController;
@@ -51,6 +50,8 @@ import java.util.Set;
  * @author Stuart Douglas
  */
 public class HttpClientProvider implements ClientProvider {
+
+    private static final String HTTP_1_1 = "http/1.1";
 
     public static final String DISABLE_HTTPS_ENDPOINT_IDENTIFICATION_PROPERTY = "io.undertow.client.https.disableEndpointIdentification";
     public static final boolean DISABLE_HTTPS_ENDPOINT_IDENTIFICATION;
@@ -154,6 +155,14 @@ public class HttpClientProvider implements ClientProvider {
         };
     }
 
+    public static ALPNClientSelector.ALPNProtocol alpnProtocol(final ClientCallback<ClientConnection> listener, URI uri, ByteBufferPool bufferPool, OptionMap options) {
+        return new ALPNClientSelector.ALPNProtocol(new ChannelListener<SslConnection>() {
+            @Override
+            public void handleEvent(SslConnection connection) {
+                listener.completed(new HttpClientConnection(connection, options, bufferPool));
+            }
+        }, HTTP_1_1);
+    }
 
     private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final ByteBufferPool bufferPool, final OptionMap options, URI uri) {
 
@@ -163,7 +172,7 @@ public class HttpClientProvider implements ClientProvider {
             if(h2) {
                 protocolList.add(Http2ClientProvider.alpnProtocol(listener, uri, bufferPool, options));
             }
-
+            protocolList.add(alpnProtocol(listener, uri, bufferPool, options));
             ALPNClientSelector.runAlpn((SslConnection) connection, new ChannelListener<SslConnection>() {
                 @Override
                 public void handleEvent(SslConnection connection) {
@@ -172,11 +181,14 @@ public class HttpClientProvider implements ClientProvider {
             }, listener, protocolList.toArray(new ALPNClientSelector.ALPNProtocol[protocolList.size()]));
         } else {
             if(connection instanceof SslConnection) {
-                try {
-                    ((SslConnection) connection).startHandshake();
-                } catch (Throwable t) {
-                    listener.failed((t instanceof IOException) ? (IOException) t : new IOException(t));
-                }
+                List<ALPNClientSelector.ALPNProtocol> protocolList = new ArrayList<>();
+                protocolList.add(alpnProtocol(listener, uri, bufferPool, options));
+                ALPNClientSelector.runAlpn((SslConnection) connection, new ChannelListener<SslConnection>() {
+                    @Override
+                    public void handleEvent(SslConnection connection) {
+                        listener.completed(new HttpClientConnection(connection, options, bufferPool));
+                    }
+                }, listener, protocolList.toArray(new ALPNClientSelector.ALPNProtocol[protocolList.size()]));
             }
             listener.completed(new HttpClientConnection(connection, options, bufferPool));
         }
