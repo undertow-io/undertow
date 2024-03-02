@@ -676,6 +676,45 @@ public class SimpleParserTestCase {
         Assert.assertEquals("/bÃ¥r", result.getRequestURI()); //not decoded
     }
 
+    @Test
+    public void testDirectoryTraversal() throws Exception {
+        byte[] in = "GET /path/..;/ HTTP/1.1\r\n\r\n".getBytes();
+        ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertEquals("/path/..;/", result.getRequestURI());
+        Assert.assertEquals("/path/..;/", result.getRequestPath());
+        Assert.assertEquals("/path/..;/", result.getRelativePath());
+        Assert.assertEquals("", result.getQueryString());
+
+        in = "GET /path/../ HTTP/1.1\r\n\r\n".getBytes();
+        context = new ParseState(10);
+        result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertEquals("/path/../", result.getRequestURI());
+        Assert.assertEquals("/path/../", result.getRequestPath());
+        Assert.assertEquals("/path/../", result.getRelativePath());
+        Assert.assertEquals("", result.getQueryString());
+
+        in = "GET /path/..?/ HTTP/1.1\r\n\r\n".getBytes();
+        context = new ParseState(10);
+        result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertEquals("/path/..", result.getRequestURI());
+        Assert.assertEquals("/path/..", result.getRequestPath());
+        Assert.assertEquals("/path/..", result.getRelativePath());
+        Assert.assertEquals("/", result.getQueryString());
+
+        in = "GET /path/..~/ HTTP/1.1\r\n\r\n".getBytes();
+        context = new ParseState(10);
+        result = new HttpServerExchange(null);
+        HttpRequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertEquals("/path/..~/", result.getRequestURI());
+        Assert.assertEquals("/path/..~/", result.getRequestPath());
+        Assert.assertEquals("/path/..~/", result.getRelativePath());
+        Assert.assertEquals("", result.getQueryString());
+    }
+
 
     private void runTest(final byte[] in) throws BadRequestException {
         runTest(in, "some value");
