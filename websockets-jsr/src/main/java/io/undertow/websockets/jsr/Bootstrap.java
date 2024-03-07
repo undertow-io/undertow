@@ -130,7 +130,9 @@ public class Bootstrap implements ServletExtension {
         @Override
         public void contextDestroyed(ServletContextEvent sce) {
             SecurityActions.removeContainer(sce.getServletContext().getClassLoader());
-            container.close();
+            if (container != null) {
+                container.close();
+            }
         }
     }
 
