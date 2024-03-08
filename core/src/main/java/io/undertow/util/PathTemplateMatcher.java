@@ -36,7 +36,10 @@ import java.util.TreeSet;
  * TODO: we can probably do this faster using a trie type structure, but I think the current impl should perform ok most of the time
  *
  * @author Stuart Douglas
+ *
+ * @deprecated See {@link PathTemplateRouter}.
  */
+@Deprecated
 public class PathTemplateMatcher<T> {
 
     /**
