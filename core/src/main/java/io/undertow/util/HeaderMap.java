@@ -834,6 +834,22 @@ public final class HeaderMap implements Iterable<HeaderValues> {
         return false;
     }
 
+    public long getHeadersBytes() {
+        long headersSize = 0;
+        long cookie = this.fastIterateNonEmpty();
+        while (cookie != -1L) {
+            HeaderValues header = this.fiCurrent(cookie);
+            headersSize += header.getHeaderName().length(); // Size of the header name
+            for (String value : header) {
+                headersSize += value.getBytes().length; // Size of each header value
+            }
+
+            // Get the next non-empty header cookie
+            cookie = this.fiNextNonEmpty(cookie);
+        }
+        return headersSize;
+    }
+
     // compare
 
     @Override
