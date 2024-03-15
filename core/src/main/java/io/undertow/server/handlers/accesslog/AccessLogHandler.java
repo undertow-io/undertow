@@ -131,6 +131,8 @@ public class AccessLogHandler implements HttpHandler {
     private static String handleCommonNames(String formatString) {
         if(formatString.equals("common")) {
             return "%h %l %u %t \"%r\" %s %b";
+        } if(formatString.equals("commonv")) {
+            return "%h %l %u %t \"%r\" %s %b %T \"%I\"";
         } else if (formatString.equals("combined")) {
             return "%h %l %u %t \"%r\" %s %b \"%{i,Referer}\" \"%{i,User-Agent}\"";
         } else if(formatString.equals("commonobf")) {
