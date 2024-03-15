@@ -19,7 +19,6 @@
 package io.undertow.server.handlers.encoding;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -32,6 +31,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import io.undertow.conduits.GzipStreamSourceConduit;
 import io.undertow.conduits.InflatingStreamSourceConduit;
 import io.undertow.io.IoCallback;
@@ -50,7 +50,7 @@ import io.undertow.util.StatusCodes;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class RequestContentEncodingTestCase {
+public class RequestContentEncodingTestCase2 {
 
     private static volatile String message;
 
@@ -71,11 +71,11 @@ public class RequestContentEncodingTestCase {
         final HttpHandler decode = new RequestEncodingHandler(new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.getRequestReceiver().receiveFullBytes(new Receiver.FullBytesCallback() {
+                exchange.getRequestReceiver().receiveFullString(new Receiver.FullStringCallback() {
                     @Override
-                    public void handle(HttpServerExchange exchange, byte[] message) {
+                    public void handle(HttpServerExchange exchange, String message) {
                         Assert.assertTrue(exchange.getRequestContentLength()>0);
-                        exchange.getResponseSender().send(ByteBuffer.wrap(message));
+                        exchange.getResponseSender().send(message);
                     }
                 });
             }
