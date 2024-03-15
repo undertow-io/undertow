@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2024 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -36,8 +36,7 @@ import org.junit.experimental.categories.Category;
  * Some tests that were specifically used to test during the development of {@link PathTemplateRouter} as well as
  * an adaptation of the tests in {@link PathTemplateTestCase} to confirm compatibility with {@link PathTemplateMatcher}.
  *
- * @author Dirk Roets dirkroets@gmail.com
- * @since 2023-03-08
+ * @author Dirk Roets
  */
 @Category(UnitTest.class)
 public class PathTemplateRouterTest {
@@ -433,7 +432,7 @@ public class PathTemplateRouterTest {
                         "default"
                 );
         for (final String template : templates)
-            routerBuilder.addTemplate(template, ()->template);
+            routerBuilder.addTemplate(template, () -> template);
         final PathTemplateRouter.Router<String> router = routerBuilder.build();
 
         PathTemplateRouter.RouteResult<String> pathRouteResult;

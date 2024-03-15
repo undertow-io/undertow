@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2024 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -40,8 +40,7 @@ import java.util.stream.Collectors;
  *
  * Instances of this class are thread-safe.
  *
- * @author Dirk Roets dirkroets@gmail.com
- * @since 2023-03-07
+ * @author Dirk Roets
  */
 /*
  * Warning:
@@ -1335,7 +1334,6 @@ public class PathTemplateRouter {
         private List<Integer> currentParamIndexes;
         private List<String> currentParamNames;
         private MatcherLeaveArterfacts<Supplier<? extends T>> currentLeave;
-        private TemplateSegment currentSegment;
         // Resulting matchers.
         private Matcher[] matchers;
         private Matcher[] wildCardMatchers;
@@ -1436,7 +1434,6 @@ public class PathTemplateRouter {
 
         private void processSegment(final TemplateSegment segment) {
             segmentStack.add(segment);
-            currentSegment = segment;
 
             final PatternEqualsAdapter<TemplateSegment> adapter = new PatternEqualsAdapter<>(segment);
             MatcherLeaveArterfacts<Supplier<? extends T>> nextLeave = currentLeave.children.get(adapter);
@@ -2079,12 +2076,11 @@ public class PathTemplateRouter {
         /**
          * Creates a new instance of the simple builder.
          *
-         * @param <T> Target type for built routes.
-         *
          * @return Reference to the builder.
          */
-        public static <T> SimpleBuilder<T> newBuilder() {
-            return newBuilder(null);
+        public static SimpleBuilder<Void> newBuilder() {
+            final Builder<Supplier<Void>, Void> builder = Builder.newBuilder();
+            return new SimpleBuilder<>(builder);
         }
 
         /**

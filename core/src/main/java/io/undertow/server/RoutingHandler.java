@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2024 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,7 +37,7 @@ import java.util.function.Supplier;
 /**
  * A Handler that handles the common case of routing via path template and method name.
  *
- * @author Dirk Roets dirkroets@gmail.com. This class was originally written by Stuart Douglas. After the introduction
+ * @author Dirk Roets. This class was originally written by Stuart Douglas. After the introduction
  * of {@link PathTemplateRouter}, it was rewritten against the original interface and tests.
  */
 public class RoutingHandler implements HttpHandler {
