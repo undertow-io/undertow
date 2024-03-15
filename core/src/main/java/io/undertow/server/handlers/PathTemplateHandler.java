@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2024 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,9 +33,8 @@ import java.util.stream.Collectors;
  * by instantiating it with a {@link PathTemplateRouter}. This class implements all of the methods from
  * the original PathTemplateHandler to provide backwards compatibility.
  *
- * @author Dirk Roets dirkroets@gmail.com. This class was originally written by Stuart Douglas. After the introduction
+ * @author Dirk Roets. This class was originally written by Stuart Douglas. After the introduction
  * of {@link PathTemplateRouter}, it was rewritten against the original interface and tests.
- * @since 2023-07-20
  */
 public class PathTemplateHandler implements HttpHandler {
 
@@ -135,10 +134,8 @@ public class PathTemplateHandler implements HttpHandler {
 
     @Override
     public String toString() {
-        final List<PathTemplateRouter.PatternEqualsAdapter<PathTemplateRouter.Template<Supplier<HttpHandler>>>> templates;
-        synchronized (lock) {
-            templates = new ArrayList<>(builder.getBuilder().getTemplates().keySet());
-        }
+        final List<PathTemplateRouter.PatternEqualsAdapter<PathTemplateRouter.Template<Supplier<HttpHandler>>>> templates
+                = new ArrayList<>(builder.getBuilder().getTemplates().keySet());
 
         final StringBuilder sb = new StringBuilder();
         sb.append("path-template( ");

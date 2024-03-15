@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2024 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,8 +28,7 @@ import static io.undertow.server.handlers.PathTemplateHandler.PATH_TEMPLATE_MATC
 /**
  * A handler that matches URI templates.
  *
- * @author Dirk Roets dirkroets@gmail.com
- * @since 2023-07-20
+ * @author Dirk Roets
  * @see PathTemplateRouter
  */
 public class PathTemplateRouterHandler implements HttpHandler {
@@ -59,7 +58,6 @@ public class PathTemplateRouterHandler implements HttpHandler {
             return;
         }
 
-        final String pathTemplate = routeResult.getPathTemplate().get();
         exchange.putAttachment(PATH_TEMPLATE_MATCH, new PathTemplateHandler.PathTemplateMatch(routeResult));
         exchange.putAttachment(io.undertow.util.PathTemplateMatch.ATTACHMENT_KEY, routeResult);
         if (rewriteQueryParameters && !routeResult.getParameters().isEmpty()) {
