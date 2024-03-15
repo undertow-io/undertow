@@ -442,6 +442,7 @@ public interface UndertowLogger extends BasicLogger {
     void sslEngineDelegatedTaskRejected(@Cause RejectedExecutionException ree);
 
     @LogMessage(level = DEBUG)
+
     @Message(id = 5096, value = "Authentication failed for digest header %s in %s")
     void authenticationFailedFor(final String header, final HttpServerExchange exchange, final @Cause Exception e);
 
@@ -468,4 +469,21 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = WARN)
     @Message(id = 5102, value = "Flushing waiting in a frame more than %s miliseconds. The framed channel will be forcibly closed.")
     void noFrameflushInTimeout(long timeoutMiliseconds);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5103, value = "Access Log Worker failed to transition gracefuly.")
+    void accessLogWorkerFailureOnTransition();
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5104, value = "Access Log Worker failed to reschedule.")
+    void accessLogWorkerFailureOnReschedule();
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5105, value = "Access Log Worker did not terminate cleanly.")
+    void accessLogWorkerNoTermination();
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5106, value = "Interruption in close()")
+    void closeInterrupted(@Cause InterruptedException ie);
+
 }
