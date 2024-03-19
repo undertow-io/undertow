@@ -109,6 +109,10 @@ public class ResponseCachingSender implements Sender {
     @Override
     public void transferFrom(FileChannel channel, IoCallback callback) {
         // Transfer never caches
+        // This will deallocate the buffers, but still won't keep the cacheEntry from clogging up the cache
+        // for path resources small enough to be cached, but bigger than the min transfer size of the manager
+        cacheEntry.disable();
+        cacheEntry.dereference();
         delegate.transferFrom(channel, callback);
     }
 

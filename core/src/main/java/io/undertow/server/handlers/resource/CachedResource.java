@@ -135,6 +135,7 @@ public class CachedResource implements Resource, RangeAwareResource {
     @Override
     public void serve(final Sender sender, final HttpServerExchange exchange, final IoCallback completionCallback) {
         final DirectBufferCache dataCache = cachingResourceManager.getDataCache();
+        // If there is no data cache associated, just serve like normal
         if(dataCache == null) {
             underlyingResource.serve(sender, exchange, completionCallback);
             return;
@@ -142,37 +143,61 @@ public class CachedResource implements Resource, RangeAwareResource {
 
         final DirectBufferCache.CacheEntry existing = dataCache.get(cacheKey);
         final Long length = getContentLength();
-        //if it is not eligible to be served from the cache
+        // If it is not eligible to be served from the cache
         if (length == null || length > cachingResourceManager.getMaxFileSize()) {
             underlyingResource.serve(sender, exchange, completionCallback);
             return;
         }
-        //it is not cached yet, install a wrapper to grab the data
-        if (existing == null || !existing.enabled() || !existing.reference()) {
+
+        // If there is not an entry in the data cache, create one.
+        final DirectBufferCache.CacheEntry entry;
+        if (existing == null) {
+            entry = dataCache.add(cacheKey, length.intValue(), cachingResourceManager.getMaxAge());
+        } else {
+            entry = existing;
+        }
+
+        // If the entry is disabled, let's see if we can claim it and initialize the buffers
+        if (!entry.enabled()) {
             Sender newSender = sender;
+            IoCallback newCallback = completionCallback;
 
-            final DirectBufferCache.CacheEntry entry;
-            if (existing == null) {
-                entry = dataCache.add(cacheKey, length.intValue(), cachingResourceManager.getMaxAge());
-            } else {
-                entry = existing;
-            }
-
-            if (entry != null && entry.buffers().length != 0 && entry.claimEnable()) {
+            // Attempt to claim this entry with the intention of enabling it
+            if (entry.claimEnable()) {
+                // Add a reference to the entry since we're using it now
                 if (entry.reference()) {
-                    newSender = new ResponseCachingSender(sender, entry, length);
+                    // Now that we've referenced this entry, we must ensure we automatically dereference when we're done sending
+                    newCallback = new DereferenceCallback(entry, completionCallback);
+                    // Check that their are either buffers already allocated, or allocate some now
+                    if (entry.allocate()){
+                        newSender = new ResponseCachingSender(sender, entry, length);
+                    // Buffers could not be allocated (memory is probably full)
+                    } else {
+                        // Make sure we mark it as disabled so it's not left invalid
+                        entry.disable();
+                    }
+                // Couldn't reference entry- it was probably being destroyed
                 } else {
+                    // Make sure we mark it as disabled so it's not left invalid
                     entry.disable();
                 }
             }
-            underlyingResource.serve(newSender, exchange, completionCallback);
+            underlyingResource.serve(newSender, exchange, newCallback);
+        // Entry was found in the cache, lets try and serve it up
         } else {
+            // Reference the entry that we're using it
+            if (!entry.reference()) {
+                // Oops, we couldn't reference it-- it's probably being destroyed.  Send normally.
+                underlyingResource.serve(sender, exchange, completionCallback);
+                return;
+            }
+
             UndertowLogger.REQUEST_LOGGER.tracef("Serving resource %s from the buffer cache to %s", name, exchange);
             //serve straight from the cache
             ByteBuffer[] buffers;
             boolean ok = false;
             try {
-                LimitedBufferSlicePool.PooledByteBuffer[] pooled = existing.buffers();
+                LimitedBufferSlicePool.PooledByteBuffer[] pooled = entry.buffers();
                 buffers = new ByteBuffer[pooled.length];
                 for (int i = 0; i < buffers.length; i++) {
                     // Keep position from mutating
@@ -181,10 +206,10 @@ public class CachedResource implements Resource, RangeAwareResource {
                 ok = true;
             } finally {
                 if (!ok) {
-                    existing.dereference();
+                    entry.dereference();
                 }
             }
-            sender.send(buffers, new DereferenceCallback(existing, completionCallback));
+            sender.send(buffers, new DereferenceCallback(entry, completionCallback));
         }
     }
 
@@ -196,7 +221,8 @@ public class CachedResource implements Resource, RangeAwareResource {
         if(dataCache == null) {
             return underlyingResource.getContentLength();
         }
-        final DirectBufferCache.CacheEntry existing = dataCache.get(cacheKey);
+        // use getQuiet so we don't unnecessarily increment the hit counter for internal access
+        final DirectBufferCache.CacheEntry existing = dataCache.getQuiet(cacheKey);
         if(existing == null || !existing.enabled()) {
             return underlyingResource.getContentLength();
         }
