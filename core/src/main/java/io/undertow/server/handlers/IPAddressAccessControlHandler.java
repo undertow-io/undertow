@@ -500,6 +500,11 @@ public class IPAddressAccessControlHandler implements HttpHandler {
             return new Wrapper(peerMatches, defaultAllow == null ? false : defaultAllow, failureStatus == null ? StatusCodes.FORBIDDEN : failureStatus);
         }
 
+        @Override
+        public int priority() {
+            return 1;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

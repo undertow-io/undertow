@@ -447,6 +447,11 @@ public class JDBCLogHandler implements HttpHandler, Runnable {
             }
         }
 
+        @Override
+        public int priority() {
+            return 1;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

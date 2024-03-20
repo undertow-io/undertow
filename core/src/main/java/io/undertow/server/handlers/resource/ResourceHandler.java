@@ -504,6 +504,11 @@ public class ResourceHandler implements HttpHandler {
             return new Wrapper((String)config.get("location"), (Boolean) config.get("allow-listing"));
         }
 
+        @Override
+        public int priority() {
+            return 1;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

@@ -100,6 +100,11 @@ public class RedirectHandler implements HttpHandler {
             return new Wrapper((ExchangeAttribute) config.get("value"));
         }
 
+        @Override
+        public int priority() {
+            return 1;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

@@ -98,6 +98,11 @@ public final class ActiveRequestTrackerHandler implements HttpHandler {
             return new ActiveRequestTrackerHandler.Wrapper();
         }
 
+        @Override
+        public int priority() {
+            return 1;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

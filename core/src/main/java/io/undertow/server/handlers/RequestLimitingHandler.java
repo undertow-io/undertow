@@ -121,6 +121,11 @@ public final class RequestLimitingHandler implements HttpHandler {
             return new Wrapper((Integer) config.get("requests"));
         }
 
+        @Override
+        public int priority() {
+            return 1;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {
