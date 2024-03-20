@@ -6,7 +6,7 @@ Bug fixes and documentation improvements are welcome! If you want to contribute,
 
 PRs must be submitted to master branch (soon to be [renamed to main](https://issues.redhat.com/browse/UNDERTOW-2043)) and they should:
 - state clearly what they do (see more [here](https://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html))
-- point to associated Jira (see more on [link par aa sesscao do Jira])
+- point to associated Jira (see more [here](#Issues))
 - contain a test case, unless existing tests already verify the code added by the PR
 - have a license header in all new files, with current year’s number
 - pass CI (except for known failures, we are working on fixing those, tracked by [UNDERTOW-1523](https://issues.redhat.com/browse/UNDERTOW-1523))
@@ -18,9 +18,9 @@ We expect all contributors and users to follow our [Code of Conduct](CODE_OF_CON
 
 # Issues
 
-Undertow uses JIRA to manage issues. All issues can be found [here](https://issues.redhat.com/projects/Undertow/issues).
+Undertow uses Jira to manage issues. All issues can be found [here](https://issues.redhat.com/projects/UNDERTOW/issues).
 
-To create a new issue, comment on an existing issue, or assign an issue to yourself, you'll need to first [create a JIRA account](https://issues.redhat.com/).
+To create a new issue, comment on an existing issue, or assign an issue to yourself, you'll need to first [create a Jira account](https://issues.redhat.com/).
 
 ## Good First Issues
 
@@ -31,15 +31,14 @@ Once you have selected an issue you would like to work on, make sure it's not al
 ## Discussing your Planned Changes
 
 If you want feedback, you can discuss your planned changes in any of the following ways: 
-* add comments to the issue ticket at [Undertow Jira](https://issues.jboss.org/browse/UNDERTOW)
+* add comments to the issue ticket at [Undertow Jira](https://issues.redhat.com/browse/UNDERTOW)
 * Undertow Dev Google Group
 * Undertow [Zulip chat](https://wildfly.zulipchat.com/#narrow/stream/174183-undertow "#undertow").
-* or simply create a draft PR and poing in the PR description that you would like feedback on the proposal before getting to the
+* or simply create a draft PR and point out in the PR description that you would like feedback on the proposal before getting to the
 final solution
 
 
-PR Review Process
---------------------------------------------
+# PR Review Process
 
 PR reviewers will take into account the following aspects when reviewing your PR:
 - correctness: the code must be correct
@@ -61,9 +60,9 @@ Besides the classifications labels, a series of labels are going to be added to 
 - **waiting peer review** PR has been reviewed but is waiting on a second review before being merged  (as the changes affects core classes or adds a new feature)
 - **next release** PR is in the payload of the next release based on master branch
 - **maintenance branch** this tag is used for PRs submitted to maintenance branches only, and is included here just for completeness. Maintainers will take care of backporting
-submittted fixes to the maintenance branches when needed 
+submitted fixes to the maintenance branches when needed 
 
-#GitHub Quickstart
+# GitHub Quickstart
 
 If this is your first time contributing to a GitHub project, you can follow the next steps to get up to speed when contributing to
 Undertow. Regardless of your level of experience, though, we kindly ask you that PRs are always rebased before being submitted or
