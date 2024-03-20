@@ -82,7 +82,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
      * The threshold of form field size to persist to disk.
      * It takes effect only for the form fields which do not have <i>filename</i> specified.
      */
-    private long fieldSizeThreshold = MINSIZE;
+    private long fieldSizeThreshold;
 
     public MultiPartParserDefinition() {
         tempFileLocation = Paths.get(System.getProperty("java.io.tmpdir"));
@@ -101,6 +101,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 UndertowLogger.REQUEST_LOGGER.debugf("Could not find boundary in multipart request with ContentType: %s, multipart data will not be available", mimeType);
                 return null;
             }
+            fieldSizeThreshold = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MEMORY_STORAGE_THRESHOLD, UndertowOptions.DEFAULT_MEMORY_STORAGE_THRESHOLD);
             final MultiPartUploadHandler parser = new MultiPartUploadHandler(exchange, boundary, maxIndividualFileSize, fileSizeThreshold, defaultEncoding, fieldSizeThreshold);
             exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
                 @Override
