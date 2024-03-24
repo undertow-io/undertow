@@ -159,4 +159,102 @@ public class PredicatedHandlersTestCase {
         handler.handleRequest(e);
         Assert.assertEquals("foo'bar",e.getResponseHeaders().get("test-header").getFirst());
     }
+
+    @Test
+    public void testRewritePathCaseSensitiveContext() throws IOException {
+        DefaultServer.setRootHandler(
+                Handlers.predicates(
+
+                        PredicatedHandlersParser.parse(
+                                        "path( 'Foo'  ) -> rewrite( BAR )\r\n"
+                                        + "path( path='Foo', case-sensitive='false' ) -> rewrite( bar )", getClass().getClassLoader()), new HttpHandler() {
+                            @Override
+                            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                exchange.getResponseSender().send(exchange.getRelativePath());
+                            }
+                        }));
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/Foo");
+
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("/BAR", response);
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/fOo");
+
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("/bar", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testRewritePathPrefixCaseSensitiveContext() throws IOException {
+        //PREFIX does not match partial, like in undertow routing.
+        DefaultServer.setRootHandler(
+                Handlers.predicates(
+
+                        PredicatedHandlersParser.parse(
+                                        "path-prefix( 'Foo'  ) -> rewrite( BAR )\r\n"
+                                        + "path-prefix( path='FoO', case-sensitive='false' ) -> rewrite( bar )", getClass().getClassLoader()), new HttpHandler() {
+                            @Override
+                            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                exchange.getResponseSender().send(exchange.getRelativePath());
+                            }
+                        }));
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/Foo/dense");
+
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("/BAR", response);
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/fOo/light");
+
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("/bar", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testRewritePathSuffixCaseSensitiveContext() throws IOException {
+        //SUFFIX does not match partial
+        DefaultServer.setRootHandler(
+                Handlers.predicates(
+
+                        PredicatedHandlersParser.parse(
+                                        "path-suffix( 'Foo'  ) -> rewrite( BAR )\r\n"
+                                        + "path-suffix( path='FoO', case-sensitive='false' ) -> rewrite( bar )", getClass().getClassLoader()), new HttpHandler() {
+                            @Override
+                            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                exchange.getResponseSender().send(exchange.getRelativePath());
+                            }
+                        }));
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/dense/Foo");
+
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("/BAR", response);
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/light/fOo");
+
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("/bar", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }

@@ -19,6 +19,7 @@
 package io.undertow.predicate;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -35,6 +36,7 @@ public class PathPrefixPredicate implements Predicate {
 
     public static final String PREFIX_MATCH_RECORD = "PREFIX_MATCH_RECORD";
     private final PathMatcher<Boolean> pathMatcher;
+    private final boolean caseSensitive;
     private static final boolean traceEnabled;
 
     static {
@@ -42,12 +44,25 @@ public class PathPrefixPredicate implements Predicate {
     }
 
     PathPrefixPredicate(final String... paths) {
+        this(true, paths);
+    }
+
+    PathPrefixPredicate( final boolean caseSensitive, final String... paths) {
+        this.caseSensitive = caseSensitive;
         PathMatcher<Boolean> matcher = new PathMatcher<>();
         for(String path : paths) {
             if(!path.startsWith("/")) {
-                matcher.addPrefixPath("/" + path, Boolean.TRUE);
+                if(!caseSensitive) {
+                    matcher.addPrefixPath("/" + path.toLowerCase(), Boolean.TRUE);
+                } else {
+                    matcher.addPrefixPath("/" + path, Boolean.TRUE);
+                }
             } else {
-                matcher.addPrefixPath(path, Boolean.TRUE);
+                if(!caseSensitive) {
+                    matcher.addPrefixPath(path.toLowerCase(), Boolean.TRUE);
+                } else {
+                    matcher.addPrefixPath(path, Boolean.TRUE);
+                }
             }
         }
         this.pathMatcher = matcher;
@@ -55,13 +70,13 @@ public class PathPrefixPredicate implements Predicate {
 
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        final String relativePath = value.getRelativePath();
+        final String relativePath = this.caseSensitive ? value.getRelativePath() : value.getRelativePath().toLowerCase();
         PathMatcher.PathMatch<Boolean> result = pathMatcher.match(relativePath);
 
         boolean matches = Boolean.TRUE.equals(result.getValue());
 
         if (traceEnabled) {
-            UndertowLogger.PREDICATE_LOGGER.tracef("Path prefix(s) [%s] %s input [%s] for %s.", pathMatcher.getPathMatchesSet().stream().collect(Collectors.joining(", ")), (matches ? "MATCH" : "DO NOT MATCH" ), relativePath, value);
+            UndertowLogger.PREDICATE_LOGGER.tracef("Path prefix(s) [%s] %s %s input [%s] for %s.", pathMatcher.getPathMatchesSet().stream().collect(Collectors.joining(", ")), caseSensitive? "[case-sensitive]" : "[case-insensitive]", (matches ? "MATCH" : "DO NOT MATCH" ), relativePath, value);
         }
         if(matches) {
             Map<String, Object> context = value.getAttachment(PREDICATE_CONTEXT);
@@ -83,9 +98,9 @@ public class PathPrefixPredicate implements Predicate {
     public String toString() {
         Set<String> matches = pathMatcher.getPathMatchesSet();
         if( matches.size() == 1 ) {
-            return "path-prefix( '" + matches.toArray()[0] +  "' )";
+            return "path-prefix( '" + matches.toArray()[0] +  ", ' case-sensitive="+this.caseSensitive+" )";
         } else {
-            return "path-prefix( { '" + matches.stream().collect(Collectors.joining("', '")) +  "' } )";
+            return "path-prefix( { '" + matches.stream().collect(Collectors.joining("', '")) +  "' }, case-sensitive="+this.caseSensitive+" )";
         }
     }
 
@@ -98,7 +113,10 @@ public class PathPrefixPredicate implements Predicate {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            return Collections.<String, Class<?>>singletonMap("path", String[].class);
+            final Map<String, Class<?>> params = new HashMap<>();
+            params.put("path", String[].class);
+            params.put("case-sensitive", boolean.class);
+            return params;
         }
 
         @Override
@@ -114,7 +132,8 @@ public class PathPrefixPredicate implements Predicate {
         @Override
         public Predicate build(final Map<String, Object> config) {
             String[] path = (String[]) config.get("path");
-            return new PathPrefixPredicate(path);
+            boolean caseSensitive = (Boolean) config.getOrDefault("case-sensitive", Boolean.TRUE);
+            return new PathPrefixPredicate(caseSensitive,path);
         }
     }
 

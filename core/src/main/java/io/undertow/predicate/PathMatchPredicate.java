@@ -19,6 +19,7 @@
 package io.undertow.predicate;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -32,6 +33,7 @@ import io.undertow.UndertowLogger;
  */
 public class PathMatchPredicate implements Predicate {
 
+    private final boolean caseSensitive;
     private final PathMatcher<Boolean> pathMatcher;
     private static final boolean traceEnabled;
 
@@ -40,12 +42,25 @@ public class PathMatchPredicate implements Predicate {
     }
 
     PathMatchPredicate(final String... paths) {
+        this(true, paths);
+    }
+
+    PathMatchPredicate(final boolean caseSensitive, final String... paths) {
+        this.caseSensitive = caseSensitive;
         PathMatcher<Boolean> matcher = new PathMatcher<>();
         for(String path : paths) {
             if(!path.startsWith("/")) {
-                matcher.addExactPath("/" + path, Boolean.TRUE);
+                if(this.caseSensitive) {
+                    matcher.addExactPath("/" +path, Boolean.TRUE);
+                } else {
+                    matcher.addExactPath("/" +path.toLowerCase(), Boolean.TRUE);
+                }
             } else {
-                matcher.addExactPath(path, Boolean.TRUE);
+                if(this.caseSensitive) {
+                    matcher.addExactPath(path, Boolean.TRUE);
+                } else {
+                    matcher.addExactPath(path.toLowerCase(), Boolean.TRUE);
+                }
             }
         }
         this.pathMatcher = matcher;
@@ -54,19 +69,19 @@ public class PathMatchPredicate implements Predicate {
     public String toString() {
         Set<String> matches = pathMatcher.getExactPathMatchesSet();
         if( matches.size() == 1 ) {
-            return "path( '" + matches.toArray()[0] +  "' )";
+            return "path( '" + matches.toArray()[0] +  "' case-sensitive="+this.caseSensitive+" )";
         } else {
-            return "path( { '" + matches.stream().collect(Collectors.joining("', '")) +  "' } )";
+            return "path( { '" + matches.stream().collect(Collectors.joining("', '")) +  "' } case-sensitive="+this.caseSensitive+" )";
         }
     }
 
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        final String relativePath = value.getRelativePath();
+        final String relativePath = this.caseSensitive ? value.getRelativePath() : value.getRelativePath().toLowerCase();
         PathMatcher.PathMatch<Boolean> result = pathMatcher.match(relativePath);
         boolean matches = Boolean.TRUE.equals(result.getValue());
         if (traceEnabled) {
-            UndertowLogger.PREDICATE_LOGGER.tracef( "Path(s) [%s] %s input [%s] for %s.", pathMatcher.getExactPathMatchesSet().stream().collect(Collectors.joining(", ")), ( matches ? "MATCH" : "DO NOT MATCH" ), relativePath, value );
+            UndertowLogger.PREDICATE_LOGGER.tracef( "Path(s) [%s] %s %s input [%s] for %s.", pathMatcher.getExactPathMatchesSet().stream().collect(Collectors.joining(", ")), caseSensitive? "[case-sensitive]" : "[case-insensitive]", ( matches ? "MATCH" : "DO NOT MATCH" ), relativePath, value );
         }
         return matches;
     }
@@ -80,7 +95,10 @@ public class PathMatchPredicate implements Predicate {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            return Collections.<String, Class<?>>singletonMap("path", String[].class);
+            final Map<String, Class<?>> params = new HashMap<>();
+            params.put("path", String[].class);
+            params.put("case-sensitive", boolean.class);
+            return params;
         }
 
         @Override
@@ -96,7 +114,8 @@ public class PathMatchPredicate implements Predicate {
         @Override
         public Predicate build(final Map<String, Object> config) {
             String[] path = (String[]) config.get("path");
-            return new PathMatchPredicate(path);
+            boolean caseSensitive = (Boolean) config.getOrDefault("case-sensitive", Boolean.TRUE);
+            return new PathMatchPredicate(caseSensitive, path);
         }
     }
 }
