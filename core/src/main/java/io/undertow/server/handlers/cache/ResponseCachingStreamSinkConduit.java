@@ -30,6 +30,8 @@ import org.xnio.conduits.ConduitWritableByteChannel;
 import org.xnio.conduits.Conduits;
 import org.xnio.conduits.StreamSinkConduit;
 
+import io.undertow.UndertowLogger;
+
 /**
  * @author Stuart Douglas
  */
@@ -82,7 +84,13 @@ public class ResponseCachingStreamSinkConduit extends AbstractStreamSinkConduit<
                     //prepare buffers for reading
                     buffer.flip();
                 }
-                cacheEntry.enable();
+                if(cacheEntry.size() == written) {
+                    cacheEntry.enable();
+                } else {
+                    UndertowLogger.ROOT_LOGGER.cacheEntryMismatchContent(cacheEntry.key(),cacheEntry.size(), written);
+                    cacheEntry.disable();
+                    cacheEntry.dereference();
+                }
             }
         }
         return totalWritten;
@@ -120,7 +128,13 @@ public class ResponseCachingStreamSinkConduit extends AbstractStreamSinkConduit<
                     //prepare buffers for reading
                     buffer.flip();
                 }
-                cacheEntry.enable();
+                if(cacheEntry.size() == written) {
+                    cacheEntry.enable();
+                } else {
+                    UndertowLogger.ROOT_LOGGER.cacheEntryMismatchContent(cacheEntry.key(),cacheEntry.size(), written);
+                    cacheEntry.disable();
+                    cacheEntry.dereference();
+                }
             }
         }
         return totalWritten;

@@ -65,10 +65,16 @@ public class CachedResource implements Resource, RangeAwareResource {
         this.eTag = underlyingResource.getETag();
         this.name = underlyingResource.getName();
         this.cacheKey = new CacheKey(cachingResourceManager, underlyingResource.getCacheKey());
-        if (cachingResourceManager.getMaxAge() > 0) {
-            nextMaxAgeCheck = System.currentTimeMillis() + cachingResourceManager.getMaxAge();
+        final int managerMaxAge = cachingResourceManager.getMaxAge();
+        if (managerMaxAge > 0) {
+            nextMaxAgeCheck = System.currentTimeMillis() + managerMaxAge;
+        } else if(managerMaxAge == CachingResourceManager.MAX_AGE_NO_CACHING){
+            nextMaxAgeCheck = CachingResourceManager.MAX_AGE_NO_CACHING;
+        } else if(managerMaxAge == CachingResourceManager.MAX_AGE_NO_EXPIRY){
+            nextMaxAgeCheck = CachingResourceManager.MAX_AGE_NO_EXPIRY;
         } else {
-            nextMaxAgeCheck = -1;
+            UndertowLogger.ROOT_LOGGER.wrongCacheTTLValue(managerMaxAge, CachingResourceManager.MAX_AGE_NO_CACHING);
+            this.nextMaxAgeCheck = CachingResourceManager.MAX_AGE_NO_CACHING;
         }
     }
 
@@ -127,9 +133,14 @@ public class CachedResource implements Resource, RangeAwareResource {
                 if (!underlyingResource.getLastModified().equals(lastModifiedDate)) {
                     return false;
                 }
+            } else {
+                return true;
             }
+        } else if(nextMaxAgeCheck == CachingResourceManager.MAX_AGE_NO_EXPIRY) {
+            //this is essentially equal to 0/-1 prior to UNDERTOW-2332
+            return true;
         }
-        return true;
+        return false;
     }
 
     @Override

@@ -468,4 +468,20 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = WARN)
     @Message(id = 5102, value = "Flushing waiting in a frame more than %s miliseconds. The framed channel will be forcibly closed.")
     void noFrameflushInTimeout(long timeoutMiliseconds);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5103, value = "Cache TTL set to wrong value '%sms'. Defaulting to '%sms'.")
+    void wrongCacheTTLValue(int ttl, int defaultTtl);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5104, value = "Could not register resource change listener for caching resource manager, automatic invalidation of cached resource will not work. TTL value configured '%sms'. Defaulting to '%sms'.")
+    void failedToRegisterChangeListener(int ttl, int defaultTtl, @Cause Exception e);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5105, value = "Cache entry content mismatch for '%s'. Expected length '%s', but was '%s'.")
+    void cacheEntryMismatchContent(Object key, int cacheIndicatedSize, long written);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5106, value = "Content mismatch for '%s'. Expected length '%s', but was '%s'.")
+    void contentEntryMismatch(Object key, long indicatedSize, long written);
 }

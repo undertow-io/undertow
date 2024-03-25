@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.ConcurrentHashMap;
 
+import io.undertow.UndertowLogger;
+import io.undertow.server.handlers.resource.CachingResourceManager;
 import io.undertow.util.ConcurrentDirectDeque;
 import org.xnio.BufferAllocator;
 
@@ -95,14 +97,13 @@ public class DirectBufferCache {
             return null;
         }
 
-        long expires = cacheEntry.getExpires();
-        if(expires != -1) {
-            if(System.currentTimeMillis() > expires) {
+        final long expires = cacheEntry.getExpires();
+        if(expires == CachingResourceManager.MAX_AGE_NO_CACHING || (expires > 0 && System.currentTimeMillis() > expires)) {
                 remove(key);
                 return null;
-            }
         }
 
+        //either did not expire or CachingResourceManager.MAX_AGE_NO_EXPIRY
         if (cacheEntry.hit() % SAMPLE_INTERVAL == 0) {
 
             bumpAccess(cacheEntry);
@@ -234,12 +235,20 @@ public class DirectBufferCache {
         }
 
         public void enable() {
-            if(maxAge == -1) {
-                this.expires = -1;
-            } else {
+            if(this.maxAge == CachingResourceManager.MAX_AGE_NO_CACHING) {
+                this.expires = CachingResourceManager.MAX_AGE_NO_CACHING;
+                disable();
+            } else if(this.maxAge == CachingResourceManager.MAX_AGE_NO_EXPIRY) {
+                this.expires = CachingResourceManager.MAX_AGE_NO_EXPIRY;
+                this.enabled = 2;
+            } else if(this.maxAge > 0) {
                 this.expires = System.currentTimeMillis() + maxAge;
+                this.enabled = 2;
+            } else {
+                this.expires = CachingResourceManager.MAX_AGE_NO_CACHING;
+                UndertowLogger.ROOT_LOGGER.wrongCacheTTLValue(this.maxAge, CachingResourceManager.MAX_AGE_NO_CACHING);
+                disable();
             }
-            this.enabled = 2;
         }
 
         public void disable() {
