@@ -145,7 +145,7 @@ public class ServletContextImpl implements ServletContext {
             this.attributes = deploymentInfo.getServletContextAttributeBackingMap();
         }
         attributes.putAll(deployment.getDeploymentInfo().getServletContextAttributes());
-        this.contentTypeCache = new LRUCache<>(deployment.getDeploymentInfo().getContentTypeCacheSize(), -1, true);
+        this.contentTypeCache = new LRUCache<>(deployment.getDeploymentInfo().getContentTypeCacheSize(), LRUCache.MAX_AGE_NO_EXPIRY, true);
         this.defaultSessionTimeout = deploymentInfo.getDefaultSessionTimeout() / 60;
     }
 
