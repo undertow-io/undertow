@@ -555,12 +555,26 @@ public class Handlers {
      * Creates a handler that automatically learns which resources to push based on the referer header
      *
      * @param maxEntries The maximum number of entries to store
-     * @param maxAge The maximum age of the entries
+     * @param maxAge The maximum age of the entries (ms)
      * @param next The next handler
      * @return A caching push handler
      */
     public static LearningPushHandler learningPushHandler(int maxEntries, int maxAge, HttpHandler next) {
         return new LearningPushHandler(maxEntries, maxAge, next);
+    }
+
+    /**
+     * Creates a handler that automatically learns which resources to push based on the referer header
+     *
+     * @param maxPathEntries The maximum number of entries to store. Path->{1..n Push}
+     * @param maxPathAge The maximum age of the entries (ms)
+     * @param maxPushEntries The maximum number of push entries stored for given path
+     * @param maxPushAge The maximum age of push entry (ms)
+     * @param next The next handler
+     * @return A caching push handler
+     */
+    public static LearningPushHandler learningPushHandler(final int maxPathEntries, final  int maxPathAge, final int maxPushEntries, final int maxPushAge, final HttpHandler next) {
+        return new LearningPushHandler(maxPathEntries, maxPathAge, maxPushEntries, maxPushAge, next);
     }
 
     /**
