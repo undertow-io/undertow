@@ -17,18 +17,6 @@
  */
 package io.undertow.servlet.util;
 
-import io.undertow.server.Connectors;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.servlet.handlers.ServletPathMatch;
-import io.undertow.servlet.handlers.ServletRequestContext;
-import io.undertow.servlet.spec.HttpServletRequestImpl;
-import io.undertow.servlet.spec.HttpServletResponseImpl;
-import io.undertow.servlet.spec.ServletContextImpl;
-import io.undertow.util.ParameterLimitException;
-import jakarta.servlet.ServletException;
-import java.util.Deque;
-import java.util.Map;
-
 import static jakarta.servlet.AsyncContext.ASYNC_CONTEXT_PATH;
 import static jakarta.servlet.AsyncContext.ASYNC_MAPPING;
 import static jakarta.servlet.AsyncContext.ASYNC_PATH_INFO;
@@ -53,6 +41,17 @@ import static jakarta.servlet.RequestDispatcher.INCLUDE_PATH_INFO;
 import static jakarta.servlet.RequestDispatcher.INCLUDE_QUERY_STRING;
 import static jakarta.servlet.RequestDispatcher.INCLUDE_REQUEST_URI;
 import static jakarta.servlet.RequestDispatcher.INCLUDE_SERVLET_PATH;
+
+import io.undertow.server.Connectors;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.handlers.ServletPathMatch;
+import io.undertow.servlet.handlers.ServletRequestContext;
+import io.undertow.servlet.spec.HttpServletRequestImpl;
+import io.undertow.servlet.spec.HttpServletResponseImpl;
+import io.undertow.servlet.spec.ServletContextImpl;
+import io.undertow.util.ParameterLimitException;
+import io.undertow.util.QueryParameterUtils;
+import jakarta.servlet.ServletException;
 
 /**
  * <p>Utility class to manage the dispatching parsing of the path. The methods
@@ -210,24 +209,6 @@ public final class DispatchUtils {
         return pathMatch;
     }
 
-    private static Map<String, Deque<String>> mergeQueryParameters(final Map<String, Deque<String>> newParams, final Map<String, Deque<String>> oldParams) {
-        for (Map.Entry<String, Deque<String>> entry : oldParams.entrySet()) {
-            Deque<String> values = newParams.get(entry.getKey());
-            if (values == null) {
-                // add all the values as new params do not contain this key
-                newParams.put(entry.getKey(), entry.getValue());
-            } else {
-                // merge values new params first
-                for (String v : entry.getValue()) {
-                    if (!values.contains(v)) {
-                        values.add(v);
-                    }
-                }
-            }
-        }
-        return newParams;
-    }
-
     private static String assignRequestPath(final String path, final HttpServletRequestImpl requestImpl,
             final ServletContextImpl servletContext, final boolean include) throws ParameterLimitException {
         final StringBuilder sb = new StringBuilder();
@@ -253,7 +234,14 @@ public final class DispatchUtils {
         }
         // both forward and include merge parameters by spec
         if (!fake.getQueryString().isEmpty()) {
-            requestImpl.setQueryParameters(mergeQueryParameters(fake.getQueryParameters(), requestImpl.getQueryParameters()));
+            requestImpl.setQueryParameters(QueryParameterUtils.mergeQueryParameters(fake.getQueryParameters(), exchange.getQueryParameters()));
+            if(!include) {
+                final String newQueryString = QueryParameterUtils.buildQueryString(requestImpl.getQueryParameters(), QueryParameterUtils.getQueryParamEncoding(exchange));
+                exchange.setQueryString(newQueryString);
+                exchange.getQueryParameters().clear();
+                exchange.getQueryParameters().putAll(requestImpl.getQueryParameters());
+            }
+
         }
         return newRequestPath;
     }
