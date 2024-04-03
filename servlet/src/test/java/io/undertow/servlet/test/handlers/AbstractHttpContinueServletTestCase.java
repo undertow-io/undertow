@@ -32,7 +32,6 @@ import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpParams;
 import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -56,10 +55,10 @@ public abstract class AbstractHttpContinueServletTestCase {
     public static void setup() {
         DeploymentUtils.setupServlet(Servlets.servlet(ContinueConsumeServlet.class).addMappings("/path"),
                 Servlets.servlet(ContinueIgnoreServlet.class).addMappings("/ignore"));
+        Assume.assumeFalse(DefaultServer.isAjp());
     }
 
-    @Before
-    public void before() throws Exception {
+    public static void before() throws Exception {
         Assume.assumeFalse(DefaultServer.isAjp());
     }
 
