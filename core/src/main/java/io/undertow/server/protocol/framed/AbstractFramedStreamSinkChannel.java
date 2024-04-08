@@ -62,9 +62,9 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
 
     /**
-     * The maximum timeout to wait on awaitWritable in milliseconds when not specified.
+     * The maximum timeout to wait on awaitWritable in nanoseconds when not specified.
      */
-    private static final int AWAIT_WRITABLE_TIMEOUT;
+    private static final long AWAIT_WRITABLE_TIMEOUT;
 
     /**
      * Extra timeout to make sure the flush has actually timed out
@@ -73,8 +73,8 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
 
     static {
-        final int defaultAwaitWritableTimeout = 600000;
-        int await_writable_timeout = AccessController.doPrivileged((PrivilegedAction<Integer>) () -> Integer.getInteger("io.undertow.await_writable_timeout", defaultAwaitWritableTimeout));
+        final long defaultAwaitWritableTimeout = TimeUnit.MINUTES.toNanos(10);
+        long await_writable_timeout = TimeUnit.MILLISECONDS.toNanos(AccessController.doPrivileged((PrivilegedAction<Long>) () -> Long.getLong("io.undertow.await_writable_timeout", defaultAwaitWritableTimeout)));
         AWAIT_WRITABLE_TIMEOUT = await_writable_timeout > 0? await_writable_timeout : defaultAwaitWritableTimeout;
     }
 
@@ -310,7 +310,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void awaitWritable() throws IOException {
-        awaitWritable(getAwaitWritableTimeout(), TimeUnit.MILLISECONDS);
+        awaitWritable(getAwaitWritableTimeout(), TimeUnit.NANOSECONDS);
     }
 
     @Override
@@ -485,12 +485,12 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
      * channel write timeout is read and if not set the default
      * AWAIT_WRITABLE_TIMEOUT.
      *
-     * @return the awaitWritable timeout, in milliseconds
+     * @return the awaitWritable timeout, in nanoseconds
      */
     protected long getAwaitWritableTimeout() {
-        Integer timeout = null;
+        Long timeout = null;
         try {
-            timeout = getChannel().getOption(Options.WRITE_TIMEOUT);
+            timeout = TimeUnit.MILLISECONDS.toNanos(getChannel().getOption(Options.WRITE_TIMEOUT));
         } catch (IOException e) {
             // should never happen, ignoring
         }
@@ -810,7 +810,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private void addHandle(long timeout) {
         synchronized (lock) {
             if (handle == null) {
-                handle = getChannel().getIoThread().executeAfter(timeoutRunnable, timeout + FUZZ_FACTOR, TimeUnit.MILLISECONDS);
+                handle = getChannel().getIoThread().executeAfter(timeoutRunnable, timeout + FUZZ_FACTOR, TimeUnit.NANOSECONDS);
             }
         }
     }
@@ -824,7 +824,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     void addReadyForFlushTask() {
         synchronized (lock) {
             final long timeout = this.getAwaitWritableTimeout();
-            flushExpirationTime = System.currentTimeMillis() + timeout;
+            flushExpirationTime = System.nanoTime() + timeout;
             // set the handle to avoid wait forever for flushing
             addHandle(timeout);
         }
@@ -851,7 +851,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
         @Override
         public void run() {
-            long currentTime = System.currentTimeMillis();
+            long currentTime = System.nanoTime();
 
             synchronized (channel.lock) {
                 channel.handle = null;
@@ -867,7 +867,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
             }
 
             // Reaching this point the flush has been waiting more than the timeout => terminate it
-            UndertowLogger.REQUEST_IO_LOGGER.noFrameflushInTimeout(channel.getAwaitWritableTimeout());
+            UndertowLogger.REQUEST_IO_LOGGER.noFrameflushInTimeout(TimeUnit.NANOSECONDS.toMillis(channel.getAwaitWritableTimeout()));
             try {
                 channel.channelForciblyClosed();
             } catch (IOException e) {
