@@ -117,6 +117,25 @@ public class RequestContentEncodingTestCase {
         runTest(sb.toString(), "gzip");
     }
 
+    private static final String MESSAGE = "COMPRESSED I'AM";
+    private static final byte[] COMPRESSED_MESSAGE = { 0x78, (byte) (0x9C & 0xFF), 0x73, (byte) (0xF6 & 0xFF),
+            (byte) (0xF7 & 0xFF), 0x0D, 0x08, 0x72, 0x0D, 0x0E, 0x76, 0x75, 0x51, (byte) (0xF0 & 0xFF), 0x54, 0x77,
+            (byte) (0xF4 & 0xFF), 0x05, 0x00, 0x22, 0x35, 0x04, 0x14 };
+
+    @Test
+    public void testDeflateWithNoWrapping() throws IOException {
+        HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/decode");
+        post.setEntity(new ByteArrayEntity(COMPRESSED_MESSAGE));
+        post.addHeader(Headers.CONTENT_ENCODING_STRING, "deflate");
+
+        try (CloseableHttpClient client = HttpClientBuilder.create().disableContentCompression().build()) {
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String sb = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(MESSAGE.length(), sb.length());
+            Assert.assertEquals(MESSAGE, sb);
+        }
+    }
 
     public void runTest(final String theMessage, String encoding) throws IOException {
         try (CloseableHttpClient client = HttpClientBuilder.create().disableContentCompression().build()){
