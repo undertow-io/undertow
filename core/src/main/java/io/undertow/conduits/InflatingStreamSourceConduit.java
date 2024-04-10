@@ -32,6 +32,7 @@ import org.xnio.conduits.AbstractStreamSourceConduit;
 import org.xnio.conduits.ConduitReadableByteChannel;
 import org.xnio.conduits.StreamSourceConduit;
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.ConduitWrapper;
 import io.undertow.server.HttpServerExchange;
@@ -54,8 +55,10 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
     };
 
     private volatile Inflater inflater;
+    private volatile PooledObject<Inflater> activePooledObject;
 
-    private final PooledObject<Inflater> pooledObject;
+    private final ObjectPool<Inflater> objectPoolNonWrapping;
+    private final ObjectPool<Inflater> objectPoolWrapping;
     private final HttpServerExchange exchange;
     private PooledByteBuffer compressed;
     private PooledByteBuffer uncompressed;
@@ -63,7 +66,7 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
     private boolean headerDone = false;
 
     public InflatingStreamSourceConduit(HttpServerExchange exchange, StreamSourceConduit next) {
-        this(exchange, next, newInstanceInflaterPool());
+        this(exchange, next, newInstanceInflaterPool(), newInstanceWrappingInflaterPool());
     }
 
     public InflatingStreamSourceConduit(
@@ -72,16 +75,50 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
             ObjectPool<Inflater> inflaterPool) {
         super(next);
         this.exchange = exchange;
-        this.pooledObject = inflaterPool.allocate();
-        this.inflater = pooledObject.getObject();
+        this.objectPoolNonWrapping = inflaterPool;
+        this.objectPoolWrapping = null;
     }
 
+    public InflatingStreamSourceConduit(
+            HttpServerExchange exchange,
+            StreamSourceConduit next,
+            ObjectPool<Inflater> inflaterPool,
+            ObjectPool<Inflater> inflaterWrappingPool) {
+        super(next);
+        this.exchange = exchange;
+        this.objectPoolNonWrapping = inflaterPool;
+        this.objectPoolWrapping = inflaterWrappingPool;
+    }
+    /**
+     * Create non-wrapping(gzip/zlib without headers) inflater pool
+     * @return
+     */
     public static ObjectPool<Inflater> newInstanceInflaterPool() {
         return new NewInstanceObjectPool<Inflater>(() -> new Inflater(true), Inflater::end);
     }
 
+    /**
+     * Create non-wrapping(gzip/zlib without headers) inflater pool
+     * @return
+     */
     public static ObjectPool<Inflater> simpleInflaterPool(int poolSize) {
         return new SimpleObjectPool<Inflater>(poolSize, () -> new Inflater(true), Inflater::reset, Inflater::end);
+    }
+
+    /**
+     * Create wrapping inflater pool, one that expects headers.
+     * @return
+     */
+    public static ObjectPool<Inflater> newInstanceWrappingInflaterPool(){
+        return new NewInstanceObjectPool<>(() -> new Inflater(false), Inflater::end);
+    }
+
+    /**
+     * Create wrapping inflater pool, one that expects headers.
+     * @return
+     */
+    public static ObjectPool<Inflater> simpleWrappingInflaterPool(int poolSize) {
+        return new SimpleObjectPool<>(poolSize, () -> new Inflater(false), Inflater::reset, Inflater::end);
     }
 
     @Override
@@ -115,6 +152,8 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
                     if (!headerDone) {
                         headerDone = readHeader(buf);
                     }
+
+                    initializeInflater(buf);
                     inflater.setInput(buf.array(), buf.arrayOffset() + buf.position(), buf.remaining());
                 }
             }
@@ -171,6 +210,38 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
         }
     }
 
+    protected void initializeInflater(ByteBuffer buf) throws IOException {
+        if(isZlibHeaderPresent(buf)) {
+            this.activePooledObject = this.objectPoolWrapping.allocate();
+        } else {
+            this.activePooledObject = this.objectPoolNonWrapping.allocate();
+        }
+        this.inflater = this.activePooledObject.getObject();
+    }
+
+    protected boolean isZlibHeaderPresent(final ByteBuffer buf) throws IOException {
+        if(buf.remaining()<2) {
+            throw UndertowMessages.MESSAGES.bufferUnderflow(this.exchange, buf);
+        }
+        // https://www.ietf.org/rfc/rfc1950.txt - 2.2. - Data format, two bytes. Below is sort of a cheat, we have so much power
+        //to quickly compress to best cap.
+        //      FLEVEL:        0       1       2       3
+        //        CINFO:
+        //            0      08 1D   08 5B   08 99   08 D7
+        //            1      18 19   18 57   18 95   18 D3
+        //            2      28 15   28 53   28 91   28 CF
+        //            3      38 11   38 4F   38 8D   38 CB
+        //            4      48 0D   48 4B   48 89   48 C7
+        //            5      58 09   58 47   58 85   58 C3
+        //            6      68 05   68 43   68 81   68 DE
+        //            7      78 01   78 5E   78 9C   78 DA
+        buf.mark();
+        final char cmf = (char)(buf.get() & 0xFF);
+        final char flg = (char)(buf.get() & 0xFF);
+        buf.reset();
+        return (cmf == 0x78 && (flg == 0x01 || flg == 0x5E || flg == 0x9c || flg == 0xDA));
+    }
+
     protected void readFooter(ByteBuffer buf) throws IOException {
 
     }
@@ -191,7 +262,8 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
             uncompressed.close();
         }
         if (inflater != null) {
-            pooledObject.close();
+            activePooledObject.close();
+            activePooledObject = null;
             inflater = null;
         }
     }
