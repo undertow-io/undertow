@@ -598,6 +598,9 @@
                     <name>release</name>
                 </property>
             </activation>
+            <properties>
+                <jdk.min.version>[1.8, 9)</jdk.min.version>
+            </properties>
             <modules>
                 <module>dist</module>
             </modules>
