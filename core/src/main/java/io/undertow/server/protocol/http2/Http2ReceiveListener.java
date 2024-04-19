@@ -322,9 +322,9 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         }
 
         // verify content of request pseudo-headers. Each header should only have a single value.
-        if (headers.contains(PATH)) {
+        if (headers.contains(PATH) && !allowUnescapedCharactersInUrl) {
             for (byte b: headers.get(PATH).getFirst().getBytes(ISO_8859_1)) {
-                if (!allowUnescapedCharactersInUrl && !HttpRequestParser.isTargetCharacterAllowed((char)b)){
+                if (!HttpRequestParser.isTargetCharacterAllowed((char)b)){
                     return false;
                 }
             }
