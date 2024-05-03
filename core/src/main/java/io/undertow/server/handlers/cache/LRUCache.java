@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers.cache;
 
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -153,6 +154,18 @@ public class LRUCache<K, V> {
     public void clear() {
         cache.clear();
         accessQueue.clear();
+    }
+
+    public Set<K> keys(){
+        return cache.keySet();
+    }
+
+    public int getMaxEntries() {
+        return maxEntries;
+    }
+
+    public int getMaxAge() {
+        return maxAge;
     }
 
     public static final class CacheEntry<K, V> {
