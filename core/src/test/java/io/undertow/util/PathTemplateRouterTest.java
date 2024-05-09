@@ -33,8 +33,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Some tests that were specifically used to test during the development of {@link PathTemplateRouter} as well as
- * an adaptation of the tests in {@link PathTemplateTestCase} to confirm compatibility with {@link PathTemplateMatcher}.
+ * Some tests that were specifically used to test during the development of {@link PathTemplateRouter} as well as an adaptation
+ * of the tests in {@link PathTemplateTestCase} to confirm compatibility with {@link PathTemplateMatcher}.
  *
  * @author Dirk Roets
  */
@@ -144,14 +144,16 @@ public class PathTemplateRouterTest {
             final String... pathParams
     ) {
         final int pathParamLen = pathParams.length;
-        if (pathParamLen % 2 == 1)
+        if (pathParamLen % 2 == 1) {
             throw new IllegalArgumentException();
+        }
 
         final Map<String, String> expectedParams;
         if (pathParamLen > 0) {
             expectedParams = new HashMap<>((int) (pathParamLen / 0.75d) + 1);
-            for (int i = 0; i < pathParamLen; i += 2)
+            for (int i = 0; i < pathParamLen; i += 2) {
                 expectedParams.put(pathParams[i], pathParams[i + 1]);
+            }
         } else {
             expectedParams = Collections.emptyMap();
         }
@@ -169,8 +171,9 @@ public class PathTemplateRouterTest {
     public void testRouting() {
         final int targetCount = 20;
         final String[] targets = new String[targetCount];
-        for (int i = 0; i < targetCount; i++)
+        for (int i = 0; i < targetCount; i++) {
             targets[i] = "target-" + i;
+        }
 
         PathTemplateRouter.Router<String> router = routerBuilder(defaultTarget)
                 .addTemplate("/", () -> targets[0])
@@ -353,16 +356,18 @@ public class PathTemplateRouterTest {
                     boolean duplicate = false;
                     for (int j = 0; j <= s; j++) {
                         if (vp == j) {
-                            if (j > 0 || i == 0)
+                            if (j > 0 || i == 0) {
                                 sb.append("/{var_").append(i).append("_").append(j).append("}");
-                            else
+                            } else {
                                 duplicate = true;
+                            }
                         } else {
                             sb.append("/path-").append(i).append("-seg-").append(j);
                         }
                     }
-                    if (!duplicate)
+                    if (!duplicate) {
                         result.add(sb.toString());
+                    }
                 }
             }
         }
@@ -381,10 +386,11 @@ public class PathTemplateRouterTest {
                 for (int i = 0; i < n; i++) {
                     final StringBuilder sb = new StringBuilder();
                     for (int j = 0; j <= s; j++) {
-                        if (vp == j)
+                        if (vp == j) {
                             sb.append("/a-value-for-the-var");
-                        else
+                        } else {
                             sb.append("/path-").append(i).append("-seg-").append(j);
+                        }
                     }
                     result.add(sb.toString());
                 }
@@ -404,13 +410,15 @@ public class PathTemplateRouterTest {
         final int requestsLen = requests.length;
 
         final PathTemplateMatcher<String> matcher = new PathTemplateMatcher<>();
-        for (final String template : templates)
+        for (final String template : templates) {
             matcher.add(PathTemplate.create(template), template);
+        }
 
         PathTemplateMatcher.PathMatchResult<String> pathMatchResult;
         final long startMillis = System.currentTimeMillis();
-        for (int i = 0; i < requestCount; i++)
+        for (int i = 0; i < requestCount; i++) {
             pathMatchResult = matcher.match(requests[i % requestsLen]);
+        }
 
         final long endMillis = System.currentTimeMillis();
 
@@ -431,14 +439,16 @@ public class PathTemplateRouterTest {
                 .updateDefaultTarget(
                         "default"
                 );
-        for (final String template : templates)
+        for (final String template : templates) {
             routerBuilder.addTemplate(template, () -> template);
+        }
         final PathTemplateRouter.Router<String> router = routerBuilder.build();
 
         PathTemplateRouter.RouteResult<String> pathRouteResult;
         final long startMillis = System.currentTimeMillis();
-        for (int i = 0; i < requestCount; i++)
+        for (int i = 0; i < requestCount; i++) {
             pathRouteResult = router.apply(requests[i % requestsLen]);
+        }
 
         final long endMillis = System.currentTimeMillis();
 
@@ -473,17 +483,19 @@ public class PathTemplateRouterTest {
 
         // Write the results to a file.
         final File file = new File(resultsFile);
-        if (file.exists())
+        if (file.exists()) {
             file.delete();
+        }
 
         try (PrintWriter pw = new PrintWriter(file)) {
 
             pw.println("n,template_count,request_count,old,new");
-            for (int i = 0; i < maxN; i++)
+            for (int i = 0; i < maxN; i++) {
                 pw.println(String.format(
                         "%d,%d,%d,%d,%d",
                         results[i][0], results[i][1], results[i][2], results[i][3], results[i][4]
                 ));
+            }
         } catch (final IOException ex) {
             ex.printStackTrace();
         }
