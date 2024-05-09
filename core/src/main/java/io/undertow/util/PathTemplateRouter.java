@@ -57,15 +57,15 @@ public class PathTemplateRouter {
 
     //<editor-fold defaultstate="collapsed" desc="PatternElement inner class">
     /**
-     * Interface for elements that represent a URL path pattern. The objective of this interface is to provide
-     * a contract for comparing path patterns. For example:
+     * Interface for elements that represent a URL path pattern. The objective of this interface is to provide a contract for
+     * comparing path patterns. For example:
      * <ol>
      * <li>/some/{varNameA}/url</li>
      * <li>/some/{varNameB}/url</li>
      * </ol>
      *
-     * These templates have different path parameter names and are therefore not equal to each other, but the patterns
-     * that they represent are considered to be equal.
+     * These templates have different path parameter names and are therefore not equal to each other, but the patterns that they
+     * represent are considered to be equal.
      *
      * <b>Custom implementations of this interface are not supported by the {@link PathTemplateRouter}.</b>
      */
@@ -90,9 +90,8 @@ public class PathTemplateRouter {
     //
     //<editor-fold defaultstate="collapsed" desc="PatternEqualsAdapter inner class">
     /**
-     * An object adapter that wraps a {@link PatternElement} and that uses its patternHashCode and patternEquals
-     * methods as the standard hashCode and equals methods. The objective is to enable the use of "patterns" as
-     * keys for maps / sets etc.
+     * An object adapter that wraps a {@link PatternElement} and that uses its patternHashCode and patternEquals methods as the
+     * standard hashCode and equals methods. The objective is to enable the use of "patterns" as keys for maps / sets etc.
      *
      * @param <T> Type of pattern elements.
      */
@@ -120,12 +119,15 @@ public class PathTemplateRouter {
 
         @Override
         public boolean equals(final Object obj) {
-            if (this == obj)
+            if (this == obj) {
                 return true;
-            if (obj == null)
+            }
+            if (obj == null) {
                 return false;
-            if (getClass() != obj.getClass())
+            }
+            if (getClass() != obj.getClass()) {
                 return false;
+            }
             final PatternEqualsAdapter<?> other = (PatternEqualsAdapter<?>) obj;
             return this.element.patternEquals(other.element);
         }
@@ -141,11 +143,12 @@ public class PathTemplateRouter {
         @SuppressWarnings("unchecked")
         public int compareTo(final PatternEqualsAdapter<T> o) {
             if (element instanceof TemplateSegment) {
-                if (o.element instanceof TemplateSegment)
+                if (o.element instanceof TemplateSegment) {
                     return compareMostSpecificToLeastSpecific(
                             (PatternEqualsAdapter<TemplateSegment>) this,
                             (PatternEqualsAdapter<TemplateSegment>) o
                     );
+                }
                 return 1;
             } else if (o.element instanceof TemplateSegment) {
                 return -1;
@@ -158,8 +161,8 @@ public class PathTemplateRouter {
     //
     //<editor-fold defaultstate="collapsed" desc="Template segment inner classes">
     /**
-     * Parent class for all segments inside a URL path. For the purposes of this class a segment is defined as the
-     * parts of a path that are delimited by '/' characters.
+     * Parent class for all segments inside a URL path. For the purposes of this class a segment is defined as the parts of a
+     * path that are delimited by '/' characters.
      *
      * Extensions of this class must be immutable.
      */
@@ -173,8 +176,9 @@ public class PathTemplateRouter {
         private TemplateSegment(final int segmentIdx) {
             this.segmentIdx = segmentIdx;
 
-            if (segmentIdx < 0)
+            if (segmentIdx < 0) {
                 throw new IllegalArgumentException();
+            }
         }
     }
 
@@ -210,15 +214,19 @@ public class PathTemplateRouter {
 
         @Override
         public boolean equals(final Object obj) {
-            if (this == obj)
+            if (this == obj) {
                 return true;
-            if (obj == null)
+            }
+            if (obj == null) {
                 return false;
-            if (getClass() != obj.getClass())
+            }
+            if (getClass() != obj.getClass()) {
                 return false;
+            }
             final TemplateStaticSegment other = (TemplateStaticSegment) obj;
-            if (this.segmentIdx != other.segmentIdx)
+            if (this.segmentIdx != other.segmentIdx) {
                 return false;
+            }
             return Objects.equals(this.value, other.value);
         }
 
@@ -234,9 +242,9 @@ public class PathTemplateRouter {
     }
 
     /**
-     * A segment inside a pattern that is intended to match match any content from the corresponding segment of a
-     * requested URL and that sets the value of the parameter with the associated name to the content of the
-     * corresponding segment of the requested URL.
+     * A segment inside a pattern that is intended to match match any content from the corresponding segment of a requested URL
+     * and that sets the value of the parameter with the associated name to the content of the corresponding segment of the
+     * requested URL.
      *
      * Instances of this class are immutable.
      */
@@ -270,15 +278,19 @@ public class PathTemplateRouter {
 
         @Override
         public boolean equals(final Object obj) {
-            if (this == obj)
+            if (this == obj) {
                 return true;
-            if (obj == null)
+            }
+            if (obj == null) {
                 return false;
-            if (getClass() != obj.getClass())
+            }
+            if (getClass() != obj.getClass()) {
                 return false;
+            }
             final TemplateParamSegment other = (TemplateParamSegment) obj;
-            if (this.segmentIdx != other.segmentIdx)
+            if (this.segmentIdx != other.segmentIdx) {
                 return false;
+            }
             return Objects.equals(this.paramName, other.paramName);
         }
 
@@ -291,20 +303,23 @@ public class PathTemplateRouter {
 
         @Override
         public boolean patternEquals(final Object obj) {
-            if (this == obj)
+            if (this == obj) {
                 return true;
-            if (obj == null)
+            }
+            if (obj == null) {
                 return false;
-            if (getClass() != obj.getClass())
+            }
+            if (getClass() != obj.getClass()) {
                 return false;
+            }
             final TemplateParamSegment other = (TemplateParamSegment) obj;
             return this.segmentIdx == other.segmentIdx;
         }
     }
 
     /**
-     * A segment inside a pattern that matches an optional prefix of the corresponding segment of a requested URL
-     * and that matches anything after that in the requested URL.
+     * A segment inside a pattern that matches an optional prefix of the corresponding segment of a requested URL and that
+     * matches anything after that in the requested URL.
      *
      * Instances of this class are immutable.
      */
@@ -338,15 +353,19 @@ public class PathTemplateRouter {
 
         @Override
         public boolean equals(final Object obj) {
-            if (this == obj)
+            if (this == obj) {
                 return true;
-            if (obj == null)
+            }
+            if (obj == null) {
                 return false;
-            if (getClass() != obj.getClass())
+            }
+            if (getClass() != obj.getClass()) {
                 return false;
+            }
             final TemplateWildCardSegment other = (TemplateWildCardSegment) obj;
-            if (this.segmentIdx != other.segmentIdx)
+            if (this.segmentIdx != other.segmentIdx) {
                 return false;
+            }
             return Objects.equals(this.prefix, other.prefix);
         }
 
@@ -397,48 +416,61 @@ public class PathTemplateRouter {
 
         @Override
         public boolean equals(final Object obj) {
-            if (this == obj)
+            if (this == obj) {
                 return true;
-            if (obj == null)
+            }
+            if (obj == null) {
                 return false;
-            if (getClass() != obj.getClass())
+            }
+            if (getClass() != obj.getClass()) {
                 return false;
+            }
             final Template<?> other = (Template<?>) obj;
-            if (this.wildCard != other.wildCard)
+            if (this.wildCard != other.wildCard) {
                 return false;
-            if (!Objects.equals(this.segments, other.segments))
+            }
+            if (!Objects.equals(this.segments, other.segments)) {
                 return false;
+            }
             return Objects.equals(this.target, other.target);
         }
 
         @Override
         public int patternHashCode() {
             int hash = 7;
-            for (final TemplateSegment segment : segments)
+            for (final TemplateSegment segment : segments) {
                 hash = 97 * hash + segment.patternHashCode();
+            }
             return hash;
         }
 
         @Override
         public boolean patternEquals(final Object obj) {
-            if (this == obj)
+            if (this == obj) {
                 return true;
-            if (obj == null)
+            }
+            if (obj == null) {
                 return false;
-            if (getClass() != obj.getClass())
+            }
+            if (getClass() != obj.getClass()) {
                 return false;
+            }
 
             final Template<?> other = (Template<?>) obj;
-            if (wildCard != other.wildCard)
+            if (wildCard != other.wildCard) {
                 return false;
-            if (segments.size() != other.segments.size())
+            }
+            if (segments.size() != other.segments.size()) {
                 return false;
+            }
 
             final Iterator<TemplateSegment> it = segments.iterator();
             final Iterator<TemplateSegment> otherIt = other.segments.iterator();
-            while (it.hasNext())
-                if (!it.next().patternEquals(otherIt.next()))
+            while (it.hasNext()) {
+                if (!it.next().patternEquals(otherIt.next())) {
                     return false;
+                }
+            }
             return true;
         }
 
@@ -532,9 +564,8 @@ public class PathTemplateRouter {
     //
     //<editor-fold defaultstate="collapsed" desc="Matcher inner classes">
     /**
-     * A strategy that accepts a route request, attempts to match it against the structure represented by the
-     * strategy (matcher) and that returns an appropriate result for the request based on whether or not the request
-     * 'matches' the structure.
+     * A strategy that accepts a route request, attempts to match it against the structure represented by the strategy (matcher)
+     * and that returns an appropriate result for the request based on whether or not the request 'matches' the structure.
      *
      * Implementations must be thread-safe.
      *
@@ -571,8 +602,9 @@ public class PathTemplateRouter {
             this.segmentIdx = segmentIdx;
             this.nextMatcher = Objects.requireNonNull(nextMatcher);
 
-            if (this.segmentIdx < 0)
+            if (this.segmentIdx < 0) {
                 throw new IllegalArgumentException();
+            }
         }
 
         @Override
@@ -588,12 +620,14 @@ public class PathTemplateRouter {
             final int segmentEndIdx = request.segmentStartIndexes[segmentIdx + 1] - 1;
 
             final int segmentLength = segmentEndIdx - segmentStartIdx;
-            if (segmentLength != len)
+            if (segmentLength != len) {
                 return defaultResult;
+            }
 
             for (int i = 0; i < segmentLength; i++) {
-                if (value[i] != request.path[segmentStartIdx + i])
+                if (value[i] != request.path[segmentStartIdx + i]) {
                     return defaultResult;
+                }
             }
 
             return nextMatcher.apply(request);
@@ -627,10 +661,12 @@ public class PathTemplateRouter {
             this.segmentIdx = segmentIdx;
             this.nextMatcher = Objects.requireNonNull(nextMatcher);
 
-            if (this.len < 1)
+            if (this.len < 1) {
                 throw new IllegalArgumentException();
-            if (this.segmentIdx < 0)
+            }
+            if (this.segmentIdx < 0) {
                 throw new IllegalArgumentException();
+            }
         }
 
         @Override
@@ -646,12 +682,14 @@ public class PathTemplateRouter {
             final int segmentEndIdx = request.segmentStartIndexes[segmentIdx + 1] - 1;
 
             final int segmentLength = segmentEndIdx - segmentStartIdx;
-            if (segmentLength < len)
+            if (segmentLength < len) {
                 return defaultResult;
+            }
 
             for (int i = 0; i < len; i++) {
-                if (value[i] != request.path[segmentStartIdx + i])
+                if (value[i] != request.path[segmentStartIdx + i]) {
                     return defaultResult;
+                }
             }
             return nextMatcher.apply(request);
         }
@@ -674,19 +712,24 @@ public class PathTemplateRouter {
             this.matchers = sortedSegmentEqualsMatchers(matchers);
             this.matchersLen = this.matchers.length;
 
-            if (this.matchersLen == 0)
+            if (this.matchersLen == 0) {
                 throw new IllegalArgumentException();
+            }
 
             this.segmentIdx = this.matchers[0].segmentIdx;
 
             int i = 0;
-            for (final SegmentEqualsMatcher<?> m : this.matchers)
-                if (m.len > i)
+            for (final SegmentEqualsMatcher<?> m : this.matchers) {
+                if (m.len > i) {
                     i = m.len;
+                }
+            }
             this.maxSegmentLength = i;
-            for (final SegmentEqualsMatcher<?> m : this.matchers)
-                if (m.len < i)
+            for (final SegmentEqualsMatcher<?> m : this.matchers) {
+                if (m.len < i) {
                     i = m.len;
+                }
+            }
             this.minSegmentLength = i;
         }
 
@@ -699,16 +742,18 @@ public class PathTemplateRouter {
             int result;
             for (int i = 0; i < len; i++) {
                 result = c1[i] - c2[i];
-                if (result != 0)
+                if (result != 0) {
                     return result;
+                }
             }
             return 0;
         }
 
         private static int compare(final SegmentEqualsMatcher<?> s1, final SegmentEqualsMatcher<?> s2) {
             int result = Integer.compare(s1.len, s2.len);
-            if (result != 0)
+            if (result != 0) {
                 return result;
+            }
 
             return compare(s1.value, s2.value, s1.len);
         }
@@ -722,8 +767,9 @@ public class PathTemplateRouter {
             final int len = matchers.size();
             final SegmentEqualsMatcher[] result = new SegmentEqualsMatcher[len];
             int idx = 0;
-            for (final SegmentEqualsMatcher<? extends T> matcher : matchers)
+            for (final SegmentEqualsMatcher<? extends T> matcher : matchers) {
                 result[idx++] = matcher;
+            }
 
             Arrays.sort(result, BinarySearchRouterMatcher::compare);
             return result;
@@ -737,16 +783,19 @@ public class PathTemplateRouter {
                 //Second object - the matcher
                 final SegmentEqualsMatcher<?> matcher
         ) {
-            if (requestSegmentLength < matcher.len)
+            if (requestSegmentLength < matcher.len) {
                 return -1;
-            if (requestSegmentLength > matcher.len)
+            }
+            if (requestSegmentLength > matcher.len) {
                 return 1;
+            }
 
             int result;
             for (int i = 0; i < requestSegmentLength; i++) {
                 result = requestPath[requestSegmentStartIdx + i] - matcher.value[i];
-                if (result != 0)
+                if (result != 0) {
                     return result;
+                }
             }
             return 0;
         }
@@ -761,8 +810,9 @@ public class PathTemplateRouter {
             final int segmentLength = segmentEndIdx - segmentStartIdx;
 
             //We don't evaluate the static matchers if none of them has the correct length to match this segment anyway
-            if (segmentLength < this.minSegmentLength || segmentLength > this.maxSegmentLength)
+            if (segmentLength < this.minSegmentLength || segmentLength > this.maxSegmentLength) {
                 return defaultResult;
+            }
 
             //Binary search
             int low = 0, high = this.matchersLen - 1, mid, cmp;
@@ -786,8 +836,8 @@ public class PathTemplateRouter {
     }
 
     /**
-     * The terminal stage for a path that doesn't contain parameters or wildcards. It will be called once all
-     * preceding checks have passed and only returns the target result.
+     * The terminal stage for a path that doesn't contain parameters or wildcards. It will be called once all preceding checks
+     * have passed and only returns the target result.
      *
      * Instances of this class are thread-safe.
      *
@@ -821,9 +871,8 @@ public class PathTemplateRouter {
     }
 
     /**
-     * The terminal stage for a path that contains parameters, but no wildcards. It will be called once all
-     * preceding checks have passed, it populates the parameters and returns the target result along with the
-     * parameters.
+     * The terminal stage for a path that contains parameters, but no wildcards. It will be called once all preceding checks
+     * have passed, it populates the parameters and returns the target result along with the parameters.
      *
      * Instances of this class are thread-safe.
      *
@@ -851,8 +900,9 @@ public class PathTemplateRouter {
             this.paramCount = this.paramSegmentIndexes.length;
             this.paramMapSize = (int) (this.paramCount / 0.75d) + 1;
 
-            if (this.paramCount != this.paramNames.length)
+            if (this.paramCount != this.paramNames.length) {
                 throw new IllegalArgumentException();
+            }
         }
 
         @Override
@@ -871,9 +921,9 @@ public class PathTemplateRouter {
     }
 
     /**
-     * The terminal stage for a path that doesn't contain parameters, but that does contain a wild card. It will be
-     * called once all preceding checks have passed and only returns the target result along with a single parameter,
-     * being that part of the path that was matched by the wild card.
+     * The terminal stage for a path that doesn't contain parameters, but that does contain a wild card. It will be called once
+     * all preceding checks have passed and only returns the target result along with a single parameter, being that part of the
+     * path that was matched by the wild card.
      *
      * Instances of this class are thread-safe.
      *
@@ -897,10 +947,12 @@ public class PathTemplateRouter {
             this.segmentIdx = segmentIdx;
             this.prefixLength = prefixLength;
 
-            if (segmentIdx < 0)
+            if (segmentIdx < 0) {
                 throw new IllegalArgumentException();
-            if (prefixLength < 0)
+            }
+            if (prefixLength < 0) {
                 throw new IllegalArgumentException();
+            }
         }
 
         @Override
@@ -930,9 +982,8 @@ public class PathTemplateRouter {
     }
 
     /**
-     * The terminal stage for a path that contains parameters and that contains a wildcard. It will be called once all
-     * preceding checks have passed, it populates the parameters and returns the target result along with the
-     * parameters.
+     * The terminal stage for a path that contains parameters and that contains a wildcard. It will be called once all preceding
+     * checks have passed, it populates the parameters and returns the target result along with the parameters.
      *
      * Instances of this class are thread-safe.
      *
@@ -966,12 +1017,15 @@ public class PathTemplateRouter {
             this.segmentIdx = segmentIdx;
             this.prefixLength = prefixLength;
 
-            if (segmentIdx < 0)
+            if (segmentIdx < 0) {
                 throw new IllegalArgumentException();
-            if (prefixLength < 0)
+            }
+            if (prefixLength < 0) {
                 throw new IllegalArgumentException();
-            if (paramCount != this.paramNames.length)
+            }
+            if (paramCount != this.paramNames.length) {
                 throw new IllegalArgumentException();
+            }
         }
 
         @Override
@@ -1012,8 +1066,8 @@ public class PathTemplateRouter {
     }
 
     /**
-     * A composite matcher that tries all of the underlying matchers until a matcher returns a result other
-     * than the default result, then it returns that result. Otherwise the default result is returned.
+     * A composite matcher that tries all of the underlying matchers until a matcher returns a result other than the default
+     * result, then it returns that result. Otherwise the default result is returned.
      *
      * @param <T> Type of target.
      */
@@ -1031,8 +1085,9 @@ public class PathTemplateRouter {
             this.len = this.matchers.length;
             this.defaultResult = Objects.requireNonNull(defaultResult);
 
-            if (this.len < 2)
+            if (this.len < 2) {
                 throw new IllegalArgumentException("Should not use a composite");
+            }
         }
 
         @Override
@@ -1045,8 +1100,9 @@ public class PathTemplateRouter {
             RouteResult<T> result;
             for (int i = 0; i < len; i++) {
                 result = matchers[i].apply(request);
-                if (result != defaultResult)
+                if (result != defaultResult) {
                     return result;
+                }
             }
             return defaultResult;
         }
@@ -1081,8 +1137,8 @@ public class PathTemplateRouter {
     }
 
     /**
-     * A simple router that routes paths containing static segments or parameters. Specifically this router has
-     * an optimisation - based on the segment counts of requests - that do not support wild cards.
+     * A simple router that routes paths containing static segments or parameters. Specifically this router has an optimisation
+     * - based on the segment counts of requests - that do not support wild cards.
      *
      * Instances of this class are thread-safe.
      *
@@ -1112,8 +1168,9 @@ public class PathTemplateRouter {
 
         private static int getMinSegmentCount(final Matcher<?>[] matchers) {
             for (int i = 0; i < matchers.length; i++) {
-                if (matchers[i] != null)
+                if (matchers[i] != null) {
                     return i;
+                }
             }
             throw new IllegalArgumentException("At least one segment matcher must be supplied");
         }
@@ -1131,15 +1188,17 @@ public class PathTemplateRouter {
         @Override
         public RouteResult<T> apply(final String path) {
             //This router is empty.
-            if (maxSegmentCount == 0)
+            if (maxSegmentCount == 0) {
                 return defaultResult;
+            }
 
             final RouteRequest request = createRouteRequest(path, minSegmentCount, maxSegmentCount);
 
             /* Early exit when the request factory determined that we don't have a matcher with the resulting number
         of segments. */
-            if (request == CANT_MATCH_REQUEST)
+            if (request == CANT_MATCH_REQUEST) {
                 return defaultResult;
+            }
 
             final Matcher<T> matcher = matchers[request.segmentCount];
             return matcher != null ? matcher.apply(request) : defaultResult;
@@ -1177,8 +1236,9 @@ public class PathTemplateRouter {
 
         private static int getMinSegmentCount(final Matcher<?>[] matchers) {
             for (int i = 0; i < matchers.length; i++) {
-                if (matchers[i] != null)
+                if (matchers[i] != null) {
                     return i;
+                }
             }
             throw new IllegalArgumentException("At least one segment matcher must be supplied");
         }
@@ -1199,8 +1259,9 @@ public class PathTemplateRouter {
 
             /* Early exit when the request factory determined that we don't have a matcher with the resulting number
         of segments. */
-            if (request == CANT_MATCH_REQUEST)
+            if (request == CANT_MATCH_REQUEST) {
                 return defaultResult;
+            }
 
             Matcher<T> matcher;
             RouteResult<T> result;
@@ -1208,8 +1269,9 @@ public class PathTemplateRouter {
                 matcher = matchers[i];
                 if (matcher != null) {
                     result = matcher.apply(request);
-                    if (result != defaultResult)
+                    if (result != defaultResult) {
                         return result;
+                    }
                 }
             }
             return defaultResult;
@@ -1248,8 +1310,9 @@ public class PathTemplateRouter {
             RouteResult<T> result;
             for (int i = 0; i < len; i++) {
                 result = routers[i].apply(path);
-                if (result != defaultResult)
+                if (result != defaultResult) {
                     return result;
+                }
             }
             return defaultResult;
         }
@@ -1259,11 +1322,11 @@ public class PathTemplateRouter {
     //
     //<editor-fold defaultstate="collapsed" desc="MatcherLeaveArterfacts inner class">
     /**
-     * Intermediate objects used to build the tree structure during creation of a router. Represents leaves of the tree
-     * which are later turned into a tree of matchers by the router factory.
+     * Intermediate objects used to build the tree structure during creation of a router. Represents leaves of the tree which
+     * are later turned into a tree of matchers by the router factory.
      *
-     * Instances of this class ARE NOT thread-safe. These are only used by the factory and should therefore never
-     * be used from multiple threads.
+     * Instances of this class ARE NOT thread-safe. These are only used by the factory and should therefore never be used from
+     * multiple threads.
      *
      * @param <T> Target type.
      */
@@ -1292,18 +1355,17 @@ public class PathTemplateRouter {
          */
         private TemplateStaticSegment staticSegment;
         /**
-         * IF this leave is a parameter segment leave: The index of the parameter in the array of parameters for the
-         * template.
+         * IF this leave is a parameter segment leave: The index of the parameter in the array of parameters for the template.
          */
         private int paramIdx = -1;
         /**
-         * IF this leave is a parameter segment leave AND it is the final leave: Reference to the array of segment
-         * indexes that are parameter segments in the current template.
+         * IF this leave is a parameter segment leave AND it is the final leave: Reference to the array of segment indexes that
+         * are parameter segments in the current template.
          */
         private List<Integer> paramIndexes;
         /**
-         * IF this leave is a parameter segment leave AND it is the final leave: Reference to the array of names for
-         * parameters in the template.
+         * IF this leave is a parameter segment leave AND it is the final leave: Reference to the array of names for parameters
+         * in the template.
          */
         private List<String> paramNames;
         /**
@@ -1358,8 +1420,9 @@ public class PathTemplateRouter {
         private static <A> Matcher<A>[] toMatcherArray(final Collection<? extends Matcher<A>> matchers) {
             final Matcher[] result = new Matcher[matchers.size()];
             int idx = 0;
-            for (final Matcher<?> m : matchers)
+            for (final Matcher<?> m : matchers) {
                 result[idx++] = m;
+            }
 
             return result;
         }
@@ -1390,11 +1453,13 @@ public class PathTemplateRouter {
             for (final Template<?> template : templates) {
                 cnt = template.segments.size();
                 if (template.wildCard) {
-                    if (cnt > maxWildCardSegmentCount)
+                    if (cnt > maxWildCardSegmentCount) {
                         maxWildCardSegmentCount = cnt;
+                    }
                 } else {
-                    if (cnt > maxSegmentCount)
+                    if (cnt > maxSegmentCount) {
                         maxSegmentCount = cnt;
+                    }
                 }
             }
         }
@@ -1422,8 +1487,9 @@ public class PathTemplateRouter {
                     ? wildCardRootLeaves : rootLeaves;
 
             MatcherLeaveArterfacts result = artefacts[currentSegmentCount];
-            if (result != null)
+            if (result != null) {
                 return result;
+            }
 
             result = new MatcherLeaveArterfacts();
             result.segmentIdx = -1;
@@ -1454,8 +1520,9 @@ public class PathTemplateRouter {
                 currentParamNames.add(paramSegment.paramName);
             } else if (segment instanceof TemplateWildCardSegment) {
                 final TemplateWildCardSegment wildCardSegment = (TemplateWildCardSegment) segment;
-                if (segmentStack.size() != currentSegmentCount)
+                if (segmentStack.size() != currentSegmentCount) {
                     throw new IllegalArgumentException("Wild cards are only supported at the end of a template path");
+                }
                 currentLeave.paramIdx = currentParamNames.size();
                 currentParamIndexes.add(wildCardSegment.segmentIdx);
                 currentParamNames.add("*");
@@ -1506,14 +1573,16 @@ public class PathTemplateRouter {
         private void printNodes() {
             System.out.println("Nodes:");
             for (int i = 0; i < maxSegmentCount + 1; i++) {
-                if (rootLeaves[i] != null)
+                if (rootLeaves[i] != null) {
                     printNode(0, rootLeaves[i]);
+                }
             }
             System.out.println();
             System.out.println("Wild Card Nodes:");
             for (int i = 0; i < maxWildCardSegmentCount + 1; i++) {
-                if (rootLeaves[i] != null)
+                if (rootLeaves[i] != null) {
                     printNode(0, wildCardRootLeaves[i]);
+                }
             }
         }
 
@@ -1591,14 +1660,17 @@ public class PathTemplateRouter {
         }
 
         private Matcher<T> createFinalMatcher(final MatcherLeaveArterfacts<Supplier<? extends T>> artefacts) {
-            if (!artefacts.children.isEmpty())
+            if (!artefacts.children.isEmpty()) {
                 throw new IllegalStateException();
+            }
 
-            if (artefacts.paramNames == null)
+            if (artefacts.paramNames == null) {
                 return createSimpleResultMatcher(artefacts);
+            }
 
-            if (artefacts.wildCardSegment != null)
+            if (artefacts.wildCardSegment != null) {
                 return createWildCardResultMatcher(artefacts);
+            }
 
             return createResultWithParamsMatcher(artefacts);
         }
@@ -1619,8 +1691,9 @@ public class PathTemplateRouter {
                 final MatcherLeaveArterfacts<Supplier<? extends T>> artefacts,
                 final Matcher<T> nextMatcher
         ) {
-            if (artefacts.wildCardSegment.prefix.isEmpty())
+            if (artefacts.wildCardSegment.prefix.isEmpty()) {
                 return nextMatcher;
+            }
 
             return new SegmentStartsWithMatcher<>(
                     defaultResult,
@@ -1634,14 +1707,15 @@ public class PathTemplateRouter {
                 final MatcherLeaveArterfacts<Supplier<? extends T>> artefacts,
                 final Matcher<T> nextMatcher
         ) {
-            if (artefacts.staticSegment != null)
+            if (artefacts.staticSegment != null) {
                 return createStaticSegmentMatcher(artefacts, nextMatcher);
-            else if (artefacts.wildCardSegment != null)
+            } else if (artefacts.wildCardSegment != null) {
                 return createWildCardSegmentMatcher(artefacts, nextMatcher);
-            else if (artefacts.paramIdx != -1)
+            } else if (artefacts.paramIdx != -1) {
                 return nextMatcher;
-            else if (artefacts.rootLeave)
+            } else if (artefacts.rootLeave) {
                 return nextMatcher;
+            }
             throw new IllegalStateException("Should never happen");
         }
 
@@ -1652,8 +1726,9 @@ public class PathTemplateRouter {
             Collections.sort(keys, PathTemplateRouter::compareMostSpecificToLeastSpecific);
 
             final List<Matcher<T>> result = new ArrayList<>(keys.size());
-            for (final PatternEqualsAdapter<TemplateSegment> key : keys)
+            for (final PatternEqualsAdapter<TemplateSegment> key : keys) {
                 result.add(createMatcher(artefacts.children.get(key)));
+            }
             return result;
         }
 
@@ -1663,8 +1738,9 @@ public class PathTemplateRouter {
                 final List<Matcher<T>> sortedInnerMatchers,
                 final List<Matcher<T>> target
         ) {
-            if (sortedInnerMatchers.isEmpty())
+            if (sortedInnerMatchers.isEmpty()) {
                 return;
+            }
 
             final List<SegmentEqualsMatcher<T>> segmentEqualsMatchers = new LinkedList<>();
             final Iterator<Matcher<T>> it = sortedInnerMatchers.iterator();
@@ -1702,8 +1778,9 @@ public class PathTemplateRouter {
                 final List<Matcher<T>> sortedInnerMatchers,
                 final List<Matcher<T>> target
         ) {
-            if (sortedInnerMatchers.isEmpty())
+            if (sortedInnerMatchers.isEmpty()) {
                 return;
+            }
 
             final List<SegmentStartsWithMatcher<T>> segmentStartsWithMatchers = new LinkedList<>();
             final Iterator<Matcher<T>> it = sortedInnerMatchers.iterator();
@@ -1766,8 +1843,9 @@ public class PathTemplateRouter {
 
             //See how many children we have.
             final int childrenSize = artefacts.children.size();
-            if (childrenSize == 0)
+            if (childrenSize == 0) {
                 throw new IllegalStateException("Should never happen");
+            }
 
             //If we have just one child, then the result needs to be a simple matcher.
             if (childrenSize == 1) {
@@ -1783,13 +1861,15 @@ public class PathTemplateRouter {
         private void createMatchers() {
             for (int i = 0; i <= maxSegmentCount; i++) {
                 final MatcherLeaveArterfacts<Supplier<? extends T>> artefacts = getLeave(rootLeaves, i);
-                if (artefacts != null)
+                if (artefacts != null) {
                     matchers[i] = createMatcher(artefacts);
+                }
             }
             for (int i = 0; i <= maxWildCardSegmentCount; i++) {
                 final MatcherLeaveArterfacts<Supplier<? extends T>> artefacts = getLeave(wildCardRootLeaves, i);
-                if (artefacts != null)
+                if (artefacts != null) {
                     wildCardMatchers[i] = createMatcher(artefacts);
+                }
             }
         }
 
@@ -1802,8 +1882,9 @@ public class PathTemplateRouter {
         private static <T> Router<T>[] toRouterArray(final List<? extends Router<? extends T>> routers) {
             final Router[] result = new Router[routers.size()];
             int idx = 0;
-            for (final Router<? extends T> router : routers)
+            for (final Router<? extends T> router : routers) {
                 result[idx++] = router;
+            }
             return result;
         }
 
@@ -1811,8 +1892,9 @@ public class PathTemplateRouter {
          * @return A new router instance base on this factory.
          */
         public Router<T> create() {
-            if (templates.isEmpty())
+            if (templates.isEmpty()) {
                 return createEmptyRouter();
+            }
 
             initDefaultResults();
             initMaxSegmentCounts();
@@ -1821,27 +1903,31 @@ public class PathTemplateRouter {
             initCurrentParamIndexes();
             initCurrentParamNames();
             templates.forEach(this::processTemplate);
-            if (DEBUG)
+            if (DEBUG) {
                 printNodes();
+            }
 
             initMatchers();
             createMatchers();
 
             final List<Router<T>> routers = new LinkedList<>();
-            if (maxSegmentCount > 0)
+            if (maxSegmentCount > 0) {
                 routers.add(new SimpleRouter<>(
                         getMatchers(matchers),
                         defaultResult
                 ));
+            }
 
-            if (maxWildCardSegmentCount > 0)
+            if (maxWildCardSegmentCount > 0) {
                 routers.add(new WildCardRouter<>(
                         getMatchers(wildCardMatchers),
                         defaultResult
                 ));
+            }
 
-            if (routers.size() == 1)
+            if (routers.size() == 1) {
                 return routers.get(0);
+            }
 
             return new CompositeRouter<>(
                     toRouterArray(routers),
@@ -1903,17 +1989,18 @@ public class PathTemplateRouter {
         /**
          * Sets the default target to any type - provided that no templates have been added.
          *
-         * @param <A>                  New target factory type.
-         * @param <B>                  New target type.
+         * @param <A> New target factory type.
+         * @param <B> New target type.
          * @param defaultTargetFactory The default target factory.
          *
          * @return Reference to the builder.
          */
         @SuppressWarnings("unchecked") //Always safe based on the encapsulated features of this builder.
         public <A extends Supplier<B>, B> Builder<A, B> updateDefaultTargetFactory(final A defaultTargetFactory) {
-            if (!templates.isEmpty())
+            if (!templates.isEmpty()) {
                 throw new IllegalStateException("updateDefaultTargetFactory cannot be called after having added "
                         + "templates. Use defaultTarget instead");
+            }
 
             Builder b = this;
             b.defaultTargetFactory = defaultTargetFactory;
@@ -1923,7 +2010,7 @@ public class PathTemplateRouter {
         /**
          * Sets the default target to any type - provided that no templates have been added.
          *
-         * @param <B>           New target type.
+         * @param <B> New target type.
          * @param defaultTarget The default target.
          *
          * @return Reference to the builder.
@@ -1932,9 +2019,10 @@ public class PathTemplateRouter {
         public <B> Builder<Supplier<B>, B> updateDefaultTarget(final B defaultTarget) {
             Objects.requireNonNull(defaultTarget);
 
-            if (!templates.isEmpty())
+            if (!templates.isEmpty()) {
                 throw new IllegalStateException("updateDefaultTarget cannot be called after having added "
                         + "templates. Use defaultTarget instead");
+            }
 
             Builder b = this;
             b.defaultTargetFactory = () -> defaultTarget;
@@ -1980,9 +2068,10 @@ public class PathTemplateRouter {
          */
         public Builder<S, T> addTemplate(final Template<S> template) {
             final PatternEqualsAdapter<Template<S>> item = new PatternEqualsAdapter<>(template);
-            if (templates.containsKey(item))
+            if (templates.containsKey(item)) {
                 throw new IllegalArgumentException("The builder already contains a template with the same "
                         + "pattern for '" + template.pathTemplate + "'");
+            }
             templates.put(item, template.target);
             return this;
         }
@@ -1991,7 +2080,7 @@ public class PathTemplateRouter {
          * Adds the specified template to this builder, provided that it has not been added yet. Throws
          * {@link IllegalArgumentException} if this builder already contains the template.
          *
-         * @param pathTemplate  The path template.
+         * @param pathTemplate The path template.
          * @param targetFactory The target factory.
          *
          * @return Reference to the builder.
@@ -2027,8 +2116,9 @@ public class PathTemplateRouter {
          * @return A new router based on this builder.
          */
         public Router<T> build() {
-            if (defaultTargetFactory == null)
+            if (defaultTargetFactory == null) {
                 throw new IllegalStateException("The 'defaultTargetFactory' must be set before calling 'build'");
+            }
 
             return new RouterFactory<>(
                     templates.keySet().stream().map(t -> t.element).collect(Collectors.toSet()),
@@ -2041,8 +2131,7 @@ public class PathTemplateRouter {
     //
     //<editor-fold defaultstate="collapsed" desc="SimpleBuilder inner class">
     /**
-     * A simplistic version of {@link Builder} with convenience methods for adding targets directly without
-     * using factories.
+     * A simplistic version of {@link Builder} with convenience methods for adding targets directly without using factories.
      *
      * Instances of this class ARE NOT thread-safe, but the resulting routers are.
      *
@@ -2061,9 +2150,9 @@ public class PathTemplateRouter {
         /**
          * Creates a new instance of the simple builder.
          *
-         * @param <T>           Target type for built routes.
-         * @param defaultTarget The default target. May be {@code NULL} in which case is should be specified
-         *                      with a separate call to {@link #defaultTarget(java.lang.Object) }.
+         * @param <T> Target type for built routes.
+         * @param defaultTarget The default target. May be {@code NULL} in which case is should be specified with a separate
+         * call to {@link #defaultTarget(java.lang.Object) }.
          *
          * @return Reference to the builder.
          */
@@ -2140,7 +2229,7 @@ public class PathTemplateRouter {
          * Adds the specified template to this builder, provided that it has not been added yet. Throws
          * {@link IllegalArgumentException} if this builder already contains the template.
          *
-         * @param pathTemplate  The path template.
+         * @param pathTemplate The path template.
          * @param targetFactory The target factory.
          *
          * @return Reference to the builder.
@@ -2154,7 +2243,7 @@ public class PathTemplateRouter {
          * {@link IllegalArgumentException} if this builder already contains the template.
          *
          * @param pathTemplate The path template.
-         * @param target       The target.
+         * @param target The target.
          *
          * @return Reference to the builder.
          */
@@ -2196,8 +2285,9 @@ public class PathTemplateRouter {
             final PatternEqualsAdapter<TemplateSegment> o1,
             final PatternEqualsAdapter<TemplateSegment> o2
     ) {
-        if (o1.element.segmentIdx != o2.element.segmentIdx)
+        if (o1.element.segmentIdx != o2.element.segmentIdx) {
             return o2.element.segmentIdx - o1.element.segmentIdx;
+        }
 
         if (o1.element instanceof TemplateStaticSegment) {
             final TemplateStaticSegment o1Static = (TemplateStaticSegment) o1.element;
@@ -2209,25 +2299,30 @@ public class PathTemplateRouter {
         }
 
         if (o1.element instanceof TemplateParamSegment) {
-            if (o2.element instanceof TemplateStaticSegment)
+            if (o2.element instanceof TemplateStaticSegment) {
                 return 1;
+            }
 
-            if (o2.element instanceof TemplateParamSegment)
+            if (o2.element instanceof TemplateParamSegment) {
                 return 0;
+            }
 
-            if (o2.element instanceof TemplateWildCardSegment)
+            if (o2.element instanceof TemplateWildCardSegment) {
                 return -1;
+            }
 
             throw new IllegalArgumentException("Should never happend");
         }
 
         if (o1.element instanceof TemplateWildCardSegment) {
             final TemplateWildCardSegment o1WildCard = (TemplateWildCardSegment) o1.element;
-            if (o2.element instanceof TemplateStaticSegment)
+            if (o2.element instanceof TemplateStaticSegment) {
                 return 1;
+            }
 
-            if (o2.element instanceof TemplateParamSegment)
+            if (o2.element instanceof TemplateParamSegment) {
                 return 1;
+            }
 
             if (o2.element instanceof TemplateWildCardSegment) {
                 final TemplateWildCardSegment o2WildCard = (TemplateWildCardSegment) o2.element;
@@ -2246,8 +2341,9 @@ public class PathTemplateRouter {
         final int len = matchers.size();
         final Matcher[] result = new Matcher[len];
         int idx = 0;
-        for (final Matcher<? extends T> matcher : matchers)
+        for (final Matcher<? extends T> matcher : matchers) {
             result[idx++] = matcher;
+        }
         return result;
     }
 
@@ -2255,15 +2351,13 @@ public class PathTemplateRouter {
      * Creates a map of parameters - that are extracted from the specified request. The resulting map is mutable.
      *
      * @param paramSegmentIndexes Indexes of the segments that are parameters.
-     * @param paramNames          Names for the parameters.
-     * @param paramCount          Total count of parameters. Must be equal to paramSegmentIndexes.length and
-     *                            paramNames.length.
-     *                            Receiving this - instead of calculating is an optimisation that flows from the
-     *                            Matcher strategies that use this method. Care must be taken to ensure that it is
-     *                            accurate as it isn't validated during routing.
-     * @param paramMapSize        Initial size of the resulting map. Provided as an optimisation in case the map needs
-     *                            to cater for further values being added without having to resize/rebalance.
-     * @param request             The request.
+     * @param paramNames Names for the parameters.
+     * @param paramCount Total count of parameters. Must be equal to paramSegmentIndexes.length and paramNames.length. Receiving
+     * this - instead of calculating is an optimisation that flows from the Matcher strategies that use this method. Care must
+     * be taken to ensure that it is accurate as it isn't validated during routing.
+     * @param paramMapSize Initial size of the resulting map. Provided as an optimisation in case the map needs to cater for
+     * further values being added without having to resize/rebalance.
+     * @param request The request.
      *
      * @return The mutable map of parameters.
      */
@@ -2291,11 +2385,10 @@ public class PathTemplateRouter {
     }
 
     /**
-     * Creates a map of parameters that contains exactly one entry with the specified name and value. This is
-     * essentially an alternative to {@link Map#of(java.lang.Object, java.lang.Object) } that returns a mutable
-     * map.
+     * Creates a map of parameters that contains exactly one entry with the specified name and value. This is essentially an
+     * alternative to {@link Map#of(java.lang.Object, java.lang.Object) } that returns a mutable map.
      *
-     * @param name  Name for the parameter.
+     * @param name Name for the parameter.
      * @param value Value for the parameter.
      *
      * @return The mutable map of parameters.
@@ -2308,19 +2401,23 @@ public class PathTemplateRouter {
 
     private static int countSegments(final char[] path) {
         int len = path.length;
-        if (len == 0 || path[0] != '/')
+        if (len == 0 || path[0] != '/') {
             throw new IllegalArgumentException();
-        if (len == 1)
+        }
+        if (len == 1) {
             return 0;
-        if (path[len - 1] == '/')
+        }
+        if (path[len - 1] == '/') {
             --len;
+        }
 
         int result = 1;
         char lastChar = '/';
         for (int i = 1; i < len; i++) {
             if (path[i] == '/') {
-                if (lastChar == '/')
+                if (lastChar == '/') {
                     throw new IllegalArgumentException();
+                }
                 ++result;
             }
             lastChar = path[i];
@@ -2332,16 +2429,15 @@ public class PathTemplateRouter {
     /**
      * Finds the first index in the array that contains the specified key.
      *
-     * @param a         The array to be searched.
-     * @param fromIndex The index of the first element (inclusive) to be
-     *                  searched
-     * @param toIndex   The index of the last element (exclusive) to be searched.
-     * @param key       The value to be searched for.
+     * @param a The array to be searched.
+     * @param fromIndex The index of the first element (inclusive) to be searched
+     * @param toIndex The index of the last element (exclusive) to be searched.
+     * @param key The value to be searched for.
      *
-     * @return Index of the first element in the array - between fromIndex and toIndex - that is equal to the specified
-     *         keys. Returns -1 if the specified key is not found between fromIndex and toIndex.
+     * @return Index of the first element in the array - between fromIndex and toIndex - that is equal to the specified keys.
+     * Returns -1 if the specified key is not found between fromIndex and toIndex.
      *
-     * @throws IllegalArgumentException       If {@code fromIndex > toIndex}.
+     * @throws IllegalArgumentException If {@code fromIndex > toIndex}.
      * @throws ArrayIndexOutOfBoundsException If {@code fromIndex < 0 or toIndex > a.length}.
      */
     private static int firstIndexOf(
@@ -2363,8 +2459,9 @@ public class PathTemplateRouter {
         }
 
         for (int i = fromIndex; i < toIndex; i++) {
-            if (a[i] == key)
+            if (a[i] == key) {
                 return i;
+            }
         }
         return -1;
     }
@@ -2385,9 +2482,10 @@ public class PathTemplateRouter {
             valid = valid || (c >= 'A' && c <= 'Z');
             valid = valid || c == '_' || c == '-';
 
-            if (!valid)
+            if (!valid) {
                 throw new IllegalArgumentException("Illegal character '"
                         + c + "' is contained in the segment '" + value + "' at position " + i);
+            }
         }
 
         return value;
@@ -2400,12 +2498,14 @@ public class PathTemplateRouter {
             final int endIdx
     ) {
         // This is an empty static segment.  Mostly used by templates ending with '/' as the final segment.
-        if (startIdx == endIdx)
+        if (startIdx == endIdx) {
             return new TemplateStaticSegment(segmentIdx, "");
+        }
 
         // Starts and ends with '{' and '}', implies that it is a parameter segment.
-        if (template[startIdx] == '{' && template[endIdx - 1] == '}')
+        if (template[startIdx] == '{' && template[endIdx - 1] == '}') {
             return new TemplateParamSegment(segmentIdx, validSegment(template, startIdx + 1, endIdx - 2));
+        }
 
         // Contains an '*', implies that it is a wildcard segment.
         int idx = firstIndexOf(template, startIdx, endIdx, '*');
@@ -2422,8 +2522,9 @@ public class PathTemplateRouter {
             final String pathString,
             final int pathLength
     ) {
-        if (pathLength == 0)
+        if (pathLength == 0) {
             return new char[]{'/'};
+        }
 
         final boolean startsWithForwardSlash = pathString.charAt(0) == '/';
         final char[] path = new char[pathLength + (startsWithForwardSlash ? 0 : 1)];
@@ -2444,15 +2545,17 @@ public class PathTemplateRouter {
         /*  Work directly with char array for performance reasons.  We remove the query string and ensure that the path
             starts with a '/'. */
         int pathLength = pathString.indexOf('?');
-        if (pathLength == -1)
+        if (pathLength == -1) {
             pathLength = pathString.length();
+        }
         final char[] path = pathWithForwardSlash(pathString, pathLength);
 
         /*  We know the path starts with '/', so if the length is 1 then it is a request for root. If that is a routable
             path - based on minSegmentCount - then we return an empty request, otherwise we know it is not routable. */
         int pathLen = path.length;
-        if (pathLen == 1)
+        if (pathLen == 1) {
             return minSegmentCount > 0 ? CANT_MATCH_REQUEST : EMPTY_REQUEST;
+        }
 
         /*  Quick count of the segments to create an array of the correct size. We also exit immediately if it becomes
             clear that we have less or more segments than the router has templates for */
@@ -2460,15 +2563,18 @@ public class PathTemplateRouter {
         char c = '/';
         for (int i = 1; i < pathLen; i++) {
             if (path[i] == '/') {
-                if (c == '/')
+                if (c == '/') {
                     return CANT_MATCH_REQUEST;
-                if (++cnt > maxSegmentCount)
+                }
+                if (++cnt > maxSegmentCount) {
                     return CANT_MATCH_REQUEST;
+                }
             }
             c = path[i];
         }
-        if (cnt < minSegmentCount)
+        if (cnt < minSegmentCount) {
             return CANT_MATCH_REQUEST;
+        }
 
         //Let's create the segments.
         //The start indexes has a special last entry, which is the pathLen + 1 to simplify code in matchers.
@@ -2476,8 +2582,9 @@ public class PathTemplateRouter {
         segmentStartIndexes[0] = 1;
         cnt = 1;
         for (int i = 1; i < pathLen; i++) {
-            if (path[i] == '/')
+            if (path[i] == '/') {
                 segmentStartIndexes[cnt++] = i + 1;
+            }
         }
         segmentStartIndexes[cnt] = pathLen + 1;
 
@@ -2486,25 +2593,28 @@ public class PathTemplateRouter {
 
     private static void validWildCardOrNotAWildCard(final String pathTemplate) {
         final int idx = pathTemplate.indexOf('*');
-        if (idx == -1)
+        if (idx == -1) {
             return;
+        }
 
-        if (idx != (pathTemplate.length() - 1))
+        if (idx != (pathTemplate.length() - 1)) {
             throw new IllegalArgumentException("Wild cards are only supported at the end of a template path");
+        }
     }
 
     /**
      * Parses the URL path - with optional path parameters - into a template.
      *
-     * @param <T>          Target type.
+     * @param <T> Target type.
      * @param pathTemplate The path template.
-     * @param target       The target.
+     * @param target The target.
      *
      * @return The template.
      */
     public static <T> Template<T> parseTemplate(final String pathTemplate, final T target) {
-        if (pathTemplate == null || target == null)
+        if (pathTemplate == null || target == null) {
             throw new IllegalArgumentException();
+        }
         validWildCardOrNotAWildCard(pathTemplate);
 
         // Work directly with char array for performance reasons.  We  ensure that the path starts with a '/'.
@@ -2537,8 +2647,8 @@ public class PathTemplateRouter {
     /**
      * Creates a new router instance based on the specified templates and default target.
      *
-     * @param <T>           Target type.
-     * @param templates     The templates.
+     * @param <T> Target type.
+     * @param templates The templates.
      * @param defaultTarget The default target.
      *
      * @return The router.

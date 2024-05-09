@@ -29,12 +29,12 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * A drop-in substitute for the old PathTemplateHandler class. Ideally, one should use {@link PathTemplateRouterHandler}
- * by instantiating it with a {@link PathTemplateRouter}. This class implements all of the methods from
- * the original PathTemplateHandler to provide backwards compatibility.
+ * A drop-in substitute for the old PathTemplateHandler class. Ideally, one should use {@link PathTemplateRouterHandler} by
+ * instantiating it with a {@link PathTemplateRouter}. This class implements all of the methods from the original
+ * PathTemplateHandler to provide backwards compatibility.
  *
- * @author Dirk Roets. This class was originally written by Stuart Douglas. After the introduction
- * of {@link PathTemplateRouter}, it was rewritten against the original interface and tests.
+ * @author Dirk Roets. This class was originally written by Stuart Douglas. After the introduction of
+ * {@link PathTemplateRouter}, it was rewritten against the original interface and tests.
  */
 public class PathTemplateHandler implements HttpHandler {
 
@@ -61,8 +61,8 @@ public class PathTemplateHandler implements HttpHandler {
     /**
      * Uses {@link ResponseCodeHandler#HANDLE_404} as the next (default) handler.
      *
-     * @param rewriteQueryParameters Path parameters that are returned by the underlying router will be added as
-     *                               query parameters to the exchange if this flag is 'true'.
+     * @param rewriteQueryParameters Path parameters that are returned by the underlying router will be added as query
+     * parameters to the exchange if this flag is 'true'.
      */
     public PathTemplateHandler(final boolean rewriteQueryParameters) {
         this(ResponseCodeHandler.HANDLE_404, rewriteQueryParameters);
@@ -71,18 +71,16 @@ public class PathTemplateHandler implements HttpHandler {
     /**
      * Sets 'rewriteQueryParameters' to 'true'.
      *
-     * @param next The next (default) handler to use when requests do not match any of the specified
-     *             templates.
+     * @param next The next (default) handler to use when requests do not match any of the specified templates.
      */
     public PathTemplateHandler(final HttpHandler next) {
         this(next, true);
     }
 
     /**
-     * @param next                   The next (default) handler to use when requests do not match any of the specified
-     *                               templates.
-     * @param rewriteQueryParameters Path parameters that are returned by the underlying router will be added as
-     *                               query parameters to the exchange if this flag is 'true'.
+     * @param next The next (default) handler to use when requests do not match any of the specified templates.
+     * @param rewriteQueryParameters Path parameters that are returned by the underlying router will be added as query
+     * parameters to the exchange if this flag is 'true'.
      */
     public PathTemplateHandler(final HttpHandler next, final boolean rewriteQueryParameters) {
         Objects.requireNonNull(next);
@@ -96,7 +94,7 @@ public class PathTemplateHandler implements HttpHandler {
      * Adds a template and handler to the underlying router.
      *
      * @param uriTemplate The URI path template.
-     * @param handler     The handler to use for requests that match the specified template.
+     * @param handler The handler to use for requests that match the specified template.
      *
      * @return Reference to this handler.
      */

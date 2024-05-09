@@ -37,9 +37,9 @@ public class PathTemplateRouterHandler implements HttpHandler {
     private final boolean rewriteQueryParameters;
 
     /**
-     * @param router                 The path template router to use.
-     * @param rewriteQueryParameters Path parameters that are returned by the specified router will be added as
-     *                               query parameters to the exchange if this flag is 'true'.
+     * @param router The path template router to use.
+     * @param rewriteQueryParameters Path parameters that are returned by the specified router will be added as query parameters
+     * to the exchange if this flag is 'true'.
      */
     public PathTemplateRouterHandler(
             final PathTemplateRouter.Router<HttpHandler> router,

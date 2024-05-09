@@ -37,8 +37,8 @@ import java.util.function.Supplier;
 /**
  * A Handler that handles the common case of routing via path template and method name.
  *
- * @author Dirk Roets. This class was originally written by Stuart Douglas. After the introduction
- * of {@link PathTemplateRouter}, it was rewritten against the original interface and tests.
+ * @author Dirk Roets. This class was originally written by Stuart Douglas. After the introduction of
+ * {@link PathTemplateRouter}, it was rewritten against the original interface and tests.
  */
 public class RoutingHandler implements HttpHandler {
 
@@ -152,18 +152,20 @@ public class RoutingHandler implements HttpHandler {
 
     private void handleFallback(final HttpServerExchange exchange) throws Exception {
         final HttpHandler localFallbackHandler = this.fallbackHandler;
-        if (localFallbackHandler != null)
+        if (localFallbackHandler != null) {
             localFallbackHandler.handleRequest(exchange);
-        else
+        } else {
             ResponseCodeHandler.HANDLE_404.handleRequest(exchange);
+        }
     }
 
     private void handlInvalidMethod(final HttpServerExchange exchange) throws Exception {
         final HttpHandler localInvalidMethodHandler = this.invalidMethodHandler;
-        if (localInvalidMethodHandler != null)
+        if (localInvalidMethodHandler != null) {
             localInvalidMethodHandler.handleRequest(exchange);
-        else
+        } else {
             handleFallback(exchange);
+        }
     }
 
     private void handleNoMatch(
@@ -244,8 +246,9 @@ public class RoutingHandler implements HttpHandler {
         );
 
         final RoutingMatchBuilder existing = routeBuilder.getTemplateTarget(parsedTemplate);
-        if (existing != null)
+        if (existing != null) {
             return existing;
+        }
 
         routeBuilder.addTemplate(parsedTemplate);
         return parsedTemplate.getTarget();
@@ -256,8 +259,9 @@ public class RoutingHandler implements HttpHandler {
                 (int) (methodRouterBuilders.size() / 0.75d) + 1
         );
         for (final Entry<HttpString, PathTemplateRouter.Builder<RoutingMatchBuilder, RoutingMatch>> entry
-                : methodRouterBuilders.entrySet())
+                : methodRouterBuilders.entrySet()) {
             result.put(entry.getKey(), entry.getValue().build());
+        }
         return Collections.unmodifiableMap(result);
     }
 
@@ -275,8 +279,9 @@ public class RoutingHandler implements HttpHandler {
             );
             final PathTemplateRouter.PatternEqualsAdapter<PathTemplateRouter.Template<Supplier<Object>>> parsedTemplatePattern
                     = new PathTemplateRouter.PatternEqualsAdapter<>(parsedTemplate);
-            if (!builder.getTemplates().containsKey(parsedTemplatePattern))
+            if (!builder.getTemplates().containsKey(parsedTemplatePattern)) {
                 builder.getTemplates().put(parsedTemplatePattern, parsedTemplate.getTarget());
+            }
         };
     }
 
@@ -411,8 +416,9 @@ public class RoutingHandler implements HttpHandler {
         Objects.requireNonNull(path);
 
         final PathTemplateRouter.Builder<RoutingMatchBuilder, RoutingMatch> builder = methodRouterBuilders.get(method);
-        if (builder == null)
+        if (builder == null) {
             return false;
+        }
 
         final PathTemplateRouter.Template<RoutingMatchBuilder> parsedTemplate = PathTemplateRouter.parseTemplate(
                 path, noRoutingMatchBuilder
@@ -420,13 +426,15 @@ public class RoutingHandler implements HttpHandler {
         final PathTemplateRouter.PatternEqualsAdapter<PathTemplateRouter.Template<RoutingMatchBuilder>> parsedTemplatePattern
                 = new PathTemplateRouter.PatternEqualsAdapter<>(parsedTemplate);
 
-        if (!builder.getTemplates().containsKey(parsedTemplatePattern))
+        if (!builder.getTemplates().containsKey(parsedTemplatePattern)) {
             return false;
+        }
 
         builder.getTemplates().remove(parsedTemplatePattern);
 
-        if (builder.getTemplates().isEmpty())
+        if (builder.getTemplates().isEmpty()) {
             methodRouterBuilders.remove(method);
+        }
 
         return true;
     }
@@ -436,7 +444,7 @@ public class RoutingHandler implements HttpHandler {
      * Removes the specified route from the handler
      *
      * @param method The method to remove
-     * @param path   the path template to remove
+     * @param path the path template to remove
      *
      * @return this handler
      */
@@ -471,8 +479,7 @@ public class RoutingHandler implements HttpHandler {
     }
 
     /**
-     * @param fallbackHandler Handler that will be called when no match was found and invalid method handler can't be
-     *                        invoked.
+     * @param fallbackHandler Handler that will be called when no match was found and invalid method handler can't be invoked.
      *
      * @return This instance.
      */
@@ -489,13 +496,12 @@ public class RoutingHandler implements HttpHandler {
     }
 
     /**
-     * Sets the handler called when this instance can not match the http method but can match another http method.
-     * For example: For an exchange the POST method is not matched by this instance but at least one http method matched
-     * for the exchange.
-     * If this handler is null the fallbackHandler will be used.
+     * Sets the handler called when this instance can not match the http method but can match another http method. For example:
+     * For an exchange the POST method is not matched by this instance but at least one http method matched for the exchange. If
+     * this handler is null the fallbackHandler will be used.
      *
-     * @param invalidMethodHandler Handler that will be called when this instance can not match the http method but can
-     *                             match another http method.
+     * @param invalidMethodHandler Handler that will be called when this instance can not match the http method but can match
+     * another http method.
      *
      * @return This instance.
      */
