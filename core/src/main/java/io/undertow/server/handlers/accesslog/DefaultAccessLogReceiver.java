@@ -82,8 +82,8 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
     private boolean initialRun = true;
     private final boolean rotate;
     private final LogFileHeaderGenerator fileHeaderGenerator;
-    private final int closeRetryCount = DEFAULT_RETRY_COUNT;
-    private final int closeRetryDelay = DEFAULT_RETRY_DELAY;
+    private final int closeRetryCount;
+    private final int closeRetryDelay;
 
     public DefaultAccessLogReceiver(final Executor logWriteExecutor, final File outputDirectory, final String logBaseName) {
         this(logWriteExecutor, outputDirectory.toPath(), logBaseName, null);
@@ -109,7 +109,11 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         this(logWriteExecutor, outputDirectory, logBaseName, logNameSuffix, rotate, null);
     }
 
-    public DefaultAccessLogReceiver(final Executor logWriteExecutor, final Path outputDirectory, final String logBaseName, final String logNameSuffix, boolean rotate, LogFileHeaderGenerator fileHeader) {
+    private DefaultAccessLogReceiver(final Executor logWriteExecutor, final Path outputDirectory, final String logBaseName, final String logNameSuffix, boolean rotate, LogFileHeaderGenerator fileHeader) {
+        this(logWriteExecutor, outputDirectory, logBaseName, logNameSuffix, rotate, null, DEFAULT_RETRY_COUNT, DEFAULT_RETRY_DELAY);
+    }
+
+    private DefaultAccessLogReceiver(final Executor logWriteExecutor, final Path outputDirectory, final String logBaseName, final String logNameSuffix, boolean rotate, LogFileHeaderGenerator fileHeader, final int closeRetryCount, final int closeRetryDelay) {
         this.logWriteExecutor = logWriteExecutor;
         this.outputDirectory = outputDirectory;
         this.logBaseName = logBaseName;
@@ -118,6 +122,8 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         this.logNameSuffix = (logNameSuffix != null) ? logNameSuffix : DEFAULT_LOG_SUFFIX;
         this.pendingMessages = new ConcurrentLinkedDeque<>();
         this.defaultLogFile = outputDirectory.resolve(logBaseName + this.logNameSuffix);
+        this.closeRetryCount = closeRetryCount;
+        this.closeRetryDelay = closeRetryDelay;
         calculateChangeOverPoint();
     }
 
@@ -414,6 +420,14 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         private String logNameSuffix;
         private boolean rotate;
         private LogFileHeaderGenerator logFileHeaderGenerator;
+        /**
+         * Number of attempts for closing thread to take over control, attempts interval is specified by {@link #closeRetryCount}
+         */
+        private int closeRetryCount = DEFAULT_RETRY_COUNT;
+        /**
+         * Delay(ms) between retries when closing thread attempts to take over control.
+         */
+        private int closeRetryDelay = DEFAULT_RETRY_DELAY;
 
         public Executor getLogWriteExecutor() {
             return logWriteExecutor;
@@ -469,8 +483,30 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
             return this;
         }
 
+        public int getCloseRetryCount() {
+            return closeRetryCount;
+        }
+
+        public Builder setCloseRetryCount(int closeRetryCount) {
+            this.closeRetryCount = closeRetryCount;
+            return this;
+        }
+
+        public int getCloseRetryDelay() {
+            return closeRetryDelay;
+        }
+
+        /**
+         * Delay in ms between retrying poll on state to check for proper termination of worker
+         * @param closeRetryDelay
+         */
+        public Builder setCloseRetryDelay(int closeRetryDelay) {
+            this.closeRetryDelay = closeRetryDelay;
+            return this;
+        }
+
         public DefaultAccessLogReceiver build() {
-            return new DefaultAccessLogReceiver(logWriteExecutor, outputDirectory, logBaseName, logNameSuffix, rotate, logFileHeaderGenerator);
+            return new DefaultAccessLogReceiver(logWriteExecutor, outputDirectory, logBaseName, logNameSuffix, rotate, logFileHeaderGenerator, closeRetryCount, closeRetryDelay);
         }
     }
 }
