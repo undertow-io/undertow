@@ -26,6 +26,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -52,6 +54,8 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
     private static final String DEFAULT_LOG_SUFFIX = "log";
     private static final int DEFAULT_RETRY_COUNT = 150;
     private static final int DEFAULT_RETRY_DELAY = 200;
+    public static final String DEFAULT_RETRY_COUNT_PROPERTY = "io.undertow.accesslog.logreceiver.retryCount";
+    public static final String DEFAULT_RETRY_DELAY_PROPERTY = "io.undertow.accesslog.logreceiver.retryDelay";
 
     private final Executor logWriteExecutor;
 
@@ -82,8 +86,8 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
     private boolean initialRun = true;
     private final boolean rotate;
     private final LogFileHeaderGenerator fileHeaderGenerator;
-    private final int closeRetryCount = DEFAULT_RETRY_COUNT;
-    private final int closeRetryDelay = DEFAULT_RETRY_DELAY;
+    private final int closeRetryCount;
+    private final int closeRetryDelay;
 
     public DefaultAccessLogReceiver(final Executor logWriteExecutor, final File outputDirectory, final String logBaseName) {
         this(logWriteExecutor, outputDirectory.toPath(), logBaseName, null);
@@ -109,6 +113,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         this(logWriteExecutor, outputDirectory, logBaseName, logNameSuffix, rotate, null);
     }
 
+    @SuppressWarnings({ "removal", "deprecation" })
     public DefaultAccessLogReceiver(final Executor logWriteExecutor, final Path outputDirectory, final String logBaseName, final String logNameSuffix, boolean rotate, LogFileHeaderGenerator fileHeader) {
         this.logWriteExecutor = logWriteExecutor;
         this.outputDirectory = outputDirectory;
@@ -119,6 +124,24 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
         this.pendingMessages = new ConcurrentLinkedDeque<>();
         this.defaultLogFile = outputDirectory.resolve(logBaseName + this.logNameSuffix);
         calculateChangeOverPoint();
+
+        String property = System.getSecurityManager() == null ? System.getProperty(DEFAULT_RETRY_COUNT_PROPERTY)
+                : AccessController.doPrivileged(new PrivilegedAction<String>() {
+                    @Override
+                    public String run() {
+                        return System.getProperty(DEFAULT_RETRY_COUNT_PROPERTY);
+                    }
+                });
+        this.closeRetryCount = property == null ? DEFAULT_RETRY_COUNT : Integer.parseInt(property);
+
+        property = System.getSecurityManager() == null ? System.getProperty(DEFAULT_RETRY_DELAY_PROPERTY)
+                : AccessController.doPrivileged(new PrivilegedAction<String>() {
+                    @Override
+                    public String run() {
+                        return System.getProperty(DEFAULT_RETRY_DELAY_PROPERTY);
+                    }
+                });
+        this.closeRetryDelay = property == null ? DEFAULT_RETRY_DELAY : Integer.parseInt(property);
     }
 
     private void calculateChangeOverPoint() {
