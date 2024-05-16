@@ -20,7 +20,10 @@ package io.undertow.server.handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
+import io.undertow.util.PathTemplatePatternEqualsAdapter;
 import io.undertow.util.PathTemplateRouter;
+import io.undertow.util.PathTemplaterRouteResult;
+import io.undertow.util.PathTemplateRouterFactory;
 import java.util.function.Supplier;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,11 +33,11 @@ import java.util.stream.Collectors;
 
 /**
  * A drop-in substitute for the old PathTemplateHandler class. Ideally, one should use {@link PathTemplateRouterHandler} by
- * instantiating it with a {@link PathTemplateRouter}. This class implements all of the methods from the original
+ * instantiating it with a {@link PathTemplateRouterFactory}. This class implements all of the methods from the original
  * PathTemplateHandler to provide backwards compatibility.
  *
  * @author Dirk Roets. This class was originally written by Stuart Douglas. After the introduction of
- * {@link PathTemplateRouter}, it was rewritten against the original interface and tests.
+ * {@link PathTemplateRouterFactory}, it was rewritten against the original interface and tests.
  */
 public class PathTemplateHandler implements HttpHandler {
 
@@ -46,9 +49,9 @@ public class PathTemplateHandler implements HttpHandler {
             create(PathTemplateHandler.PathTemplateMatch.class);
 
     private final boolean rewriteQueryParameters;
-    private final PathTemplateRouter.SimpleBuilder<HttpHandler> builder;
+    private final PathTemplateRouterFactory.SimpleBuilder<HttpHandler> builder;
     private final Object lock = new Object();
-    private volatile PathTemplateRouter.Router<HttpHandler> router;
+    private volatile PathTemplateRouter<HttpHandler> router;
 
     /**
      * Default constructor. Uses {@link ResponseCodeHandler#HANDLE_404} as the next (default) handler and sets
@@ -86,7 +89,7 @@ public class PathTemplateHandler implements HttpHandler {
         Objects.requireNonNull(next);
 
         this.rewriteQueryParameters = rewriteQueryParameters;
-        builder = PathTemplateRouter.SimpleBuilder.newBuilder(next);
+        builder = PathTemplateRouterFactory.SimpleBuilder.newBuilder(next);
         router = builder.build();
     }
 
@@ -102,7 +105,7 @@ public class PathTemplateHandler implements HttpHandler {
         Objects.requireNonNull(uriTemplate);
         Objects.requireNonNull(handler);
 
-        // Router builders are not thread-safe, so we need to synchronize.
+        // PathTemplateRouter builders are not thread-safe, so we need to synchronize.
         synchronized (lock) {
             builder.addTemplate(uriTemplate, handler);
             router = builder.build();
@@ -121,7 +124,7 @@ public class PathTemplateHandler implements HttpHandler {
     public PathTemplateHandler remove(final String uriTemplate) {
         Objects.requireNonNull(uriTemplate);
 
-        // Router builders are not thread-safe, so we need to synchronize.
+        // PathTemplateRouter builders are not thread-safe, so we need to synchronize.
         synchronized (lock) {
             builder.removeTemplate(uriTemplate);
             router = builder.build();
@@ -132,16 +135,16 @@ public class PathTemplateHandler implements HttpHandler {
 
     @Override
     public String toString() {
-        final List<PathTemplateRouter.PatternEqualsAdapter<PathTemplateRouter.Template<Supplier<HttpHandler>>>> templates
+        final List<PathTemplatePatternEqualsAdapter<PathTemplateRouterFactory.Template<Supplier<HttpHandler>>>> templates
                 = new ArrayList<>(builder.getBuilder().getTemplates().keySet());
 
         final StringBuilder sb = new StringBuilder();
         sb.append("path-template( ");
         if (templates.size() == 1) {
-            sb.append(templates.get(0).getElement().getPathTemplate()).append(" )");
+            sb.append(templates.get(0).getPattern().getPathTemplate()).append(" )");
         } else {
             sb.append('{').append(
-                    templates.stream().map(s -> s.getElement().getPathTemplate()).collect(Collectors.joining(", "))
+                    templates.stream().map(s -> s.getPattern().getPathTemplate()).collect(Collectors.joining(", "))
             ).append("} )");
         }
         return sb.toString();
@@ -149,7 +152,7 @@ public class PathTemplateHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        final PathTemplateRouter.RouteResult<HttpHandler> routeResult = router.apply(exchange.getRelativePath());
+        final PathTemplaterRouteResult<HttpHandler> routeResult = router.route(exchange.getRelativePath());
         if (routeResult.getPathTemplate().isEmpty()) {
             // This is the default handler, therefore it doesn't contain path parameters.
             routeResult.getTarget().handleRequest(exchange);
