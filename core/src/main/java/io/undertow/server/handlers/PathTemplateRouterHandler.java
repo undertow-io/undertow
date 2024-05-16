@@ -20,6 +20,8 @@ package io.undertow.server.handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.PathTemplateRouter;
+import io.undertow.util.PathTemplaterRouteResult;
+import io.undertow.util.PathTemplateRouterFactory;
 import java.util.Map;
 import java.util.Objects;
 
@@ -29,11 +31,11 @@ import static io.undertow.server.handlers.PathTemplateHandler.PATH_TEMPLATE_MATC
  * A handler that matches URI templates.
  *
  * @author Dirk Roets
- * @see PathTemplateRouter
+ * @see PathTemplateRouterFactory
  */
 public class PathTemplateRouterHandler implements HttpHandler {
 
-    private final PathTemplateRouter.Router<HttpHandler> router;
+    private final PathTemplateRouter<HttpHandler> router;
     private final boolean rewriteQueryParameters;
 
     /**
@@ -42,7 +44,7 @@ public class PathTemplateRouterHandler implements HttpHandler {
      * to the exchange if this flag is 'true'.
      */
     public PathTemplateRouterHandler(
-            final PathTemplateRouter.Router<HttpHandler> router,
+            final PathTemplateRouter<HttpHandler> router,
             final boolean rewriteQueryParameters
     ) {
         this.router = Objects.requireNonNull(router);
@@ -51,7 +53,7 @@ public class PathTemplateRouterHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        final PathTemplateRouter.RouteResult<HttpHandler> routeResult = router.apply(exchange.getRelativePath());
+        final PathTemplaterRouteResult<HttpHandler> routeResult = router.route(exchange.getRelativePath());
         if (routeResult.getPathTemplate().isEmpty()) {
             // This is the default handler, therefore it doesn't contain path parameters.
             routeResult.getTarget().handleRequest(exchange);

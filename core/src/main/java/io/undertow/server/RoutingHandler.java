@@ -22,7 +22,10 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.PathTemplateMatch;
+import io.undertow.util.PathTemplatePatternEqualsAdapter;
 import io.undertow.util.PathTemplateRouter;
+import io.undertow.util.PathTemplaterRouteResult;
+import io.undertow.util.PathTemplateRouterFactory;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -38,7 +41,7 @@ import java.util.function.Supplier;
  * A Handler that handles the common case of routing via path template and method name.
  *
  * @author Dirk Roets. This class was originally written by Stuart Douglas. After the introduction of
- * {@link PathTemplateRouter}, it was rewritten against the original interface and tests.
+ * {@link PathTemplateRouterFactory}, it was rewritten against the original interface and tests.
  */
 public class RoutingHandler implements HttpHandler {
 
@@ -100,12 +103,12 @@ public class RoutingHandler implements HttpHandler {
     //<editor-fold defaultstate="collapsed" desc="Routers inner class">
     private static class Routers {
 
-        private final Map<HttpString, PathTemplateRouter.Router<RoutingMatch>> methodRouters;
-        private final PathTemplateRouter.Router<Object> allMethodsRouter;
+        private final Map<HttpString, PathTemplateRouter<RoutingMatch>> methodRouters;
+        private final PathTemplateRouter<Object> allMethodsRouter;
 
         private Routers(
-                final Map<HttpString, PathTemplateRouter.Router<RoutingMatch>> methodRouters,
-                final PathTemplateRouter.Router<Object> allMethodsRouter
+                final Map<HttpString, PathTemplateRouter<RoutingMatch>> methodRouters,
+                final PathTemplateRouter<Object> allMethodsRouter
         ) {
             this.methodRouters = Objects.requireNonNull(methodRouters);
             this.allMethodsRouter = Objects.requireNonNull(allMethodsRouter);
@@ -121,7 +124,7 @@ public class RoutingHandler implements HttpHandler {
             return noRoutingMatch;
         }
     };
-    private final Map<HttpString, PathTemplateRouter.Builder<RoutingMatchBuilder, RoutingMatch>> methodRouterBuilders
+    private final Map<HttpString, PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch>> methodRouterBuilders
             = new HashMap<>();
 
     // The routers to use.
@@ -142,7 +145,7 @@ public class RoutingHandler implements HttpHandler {
         this.rewriteQueryParameters = rewriteQueryParameters;
         this.routers = new Routers(
                 Map.of(),
-                PathTemplateRouter.SimpleBuilder.newBuilder(new Object()).build()
+                PathTemplateRouterFactory.SimpleBuilder.newBuilder(new Object()).build()
         );
     }
 
@@ -172,8 +175,8 @@ public class RoutingHandler implements HttpHandler {
             final Routers routers,
             final HttpServerExchange exchange
     ) throws Exception {
-        final PathTemplateRouter.RouteResult<Object> routeResult = routers.allMethodsRouter
-                .apply(exchange.getRelativePath());
+        final PathTemplaterRouteResult<Object> routeResult = routers.allMethodsRouter
+                .route(exchange.getRelativePath());
         if (routeResult.getPathTemplate().isPresent()) {
             handlInvalidMethod(exchange);
         } else {
@@ -185,14 +188,14 @@ public class RoutingHandler implements HttpHandler {
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final Routers localRouters = this.routers;
 
-        final PathTemplateRouter.Router<RoutingMatch> methodRouter = localRouters.methodRouters
+        final PathTemplateRouter<RoutingMatch> methodRouter = localRouters.methodRouters
                 .get(exchange.getRequestMethod());
         if (methodRouter == null) {
             handleNoMatch(localRouters, exchange);
             return;
         }
 
-        final PathTemplateRouter.RouteResult<RoutingMatch> routeResult = methodRouter.apply(exchange.getRelativePath());
+        final PathTemplaterRouteResult<RoutingMatch> routeResult = methodRouter.route(exchange.getRelativePath());
         if (routeResult.getPathTemplate().isEmpty()) {
             handleNoMatch(localRouters, exchange);
             return;
@@ -220,14 +223,14 @@ public class RoutingHandler implements HttpHandler {
         handleFallback(exchange);
     }
 
-    private PathTemplateRouter.Builder<RoutingMatchBuilder, RoutingMatch> getOrAddMethodRouterBuiler(
+    private PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch> getOrAddMethodRouterBuiler(
             final HttpString method
     ) {
         Objects.requireNonNull(method);
 
-        PathTemplateRouter.Builder<RoutingMatchBuilder, RoutingMatch> result = methodRouterBuilders.get(method);
+        PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch> result = methodRouterBuilders.get(method);
         if (result == null) {
-            result = PathTemplateRouter.Builder.newBuilder().updateDefaultTargetFactory(noRoutingMatchBuilder);
+            result = PathTemplateRouterFactory.Builder.newBuilder().updateDefaultTargetFactory(noRoutingMatchBuilder);
             methodRouterBuilders.put(method, result);
         }
         return result;
@@ -239,9 +242,9 @@ public class RoutingHandler implements HttpHandler {
     ) {
         Objects.requireNonNull(template);
 
-        final PathTemplateRouter.Builder<RoutingMatchBuilder, RoutingMatch> routeBuilder
+        final PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch> routeBuilder
                 = getOrAddMethodRouterBuiler(method);
-        final PathTemplateRouter.Template<RoutingMatchBuilder> parsedTemplate = PathTemplateRouter.parseTemplate(
+        final PathTemplateRouterFactory.Template<RoutingMatchBuilder> parsedTemplate = PathTemplateRouterFactory.parseTemplate(
                 template, new RoutingMatchBuilder()
         );
 
@@ -254,45 +257,45 @@ public class RoutingHandler implements HttpHandler {
         return parsedTemplate.getTarget();
     }
 
-    private Map<HttpString, PathTemplateRouter.Router<RoutingMatch>> createMethodRouters() {
-        final Map<HttpString, PathTemplateRouter.Router<RoutingMatch>> result = new HashMap<>(
+    private Map<HttpString, PathTemplateRouter<RoutingMatch>> createMethodRouters() {
+        final Map<HttpString, PathTemplateRouter<RoutingMatch>> result = new HashMap<>(
                 (int) (methodRouterBuilders.size() / 0.75d) + 1
         );
-        for (final Entry<HttpString, PathTemplateRouter.Builder<RoutingMatchBuilder, RoutingMatch>> entry
+        for (final Entry<HttpString, PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch>> entry
                 : methodRouterBuilders.entrySet()) {
             result.put(entry.getKey(), entry.getValue().build());
         }
         return Collections.unmodifiableMap(result);
     }
 
-    private static <A> Consumer<PathTemplateRouter.Template<A>> createAddTemplateIfAbsentConsumer(
-            final PathTemplateRouter.SimpleBuilder<Object> builder,
+    private static <A> Consumer<PathTemplateRouterFactory.Template<A>> createAddTemplateIfAbsentConsumer(
+            final PathTemplateRouterFactory.SimpleBuilder<Object> builder,
             final Supplier<Object> targetFactory
     ) {
         Objects.requireNonNull(builder);
         Objects.requireNonNull(targetFactory);
 
-        return (final PathTemplateRouter.Template<A> item) -> {
+        return (final PathTemplateRouterFactory.Template<A> item) -> {
             final String template = item.getPathTemplate();
-            final PathTemplateRouter.Template<Supplier<Object>> parsedTemplate = PathTemplateRouter.parseTemplate(
+            final PathTemplateRouterFactory.Template<Supplier<Object>> parsedTemplate = PathTemplateRouterFactory.parseTemplate(
                     template, targetFactory
             );
-            final PathTemplateRouter.PatternEqualsAdapter<PathTemplateRouter.Template<Supplier<Object>>> parsedTemplatePattern
-                    = new PathTemplateRouter.PatternEqualsAdapter<>(parsedTemplate);
+            final PathTemplatePatternEqualsAdapter<PathTemplateRouterFactory.Template<Supplier<Object>>> parsedTemplatePattern
+                    = new PathTemplatePatternEqualsAdapter<>(parsedTemplate);
             if (!builder.getTemplates().containsKey(parsedTemplatePattern)) {
                 builder.getTemplates().put(parsedTemplatePattern, parsedTemplate.getTarget());
             }
         };
     }
 
-    private PathTemplateRouter.Router<Object> createAllMethodsRouter() {
+    private PathTemplateRouter<Object> createAllMethodsRouter() {
         final Object target = new Object();
         final Supplier<Object> targetFactory = () -> target;
-        final PathTemplateRouter.SimpleBuilder<Object> builder = PathTemplateRouter.SimpleBuilder
+        final PathTemplateRouterFactory.SimpleBuilder<Object> builder = PathTemplateRouterFactory.SimpleBuilder
                 .newBuilder(target);
         methodRouterBuilders.values().stream()
                 .flatMap(b -> b.getTemplates().keySet().stream())
-                .map(PathTemplateRouter.PatternEqualsAdapter::getElement)
+                .map(PathTemplatePatternEqualsAdapter::getPattern)
                 .forEach(createAddTemplateIfAbsentConsumer(builder, targetFactory));
         return builder.build();
     }
@@ -389,21 +392,21 @@ public class RoutingHandler implements HttpHandler {
         (originally mutable) RoutingMatch class being held by both this RoutingHandler and the original
         RoutingHandler.  Since the original fields - specifically RoutingMatch.defaultHandler - were not marked
         as volatile, that could result in the handle method of this handler using outdated / cached values for
-        the field. Since the new PathTemplateRouter is immutable, there is a requirement to rebuild it whenever
+        the field. Since the new PathTemplateRouterFactory is immutable, there is a requirement to rebuild it whenever
         its configuration (templates etc) are mutated.  Mutating via the original RoutingHandler would - after
         having called this method - also result in the router being out of sync with the router builder.
         For these reasons, this has been changed to a deep copy.  Arguably, developers won't expect to end up with
         two RoutingHandlers that are implicitely linked after having called this method anyway. */
         synchronized (routingHandler) {
-            for (final Entry<HttpString, PathTemplateRouter.Builder<RoutingMatchBuilder, RoutingMatch>> outer
+            for (final Entry<HttpString, PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch>> outer
                     : routingHandler.methodRouterBuilders.entrySet()) {
-                final PathTemplateRouter.Builder<RoutingMatchBuilder, RoutingMatch> builder
+                final PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch> builder
                         = getOrAddMethodRouterBuiler(outer.getKey());
-                for (final Entry<PathTemplateRouter.PatternEqualsAdapter<PathTemplateRouter.Template<RoutingMatchBuilder>>, RoutingMatchBuilder> inner
+                for (final Entry<PathTemplatePatternEqualsAdapter<PathTemplateRouterFactory.Template<RoutingMatchBuilder>>, RoutingMatchBuilder> inner
                         : outer.getValue().getTemplates().entrySet()) {
                     builder.addTemplate(
-                            inner.getKey().getElement().getPathTemplate(),
-                            inner.getKey().getElement().getTarget().deepCopy()
+                            inner.getKey().getPattern().getPathTemplate(),
+                            inner.getKey().getPattern().getTarget().deepCopy()
                     );
                 }
             }
@@ -415,16 +418,16 @@ public class RoutingHandler implements HttpHandler {
         Objects.requireNonNull(method);
         Objects.requireNonNull(path);
 
-        final PathTemplateRouter.Builder<RoutingMatchBuilder, RoutingMatch> builder = methodRouterBuilders.get(method);
+        final PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch> builder = methodRouterBuilders.get(method);
         if (builder == null) {
             return false;
         }
 
-        final PathTemplateRouter.Template<RoutingMatchBuilder> parsedTemplate = PathTemplateRouter.parseTemplate(
+        final PathTemplateRouterFactory.Template<RoutingMatchBuilder> parsedTemplate = PathTemplateRouterFactory.parseTemplate(
                 path, noRoutingMatchBuilder
         );
-        final PathTemplateRouter.PatternEqualsAdapter<PathTemplateRouter.Template<RoutingMatchBuilder>> parsedTemplatePattern
-                = new PathTemplateRouter.PatternEqualsAdapter<>(parsedTemplate);
+        final PathTemplatePatternEqualsAdapter<PathTemplateRouterFactory.Template<RoutingMatchBuilder>> parsedTemplatePattern
+                = new PathTemplatePatternEqualsAdapter<>(parsedTemplate);
 
         if (!builder.getTemplates().containsKey(parsedTemplatePattern)) {
             return false;
@@ -463,7 +466,7 @@ public class RoutingHandler implements HttpHandler {
         Objects.requireNonNull(path);
 
         boolean removed = false;
-        for (final Entry<HttpString, PathTemplateRouter.Builder<RoutingMatchBuilder, RoutingMatch>> entry
+        for (final Entry<HttpString, PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch>> entry
                 : methodRouterBuilders.entrySet()) {
             removed = removeIfPresent(entry.getKey(), path) || removed;
         }
