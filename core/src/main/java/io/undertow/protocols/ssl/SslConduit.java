@@ -1001,6 +1001,7 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
 
     private SSLEngineResult wrapAndFlip(ByteBuffer[] userBuffers, int off, int len) throws IOException {
         SSLEngineResult result = null;
+        int totalConsumedBytes = 0;
         while (result == null || (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP
                 && result.getStatus() != SSLEngineResult.Status.BUFFER_OVERFLOW && !engine.isInboundDone())) {
             if (userBuffers == null) {
@@ -1008,6 +1009,10 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
             } else {
                 result = engine.wrap(userBuffers, off, len, wrappedData.getBuffer());
             }
+            totalConsumedBytes += result.bytesConsumed();
+        }
+        if (totalConsumedBytes != result.bytesConsumed()) {
+            result = new SSLEngineResult(result.getStatus(), result.getHandshakeStatus(), totalConsumedBytes, result.bytesProduced());
         }
         wrappedData.getBuffer().flip();
         return result;
