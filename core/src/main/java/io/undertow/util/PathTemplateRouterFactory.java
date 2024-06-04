@@ -17,6 +17,11 @@
  */
 package io.undertow.util;
 
+import io.undertow.util.PathTemplateParser.AbstractTemplateSegment;
+import io.undertow.util.PathTemplateParser.ParamTemplateSegment;
+import io.undertow.util.PathTemplateParser.StaticTemplateSegment;
+import io.undertow.util.PathTemplateParser.WildCardTemplateSegment;
+import static io.undertow.util.PathTemplateUtil.pathWithForwardSlash;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,24 +39,21 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
- * {@link PathTemplateRouterFactory} is a utility that provides classes and methods for creating routers that route URL paths
- * based on URL path templates.
+ * Utility methods and classes for creating router instances from URL path templates.
+ * <br><br>
  *
- * URL path templates are parsed from strings that:
- * <ul>
- * <li>Start with '/'.</li>
- * <li>Contain 0 or more segments, delimited by '/' characters. The following 3 segment types are supported:
+ * This is one of three main classes that participate in setting up and routing requested URL paths to URL path templates:
  * <ol>
- * <li>Static strings. The string '/abc/{varNameA}/def' is a valid URL path template that contains the static string 'abc' as
- * its first segment and the static string 'def' as its third segment.</li>
- * <li>Named parameters. The string '/abc/{varNameA}/def' is a valid URL path template that contains the named parameter
- * 'varNameA' as its second segment.</li>
- * <li>Wildcards. The string '/abc/{varNameA}/*' is a valid URL path template that contains a wildcard as its third segment.
- * Wildcards may be prefixed, i.e. the string '/abc/{varNameA}/def*' is also a valid URL path template.</li>
+ * <li>{@link PathTemplateParser} participates in the <i>*setup phase</i> by parsing formatted strings into URL path
+ * templates.</li>
+ * <li>{@link PathTemplateRouterFactory} participates in the <i>*setup phase</i> by creating router instances from sets of
+ * parsed URL path templates.</li>
+ * <li>{@link PathTemplateRouter} participates in the <i>*routing phase</i> by routing requested URL paths to sets of underlying
+ * URL path templates.</li>
  * </ol>
- * </li>
- * <li>Contain at most one wildcard. If a wildcard is present, it must be the last character in the template string.</li>
- * </ul>
+ * <br>
+ * <i>*The setup and routing phases are documented in {@link PathTemplateRouter}.</i>
+ * <br><br>
  *
  * The builders and factories that are encapsulated by this class are not thread-safe, but the resulting routers are
  * thread-safe.
@@ -79,21 +81,24 @@ public class PathTemplateRouterFactory {
             2.1 "Setup phase" as the phase/process during which routes are mutated and a router instance is created.
             2.2 "Routing phase" as the phase/process during which an existing router is used to route requests.
 
-        2.  The matcher- and router- classes that are encapsulated inside of this factory do not implement unnecessary checks
+        3.  The matcher- and router- classes that are encapsulated inside of this factory do not implement unnecessary checks
             during the routing phase. The objective is to avoid the associated overhead by relying on guarantees made by the
             factory during the setup phase.
 
-        3.  The router classes create instances of RouteRequest that are passed to their underlying matcher instances:
+        4.  The router classes create instances of RouteRequest that are passed to their underlying matcher instances:
 
-            3.1 RouteRequest contains arrays that are read directly - without being copied - by the matcher classes. It is
+            4.1 RouteRequest contains arrays that are read directly - without being copied - by the matcher classes. It is
                 therefore technically possible to mutate instances of RouteRequest during calls to Matcher.match, but the overall
                 design and integrity of the router classes depend on RouteRequest instances NOT being mutated after creation. This
                 limitation on the matcher implementations are considered a key design decision and must be strictly adhered to.
-            3.2 Instances of RouteRequest are created by calls to PathTemplateRouter.Route, used during the processing of those
+            4.2 Instances of RouteRequest are created by calls to PathTemplateRouter.Route, used during the processing of those
                 method calls and then discarded before those method calls return. RouteRequest instances are therefore only ever
                 used by a single thread and need not be thread-safe / synchronised.
 
+
     Implementation Notes
+
+    (Also read the implementation notes section in PathTemplateParser)
 
     This factory encapsulates the following classes:
 
@@ -106,73 +111,24 @@ public class PathTemplateRouterFactory {
             resulting routers. These builders also expose convenience methods to parse URL path templates provided as strings
             and to wrap targets inside of suppliers for compatibility with RouterFactory.
 
-        3.  Template (Setup phase). URL path template strings are structurally validated and then parsed into instances of
-            Template. Instances of Template are wrapped inside of PathTemplatePatternEqualsAdapter which allows duplicate
-            template patterns to be detected. For example, '/abc/{varNameA}/def' and '/abc/{varNameB}/def' are different
-            templates, but represent the same pattern of: ['abc'],[named variable],['def']. It does not make sense to allow
-            multiple templates that have the same pattern to be added to the same router as all requested paths that match the
-            first template will also match the second template and there is no predictable way to determine which is the better
-            match. Template strings are eagerly parsed into Templates and eagerly checked for uniqueness of their patterns by
-            builders. The objective there is to fail fast - with an exception - as soon as a duplicate pattern is added. This
-            approach will make it easier for developers to know which pattern is duplicated and where it is duplicated in their
-            code. Templates consist of 0 or more segments with each segment having a fixed position inside of the template.
-            3 different types of segments are supported by templates, each represented by its own class. These instances are
-            recognised by the RouterFactory that then generates matchers that will be used to recognise matches during the
-            routing phase.
-
-        4.  Template segments (Multiple classes. Setup phase). Represents the three different types of segments that appear at
-            specific positions inside of templates.
-
-        5.  MatcherLeafArterfacts (Setup phase). An intermediary class used by the RouterFactory to structure template segments
+        3.  MatcherLeafArterfacts (Setup phase). An intermediary class used by the RouterFactory to structure template segments
             as leaves of trees before finally creating the routers.
 
-        6.  Routers (Multiple classes. Routing phase). Routes requested URL paths to the most specific URL path template and
-            target that can be considered a match for the path. See the sections below for more details on routing
-            methodology and routing optimisation.
+        4.  Routers (Multiple classes. Routing phase). Routes requested URL paths to the most specific URL path templates and
+            targets that can be considered a match for the paths. See the JavaDoc on PathTemplateRouter for more details on
+            the routing methodology and see the section below on routing optimisation.
 
-        7.  Matchers (Multiple classes. Routing phase). Matchers are members of a strategy pattern that enables the
+        5.  Matchers (Multiple classes. Routing phase). Matchers are members of a strategy pattern that enables the
             RouterFactory to compose highly optimised strategies for determining the most specific URL path templates that
             'match' requested URL paths. There are essentially 3 different types of matcher implementations.
 
-            7.1 Segment matchers. These matchers determine if a segment (or part of a segment) in a requested URL path is a
+            5.1 Segment matchers. These matchers determine if a segment (or part of a segment) in a requested URL path is a
                 match for the associated segment (same position) of a URL path template.
-            7.2 Composite matchers. These matchers combine multiple segment matchers into one matcher and uses a strategy -
+            5.2 Composite matchers. These matchers combine multiple segment matchers into one matcher and uses a strategy -
                 specific to the matcher implementation - to find underlying matchers that match specific segments.
-            7.3 Terminal matchers. These matchers are added as the final leaves in the trees and are tasked with instantiating
+            5.3 Terminal matchers. These matchers are added as the final leaves in the trees and are tasked with instantiating
                 the PathTemplateRouteResult instances - populated where applicable with matched path parameters.
 
-    Routing methodology
-
-        *   Routers can route requested URL paths to any number of underlying URL path templates, provided that the patterns
-            for all URL path templates are unique.  Specifically the template strings '/abc/{varNameA}/def' and
-            '/abc/{varNameB}/def' uses different parameter names, but the patterns are the same and a router can therefore
-            only contain one of those templates.
-
-        *   Templates consist of segments in numbered positions and routers recognise 3 types of segments, namely: static
-            segments, parameter segments and wildcard segments.
-
-        *   When multiple underlying URL path templates match a requested URL path, then the router picks the most specific
-            template that matches the path.  Another way of looking at "most specific" is that it is the template that is the
-            least likely to match if something in the requested URL path were to change.  For example:
-
-            *   The templates '/abc/def/ghi' and '/abc/{varA}/ghi' will both match the request '/abc/def/ghi' and in this case
-                the routers will return the first template. Templates that contain more static segments are always more
-                specific than templates that contain less static segments.
-            *   The templates '/abc/{varA}/ghi' and '/abc/{varA}/{varB}' will both match the request '/abc/def/ghi' and in this
-                case the routers will return the first template. This first template is once again more specific as it contains
-                more static segments.
-            *   The templates '/abc/def/{varA}' and '/abc/{varB}/ghi' will both match the request '/abc/def/ghi' and in this
-                case the routers will return the first template. Templates with static segments that appear earlier in the
-                templates are more specific than templates with static segments that appear later in the templates.
-            *   The templates '/abc/{varA}' and '/abc/*' will both match the request '/abc/def' and in this case the routers
-                will return the first template. Templates that contain wildcards are always less specific than templates that
-                do not contain wildcards.
-            *   The templates '/abc/*' and '/abc*' will both match the request '/abc/def' and in this case the rotuers will
-                return the first template. The first template contains more static segments and is therefore considered
-                more specific.
-            *   The templates '/abc*' and '/*' will both match the request '/abc/def' and in this case the rotuers will
-                return the first template. Wildcards that contain prefixes are considered to e more specific than wilcards
-                that do not contain prefixes.
 
     Routing optimisation
 
@@ -182,17 +138,17 @@ public class PathTemplateRouterFactory {
                 writing basic code that avoids duplicating the same checks and that is efficent from a memory and thread-safety
                 point of view. This is fairly simple.
             *   Using tree structures to eliminate unnecessary/duplicate matching of segments.  For example if it has been
-                determined that the requested URL path '/abc/def' does not match the template '/ghi/jkl' because static segment
-                number one is a mismatch, then there is no need to check if it matches the template '/ghi/mno' as we have
-                already determined that the static segment 'ghi' is not matched. These templates can be represented as a tree:
-                    ghi
-                    |- jkl
-                    |- mno
-                If 'ghi' is not matched then there is no need to check any of its child leaves etc.
+                determined that the requested URL path '/books/14' does not match the template '/authors/books' because static segment
+                number one is a mismatch, then there is no need to check if it matches the template '/authors/photos' as we have
+                already determined that the static segment 'authors' is not matched. These templates can be represented as a tree:
+                    authors
+                    |--- books
+                    |--- photos
+                If 'authors' is not matched then there is no need to check any of its child leaves etc.
             *   Eliminating entire trees based on the number of segments in the templates (depth of the trees) and the
                 number of segments in the requested URL paths. For example, it is not necessary to ever check if the template
                 '/abc/def/ghi' is a match for the requested URL path '/abc/def' purely based on the mismatch of the number
-                of segments present in the template vs the request. For this reason trees are kept as arrays that underly
+                of segments present in the template vs the request. For this reason trees are kept as arrays that underlie
                 the routers and the trees are indexed by the number of segments present inside of the trees. This provides
                 a very efficient way to immediately illiminate large number of templates that could never match requests.
             *   Provding a specialised routing strategy for templates that contain wildcards. This allows routing for
@@ -201,348 +157,7 @@ public class PathTemplateRouterFactory {
                 fewer segments than the requested URL path.
             *   Implementing a binary search across 3 or more leaves when those leaves are all static segments with a common
                 parent leaf.
-
      */
-    //</editor-fold>
-    //
-    //<editor-fold defaultstate="collapsed" desc="Template segment inner classes">
-    /**
-     * Parent class for all segments inside a parsed URL path template ({@link Template}).
-     *
-     * For the purposes of this class a segment is defined as the parts of a URL path template that are delimited by '/'
-     * characters. The following types of segments are implemented as extensions of this class:
-     * <ul>
-     * <li>{@link StaticTemplateSegment} that represents a static string that must be exactly equal to the segment in the same
-     * position of a requested path in order for the segment to be considered a 'match' for the request.</li>
-     * <li>{@link ParamTemplateSegment} that represents a named parameter that will match any segment in the same position of a
-     * requested path.</li>
-     * <li>{@link WildCardTemplateSegment} that represents a wildcard that will match any content (for any number of segments)
-     * that follows the '*' wildcard character.</li>
-     * </ul>
-     *
-     * Extensions of this class must be immutable.
-     */
-    private abstract static class AbstractTemplateSegment implements PathTemplatePattern {
-
-        /**
-         * Index for this segment in the array of segments for the template.
-         */
-        protected final int segmentIdx;
-
-        private AbstractTemplateSegment(final int segmentIdx) {
-            this.segmentIdx = segmentIdx;
-
-            if (segmentIdx < 0) { //0-based index for an array
-                throw new IllegalArgumentException();
-            }
-        }
-    }
-
-    /**
-     * A static string that must be exactly equal to the segment in the same position of a requested path in order for the
-     * segment to be considered a 'match' for the request.
-     *
-     * Instances of this class are immutable.
-     */
-    private static class StaticTemplateSegment extends AbstractTemplateSegment {
-
-        private final String value;
-
-        private StaticTemplateSegment(
-                final int segmentIdx,
-                final String value
-        ) {
-            super(segmentIdx);
-            this.value = Objects.requireNonNull(value);
-        }
-
-        @Override
-        public String toString() {
-            return "StaticTemplateSegment{" + "segmentIdx=" + segmentIdx + ", value=" + value + '}';
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = 5;
-            hash = 67 * hash + this.segmentIdx;
-            hash = 67 * hash + Objects.hashCode(this.value);
-            return hash;
-        }
-
-        @Override
-        public boolean equals(final Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final StaticTemplateSegment other = (StaticTemplateSegment) obj;
-            if (this.segmentIdx != other.segmentIdx) {
-                return false;
-            }
-            return Objects.equals(this.value, other.value);
-        }
-
-        @Override
-        public int patternHashCode() {
-            return hashCode();
-        }
-
-        @Override
-        public boolean patternEquals(final PathTemplatePattern obj) {
-            return equals(obj);
-        }
-    }
-
-    /**
-     * A named parameter that will match any segment in the same position of a requested path.
-     *
-     * Instances of this class are immutable.
-     */
-    private static class ParamTemplateSegment extends AbstractTemplateSegment {
-
-        /**
-         * Name for the parameter, excluding the '{' and '}' braces.
-         */
-        private final String paramName;
-
-        private ParamTemplateSegment(
-                final int segmentIdx,
-                final String paramName
-        ) {
-            super(segmentIdx);
-            this.paramName = Objects.requireNonNull(paramName);
-        }
-
-        @Override
-        public String toString() {
-            return "ParamTemplateSegment{" + "segmentIdx=" + segmentIdx + ", paramName=" + paramName + '}';
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = 5;
-            hash = 53 * hash + this.segmentIdx;
-            hash = 53 * hash + Objects.hashCode(this.paramName);
-            return hash;
-        }
-
-        @Override
-        public boolean equals(final Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final ParamTemplateSegment other = (ParamTemplateSegment) obj;
-            if (this.segmentIdx != other.segmentIdx) {
-                return false;
-            }
-            return Objects.equals(this.paramName, other.paramName);
-        }
-
-        @Override
-        public int patternHashCode() {
-            int hash = 5;
-            hash = 53 * hash + this.segmentIdx;
-            return hash;
-        }
-
-        @Override
-        public boolean patternEquals(final PathTemplatePattern obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final ParamTemplateSegment other = (ParamTemplateSegment) obj;
-            return this.segmentIdx == other.segmentIdx;
-        }
-    }
-
-    /**
-     * A wildcard that will match any content (for any number of segments) that follows the '*' wildcard character.
-     *
-     * Instances of this class are immutable.
-     */
-    private static class WildCardTemplateSegment extends AbstractTemplateSegment {
-
-        /**
-         * Prefix for the wild card, excluding the '*' itself. May be an empty string.
-         */
-        private final String prefix;
-
-        private WildCardTemplateSegment(
-                final int segmentIdx,
-                final String prefix
-        ) {
-            super(segmentIdx);
-            this.prefix = Objects.requireNonNull(prefix);
-        }
-
-        @Override
-        public String toString() {
-            return "WildCardTemplateSegment{" + "segmentIdx=" + segmentIdx + ", prefix=" + prefix + '}';
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = 7;
-            hash = 53 * hash + this.segmentIdx;
-            hash = 53 * hash + Objects.hashCode(this.prefix);
-            return hash;
-        }
-
-        @Override
-        public boolean equals(final Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final WildCardTemplateSegment other = (WildCardTemplateSegment) obj;
-            if (this.segmentIdx != other.segmentIdx) {
-                return false;
-            }
-            return Objects.equals(this.prefix, other.prefix);
-        }
-
-        @Override
-        public int patternHashCode() {
-            return hashCode();
-        }
-
-        @Override
-        public boolean patternEquals(final PathTemplatePattern obj) {
-            return equals(obj);
-        }
-    }
-
-    //</editor-fold>
-    //
-    //<editor-fold defaultstate="collapsed" desc="Template inner class">
-    /**
-     * A Template is a parsed sequence of segments - in specific positions - for a URL path template.
-     *
-     * @param <T> Target type.
-     */
-    public static class Template<T> implements PathTemplatePattern {
-
-        private final String pathTemplate;
-        private final List<AbstractTemplateSegment> segments;
-        private final T target;
-        private final boolean wildCard;
-
-        private Template(
-                final String pathTemplate,
-                final List<AbstractTemplateSegment> segments,
-                final boolean wildCard,
-                final T target
-        ) {
-            this.pathTemplate = Objects.requireNonNull(pathTemplate);
-            this.segments = Objects.requireNonNull(segments);
-            this.wildCard = wildCard;
-            this.target = Objects.requireNonNull(target);
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = 7;
-            hash = 97 * hash + Objects.hashCode(this.segments);
-            return hash;
-        }
-
-        @Override
-        public boolean equals(final Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final Template<?> other = (Template<?>) obj;
-            if (this.wildCard != other.wildCard) {
-                return false;
-            }
-            if (!Objects.equals(this.segments, other.segments)) {
-                return false;
-            }
-            return Objects.equals(this.target, other.target);
-        }
-
-        @Override
-        public int patternHashCode() {
-            int hash = 7;
-            for (final AbstractTemplateSegment segment : segments) {
-                hash = 97 * hash + segment.patternHashCode();
-            }
-            return hash;
-        }
-
-        @Override
-        public boolean patternEquals(final PathTemplatePattern obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-
-            final Template<?> other = (Template<?>) obj;
-            if (wildCard != other.wildCard) {
-                return false;
-            }
-            if (segments.size() != other.segments.size()) {
-                return false;
-            }
-
-            final Iterator<AbstractTemplateSegment> it = segments.iterator();
-            final Iterator<AbstractTemplateSegment> otherIt = other.segments.iterator();
-            while (it.hasNext()) {
-                if (!it.next().patternEquals(otherIt.next())) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        /**
-         * @return The template string from which this template was created.
-         */
-        public String getPathTemplate() {
-            return pathTemplate;
-        }
-
-        /**
-         * @return The target for this template.
-         */
-        public T getTarget() {
-            return target;
-        }
-    }
-
     //</editor-fold>
     //
     //<editor-fold defaultstate="collapsed" desc="RouteRequest inner class">
@@ -551,6 +166,10 @@ public class PathTemplateRouterFactory {
      *
      * Instances of this class expose (internally) two arrays that can technically be mutated, but that MAY NOT be mutated. This
      * is a key design decision than must be maintained in order to ensure integrity of all router and matcher implementations.
+     *
+     * Participates in the routing phase, but is guaranteed to never be used by more than on thread. As an optimisation, the
+     * class is not strictly immutable to avoid the overhead associated with copying the arrays when the arrays are used - by
+     * matchers for example.
      */
     private static class RouteRequest {
 
@@ -576,10 +195,10 @@ public class PathTemplateRouterFactory {
     //
     //<editor-fold defaultstate="collapsed" desc="Matcher inner classes">
     /**
-     * A strategy pattern that enables the RouterFactory to compose highly optimised strategies for determining the most
+     * A strategy pattern that enables the {@link RouterFactory} to compose highly optimised strategies for determining the most
      * specific URL path templates that 'match' requested URL paths.
      *
-     * Implementations must be immutable and therefore thread-safe.
+     * Matchers participate in the Routing Phase, therefore implementations must be immutable / thread-safe.
      *
      * @param <T> Target type.
      */
@@ -593,27 +212,28 @@ public class PathTemplateRouterFactory {
          * @return The result. Calls to these methods return a default object (null object pattern) rather than {@code NULL}
          * when this matcher instanced cannot match the specified request.
          */
-        PathTemplaterRouteResult<T> match(RouteRequest request);
+        PathTemplateRouteResult<T> match(RouteRequest request);
     }
 
     /**
      * A segment matcher that calls the underlying 'nextMatcher' if the associated segment is exactly equal to the value
-     * contained by this matcher.
+     * contained by this matcher. This matcher is primarily used to determine if a segment in a requested URL path matches a
+     * {@link StaticTemplateSegment} from a {@link PathTemplate}.
      *
-     * Instances of this class are thread-safe.
+     * Participates in the routing phase. Instances of this class are immutable and therefore thread-safe.
      *
      * @param <T> Type of target.
      */
     private static class SegmentEqualsMatcher<T> implements Matcher<T> {
 
-        private final PathTemplaterRouteResult<T> defaultResult;
+        private final PathTemplateRouteResult<T> defaultResult;
         private final char[] value;
         private final int len;
         private final int segmentIdx;
         private final Matcher<T> nextMatcher;
 
         private SegmentEqualsMatcher(
-                final PathTemplaterRouteResult<T> defaultResult,
+                final PathTemplateRouteResult<T> defaultResult,
                 final char[] value,
                 final int segmentIdx,
                 final Matcher<T> nextMatcher
@@ -635,7 +255,7 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        public PathTemplaterRouteResult<T> match(final RouteRequest request) {
+        public PathTemplateRouteResult<T> match(final RouteRequest request) {
             final int segmentStartIdx = request.segmentStartIndexes[segmentIdx];
 
             //Index immediately after the last character of the segment.
@@ -658,22 +278,23 @@ public class PathTemplateRouterFactory {
 
     /**
      * A segment matcher that calls the underlying 'nextMatcher' if the associated segment starts with the value contained by
-     * this matcher.
+     * this matcher. This matcher is primarily used to determine if a segment in a requested URL path matches a
+     * {@link WildCardTemplateSegment} when the {@link WildCardTemplateSegment} contains a prefix.
      *
-     * Instances of this class are thread-safe.
+     * Participates in the routing phase. Instances of this class are immutable and therefore thread-safe.
      *
      * @param <T> Target type.
      */
     private static class SegmentStartsWithMatcher<T> implements Matcher<T> {
 
-        private final PathTemplaterRouteResult<T> defaultResult;
+        private final PathTemplateRouteResult<T> defaultResult;
         private final char[] value;
         private final int len;
         private final int segmentIdx;
         private final Matcher<T> nextMatcher;
 
         private SegmentStartsWithMatcher(
-                final PathTemplaterRouteResult<T> defaultResult,
+                final PathTemplateRouteResult<T> defaultResult,
                 final char[] value,
                 final int segmentIdx,
                 final Matcher<T> nextMatcher
@@ -698,7 +319,7 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        public PathTemplaterRouteResult<T> match(final RouteRequest request) {
+        public PathTemplateRouteResult<T> match(final RouteRequest request) {
             final int segmentStartIdx = request.segmentStartIndexes[segmentIdx];
 
             //Index immediately after the last character of the segment.
@@ -719,21 +340,21 @@ public class PathTemplateRouterFactory {
     }
 
     /**
-     * A simple composite matcher that tries all of the underlying matchers in the same order that they were provided to the
-     * constructor.
+     * A composite matcher that attempts to find a match for a request by passing the request to an array of underlying matchers
+     * - in the same order that the matchers were provided to the constructor.
      *
-     * Instances of this class are thread-safe.
+     * Participates in the routing phase. Instances of this class are immutable and therefore thread-safe.
      *
      * @param <T> Type of target.
      */
     private static class SimpleCompositeMatcher<T> implements Matcher<T> {
 
-        private final PathTemplaterRouteResult<T> defaultResult;
+        private final PathTemplateRouteResult<T> defaultResult;
         private final Matcher<T>[] matchers;
         private final int len;
 
         private SimpleCompositeMatcher(
-                final PathTemplaterRouteResult<T> defaultResult,
+                final PathTemplateRouteResult<T> defaultResult,
                 final List<? extends Matcher<? extends T>> matchers
         ) {
             this.matchers = arrayOfMatchers(matchers);
@@ -751,8 +372,8 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        public PathTemplaterRouteResult<T> match(final RouteRequest request) {
-            PathTemplaterRouteResult<T> result;
+        public PathTemplateRouteResult<T> match(final RouteRequest request) {
+            PathTemplateRouteResult<T> result;
             for (int i = 0; i < len; i++) {
                 result = matchers[i].match(request);
                 if (result != defaultResult) {
@@ -764,16 +385,16 @@ public class PathTemplateRouterFactory {
     }
 
     /**
-     * A specialized composite matcher that performs a binary search over an array of unique segment equals matchers to quickly
-     * find the matcher that matches the content in the associated segment of the requested URL path.
+     * A specialized composite matcher that performs a binary search over an underlying array of {@link SegmentEqualsMatcher}s
+     * in order to quickly find the matcher that matches the content in the associated segment of the requested URL path.
      *
-     * Instances of this class are thread-safe.
+     * Participates in the routing phase. Instances of this class are immutable and therefore thread-safe.
      *
      * @param <T> Target type.
      */
     private static class BinarySearchCompositeMatcher<T> implements Matcher<T> {
 
-        private final PathTemplaterRouteResult<T> defaultResult;
+        private final PathTemplateRouteResult<T> defaultResult;
         private final SegmentEqualsMatcher<T>[] matchers;
         private final int matchersLen;
         private final int segmentIdx;
@@ -781,7 +402,7 @@ public class PathTemplateRouterFactory {
         private final int maxSegmentLength;
 
         private BinarySearchCompositeMatcher(
-                final PathTemplaterRouteResult<T> defaultResult,
+                final PathTemplateRouteResult<T> defaultResult,
                 final List<? extends SegmentEqualsMatcher<? extends T>> matchers
         ) {
             this.defaultResult = Objects.requireNonNull(defaultResult);
@@ -877,7 +498,7 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        public PathTemplaterRouteResult<T> match(final RouteRequest request) {
+        public PathTemplateRouteResult<T> match(final RouteRequest request) {
             final int segmentStartIdx = request.segmentStartIndexes[segmentIdx];
 
             //Index immediately after the last character of the segment.
@@ -903,7 +524,7 @@ public class PathTemplateRouterFactory {
                     low = mid + 1;
                 } else {
                     //Match found
-                    final PathTemplaterRouteResult<T> result = midVal.nextMatcher.match(request);
+                    final PathTemplateRouteResult<T> result = midVal.nextMatcher.match(request);
                     return result;
                 }
             }
@@ -914,16 +535,16 @@ public class PathTemplateRouterFactory {
     /**
      * A terminal matcher for simple results that do not contain parameters nor wildcards.
      *
-     * Instances of this class are thread-safe.
+     * Participates in the routing phase. Instances of this class are immutable and therefore thread-safe.
      *
      * @param <T> Target type.
      */
     private static class SimpleTerminalMatcher<T> implements Matcher<T> {
 
-        private final PathTemplaterRouteResult<T> result;
+        private final PathTemplateRouteResult<T> result;
 
         private SimpleTerminalMatcher(
-                final PathTemplaterRouteResult<T> result
+                final PathTemplateRouteResult<T> result
         ) {
             this.result = Objects.requireNonNull(result);
         }
@@ -934,12 +555,12 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        public PathTemplaterRouteResult<T> match(final RouteRequest request) {
+        public PathTemplateRouteResult<T> match(final RouteRequest request) {
             if (result.getPathTemplate().isPresent()) {
                 /*  This will be set in the exchange, meaning some developers may be tempted to mutate it. For
                     backwards compatibility sake, a new mutable map is created. */
                 final Map<String, String> paramValues = new HashMap<>(result.getParameters());
-                return new PathTemplaterRouteResult<>(result.getTarget(), result.getPathTemplate(), paramValues);
+                return new PathTemplateRouteResult<>(result.getTarget(), result.getPathTemplate(), paramValues);
             }
             return result;
         }
@@ -948,7 +569,7 @@ public class PathTemplateRouterFactory {
     /**
      * A terminal matcher for results that contain parameters, but that contain no wildcards.
      *
-     * Instances of this class are thread-safe.
+     * Participates in the routing phase. Instances of this class are immutable and therefore thread-safe.
      *
      * @param <T> Target type.
      */
@@ -985,8 +606,8 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        public PathTemplaterRouteResult<T> match(final RouteRequest request) {
-            return new PathTemplaterRouteResult<>(
+        public PathTemplateRouteResult<T> match(final RouteRequest request) {
+            return new PathTemplateRouteResult<>(
                     target,
                     pathTemplate,
                     createParams(paramSegmentIndexes, paramNames, paramCount, paramMapSize, request)
@@ -997,7 +618,7 @@ public class PathTemplateRouterFactory {
     /**
      * A terminal matcher for results that contain a wildcard, but that contains no other parameters.
      *
-     * Instances of this class are thread-safe.
+     * Participates in the routing phase. Instances of this class are immutable and therefore thread-safe.
      *
      * @param <T> Target type.
      */
@@ -1033,10 +654,10 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        public PathTemplaterRouteResult<T> match(final RouteRequest request) {
+        public PathTemplateRouteResult<T> match(final RouteRequest request) {
             final int startIdx = request.segmentStartIndexes[segmentIdx] + prefixLength;
             if (startIdx == (request.pathLen - 1)) {
-                return new PathTemplaterRouteResult<>(
+                return new PathTemplateRouteResult<>(
                         target,
                         pathTemplate,
                         createParams("*", "")
@@ -1045,7 +666,7 @@ public class PathTemplateRouterFactory {
 
             final String wildCardValue = new String(request.path, startIdx, request.pathLen - startIdx);
 
-            return new PathTemplaterRouteResult<>(
+            return new PathTemplateRouteResult<>(
                     target,
                     pathTemplate,
                     createParams("*", wildCardValue)
@@ -1056,7 +677,7 @@ public class PathTemplateRouterFactory {
     /**
      * A terminal matcher for results that contain both parameters and wildcards.
      *
-     * Instances of this class are thread-safe.
+     * Participates in the routing phase. Instances of this class are immutable and therefore thread-safe.
      *
      * @param <T> Target type.
      */
@@ -1116,10 +737,10 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        public PathTemplaterRouteResult<T> match(final RouteRequest request) {
+        public PathTemplateRouteResult<T> match(final RouteRequest request) {
             final int startIdx = request.segmentStartIndexes[segmentIdx] + prefixLength;
             if (startIdx == (request.pathLen - 1)) {
-                return new PathTemplaterRouteResult<>(
+                return new PathTemplateRouteResult<>(
                         target,
                         pathTemplate,
                         createParams(request, "")
@@ -1128,7 +749,7 @@ public class PathTemplateRouterFactory {
 
             final String wildCardValue = new String(request.path, startIdx, request.pathLen - startIdx);
 
-            return new PathTemplaterRouteResult<>(
+            return new PathTemplateRouteResult<>(
                     target,
                     pathTemplate,
                     createParams(request, wildCardValue)
@@ -1140,7 +761,9 @@ public class PathTemplateRouterFactory {
     //
     //<editor-fold defaultstate="collapsed" desc="Router inner classes">
     /**
-     * Parent class - that defines an additional 'route' method - for all routers encapsulated inside PathTemplateRouterFactory.
+     * Parent class for all {@link PathTemplateRouter} implementations encapsulated inside PathTemplateRouterFactory.
+     *
+     * Routers participate in the Routing Phase, therefore implementations must be immutable / thread-safe.
      *
      * @param <T> Target type.
      */
@@ -1165,16 +788,16 @@ public class PathTemplateRouterFactory {
          *
          * @return The routing result.
          */
-        protected abstract PathTemplaterRouteResult<T> route(RouteRequest request);
+        protected abstract PathTemplateRouteResult<T> route(RouteRequest request);
     }
 
     /**
      * A simple router for templates containing combinations of static segments and parameters. This router DOES NOT support
-     * wildcards as it contains an optimisation that eliminates trees of templates based on those templates not having the exact
-     * number of segments that the requested URL paths have. That logic does not support templates with a variable number of
-     * segments, like templates containing wildcards.
+     * wildcards as it contains an optimisation that eliminates templates based on those templates not having the exact number
+     * of segments that the requests have. That logic does not support templates with a variable number of segments, like
+     * templates containing wildcards.
      *
-     * Instances of this class are thread-safe.
+     * Participates in the routing phase. Instances of this class are immutable and therefore thread-safe.
      *
      * @param <T> Target type.
      */
@@ -1182,20 +805,19 @@ public class PathTemplateRouterFactory {
 
         private final int minSegmentCount;
         private final int maxSegmentCount;
-        /*  This is a - potentially - sparse array.  Each element represents the matcher for a path with the same
+        /*  This is a - potentially - sparse array.  Each element represents the matcher for a template with the same
             number of segments as the index of the array.  So the matcher in position 1 in the array is only applicable
             to paths with one segment and so on.  This makes it easy to quickly eliminate a large number of trees (matchers)
             as those will never be able to match the path anyway. */
         private final Matcher<T>[] matchers;
-        private final PathTemplaterRouteResult<T> defaultResult;
+        private final PathTemplateRouteResult<T> defaultResult;
 
         private SimpleRouter(
                 final Matcher<T>[] matchers,
-                final PathTemplaterRouteResult<T> defaultResult
+                final PathTemplateRouteResult<T> defaultResult
         ) {
             this.matchers = Objects.requireNonNull(matchers);
             this.defaultResult = Objects.requireNonNull(defaultResult);
-
             this.minSegmentCount = PathTemplateRouterFactory.getMinSegmentCount(matchers);
             this.maxSegmentCount = this.matchers.length - 1;
         }
@@ -1221,7 +843,7 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        protected PathTemplaterRouteResult<T> route(final RouteRequest request) {
+        protected PathTemplateRouteResult<T> route(final RouteRequest request) {
             /*  Optimisation. Early exit when the request factory determined that we don't have a matcher with the
                 resulting number of segments. */
             if (request == CANT_MATCH_REQUEST) {
@@ -1235,7 +857,7 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        public PathTemplaterRouteResult<T> route(final String path) {
+        public PathTemplateRouteResult<T> route(final String path) {
             //This router is empty.
             if (maxSegmentCount == 0) {
                 return defaultResult;
@@ -1247,28 +869,28 @@ public class PathTemplateRouterFactory {
     }
 
     /**
-     * A router for templates that contain wildcards. Unlike {@link SimpleRouter}, this router only eliminates trees that
-     * contain more segments than the requested URL path as trees with less segments can still match the requested URL paths
+     * A router for templates that contain wildcards. Unlike {@link SimpleRouter}, this router only eliminates templates that
+     * contain more segments than the requested paths as templates with less segments can still match the requested URL paths
      * through their wildcards.
      *
-     * Instances of this class are thread-safe.
+     * Participates in the routing phase. Instances of this class are immutable and therefore thread-safe.
      *
      * @param <T> Target type.
      */
     private static class WildCardRouter<T> extends AbstractRouter<T> {
 
         private final int minSegmentCount;
-        /*  This is a - potentially - sparse array.  Each element represents the matcher for a path with the same
+        /*  This is a - potentially - sparse array.  Each element represents the matcher for a template with the same
             number of segments as the index of the array.  So the matcher in position 1 in the array is only applicable
-            to paths with one or more segments and so on.  This makes it easy to quickly eliminate trees with more segments
-            than that of the requested URL path. */
+            to paths with one segment and so on.  This makes it easy to quickly eliminate a large number of trees (matchers)
+            as those will never be able to match the path anyway. */
         private final Matcher<T>[] matchers;
         private final int len;
-        private final PathTemplaterRouteResult<T> defaultResult;
+        private final PathTemplateRouteResult<T> defaultResult;
 
         private WildCardRouter(
                 final Matcher<T>[] matchers,
-                final PathTemplaterRouteResult<T> defaultResult
+                final PathTemplateRouteResult<T> defaultResult
         ) {
             this.matchers = Objects.requireNonNull(matchers);
             this.len = this.matchers.length;
@@ -1298,19 +920,19 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        protected PathTemplaterRouteResult<T> route(final RouteRequest request) {
+        protected PathTemplateRouteResult<T> route(final RouteRequest request) {
             /*  Optimisation. Early exit when the request factory determined that we don't have a matcher with the
                 resulting number of segments. */
             if (request == CANT_MATCH_REQUEST) {
                 return defaultResult;
             }
 
-            /*  Optimisation. Only search the trees that contain at most the same number of segments as the requested URL
+            /*  Optimisation. Only search the templates that contain at most the same number of segments as the requested URL
                 path as templates with more segments will never be able to match. Trees are searched in descending order
                 based on the number of segments in the templates, therefore templates with more segments will be considered
                 to be more specific and therefore more likely to match. */
             Matcher<T> matcher;
-            PathTemplaterRouteResult<T> result;
+            PathTemplateRouteResult<T> result;
             for (int i = Math.min(len - 1, request.segmentCount); i > 0; i--) {
                 matcher = matchers[i];
                 if (matcher != null) {
@@ -1324,7 +946,7 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        public PathTemplaterRouteResult<T> route(final String path) {
+        public PathTemplateRouteResult<T> route(final String path) {
             final RouteRequest request = createRouteRequest(path, minSegmentCount, Integer.MAX_VALUE);
             return route(request);
         }
@@ -1334,7 +956,7 @@ public class PathTemplateRouterFactory {
      * A composite router that attempts to route a path by using the underlying routers in the same order that the routers were
      * provided to the constructor.
      *
-     * Instances of this class are thread-safe.
+     * Participates in the routing phase. Instances of this class are immutable and therefore thread-safe.
      *
      * @param <T> Target type.
      */
@@ -1342,40 +964,28 @@ public class PathTemplateRouterFactory {
 
         private final AbstractRouter<T>[] routers;
         private final int len;
-        private final PathTemplaterRouteResult<T> defaultResult;
+        private final PathTemplateRouteResult<T> defaultResult;
         //
         private final int minSegmentCount;
         private final int maxSegmentCount;
 
         private CompositeRouter(
                 final AbstractRouter<T>[] routers,
-                final PathTemplaterRouteResult<T> defaultResult
+                final PathTemplateRouteResult<T> defaultResult
         ) {
             this.routers = Objects.requireNonNull(routers);
             this.len = this.routers.length;
             this.defaultResult = Objects.requireNonNull(defaultResult);
-            this.minSegmentCount = getMinSegmentCount(routers);
-            this.maxSegmentCount = getMaxSegmentCount(routers);
-        }
-
-        private static int getMinSegmentCount(AbstractRouter<?>[] routers) {
-            int result = Integer.MAX_VALUE;
-            for (final AbstractRouter<?> router : routers) {
-                if (router.getMinSegmentCount() < result) {
-                    result = router.getMinSegmentCount();
-                }
-            }
-            return result;
-        }
-
-        private static int getMaxSegmentCount(AbstractRouter<?>[] routers) {
-            int result = 0;
-            for (final AbstractRouter<?> router : routers) {
-                if (router.getMaxSegmentCount() > result) {
-                    result = router.getMaxSegmentCount();
-                }
-            }
-            return result;
+            //Find the minimum number of segments in any of the underlying routers
+            this.minSegmentCount = Arrays.stream(routers)
+                    .mapToInt(AbstractRouter::getMinSegmentCount)
+                    .min()
+                    .orElse(Integer.MAX_VALUE);
+            //Find the maximum number of segments in any of the underlying routers
+            this.maxSegmentCount = Arrays.stream(routers)
+                    .mapToInt(AbstractRouter::getMaxSegmentCount)
+                    .max()
+                    .orElse(0);
         }
 
         @Override
@@ -1394,8 +1004,8 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        protected PathTemplaterRouteResult<T> route(final RouteRequest request) {
-            PathTemplaterRouteResult<T> result;
+        protected PathTemplateRouteResult<T> route(final RouteRequest request) {
+            PathTemplateRouteResult<T> result;
             for (int i = 0; i < len; i++) {
                 //Check that the next router supports the request based on the number of segments.
                 if (request.segmentCount < routers[i].getMinSegmentCount()
@@ -1412,7 +1022,7 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        public PathTemplaterRouteResult<T> route(final String path) {
+        public PathTemplateRouteResult<T> route(final String path) {
             final RouteRequest request = createRouteRequest(path, minSegmentCount, maxSegmentCount);
             return route(request);
         }
@@ -1425,13 +1035,13 @@ public class PathTemplateRouterFactory {
      * An intermediary class used by the RouterFactory to structure template segments as leaves of trees before finally creating
      * the routers.
      *
-     * Instances of this class ARE NOT thread-safe.
+     * Participates in the setup phase. Instances of this class are therefore not required to be thread-safe.
      *
      * @param <T> Target type.
      */
     private static class MatcherLeafArterfacts<T> {
 
-        private final Map<PathTemplatePatternEqualsAdapter<AbstractTemplateSegment>, MatcherLeafArterfacts<T>> children
+        private final Map<PathTemplateParser.PathTemplatePatternEqualsAdapter<AbstractTemplateSegment>, MatcherLeafArterfacts<T>> children
                 = new HashMap<>();
         /**
          * Index of the segment represented by these artefacts.
@@ -1440,7 +1050,7 @@ public class PathTemplateRouterFactory {
         /**
          * The template with which this leave is associated.
          */
-        private Template<? extends T> template;
+        private PathTemplateParser.PathTemplate<? extends T> template;
         /**
          * True if this leave is the root of a template.
          */
@@ -1476,19 +1086,26 @@ public class PathTemplateRouterFactory {
     //</editor-fold>
     //
     //<editor-fold defaultstate="collapsed" desc="RouterFactory inner class">
+    /**
+     * A short-lived factory that processes a set of URL path templates to create a {@link PathTemplateRouter}.
+     *
+     * Participates in the setup phase. Instances of this class are therefore not required to be thread-safe.
+     *
+     * @param <T> Type of target.
+     */
     private static class RouterFactory<T> {
 
         // Input.
-        private final Set<? extends Template<? extends Supplier<? extends T>>> templates;
+        private final Set<? extends PathTemplateParser.PathTemplate<? extends Supplier<? extends T>>> templates;
         private final T defaultTarget;
         // Results and master temporary structures..
-        private PathTemplaterRouteResult<T> defaultResult;
+        private PathTemplateRouteResult<T> defaultResult;
         private int maxSegmentCount;
         private int maxWildCardSegmentCount;
         private MatcherLeafArterfacts[] rootLeaves;
         private MatcherLeafArterfacts[] wildCardRootLeaves;
-        // Temporary structures used per call to processTemplate(Template).
-        private Template<? extends Supplier<? extends T>> currentTemplate;
+        // Temporary structures used per call to processTemplate(PathTemplate).
+        private PathTemplateParser.PathTemplate<? extends Supplier<? extends T>> currentTemplate;
         private int currentSegmentCount;
         // Temporary structures used per call to processSegment(TemplateSegment).
         private List<AbstractTemplateSegment> segmentStack;
@@ -1500,15 +1117,15 @@ public class PathTemplateRouterFactory {
         private Matcher[] wildCardMatchers;
 
         private RouterFactory(
-                final Set<? extends Template<? extends Supplier<? extends T>>> templates,
+                final Set<? extends PathTemplateParser.PathTemplate<? extends Supplier<? extends T>>> templates,
                 final T defaultTarget
         ) {
             this.templates = Objects.requireNonNull(templates);
             this.defaultTarget = Objects.requireNonNull(defaultTarget);
         }
 
-        private static <T> PathTemplaterRouteResult<T> createDefaultResult(final T defaultTarget) {
-            return new PathTemplaterRouteResult<>(
+        private static <T> PathTemplateRouteResult<T> createDefaultResult(final T defaultTarget) {
+            return new PathTemplateRouteResult<>(
                     defaultTarget,
                     Optional.empty(),
                     Collections.emptyMap()
@@ -1530,7 +1147,7 @@ public class PathTemplateRouterFactory {
             /*  An immutable map here is okay, seeing that the PathTemplateMatch won't be set in the
                 exchange and therefore no attempts can be made to mutate the map outside of the internal
                 workings of the path template router and handlers. */
-            final PathTemplaterRouteResult<T> routeResult = new PathTemplaterRouteResult<>(
+            final PathTemplateRouteResult<T> routeResult = new PathTemplateRouteResult<>(
                     defaultTarget, Optional.empty(), Map.of()
             );
             final Matcher<T> innerMatchers = new SimpleTerminalMatcher<>(
@@ -1549,9 +1166,9 @@ public class PathTemplateRouterFactory {
 
         private void initMaxSegmentCounts() {
             int cnt;
-            for (final Template<?> template : templates) {
-                cnt = template.segments.size();
-                if (template.wildCard) {
+            for (final PathTemplateParser.PathTemplate<?> template : templates) {
+                cnt = template.getSegments().size();
+                if (template.getWildCard()) {
                     if (cnt > maxWildCardSegmentCount) {
                         maxWildCardSegmentCount = cnt;
                     }
@@ -1582,7 +1199,7 @@ public class PathTemplateRouterFactory {
 
         @SuppressWarnings("unchecked")//Always safe based on the internal handling of this array.
         private MatcherLeafArterfacts<Supplier<? extends T>> getCurrentRootLeave() {
-            final MatcherLeafArterfacts[] artefacts = (currentTemplate.wildCard)
+            final MatcherLeafArterfacts[] artefacts = (currentTemplate.getWildCard())
                     ? wildCardRootLeaves : rootLeaves;
 
             MatcherLeafArterfacts result = artefacts[currentSegmentCount];
@@ -1600,11 +1217,12 @@ public class PathTemplateRouterFactory {
         private void processSegment(final AbstractTemplateSegment segment) {
             segmentStack.add(segment);
 
-            final PathTemplatePatternEqualsAdapter<AbstractTemplateSegment> adapter = new PathTemplatePatternEqualsAdapter<>(segment);
+            final PathTemplateParser.PathTemplatePatternEqualsAdapter<AbstractTemplateSegment> adapter
+                    = new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(segment);
             MatcherLeafArterfacts<Supplier<? extends T>> nextLeave = currentLeave.children.get(adapter);
             if (nextLeave == null) {
                 nextLeave = new MatcherLeafArterfacts<>();
-                nextLeave.segmentIdx = segment.segmentIdx;
+                nextLeave.segmentIdx = segment.getSegmentIdx();
                 currentLeave.children.put(adapter, nextLeave);
             }
 
@@ -1615,15 +1233,15 @@ public class PathTemplateRouterFactory {
             } else if (segment instanceof ParamTemplateSegment) {
                 final ParamTemplateSegment paramSegment = (ParamTemplateSegment) segment;
                 currentLeave.paramIdx = currentParamNames.size();
-                currentParamIndexes.add(paramSegment.segmentIdx);
-                currentParamNames.add(paramSegment.paramName);
+                currentParamIndexes.add(paramSegment.getSegmentIdx());
+                currentParamNames.add(paramSegment.getParamName());
             } else if (segment instanceof WildCardTemplateSegment) {
                 final WildCardTemplateSegment wildCardSegment = (WildCardTemplateSegment) segment;
                 if (segmentStack.size() != currentSegmentCount) {
                     throw new IllegalArgumentException("Wild cards are only supported at the end of a template path");
                 }
                 currentLeave.paramIdx = currentParamNames.size();
-                currentParamIndexes.add(wildCardSegment.segmentIdx);
+                currentParamIndexes.add(wildCardSegment.getSegmentIdx());
                 currentParamNames.add("*");
                 currentLeave.wildCardSegment = wildCardSegment;
             } else {
@@ -1641,14 +1259,14 @@ public class PathTemplateRouterFactory {
             }
         }
 
-        private void processTemplate(final Template<? extends Supplier<? extends T>> template) {
+        private void processTemplate(final PathTemplateParser.PathTemplate<? extends Supplier<? extends T>> template) {
             currentTemplate = template;
-            currentSegmentCount = template.segments.size();
+            currentSegmentCount = template.getSegments().size();
             currentLeave = getCurrentRootLeave();
             segmentStack.clear();
             currentParamIndexes.clear();
             currentParamNames.clear();
-            template.segments.forEach(this::processSegment);
+            template.getSegments().forEach(this::processSegment);
             finalizeTemplate();
         }
 
@@ -1663,7 +1281,10 @@ public class PathTemplateRouterFactory {
                 final MatcherLeafArterfacts<?> artefacts
         ) {
             System.out.println(
-                    ident(indent) + "Node (" + (artefacts.staticSegment != null ? artefacts.staticSegment.value : artefacts.paramIdx) + ")");
+                    ident(indent) + "Node ("
+                    + (artefacts.staticSegment != null ? artefacts.staticSegment.getValue() : artefacts.paramIdx)
+                    + ")"
+            );
             for (final MatcherLeafArterfacts<?> child : artefacts.children.values()) {
                 printNode(indent + 1, child);
             }
@@ -1701,9 +1322,9 @@ public class PathTemplateRouterFactory {
 
         private static <T> Matcher<T> createSimpleResultMatcher(
                 final MatcherLeafArterfacts<Supplier<? extends T>> artefacts) {
-            final PathTemplaterRouteResult<T> result = new PathTemplaterRouteResult<>(
-                    artefacts.template.target.get(),
-                    Optional.of(artefacts.template.pathTemplate),
+            final PathTemplateRouteResult<T> result = new PathTemplateRouteResult<>(
+                    artefacts.template.getTarget().get(),
+                    Optional.of(artefacts.template.getPathTemplate()),
                     /*  This result will be copied with a mutable map by the CreateSimpleResultMatcher, therefore we
                         can start with an immutable map here. */
                     Map.of()
@@ -1722,8 +1343,8 @@ public class PathTemplateRouterFactory {
             }
 
             return new ParameterisedTerminalMatcher<>(
-                    artefacts.template.target.get(),
-                    Optional.of(artefacts.template.pathTemplate),
+                    artefacts.template.getTarget().get(),
+                    Optional.of(artefacts.template.getPathTemplate()),
                     paramSegmentIndexes,
                     paramNames
             );
@@ -1734,10 +1355,10 @@ public class PathTemplateRouterFactory {
         ) {
             if (artefacts.paramIndexes.size() == 1) {
                 return new SimpleWildcardTerminalMatcher<>(
-                        artefacts.template.target.get(),
-                        Optional.of(artefacts.template.pathTemplate),
-                        artefacts.wildCardSegment.segmentIdx,
-                        artefacts.wildCardSegment.prefix.length()
+                        artefacts.template.getTarget().get(),
+                        Optional.of(artefacts.template.getPathTemplate()),
+                        artefacts.wildCardSegment.getSegmentIdx(),
+                        artefacts.wildCardSegment.getPrefix().length()
                 );
             } else {
                 final int[] paramSegmentIndexes = new int[artefacts.paramIndexes.size() - 1];
@@ -1748,12 +1369,12 @@ public class PathTemplateRouterFactory {
                     paramNames[i] = artefacts.paramNames.get(i);
                 }
                 return new ParameterisedWildcardTerminalMatcher<>(
-                        artefacts.template.target.get(),
-                        Optional.of(artefacts.template.pathTemplate),
+                        artefacts.template.getTarget().get(),
+                        Optional.of(artefacts.template.getPathTemplate()),
                         paramSegmentIndexes,
                         paramNames,
-                        artefacts.wildCardSegment.segmentIdx,
-                        artefacts.wildCardSegment.prefix.length()
+                        artefacts.wildCardSegment.getSegmentIdx(),
+                        artefacts.wildCardSegment.getPrefix().length()
                 );
             }
         }
@@ -1780,8 +1401,8 @@ public class PathTemplateRouterFactory {
         ) {
             return new SegmentEqualsMatcher<>(
                     defaultResult,
-                    artefacts.staticSegment.value.toCharArray(),
-                    artefacts.staticSegment.segmentIdx,
+                    artefacts.staticSegment.getValue().toCharArray(),
+                    artefacts.staticSegment.getSegmentIdx(),
                     nextMatcher
             );
         }
@@ -1790,14 +1411,14 @@ public class PathTemplateRouterFactory {
                 final MatcherLeafArterfacts<Supplier<? extends T>> artefacts,
                 final Matcher<T> nextMatcher
         ) {
-            if (artefacts.wildCardSegment.prefix.isEmpty()) {
+            if (artefacts.wildCardSegment.getPrefix().isEmpty()) {
                 return nextMatcher;
             }
 
             return new SegmentStartsWithMatcher<>(
                     defaultResult,
-                    artefacts.wildCardSegment.prefix.toCharArray(),
-                    artefacts.wildCardSegment.segmentIdx,
+                    artefacts.wildCardSegment.getPrefix().toCharArray(),
+                    artefacts.wildCardSegment.getSegmentIdx(),
                     nextMatcher
             );
         }
@@ -1821,20 +1442,22 @@ public class PathTemplateRouterFactory {
         private List<Matcher<T>> createSortedInnerMatchers(
                 final MatcherLeafArterfacts<Supplier<? extends T>> artefacts
         ) {
-            final List<PathTemplatePatternEqualsAdapter<AbstractTemplateSegment>> keys = new ArrayList<>(artefacts.children.keySet());
-            Collections.sort(keys, Comparator.comparing(PathTemplatePatternEqualsAdapter::getPattern,
+            final List<PathTemplateParser.PathTemplatePatternEqualsAdapter<AbstractTemplateSegment>> keys
+                    = new ArrayList<>(artefacts.children.keySet());
+            Collections.sort(keys, Comparator.comparing(
+                    PathTemplateParser.PathTemplatePatternEqualsAdapter::getPattern,
                     PathTemplateRouterFactory::compareMostSpecificToLeastSpecific
             ));
 
             final List<Matcher<T>> result = new ArrayList<>(keys.size());
-            for (final PathTemplatePatternEqualsAdapter<AbstractTemplateSegment> key : keys) {
+            for (final PathTemplateParser.PathTemplatePatternEqualsAdapter<AbstractTemplateSegment> key : keys) {
                 result.add(createMatcher(artefacts.children.get(key)));
             }
             return result;
         }
 
         private static <T> void addSegmentEqualsRouting(
-                final PathTemplaterRouteResult<T> defaultResult,
+                final PathTemplateRouteResult<T> defaultResult,
                 final int innerSegmentIdx,
                 final List<Matcher<T>> sortedInnerMatchers,
                 final List<Matcher<T>> target
@@ -2051,7 +1674,7 @@ public class PathTemplateRouterFactory {
     public static class Builder<S extends Supplier<T>, T> {
 
         private S defaultTargetFactory;
-        private final Map<PathTemplatePatternEqualsAdapter<Template<S>>, S> templates = new HashMap<>();
+        private final Map<PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<S>>, S> templates = new HashMap<>();
 
         private Builder() {
         }
@@ -2137,15 +1760,16 @@ public class PathTemplateRouterFactory {
          *
          * @return The target factory or {@code NULL}.
          */
-        public S getTemplateTarget(final Template<S> template) {
-            final PathTemplatePatternEqualsAdapter<Template<S>> key = new PathTemplatePatternEqualsAdapter<>(template);
+        public S getTemplateTarget(final PathTemplateParser.PathTemplate<S> template) {
+            final PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<S>> key
+                    = new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(template);
             return templates.get(key);
         }
 
         /**
          * @return A mutable map of {@link PathTemplatePatternEqualsAdapter}s for all templates added to this builder.
          */
-        public Map<PathTemplatePatternEqualsAdapter<Template<S>>, S> getTemplates() {
+        public Map<PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<S>>, S> getTemplates() {
             return templates;
         }
 
@@ -2167,13 +1791,14 @@ public class PathTemplateRouterFactory {
          *
          * @return Reference to the builder.
          */
-        public Builder<S, T> addTemplate(final Template<S> template) {
-            final PathTemplatePatternEqualsAdapter<Template<S>> item = new PathTemplatePatternEqualsAdapter<>(template);
+        public Builder<S, T> addTemplate(final PathTemplateParser.PathTemplate<S> template) {
+            final PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<S>> item
+                    = new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(template);
             if (templates.containsKey(item)) {
                 throw new IllegalArgumentException("The builder already contains a template with the same "
-                        + "pattern for '" + template.pathTemplate + "'");
+                        + "pattern for '" + template.getPathTemplate() + "'");
             }
-            templates.put(item, template.target);
+            templates.put(item, template.getTarget());
             return this;
         }
 
@@ -2187,7 +1812,7 @@ public class PathTemplateRouterFactory {
          * @return Reference to the builder.
          */
         public Builder<S, T> addTemplate(final String pathTemplate, final S targetFactory) {
-            final Template<S> template = parseTemplate(pathTemplate, targetFactory);
+            final PathTemplateParser.PathTemplate<S> template = PathTemplateParser.parseTemplate(pathTemplate, targetFactory);
             return Builder.this.addTemplate(template);
         }
 
@@ -2199,16 +1824,17 @@ public class PathTemplateRouterFactory {
          * @return Reference to the builder.
          */
         public Builder<S, T> removeTemplate(final String pathTemplate) {
-            final Template template = parseTemplate(
+            final PathTemplateParser.PathTemplate template = PathTemplateParser.parseTemplate(
                     pathTemplate,
                     this
             );
 
             //Always safe based on how PathTemplatePatternEqualsAdapter uses the template in equals/hashCode
             @SuppressWarnings("unchecked")
-            final PathTemplatePatternEqualsAdapter<Template<S>> item = new PathTemplatePatternEqualsAdapter<>(
-                    (Template<S>) template
-            );
+            final PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<S>> item
+                    = new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(
+                            (PathTemplateParser.PathTemplate<S>) template
+                    );
             templates.remove(item);
             return this;
         }
@@ -2223,7 +1849,7 @@ public class PathTemplateRouterFactory {
 
             return new RouterFactory<>(
                     templates.keySet().stream()
-                            .map(PathTemplatePatternEqualsAdapter::getPattern)
+                            .map(PathTemplateParser.PathTemplatePatternEqualsAdapter::getPattern)
                             .collect(Collectors.toSet()),
                     defaultTargetFactory.get()
             ).create();
@@ -2311,7 +1937,7 @@ public class PathTemplateRouterFactory {
         /**
          * @return A mutable map of {@link PathTemplatePatternEqualsAdapter}s for all templates added to this builder.
          */
-        public Map<PathTemplatePatternEqualsAdapter<Template<Supplier<T>>>, Supplier<T>> getTemplates() {
+        public Map<PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<Supplier<T>>>, Supplier<T>> getTemplates() {
             return builder.getTemplates();
         }
 
@@ -2323,7 +1949,7 @@ public class PathTemplateRouterFactory {
          *
          * @return Reference to the builder.
          */
-        public SimpleBuilder<T> addTemplate(final Template<Supplier<T>> template) {
+        public SimpleBuilder<T> addTemplate(final PathTemplateParser.PathTemplate<Supplier<T>> template) {
             builder.addTemplate(template);
             return this;
         }
@@ -2338,7 +1964,7 @@ public class PathTemplateRouterFactory {
          * @return Reference to the builder.
          */
         public SimpleBuilder<T> addTemplate(final String pathTemplate, final Supplier<T> targetFactory) {
-            return addTemplate(parseTemplate(pathTemplate, targetFactory));
+            return addTemplate(PathTemplateParser.parseTemplate(pathTemplate, targetFactory));
         }
 
         /**
@@ -2397,15 +2023,15 @@ public class PathTemplateRouterFactory {
             final AbstractTemplateSegment o1,
             final AbstractTemplateSegment o2
     ) {
-        if (o1.segmentIdx != o2.segmentIdx) {
-            return o2.segmentIdx - o1.segmentIdx;
+        if (o1.getSegmentIdx() != o2.getSegmentIdx()) {
+            return o2.getSegmentIdx() - o1.getSegmentIdx();
         }
 
         if (o1 instanceof StaticTemplateSegment) {
             final StaticTemplateSegment o1Static = (StaticTemplateSegment) o1;
             if (o2 instanceof StaticTemplateSegment) {
                 final StaticTemplateSegment o2Static = (StaticTemplateSegment) o2;
-                return o2Static.value.length() - o1Static.value.length();
+                return o2Static.getValue().length() - o1Static.getValue().length();
             }
             return -1;
         }
@@ -2423,7 +2049,8 @@ public class PathTemplateRouterFactory {
                 return -1;
             }
 
-            throw new IllegalArgumentException("Should never happend");
+            throw new IllegalArgumentException("Should never happend due to the hermetic nature of template segment "
+                    + "implementations in PathTemplateParser");
         }
 
         if (o1 instanceof WildCardTemplateSegment) {
@@ -2438,12 +2065,14 @@ public class PathTemplateRouterFactory {
 
             if (o2 instanceof WildCardTemplateSegment) {
                 final WildCardTemplateSegment o2WildCard = (WildCardTemplateSegment) o2;
-                return o2WildCard.prefix.length() - o1WildCard.prefix.length();
+                return o2WildCard.getPrefix().length() - o1WildCard.getPrefix().length();
             }
-            throw new IllegalArgumentException("Should never happend");
+            throw new IllegalArgumentException("Should never happend due to the hermetic nature of template segment "
+                    + "implementations in PathTemplateParser");
         }
 
-        throw new IllegalArgumentException("Should never happend");
+        throw new IllegalArgumentException("Should never happend due to the hermetic nature of template segment "
+                + "implementations in PathTemplateParser");
     }
 
     @SuppressWarnings("unchecked")
@@ -2511,144 +2140,6 @@ public class PathTemplateRouterFactory {
         return result;
     }
 
-    private static int countSegments(final char[] path) {
-        int len = path.length;
-        if (len == 0 || path[0] != '/') {
-            throw new IllegalArgumentException();
-        }
-        if (len == 1) {
-            return 0;
-        }
-        if (path[len - 1] == '/') {
-            --len;
-        }
-
-        int result = 1;
-        char lastChar = '/';
-        for (int i = 1; i < len; i++) {
-            if (path[i] == '/') {
-                if (lastChar == '/') {
-                    throw new IllegalArgumentException();
-                }
-                ++result;
-            }
-            lastChar = path[i];
-        }
-
-        return result;
-    }
-
-    /**
-     * Finds the first index in the array that contains the specified key.
-     *
-     * @param a The array to be searched.
-     * @param fromIndex The index of the first element (inclusive) to be searched
-     * @param toIndex The index of the last element (exclusive) to be searched.
-     * @param key The value to be searched for.
-     *
-     * @return Index of the first element in the array - between fromIndex and toIndex - that is equal to the specified keys.
-     * Returns -1 if the specified key is not found between fromIndex and toIndex.
-     *
-     * @throws IllegalArgumentException If {@code fromIndex > toIndex}.
-     * @throws ArrayIndexOutOfBoundsException If {@code fromIndex < 0 or toIndex > a.length}.
-     */
-    private static int firstIndexOf(
-            final char[] a,
-            final int fromIndex,
-            final int toIndex,
-            final char key
-    ) {
-        final int arrayLength = a.length;
-        if (fromIndex > toIndex) {
-            throw new IllegalArgumentException(
-                    "fromIndex(" + fromIndex + ") > toIndex(" + toIndex + ")");
-        }
-        if (fromIndex < 0) {
-            throw new ArrayIndexOutOfBoundsException(fromIndex);
-        }
-        if (toIndex > arrayLength) {
-            throw new ArrayIndexOutOfBoundsException(toIndex);
-        }
-
-        for (int i = fromIndex; i < toIndex; i++) {
-            if (a[i] == key) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    private static String validSegment(
-            final char[] template,
-            final int startIdx,
-            final int endIdx
-    ) {
-        final String value = new String(template, startIdx, endIdx - startIdx + 1);
-
-        char c;
-        boolean valid;
-        for (int i = startIdx; i <= endIdx; i++) {
-            c = template[i];
-            valid = (c >= '0' && c <= '9');
-            valid = valid || (c >= 'a' && c <= 'z');
-            valid = valid || (c >= 'A' && c <= 'Z');
-            valid = valid || c == '_' || c == '-';
-
-            if (!valid) {
-                throw new IllegalArgumentException("Illegal character '"
-                        + c + "' is contained in the segment '" + value + "' at position " + i);
-            }
-        }
-
-        return value;
-    }
-
-    private static AbstractTemplateSegment createSegment(
-            final int segmentIdx,
-            final char[] template,
-            final int startIdx,
-            final int endIdx
-    ) {
-        // This is an empty static segment.  Mostly used by templates ending with '/' as the final segment.
-        if (startIdx == endIdx) {
-            return new StaticTemplateSegment(segmentIdx, "");
-        }
-
-        // Starts and ends with '{' and '}', implies that it is a parameter segment.
-        if (template[startIdx] == '{' && template[endIdx - 1] == '}') {
-            return new ParamTemplateSegment(segmentIdx, validSegment(template, startIdx + 1, endIdx - 2));
-        }
-
-        // Contains an '*', implies that it is a wildcard segment.
-        int idx = firstIndexOf(template, startIdx, endIdx, '*');
-        if (idx != -1) {
-            final String prefix = validSegment(template, startIdx, idx - 1);
-            return new WildCardTemplateSegment(segmentIdx, prefix);
-        }
-
-        // Defaults to a static segment.
-        return new StaticTemplateSegment(segmentIdx, validSegment(template, startIdx, endIdx - 1));
-    }
-
-    private static char[] pathWithForwardSlash(
-            final String pathString,
-            final int pathLength
-    ) {
-        if (pathLength == 0) {
-            return new char[]{'/'};
-        }
-
-        final boolean startsWithForwardSlash = pathString.charAt(0) == '/';
-        final char[] path = new char[pathLength + (startsWithForwardSlash ? 0 : 1)];
-        if (startsWithForwardSlash) {
-            pathString.getChars(0, pathLength, path, 0);
-        } else {
-            path[0] = '/';
-            pathString.getChars(0, pathLength, path, 1);
-        }
-        return path;
-    }
-
     private static RouteRequest createRouteRequest(
             final String pathString,
             final int minSegmentCount,
@@ -2703,61 +2194,9 @@ public class PathTemplateRouterFactory {
         return new RouteRequest(path, pathLen, segmentStartIndexes, cnt);
     }
 
-    private static void validWildCardOrNotAWildCard(final String pathTemplate) {
-        final int idx = pathTemplate.indexOf('*');
-        if (idx == -1) {
-            return;
-        }
-
-        if (idx != (pathTemplate.length() - 1)) {
-            throw new IllegalArgumentException("Wild cards are only supported at the end of a template path");
-        }
-    }
-
     /**
-     * Parses the URL path - with optional path parameters - into a template.
-     *
-     * @param <T> Target type.
-     * @param pathTemplate The path template.
-     * @param target The target.
-     *
-     * @return The template.
-     */
-    public static <T> Template<T> parseTemplate(final String pathTemplate, final T target) {
-        if (pathTemplate == null || target == null) {
-            throw new IllegalArgumentException();
-        }
-        validWildCardOrNotAWildCard(pathTemplate);
-
-        // Work directly with char array for performance reasons.  We  ensure that the path starts with a '/'.
-        final char[] template = pathWithForwardSlash(pathTemplate, pathTemplate.length());
-
-        final int segmentCount = countSegments(template);
-
-        int len = template.length;
-
-        final List<AbstractTemplateSegment> segments = new ArrayList<>(segmentCount);
-        int start = 1, segmentIdx = 0;
-        AbstractTemplateSegment segment;
-        boolean wildCard = false;
-        for (int i = 2; i <= len; i++) {
-            if (i == len || template[i] == '/') {
-                segment = createSegment(segmentIdx++, template, start, i);
-                wildCard = wildCard || (segment instanceof WildCardTemplateSegment);
-                segments.add(segment);
-                start = i + 1;
-            }
-        }
-        return new Template<>(
-                pathTemplate,
-                Collections.unmodifiableList(segments),
-                wildCard,
-                target
-        );
-    }
-
-    /**
-     * Creates a new router instance based on the specified templates and default target.
+     * Creates a new router instance based on the specified templates and default target. This is a lower level method and the
+     * recommended, higher level approach towards creating router instances is to use {@link SimpleBuilder}.
      *
      * @param <T> Target type.
      * @param templates The templates.
@@ -2766,7 +2205,7 @@ public class PathTemplateRouterFactory {
      * @return The router.
      */
     public static <T> PathTemplateRouter<T> createRouter(
-            final Set<? extends Template<? extends Supplier<? extends T>>> templates,
+            final Set<? extends PathTemplateParser.PathTemplate<? extends Supplier<? extends T>>> templates,
             final T defaultTarget
     ) {
         return new RouterFactory<>(templates, defaultTarget).create();

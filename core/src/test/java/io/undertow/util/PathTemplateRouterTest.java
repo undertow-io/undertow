@@ -33,8 +33,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Some tests that were specifically used to test during the development of {@link PathTemplateRouterFactory} as well as an adaptation
- * of the tests in {@link PathTemplateTestCase} to confirm compatibility with {@link PathTemplateMatcher}.
+ * Some tests that were specifically used to test during the development of {@link PathTemplateRouterFactory} as well as an
+ * adaptation of the tests in {@link PathTemplateTestCase} to confirm compatibility with {@link PathTemplateMatcher}.
  *
  * @author Dirk Roets
  */
@@ -44,13 +44,13 @@ public class PathTemplateRouterTest {
     private final String defaultTarget = "default";
 
     private static void assertValidTemplate(final String templatePath) {
-        PathTemplateRouterFactory.parseTemplate(templatePath, new Object());
+        PathTemplateParser.parseTemplate(templatePath, new Object());
     }
 
     @SuppressWarnings("ThrowableResultIgnored")
     private static void assertInValidTemplate(final String templatePath) {
         Assert.assertThrows(IllegalArgumentException.class,
-                () -> PathTemplateRouterFactory.parseTemplate(templatePath, new Object())
+                () -> PathTemplateParser.parseTemplate(templatePath, new Object())
         );
     }
 
@@ -58,15 +58,15 @@ public class PathTemplateRouterTest {
             final String expectedTemplatePath,
             final String actualTemplatePath
     ) {
-        final PathTemplateRouterFactory.Template<Object> expectedTemplate = PathTemplateRouterFactory.parseTemplate(
+        final PathTemplateParser.PathTemplate<Object> expectedTemplate = PathTemplateParser.parseTemplate(
                 expectedTemplatePath, new Object()
         );
-        final PathTemplateRouterFactory.Template<Object> actualTemplate = PathTemplateRouterFactory.parseTemplate(
+        final PathTemplateParser.PathTemplate<Object> actualTemplate = PathTemplateParser.parseTemplate(
                 actualTemplatePath, new Object()
         );
         Assert.assertTrue(expectedTemplate.patternEquals(actualTemplate));
-        Assert.assertEquals(new PathTemplatePatternEqualsAdapter<>(expectedTemplate),
-                new PathTemplatePatternEqualsAdapter<>(actualTemplate)
+        Assert.assertEquals(new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(expectedTemplate),
+                new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(actualTemplate)
         );
     }
 
@@ -74,15 +74,15 @@ public class PathTemplateRouterTest {
             final String expectedTemplatePath,
             final String actualTemplatePath
     ) {
-        final PathTemplateRouterFactory.Template<Object> expectedTemplate = PathTemplateRouterFactory.parseTemplate(
+        final PathTemplateParser.PathTemplate<Object> expectedTemplate = PathTemplateParser.parseTemplate(
                 expectedTemplatePath, new Object()
         );
-        final PathTemplateRouterFactory.Template<Object> actualTemplate = PathTemplateRouterFactory.parseTemplate(
+        final PathTemplateParser.PathTemplate<Object> actualTemplate = PathTemplateParser.parseTemplate(
                 actualTemplatePath, new Object()
         );
         Assert.assertFalse(expectedTemplate.patternEquals(actualTemplate));
-        Assert.assertNotEquals(new PathTemplatePatternEqualsAdapter<>(expectedTemplate),
-                new PathTemplatePatternEqualsAdapter<>(actualTemplate)
+        Assert.assertNotEquals(new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(expectedTemplate),
+                new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(actualTemplate)
         );
     }
 
@@ -128,7 +128,7 @@ public class PathTemplateRouterTest {
             final PathTemplateRouter<String> router,
             final String path
     ) {
-        final PathTemplaterRouteResult<String> result = router.route(path);
+        final PathTemplateRouteResult<String> result = router.route(path);
         Assert.assertSame(defaultTarget, result.getTarget());
         Assert.assertTrue(result.getPathTemplate().isEmpty());
         Assert.assertTrue(result.getParameters().isEmpty());
@@ -155,7 +155,7 @@ public class PathTemplateRouterTest {
             expectedParams = Collections.emptyMap();
         }
 
-        final PathTemplaterRouteResult<String> result = router.route(path);
+        final PathTemplateRouteResult<String> result = router.route(path);
         Assert.assertSame(target, result.getTarget());
         Assert.assertTrue(result.getPathTemplate().isPresent());
         Assert.assertEquals(expectedParams, result.getParameters());
@@ -277,21 +277,21 @@ public class PathTemplateRouterTest {
     @SuppressWarnings("ThrowableResultIgnored")
     public void testNullPath() {
         Assert.assertThrows(IllegalArgumentException.class, () -> {
-            PathTemplateRouterFactory.parseTemplate(null, new Object());
+            PathTemplateParser.parseTemplate(null, new Object());
         });
     }
 
     @Test
     public void testDetectDuplicates() {
-        final HashSet<PathTemplatePatternEqualsAdapter<PathTemplateRouterFactory.Template<Object>>> seen = new HashSet<>();
-        seen.add(new PathTemplatePatternEqualsAdapter<>(
-                PathTemplateRouterFactory.parseTemplate("/bob/{foo}", new Object())
+        final HashSet<PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<Object>>> seen = new HashSet<>();
+        seen.add(new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(
+                PathTemplateParser.parseTemplate("/bob/{foo}", new Object())
         ));
-        Assert.assertTrue(seen.contains(new PathTemplatePatternEqualsAdapter<>(
-                PathTemplateRouterFactory.parseTemplate("/bob/{ak}", new Object())
+        Assert.assertTrue(seen.contains(new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(
+                PathTemplateParser.parseTemplate("/bob/{ak}", new Object())
         )));
-        Assert.assertFalse(seen.contains(new PathTemplatePatternEqualsAdapter<>(
-                PathTemplateRouterFactory.parseTemplate("/bob/{ak}/other", new Object())
+        Assert.assertFalse(seen.contains(new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(
+                PathTemplateParser.parseTemplate("/bob/{ak}/other", new Object())
         )));
     }
 
@@ -328,7 +328,7 @@ public class PathTemplateRouterTest {
                 .addTemplate(template, () -> t1)
                 .build();
 
-        final PathTemplaterRouteResult<String> routeResult = router.route(path);
+        final PathTemplateRouteResult<String> routeResult = router.route(path);
         Assert.assertSame("Failed. Template: " + template, t1, routeResult.getTarget());
         Assert.assertEquals(expected, routeResult.getParameters());
     }
@@ -441,7 +441,7 @@ public class PathTemplateRouterTest {
         }
         final PathTemplateRouter<String> router = routerBuilder.build();
 
-        PathTemplaterRouteResult<String> pathRouteResult;
+        PathTemplateRouteResult<String> pathRouteResult;
         final long startMillis = System.currentTimeMillis();
         for (int i = 0; i < requestCount; i++) {
             pathRouteResult = router.route(requests[i % requestsLen]);
