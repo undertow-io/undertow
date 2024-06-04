@@ -144,6 +144,7 @@ public class PathTemplateHandler implements HttpHandler {
             sb.append(templates.get(0).getPattern().getPathTemplate()).append(" )");
         } else {
             sb.append('{').append(
+                    // Creates a ", " separated string of all patterns in this handler.
                     templates.stream().map(s -> s.getPattern().getPathTemplate()).collect(Collectors.joining(", "))
             ).append("} )");
         }

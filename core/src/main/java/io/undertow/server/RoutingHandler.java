@@ -223,6 +223,13 @@ public class RoutingHandler implements HttpHandler {
         handleFallback(exchange);
     }
 
+    /**
+     * Gets the builder for the specified HTTP method. A new builder will be created and added for the specified HTTP method if
+     * one wasn't already present, otherwise the existing builder will be returned.
+     *
+     * @param method The HTTP method.
+     * @return The builder.
+     */
     private PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch> getOrAddMethodRouterBuiler(
             final HttpString method
     ) {
@@ -236,6 +243,15 @@ public class RoutingHandler implements HttpHandler {
         return result;
     }
 
+    /**
+     * Gets the builder for the specified HTTP method and URL path template. A new builder will be created and added for the
+     * specified HTTP method and URL path template if one wasn't already present, otherwise the existing builder will be
+     * returned.
+     *
+     * @param method The HTTP method.
+     * @param template The URL path template. See {@link PathTemplateParser#parseTemplate(java.lang.String, java.lang.Object) }.
+     * @return The builder.
+     */
     private RoutingMatchBuilder getOrAddMethodRoutingMatchBuilder(
             final HttpString method,
             final String template
@@ -268,12 +284,25 @@ public class RoutingHandler implements HttpHandler {
         return Collections.unmodifiableMap(result);
     }
 
+    /**
+     * Creates a consumer around the specified builder. The consumer checks if the builder already contains the URL path
+     * template. If the builder does not contain the template, then the template is added to the builder. If the builder already
+     * contains the template, then the builder is left as is to avoid the builder throwing an {@link IllegalArgumentException}.
+     *
+     * @param <A> Target type.
+     * @param builder The builder
+     * @return The consumer.
+     */
     private static <A> Consumer<PathTemplateParser.PathTemplate<A>> createAddTemplateIfAbsentConsumer(
-            final PathTemplateRouterFactory.SimpleBuilder<Object> builder,
-            final Supplier<Object> targetFactory
+            final PathTemplateRouterFactory.SimpleBuilder<Object> builder
     ) {
         Objects.requireNonNull(builder);
-        Objects.requireNonNull(targetFactory);
+
+        /* Creates a dummy factory for targets. The specified builder is only used to determine if a matching template exists
+        for another HTTP method. If it does exist, then an HTTP 405 is returned. If not, then an HTTP 400 is returned. The
+        target itself is therefore never used. */
+        final Object target = new Object();
+        final Supplier<Object> targetFactory = () -> target;
 
         return (final PathTemplateParser.PathTemplate<A> item) -> {
             final String template = item.getPathTemplate();
@@ -289,14 +318,14 @@ public class RoutingHandler implements HttpHandler {
     }
 
     private PathTemplateRouter<Object> createAllMethodsRouter() {
-        final Object target = new Object();
-        final Supplier<Object> targetFactory = () -> target;
         final PathTemplateRouterFactory.SimpleBuilder<Object> builder = PathTemplateRouterFactory.SimpleBuilder
-                .newBuilder(target);
+                .newBuilder(new Object());
+        /* Adds all known patterns from all methods to a single builder in order to distinguish between HTTP 400 and 405 when
+        a requested method / patterns combination could not be found. */
         methodRouterBuilders.values().stream()
-                .flatMap(b -> b.getTemplates().keySet().stream()) //Extract all templates for all methods into a stream
-                .map(PathTemplateParser.PathTemplatePatternEqualsAdapter::getPattern) //Extract the patterns into a stream
-                .forEach(createAddTemplateIfAbsentConsumer(builder, targetFactory));
+                .flatMap(b -> b.getTemplates().keySet().stream()) //Extracts all templates for all methods into a single stream
+                .map(PathTemplateParser.PathTemplatePatternEqualsAdapter::getPattern) //Extracts the patterns into a stream
+                .forEach(createAddTemplateIfAbsentConsumer(builder)); //Adds patterns whilst avoiding adding duplicates
         return builder.build();
     }
 

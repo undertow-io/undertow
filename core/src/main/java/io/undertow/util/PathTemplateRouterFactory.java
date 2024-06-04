@@ -824,7 +824,7 @@ public class PathTemplateRouterFactory {
 
         @Override
         public String toString() {
-            return "SimpleRouter{" + '}';
+            return "SimpleRouter{}";
         }
 
         @Override
@@ -976,12 +976,12 @@ public class PathTemplateRouterFactory {
             this.routers = Objects.requireNonNull(routers);
             this.len = this.routers.length;
             this.defaultResult = Objects.requireNonNull(defaultResult);
-            //Find the minimum number of segments in any of the underlying routers
+            //Finds the minimum number of segments in any of the underlying routers.
             this.minSegmentCount = Arrays.stream(routers)
                     .mapToInt(AbstractRouter::getMinSegmentCount)
                     .min()
                     .orElse(Integer.MAX_VALUE);
-            //Find the maximum number of segments in any of the underlying routers
+            //Finds the maximum number of segments in any of the underlying routers.
             this.maxSegmentCount = Arrays.stream(routers)
                     .mapToInt(AbstractRouter::getMaxSegmentCount)
                     .max()
@@ -1848,6 +1848,7 @@ public class PathTemplateRouterFactory {
             }
 
             return new RouterFactory<>(
+                    //Extracts all the URL path templates from the PatternEqualsAdapters and collects these as a set.
                     templates.keySet().stream()
                             .map(PathTemplateParser.PathTemplatePatternEqualsAdapter::getPattern)
                             .collect(Collectors.toSet()),
