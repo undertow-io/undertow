@@ -20,7 +20,7 @@ package io.undertow.server.handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.PathTemplateRouter;
-import io.undertow.util.PathTemplaterRouteResult;
+import io.undertow.util.PathTemplateRouteResult;
 import io.undertow.util.PathTemplateRouterFactory;
 import java.util.Map;
 import java.util.Objects;
@@ -53,7 +53,7 @@ public class PathTemplateRouterHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        final PathTemplaterRouteResult<HttpHandler> routeResult = router.route(exchange.getRelativePath());
+        final PathTemplateRouteResult<HttpHandler> routeResult = router.route(exchange.getRelativePath());
         if (routeResult.getPathTemplate().isEmpty()) {
             // This is the default handler, therefore it doesn't contain path parameters.
             routeResult.getTarget().handleRequest(exchange);

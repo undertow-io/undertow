@@ -20,9 +20,9 @@ package io.undertow.server.handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.PathTemplatePatternEqualsAdapter;
+import io.undertow.util.PathTemplateParser;
 import io.undertow.util.PathTemplateRouter;
-import io.undertow.util.PathTemplaterRouteResult;
+import io.undertow.util.PathTemplateRouteResult;
 import io.undertow.util.PathTemplateRouterFactory;
 import java.util.function.Supplier;
 import java.util.ArrayList;
@@ -135,7 +135,7 @@ public class PathTemplateHandler implements HttpHandler {
 
     @Override
     public String toString() {
-        final List<PathTemplatePatternEqualsAdapter<PathTemplateRouterFactory.Template<Supplier<HttpHandler>>>> templates
+        final List<PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<Supplier<HttpHandler>>>> templates
                 = new ArrayList<>(builder.getBuilder().getTemplates().keySet());
 
         final StringBuilder sb = new StringBuilder();
@@ -152,7 +152,7 @@ public class PathTemplateHandler implements HttpHandler {
 
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
-        final PathTemplaterRouteResult<HttpHandler> routeResult = router.route(exchange.getRelativePath());
+        final PathTemplateRouteResult<HttpHandler> routeResult = router.route(exchange.getRelativePath());
         if (routeResult.getPathTemplate().isEmpty()) {
             // This is the default handler, therefore it doesn't contain path parameters.
             routeResult.getTarget().handleRequest(exchange);

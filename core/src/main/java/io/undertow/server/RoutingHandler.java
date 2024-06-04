@@ -22,9 +22,9 @@ import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.PathTemplateMatch;
-import io.undertow.util.PathTemplatePatternEqualsAdapter;
+import io.undertow.util.PathTemplateParser;
 import io.undertow.util.PathTemplateRouter;
-import io.undertow.util.PathTemplaterRouteResult;
+import io.undertow.util.PathTemplateRouteResult;
 import io.undertow.util.PathTemplateRouterFactory;
 import java.util.Collections;
 import java.util.HashMap;
@@ -175,7 +175,7 @@ public class RoutingHandler implements HttpHandler {
             final Routers routers,
             final HttpServerExchange exchange
     ) throws Exception {
-        final PathTemplaterRouteResult<Object> routeResult = routers.allMethodsRouter
+        final PathTemplateRouteResult<Object> routeResult = routers.allMethodsRouter
                 .route(exchange.getRelativePath());
         if (routeResult.getPathTemplate().isPresent()) {
             handlInvalidMethod(exchange);
@@ -195,7 +195,7 @@ public class RoutingHandler implements HttpHandler {
             return;
         }
 
-        final PathTemplaterRouteResult<RoutingMatch> routeResult = methodRouter.route(exchange.getRelativePath());
+        final PathTemplateRouteResult<RoutingMatch> routeResult = methodRouter.route(exchange.getRelativePath());
         if (routeResult.getPathTemplate().isEmpty()) {
             handleNoMatch(localRouters, exchange);
             return;
@@ -244,7 +244,7 @@ public class RoutingHandler implements HttpHandler {
 
         final PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch> routeBuilder
                 = getOrAddMethodRouterBuiler(method);
-        final PathTemplateRouterFactory.Template<RoutingMatchBuilder> parsedTemplate = PathTemplateRouterFactory.parseTemplate(
+        final PathTemplateParser.PathTemplate<RoutingMatchBuilder> parsedTemplate = PathTemplateParser.parseTemplate(
                 template, new RoutingMatchBuilder()
         );
 
@@ -268,20 +268,20 @@ public class RoutingHandler implements HttpHandler {
         return Collections.unmodifiableMap(result);
     }
 
-    private static <A> Consumer<PathTemplateRouterFactory.Template<A>> createAddTemplateIfAbsentConsumer(
+    private static <A> Consumer<PathTemplateParser.PathTemplate<A>> createAddTemplateIfAbsentConsumer(
             final PathTemplateRouterFactory.SimpleBuilder<Object> builder,
             final Supplier<Object> targetFactory
     ) {
         Objects.requireNonNull(builder);
         Objects.requireNonNull(targetFactory);
 
-        return (final PathTemplateRouterFactory.Template<A> item) -> {
+        return (final PathTemplateParser.PathTemplate<A> item) -> {
             final String template = item.getPathTemplate();
-            final PathTemplateRouterFactory.Template<Supplier<Object>> parsedTemplate = PathTemplateRouterFactory.parseTemplate(
+            final PathTemplateParser.PathTemplate<Supplier<Object>> parsedTemplate = PathTemplateParser.parseTemplate(
                     template, targetFactory
             );
-            final PathTemplatePatternEqualsAdapter<PathTemplateRouterFactory.Template<Supplier<Object>>> parsedTemplatePattern
-                    = new PathTemplatePatternEqualsAdapter<>(parsedTemplate);
+            final PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<Supplier<Object>>> parsedTemplatePattern
+                    = new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(parsedTemplate);
             if (!builder.getTemplates().containsKey(parsedTemplatePattern)) {
                 builder.getTemplates().put(parsedTemplatePattern, parsedTemplate.getTarget());
             }
@@ -294,8 +294,8 @@ public class RoutingHandler implements HttpHandler {
         final PathTemplateRouterFactory.SimpleBuilder<Object> builder = PathTemplateRouterFactory.SimpleBuilder
                 .newBuilder(target);
         methodRouterBuilders.values().stream()
-                .flatMap(b -> b.getTemplates().keySet().stream())
-                .map(PathTemplatePatternEqualsAdapter::getPattern)
+                .flatMap(b -> b.getTemplates().keySet().stream()) //Extract all templates for all methods into a stream
+                .map(PathTemplateParser.PathTemplatePatternEqualsAdapter::getPattern) //Extract the patterns into a stream
                 .forEach(createAddTemplateIfAbsentConsumer(builder, targetFactory));
         return builder.build();
     }
@@ -402,7 +402,7 @@ public class RoutingHandler implements HttpHandler {
                     : routingHandler.methodRouterBuilders.entrySet()) {
                 final PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch> builder
                         = getOrAddMethodRouterBuiler(outer.getKey());
-                for (final Entry<PathTemplatePatternEqualsAdapter<PathTemplateRouterFactory.Template<RoutingMatchBuilder>>, RoutingMatchBuilder> inner
+                for (final Entry<PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<RoutingMatchBuilder>>, RoutingMatchBuilder> inner
                         : outer.getValue().getTemplates().entrySet()) {
                     builder.addTemplate(
                             inner.getKey().getPattern().getPathTemplate(),
@@ -423,11 +423,11 @@ public class RoutingHandler implements HttpHandler {
             return false;
         }
 
-        final PathTemplateRouterFactory.Template<RoutingMatchBuilder> parsedTemplate = PathTemplateRouterFactory.parseTemplate(
+        final PathTemplateParser.PathTemplate<RoutingMatchBuilder> parsedTemplate = PathTemplateParser.parseTemplate(
                 path, noRoutingMatchBuilder
         );
-        final PathTemplatePatternEqualsAdapter<PathTemplateRouterFactory.Template<RoutingMatchBuilder>> parsedTemplatePattern
-                = new PathTemplatePatternEqualsAdapter<>(parsedTemplate);
+        final PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<RoutingMatchBuilder>> parsedTemplatePattern
+                = new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(parsedTemplate);
 
         if (!builder.getTemplates().containsKey(parsedTemplatePattern)) {
             return false;
