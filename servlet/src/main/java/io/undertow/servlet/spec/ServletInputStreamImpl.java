@@ -186,8 +186,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         int copied = Math.min(buffer.remaining(), len);
         buffer.get(b, off, copied);
         if (!buffer.hasRemaining()) {
-            pooled.close();
-            pooled = null;
+            closePoolIfNotNull();
             if (listener != null) {
                 readIntoBufferNonBlocking();
             }
@@ -198,47 +197,80 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     private void readIntoBuffer() throws IOException {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
-            pooled = bufferPool.allocate();
-
-            int res = Channels.readBlocking(channel, pooled.getBuffer());
-            pooled.getBuffer().flip();
+            final ByteBuffer byteBuffer;
+            try {
+                PooledByteBuffer pooled = this.pooled = bufferPool.allocate();
+                byteBuffer = pooled.getBuffer();
+            } catch (NullPointerException e) {
+                // check for NPE + FLAG_FINISHED, it indicates a race condition where the buffer was closed and set to null by
+                // another thread
+                // instead of paying the price of synchronization, we just ignore the NPE and return, mimicking the code path
+                // we would follow in case the check in the if statement above returned false
+                // this is unlikely to happen, it will happen only during timeouts and server shutdowns
+                if (anyAreSet(state, FLAG_FINISHED)) {
+                    return;
+                }
+                throw e;
+            }
+            int res = Channels.readBlocking(channel, byteBuffer);
+            byteBuffer.flip();
             if (res == -1) {
                 setFlags(FLAG_FINISHED);
-                pooled.close();
-                pooled = null;
+                closePoolIfNotNull();
             }
         }
     }
 
     private void readIntoBufferNonBlocking() throws IOException {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
-            pooled = bufferPool.allocate();
+            final ByteBuffer byteBuffer;
+            try {
+                PooledByteBuffer pooled = this.pooled = bufferPool.allocate();
+                byteBuffer = pooled.getBuffer();
+            } catch (NullPointerException e) {
+                // check for NPE + FLAG_FINISHED, it indicates a race condition where the buffer was closed and set to null by
+                // another thread
+                // instead of paying the price of synchronization, we just ignore the NPE and return, mimicking the code path
+                // we would follow in case the check in the if statement above returned false
+                // this is unlikely to happen, it will happen only during timeouts and server shutdowns
+                if (anyAreSet(state, FLAG_FINISHED)) {
+                    return;
+                }
+                throw e;
+            }
             if (listener == null) {
-                int res = channel.read(pooled.getBuffer());
-                if (res == 0) {
-                    pooled.close();
-                    pooled = null;
+                int res = channel.read(byteBuffer);
+                if (res == 0 && pooled != null) {
+                    closePoolIfNotNull();
                     return;
                 }
                 pooled.getBuffer().flip();
                 if (res == -1) {
                     setFlags(FLAG_FINISHED);
-                    pooled.close();
-                    pooled = null;
+                    closePoolIfNotNull();
                 }
             } else {
-                int res = channel.read(pooled.getBuffer());
+                int res = channel.read(byteBuffer);
                 pooled.getBuffer().flip();
                 if (res == -1) {
                     setFlags(FLAG_FINISHED);
-                    pooled.close();
-                    pooled = null;
+                    closePoolIfNotNull();
                 } else if (res == 0) {
                     clearFlags(FLAG_READY);
-                    pooled.close();
-                    pooled = null;
+                    closePoolIfNotNull();
                 }
             }
+        }
+    }
+
+    private void closePoolIfNotNull() {
+        try {
+            if (pooled != null) {
+                pooled.close();
+                pooled = null;
+            }
+        } catch (NullPointerException npe) {
+            // ignore it, this can happen if reading while another thread shutdown this input stream, caused by a timeout or a jdk shutdown
         }
     }
 
@@ -266,17 +298,11 @@ public class ServletInputStreamImpl extends ServletInputStream {
         try {
             while (allAreClear(state, FLAG_FINISHED)) {
                 readIntoBuffer();
-                if (pooled != null) {
-                    pooled.close();
-                    pooled = null;
-                }
+                closePoolIfNotNull(); // race condition can happen if read bytes reads -1
             }
         } finally {
             setFlags(FLAG_FINISHED);
-            if (pooled != null) {
-                pooled.close();
-                pooled = null;
-            }
+            closePoolIfNotNull();
             channel.shutdownReads();
         }
     }
@@ -329,10 +355,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
                         }
                     });
                 } finally {
-                    if (pooled != null) {
-                        pooled.close();
-                        pooled = null;
-                    }
+                    closePoolIfNotNull();
                     IoUtils.safeClose(channel);
                 }
             }

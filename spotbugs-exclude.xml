@@ -937,6 +937,15 @@
             <Class name="io.undertow.servlet.spec.ServletOutputStreamImpl"/>
         </Or>
     </Match>
+    <Match>
+        <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
+        <Class name="io.undertow.servlet.spec.ServletInputStreamImpl"/>
+        <Or>
+            <Method name="readIntoBuffer"/>
+            <Method name="readIntoBufferNonBlocking"/>
+            <Method name="closePoolIfNotNull"/>
+        </Or>
+    </Match>
     <!-- ignore benchmarks -->
     <Match>
         <Package name="io.undertow.benchmarks"/>
