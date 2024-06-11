@@ -240,7 +240,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         encoderHeaderTableSize = settings.get(UndertowOptions.HTTP2_SETTINGS_HEADER_TABLE_SIZE, Hpack.DEFAULT_TABLE_SIZE);
         receiveMaxFrameSize = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_FRAME_SIZE, DEFAULT_MAX_FRAME_SIZE);
         maxPadding = settings.get(UndertowOptions.HTTP2_PADDING_SIZE, 0);
-        maxHeaderListSize = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE, settings.get(UndertowOptions.MAX_HEADER_SIZE, -1));
+        maxHeaderListSize = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE, settings.get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE));
         if(maxPadding > 0) {
             paddingRandom = new SecureRandom();
         } else {

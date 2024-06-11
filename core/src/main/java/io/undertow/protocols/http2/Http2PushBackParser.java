@@ -18,10 +18,10 @@
 
 package io.undertow.protocols.http2;
 
+import io.undertow.UndertowMessages;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
-import io.undertow.UndertowMessages;
 
 /**
  * Parser that supports push back when not all data can be read.
@@ -123,9 +123,10 @@ public abstract class Http2PushBackParser {
         finished = true;
     }
 
-    protected void moreData(int data) {
+    protected boolean moreData(int data) {
         finished = false;
         this.remainingData += data;
+        return true;
     }
 
     public int getFrameLength() {
