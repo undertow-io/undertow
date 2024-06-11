@@ -303,6 +303,15 @@
         <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
         <Class name="io.undertow.servlet.spec.ServletOutputStreamImpl"/>
     </Match>
+    <Match>
+        <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
+        <Class name="io.undertow.servlet.spec.ServletInputStreamImpl"/>
+        <Or>
+            <Method name="readIntoBuffer"/>
+            <Method name="readIntoBufferNonBlocking"/>
+            <Method name="closePoolIfNotNull"/>
+        </Or>
+    </Match>
     <!-- ignore benchmarks -->
     <Match>
         <Package name="io.undertow.benchmarks"/>
