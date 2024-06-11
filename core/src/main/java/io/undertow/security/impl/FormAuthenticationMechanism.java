@@ -46,21 +46,15 @@ import static io.undertow.UndertowMessages.MESSAGES;
 public class FormAuthenticationMechanism implements AuthenticationMechanism {
 
     public static final String LOCATION_ATTRIBUTE = FormAuthenticationMechanism.class.getName() + ".LOCATION";
+
     public static final String DEFAULT_POST_LOCATION = "/j_security_check";
-    protected static final String ORIGINAL_SESSION_TIMEOUT = "io.undertow.servlet.form.auth.orig.session.timeout";;
+
     private final String name;
     private final String loginPage;
     private final String errorPage;
     private final String postLocation;
     private final FormParserFactory formParserFactory;
     private final IdentityManager identityManager;
-
-    /**
-     * If the authentication process creates a session, this is the maximum session timeout (in seconds) during the
-     * authentication process. Once authentication is complete, the default session timeout will apply. Sessions that
-     * exist before the authentication process starts will retain their original session timeout throughout.
-     */
-    protected final int authenticationSessionTimeout = 120;
 
     public FormAuthenticationMechanism(final String name, final String loginPage, final String errorPage) {
         this(FormParserFactory.builder().build(), name, loginPage, errorPage);
@@ -172,10 +166,6 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     protected void handleRedirectBack(final HttpServerExchange exchange) {
         final Session session = Sessions.getSession(exchange);
         if (session != null) {
-            final Integer originalSessionTimeout = (Integer) session.removeAttribute(ORIGINAL_SESSION_TIMEOUT);
-            if (originalSessionTimeout != null) {
-                session.setMaxInactiveInterval(originalSessionTimeout);
-            }
             final String location = (String) session.removeAttribute(LOCATION_ATTRIBUTE);
             if(location != null) {
                 exchange.addDefaultResponseListener(new DefaultResponseListener() {
@@ -218,19 +208,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     }
 
     protected void storeInitialLocation(final HttpServerExchange exchange) {
-        Session session = Sessions.getSession(exchange);
-        boolean newSession = false;
-        if (session == null) {
-            session = Sessions.getOrCreateSession(exchange);
-            newSession = true;
-        }
-        if (newSession) {
-            int originalMaxInactiveInterval = session.getMaxInactiveInterval();
-            if (originalMaxInactiveInterval > authenticationSessionTimeout) {
-                session.setAttribute(ORIGINAL_SESSION_TIMEOUT, session.getMaxInactiveInterval());
-                session.setMaxInactiveInterval(authenticationSessionTimeout);
-            }
-        }
+        Session session = Sessions.getOrCreateSession(exchange);
         session.setAttribute(LOCATION_ATTRIBUTE, RedirectBuilder.redirect(exchange, exchange.getRelativePath()));
     }
 
