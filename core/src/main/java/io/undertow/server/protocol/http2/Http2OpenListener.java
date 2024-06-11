@@ -51,7 +51,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class Http2OpenListener implements ChannelListener<StreamConnection>, DelegateOpenListener {
 
-
+    private static final int DEFAULT_MAX_CONNECTIONS_PER_LISTENER = 100;
+    private static final int MAX_CONNECTIONS_PER_LISTENER = Integer.getInteger("io.undertow.max-connections-per-listener", DEFAULT_MAX_CONNECTIONS_PER_LISTENER);
     private final Set<Http2Channel> connections = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
 
@@ -113,7 +114,12 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened HTTP/2 connection with %s", channel.getPeerAddress());
         }
-
+        if (connections.size() >= MAX_CONNECTIONS_PER_LISTENER) {
+            UndertowLogger.REQUEST_IO_LOGGER.debugf("Reached maximum number of connections %d per listener; closing open connection request from %s",
+                    MAX_CONNECTIONS_PER_LISTENER, channel.getPeerAddress());
+            IoUtils.safeClose(channel);
+            return;
+        }
         //cool, we have a Http2 connection.
         Http2Channel http2Channel = new Http2Channel(channel, protocol, bufferPool, buffer, false, false, undertowOptions);
         Integer idleTimeout = undertowOptions.get(UndertowOptions.IDLE_TIMEOUT);
