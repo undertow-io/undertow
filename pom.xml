@@ -108,9 +108,6 @@
         <version.jmh>1.21</version.jmh>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
-        <maven.javadoc.plugin.quiet>true</maven.javadoc.plugin.quiet>
-        <maven.compiler.showDeprecation>false</maven.compiler.showDeprecation>
-        <maven.compiler.showWarnings>false</maven.compiler.showWarnings>
     </properties>
 
     <modules>
@@ -140,7 +137,6 @@
                         following setting.
                     -->
                     <doclint>none</doclint>
-                    <quiet>${maven.javadoc.plugin.quiet}</quiet>
                     <!-- @implNote is a non-standard tag and must be declared or the build will fail -->
                     <tags>
                         <tag>
@@ -191,9 +187,6 @@
                         <compilerArgs>
                             <arg>-J--add-opens=java.base/java.lang=ALL-UNNAMED</arg>
                         </compilerArgs>
-                        <!-- need to specify directly, for some reason properties are ignored -->
-                        <showDeprecation>${maven.compiler.showDeprecation}</showDeprecation>
-                        <showWarnings>${maven.compilie${maven.compiler.showWarnings}</showWarnings>
                     </configuration>
                 </plugin>
 
@@ -650,18 +643,5 @@
                 <modular.jdk.props>-Djava.security.manager=allow</modular.jdk.props>
             </properties>
         </profile>
-		<profile>
-			<id>verbose</id>
-			<activation>
-				<property>
-					<name>findbugs</name>
-				</property>
-			</activation>
-			<properties>
-				<maven.javadoc.plugin.quiet>false</maven.javadoc.plugin.quiet>
-				<maven.compiler.showDeprecation>true</maven.compiler.showDeprecation>
-				<maven.compiler.showWarnings>false</maven.compiler.showWarnings>
-			</properties>
-		</profile>
     </profiles>
 </project>
