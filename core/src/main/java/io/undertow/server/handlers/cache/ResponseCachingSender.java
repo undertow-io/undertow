@@ -23,7 +23,6 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import io.undertow.UndertowLogger;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import org.xnio.Buffers;
@@ -125,7 +124,6 @@ public class ResponseCachingSender implements Sender {
     @Override
     public void close() {
         if (written != length) {
-            UndertowLogger.ROOT_LOGGER.contentEntryMismatch(cacheEntry.key(),length, written);
             cacheEntry.disable();
             cacheEntry.dereference();
         }
@@ -144,13 +142,7 @@ public class ResponseCachingSender implements Sender {
                 //prepare buffers for reading
                 buffer.flip();
             }
-            if(written == cacheEntry.size()) {
-                cacheEntry.enable();
-            } else {
-                UndertowLogger.ROOT_LOGGER.cacheEntryMismatchContent(cacheEntry.key(),cacheEntry.size(), written);
-                cacheEntry.disable();
-                cacheEntry.dereference();
-            }
+            cacheEntry.enable();
         }
     }
 
@@ -178,13 +170,7 @@ public class ResponseCachingSender implements Sender {
                 //prepare buffers for reading
                 buffer.flip();
             }
-            if(cacheEntry.size() == written) {
-                cacheEntry.enable();
-            } else {
-                UndertowLogger.ROOT_LOGGER.cacheEntryMismatchContent(cacheEntry.key(),cacheEntry.size(), written);
-                cacheEntry.disable();
-                cacheEntry.dereference();
-            }
+            cacheEntry.enable();
         }
     }
 }
