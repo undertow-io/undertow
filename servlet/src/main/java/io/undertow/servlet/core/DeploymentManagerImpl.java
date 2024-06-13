@@ -612,28 +612,26 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public void stop() throws ServletException {
-        if(deployment.getDeploymentState() == State.STARTED) {
-            try {
-                deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, Object>() {
-                    @Override
-                    public Void call(HttpServerExchange exchange, Object ignore) throws ServletException {
-                        for (Lifecycle object : deployment.getLifecycleObjects()) {
-                            try {
-                                object.stop();
-                            } catch (Throwable t) {
-                                UndertowServletLogger.ROOT_LOGGER.failedToDestroy(object, t);
-                            }
+        try {
+            deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, Object>() {
+                @Override
+                public Void call(HttpServerExchange exchange, Object ignore) throws ServletException {
+                    for (Lifecycle object : deployment.getLifecycleObjects()) {
+                        try {
+                            object.stop();
+                        } catch (Throwable t) {
+                            UndertowServletLogger.ROOT_LOGGER.failedToDestroy(object, t);
                         }
-                        deployment.getSessionManager().stop();
-                        state = State.DEPLOYED;
-                        return null;
                     }
-                }).call(null, null);
-            } catch (ServletException|RuntimeException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+                    deployment.getSessionManager().stop();
+                    state = State.DEPLOYED;
+                    return null;
+                }
+            }).call(null, null);
+        } catch (ServletException|RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -671,29 +669,27 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public void undeploy() {
-        if(deployment.getDeploymentState() == State.DEPLOYED) {
-            //NOTE: this can happen if deployment isnt full and attempt is made to roll it back.
-            try {
-                deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, Object>() {
-                    @Override
-                    public Void call(HttpServerExchange exchange, Object ignore) throws ServletException {
-                        for(ServletContextListener listener : deployment.getDeploymentInfo().getDeploymentCompleteListeners()) {
-                            try {
-                                listener.contextDestroyed(new ServletContextEvent(deployment.getServletContext()));
-                            } catch (Throwable t) {
-                                UndertowServletLogger.REQUEST_LOGGER.failedToDestroy(listener, t);
-                            }
+        try {
+            deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, Object>() {
+                @Override
+                public Void call(HttpServerExchange exchange, Object ignore) throws ServletException {
+                    for(ServletContextListener listener : deployment.getDeploymentInfo().getDeploymentCompleteListeners()) {
+                        try {
+                            listener.contextDestroyed(new ServletContextEvent(deployment.getServletContext()));
+                        } catch (Throwable t) {
+                            UndertowServletLogger.REQUEST_LOGGER.failedToDestroy(listener, t);
                         }
-                        deployment.destroy();
-                        deployment = null;
-                        state = State.UNDEPLOYED;
-                        return null;
                     }
-                }).call(null, null);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+                    deployment.destroy();
+                    deployment = null;
+                    state = State.UNDEPLOYED;
+                    return null;
+                }
+            }).call(null, null);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
+
     }
 
     @Override
