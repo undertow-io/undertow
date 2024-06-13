@@ -59,7 +59,7 @@ jobs:
       matrix:
         os: [macos-latest]
         module: [core, servlet, websockets-jsr]
-        jdk: [11, 17, 21]
+        jdk: [11, 17]
         openjdk_impl: [ temurin ]
     steps:
     - name: Update hosts - linux
