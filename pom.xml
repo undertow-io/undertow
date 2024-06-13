@@ -87,9 +87,8 @@
         <spotbugs.exclude.filter.file>../spotbugs-exclude.xml</spotbugs.exclude.filter.file>
 
         <!-- Surefire args -->
-        <modular.jdk.props></modular.jdk.props>
         <surefire.jpda.args/>
-        <surefire.system.args>-ea ${surefire.jpda.args} -Xmx1024m ${modular.jdk.props}</surefire.system.args>
+        <surefire.system.args>-ea ${surefire.jpda.args} -Xmx1024m</surefire.system.args>
         <!--by default run all tests-->
         <test.categories>io.undertow.testutils.category.UnitTest OR NOT io.undertow.testutils.category.UnitTest</test.categories>
 
@@ -633,15 +632,6 @@
                 <module>karaf</module>
             </modules>
         </profile>
-
-        <profile>
-            <id>jdk18</id>
-            <activation>
-                <jdk>[18,)</jdk>
-            </activation>
-            <properties>
-                <modular.jdk.props>-Djava.security.manager=allow</modular.jdk.props>
-            </properties>
-        </profile>
     </profiles>
+
 </project>
