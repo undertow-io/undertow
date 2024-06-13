@@ -38,6 +38,7 @@ public class AsyncResponseWriterOnPostServlet extends ResponseWriterOnPostServle
             throw new IllegalArgumentException("not a test " + test);
         }
         final AsyncContext asyncContext = req.startAsync();
+        asyncContext.setTimeout(50000);
         new Thread(()->{
             try {
                 HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
