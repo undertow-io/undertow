@@ -581,8 +581,4 @@ public final class HeaderValues extends AbstractCollection<String> implements De
         }
         return !c.isEmpty();
     }
-
-    public HeaderValues reversed() {
-        throw new UnsupportedOperationException();
-    }
 }
