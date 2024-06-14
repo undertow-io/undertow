@@ -210,7 +210,14 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
                 } else {
                     current = "";
                 }
-                realPath = CanonicalPathUtils.canonicalize(servletContext.getContextPath() + current + location);
+                String precanonLocation = location;
+                String query = "";
+                int firstQuestionMark = location.indexOf("?");
+                if (firstQuestionMark >= 0) {
+                    precanonLocation = location.substring(0, firstQuestionMark);
+                    query = location.substring(firstQuestionMark);
+                }
+                realPath = CanonicalPathUtils.canonicalize(servletContext.getContextPath() + current + precanonLocation) + query;
             }
             String loc = exchange.getRequestScheme() + "://" + exchange.getHostAndPort() + realPath;
             exchange.getResponseHeaders().put(Headers.LOCATION, loc);
