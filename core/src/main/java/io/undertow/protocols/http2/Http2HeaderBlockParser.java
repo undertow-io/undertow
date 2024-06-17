@@ -157,7 +157,7 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
         if(maxHeaderListSize > 0) {
             headerSize += (name.length() + value.length() + 32);
             if (headerSize > maxHeaderListSize) {
-                throw new HpackException(UndertowMessages.MESSAGES.headerBlockTooLarge(), Http2Channel.ERROR_PROTOCOL_ERROR);
+                throw new HpackException(UndertowMessages.MESSAGES.headerBlockTooLarge(maxHeaderListSize), Http2Channel.ERROR_PROTOCOL_ERROR);
             }
         }
         if(maxHeaders > 0 && headerMap.size() > maxHeaders) {
@@ -205,7 +205,11 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
         boolean acceptMoreData = super.moreData(data);
         frameRemaining += data;
         totalHeaderLength += data;
-        return acceptMoreData && totalHeaderLength < maxHeaderListSize;
+        if (maxHeaderListSize > 0 && totalHeaderLength > maxHeaderListSize) {
+            UndertowLogger.REQUEST_LOGGER.debug(UndertowMessages.MESSAGES.headerBlockTooLarge(maxHeaderListSize));
+            return false;
+        }
+        return acceptMoreData;
     }
 
     public boolean isInvalid() {
