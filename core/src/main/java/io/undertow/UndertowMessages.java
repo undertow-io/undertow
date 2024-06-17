@@ -518,8 +518,8 @@ public interface UndertowMessages {
 //    @Message(id = 159, value = "Max size must be larger than one")
 //    IllegalArgumentException maxSizeMustBeLargerThanOne();
 
-    @Message(id = 161, value = "HTTP/2 header block is too large")
-    String headerBlockTooLarge();
+    @Message(id = 161, value = "HTTP/2 header block is too large, maximum header size is %s")
+    String headerBlockTooLarge(int maxHeaderSize);
 
     @Message(id = 162, value = "An invalid SameSite attribute [%s] is specified. It must be one of %s")
     IllegalArgumentException invalidSameSiteMode(String mode, String validAttributes);
