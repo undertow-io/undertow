@@ -228,11 +228,11 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         synchronized (threadLocalDataList) {
             for (WeakReference<ThreadLocalData> ref : threadLocalDataList) {
                 ThreadLocalData local = ref.get();
+                ref.clear();
                 if (local != null) {
                     local.buffers.clear();
+                    threadLocalCache.remove(local);
                 }
-                ref.clear();
-                threadLocalCache.remove(local);
             }
             threadLocalDataList.clear();
         }
