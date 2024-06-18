@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static io.undertow.protocols.http2.Http2Channel.DATA_FLAG_END_STREAM;
-import static io.undertow.protocols.http2.Http2Channel.ERROR_ENHANCE_YOUR_CALM;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_CONTINUATION;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_DATA;
 import static io.undertow.protocols.http2.Http2Channel.FRAME_TYPE_GOAWAY;
@@ -110,7 +109,7 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                     }
                     parser = continuationParser;
                     if (!continuationParser.moreData(length)) {
-                        http2Channel.sendGoAway(ERROR_ENHANCE_YOUR_CALM);
+                        http2Channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
                     }
                     break;
                 }
