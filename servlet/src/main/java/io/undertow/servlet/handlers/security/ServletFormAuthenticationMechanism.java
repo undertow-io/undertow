@@ -19,7 +19,6 @@
 package io.undertow.servlet.handlers.security;
 
 import static io.undertow.security.api.SecurityNotification.EventType.AUTHENTICATED;
-import static io.undertow.util.Methods.POST;
 import static io.undertow.util.StatusCodes.OK;
 
 import io.undertow.security.api.AuthenticationMechanism;
@@ -160,16 +159,14 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
     @Override
     public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange, final SecurityContext securityContext) {
-        if (POST.equals(exchange.getRequestMethod())) {
-            securityContext.registerNotificationReceiver(new NotificationReceiver() {
-                @Override
-                public void handleNotification(final SecurityNotification notification) {
-                    if (notification.getEventType() == AUTHENTICATED) {
-                        getAndInitializeSession(exchange, false);
-                    }
+        securityContext.registerNotificationReceiver(new NotificationReceiver() {
+            @Override
+            public void handleNotification(final SecurityNotification notification) {
+                if (notification.getEventType() == AUTHENTICATED) {
+                    getAndInitializeSession(exchange, false);
                 }
-            });
-        }
+            }
+        });
         return super.authenticate(exchange, securityContext);
     }
 
