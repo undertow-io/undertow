@@ -36,11 +36,13 @@ class Http2GoAwayStreamSinkChannel extends Http2NoDataStreamSinkChannel {
 
     private final int status;
     private final int lastGoodStreamId;
+    private final boolean isLastFrame;
 
-    protected Http2GoAwayStreamSinkChannel(Http2Channel channel, int status, int lastGoodStreamId) {
+    protected Http2GoAwayStreamSinkChannel(Http2Channel channel, int status, int lastGoodStreamId, boolean isLastFrame) {
         super(channel);
         this.status = status;
         this.lastGoodStreamId = lastGoodStreamId;
+        this.isLastFrame = isLastFrame;
     }
 
     @Override
@@ -58,6 +60,6 @@ class Http2GoAwayStreamSinkChannel extends Http2NoDataStreamSinkChannel {
 
     @Override
     protected boolean isLastFrame() {
-        return true;
+        return isLastFrame;
     }
 }
