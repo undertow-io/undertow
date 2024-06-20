@@ -360,8 +360,7 @@ public class HttpClientTestCase {
             latch.await(10, TimeUnit.SECONDS);
 
             Assert.assertEquals(0, responses.size());
-            // see UNDERTOW-2249: assert exception instanceof ClosedChannelException
-            Assert.assertNotNull(exception);
+            Assert.assertTrue(exception instanceof ClosedChannelException);
         } finally {
             connection.getIoThread().execute(() -> IoUtils.safeClose(connection));
             DefaultServer.stopSSLServer();
