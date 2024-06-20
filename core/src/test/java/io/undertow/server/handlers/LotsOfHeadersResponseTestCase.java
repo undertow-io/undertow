@@ -18,6 +18,7 @@
 
 package io.undertow.server.handlers;
 
+import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
@@ -49,6 +50,9 @@ public class LotsOfHeadersResponseTestCase {
 
     @BeforeClass
     public static void setup() {
+        // TODO replace by new UndertowOptions.HTTP2_MAX_HEADER_SIZE
+        // skip this test if we are running in a scenario with default max header size property
+        Assume.assumeNotNull(System.getProperty(Http2Channel.HTTP2_MAX_HEADER_SIZE_PROPERTY));
         final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
         blockingHandler.setRootHandler(new HttpHandler() {

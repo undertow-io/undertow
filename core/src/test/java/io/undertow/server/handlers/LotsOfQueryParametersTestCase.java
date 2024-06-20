@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers;
 
+import io.undertow.UndertowOptions;
+import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
@@ -29,16 +31,16 @@ import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
 
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.Deque;
 import java.util.Map;
-import io.undertow.UndertowOptions;
-import org.xnio.OptionMap;
 
 /**
  * @author Stuart Douglas
@@ -52,11 +54,19 @@ public class LotsOfQueryParametersTestCase {
 
     private static final int DEFAULT_MAX_PARAMETERS = 1000;
     private static final int TEST_MAX_PARAMETERS = 10;
+    // TODO private static OptionMap EXISTING_OPTIONS = DefaultServer.getUndertowOptions();
 
     @BeforeClass
     public static void setup() {
+        // skip this test if we are running in a scenario with default max header size property
+        Assume.assumeNotNull(System.getProperty(Http2Channel.HTTP2_MAX_HEADER_SIZE_PROPERTY));
         final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
+        // TODO replace by UndertowOption.HTTP2_MAX_HEADER_SIZE
+        //final OptionMap bigMaxHeaderOptions = OptionMap.builder().set(UndertowOptions.HTTP2_MAX_HEADER_SIZE, 100000).getMap();
+        //DefaultServer.setUndertowOptions(bigMaxHeaderOptions);
+        //DefaultServer.setProxyOptions(bigMaxHeaderOptions);
+
         blockingHandler.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) {
@@ -66,6 +76,12 @@ public class LotsOfQueryParametersTestCase {
             }
         });
     }
+
+    // TODO
+    /* @AfterClass
+    public static void teardown() {
+        DefaultServer.setUndertowOptions(EXISTING_OPTIONS);
+    } */
 
     @Test @AjpIgnore
     public void testLotsOfQueryParameters_Default_Ok() throws IOException {

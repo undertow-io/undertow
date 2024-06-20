@@ -18,6 +18,19 @@
 
 package io.undertow.server.protocol.http;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.xnio.ChannelListener;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.Pool;
+import org.xnio.StreamConnection;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
@@ -34,18 +47,6 @@ import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.XnioByteBufferPool;
-import org.xnio.ChannelListener;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import org.xnio.Pool;
-import org.xnio.StreamConnection;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.Collections;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Open listener for HTTP server.  XNIO should be set up to chain the accept handler to post-accept open
@@ -55,8 +56,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class HttpOpenListener implements ChannelListener<StreamConnection>, DelegateOpenListener {
 
-    private static final int DEFAULT_MAX_CONNECTIONS_PER_LISTENER = 100;
-    private static final int MAX_CONNECTIONS_PER_LISTENER = Integer.getInteger("io.undertow.max-connections-per-listener", DEFAULT_MAX_CONNECTIONS_PER_LISTENER);
     private final Set<HttpServerConnection> connections = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     private final ByteBufferPool bufferPool;
@@ -103,12 +102,6 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
 
     @Override
     public void handleEvent(final StreamConnection channel, PooledByteBuffer buffer) {
-        if (connections.size() >= MAX_CONNECTIONS_PER_LISTENER) {
-            UndertowLogger.REQUEST_IO_LOGGER.debugf("Reached maximum number of connections %d per listener; closing open connection request from %s",
-                    MAX_CONNECTIONS_PER_LISTENER, channel.getPeerAddress());
-            IoUtils.safeClose(channel);
-            return;
-        }
         if (UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_LOGGER.tracef("Opened connection with %s", channel.getPeerAddress());
         }
