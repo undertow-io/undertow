@@ -98,5 +98,10 @@ public class PathMatchPredicate implements Predicate {
             String[] path = (String[]) config.get("path");
             return new PathMatchPredicate(path);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

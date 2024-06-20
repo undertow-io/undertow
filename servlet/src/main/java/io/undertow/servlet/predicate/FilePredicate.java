@@ -120,6 +120,11 @@ public class FilePredicate implements Predicate {
             }
             return new FilePredicate(value, requireContent == null ? false : requireContent);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 
 }

@@ -142,5 +142,10 @@ public class RegularExpressionPredicate implements Predicate {
             String pattern = (String) config.get("pattern");
             return new RegularExpressionPredicate(pattern, value, fullMatch == null ? false : fullMatch, caseSensitive == null ? true : caseSensitive);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

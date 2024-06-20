@@ -66,6 +66,11 @@ public class SecurePredicate implements Predicate {
         public Predicate build(Map<String, Object> config) {
             return INSTANCE;
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 
 }
