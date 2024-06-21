@@ -59,8 +59,33 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         module: [core, servlet, websockets-jsr]
-        jdk: [8, 11, 17]
+        jdk: [11, 17]
         openjdk_impl: [ temurin ]
+        include:
+          - jdk: 8
+            os: ubuntu-latest
+            module: core
+            openjdk_impl: temurin
+          - jdk: 8
+            os: ubuntu-latest
+            module: servlet
+            openjdk_impl: temurin
+          - jdk: 8
+            os: ubuntu-latest
+            module: websockets-jsr
+            openjdk_impl: temurin
+          - jdk: 8
+            os: windows-latest
+            module: core
+            openjdk_impl: temurin
+          - jdk: 8
+            os: windows-latest
+            module: servlet
+            openjdk_impl: temurin
+          - jdk: 8
+            os: windows-latest
+            module: websockets-jsr
+            openjdk_impl: temurin
     steps:
     - name: Update hosts - linux
       if: matrix.os == 'ubuntu-latest'
