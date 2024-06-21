@@ -46,6 +46,7 @@ import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.util.DispatchUtils;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.ParameterLimitException;
 
 /**
@@ -173,7 +174,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         if (!named) {
             try {
                 pathMatch = DispatchUtils.dispatchForward(path, requestImpl, responseImpl, servletContext);
-            } catch (ParameterLimitException e) {
+            } catch (ParameterLimitException | BadRequestException e) {
                 throw new ServletException(e);
             }
         }
@@ -319,7 +320,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
             try {
                 pathMatch = DispatchUtils.dispatchInclude(path, requestImpl, responseImpl, servletContext);
-            } catch (ParameterLimitException e) {
+            } catch (ParameterLimitException | BadRequestException e) {
                 throw new ServletException(e);
             }
         }
@@ -403,7 +404,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         ServletPathMatch pathMatch;
         try {
             pathMatch = DispatchUtils.dispatchError(path, servletName, exception, message, requestImpl, responseImpl, servletContext);
-        } catch (ParameterLimitException e) {
+        } catch (ParameterLimitException | BadRequestException e) {
             throw new ServletException(e);
         }
 
