@@ -44,7 +44,6 @@ import org.junit.runner.RunWith;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -56,11 +55,9 @@ import java.util.stream.Collectors;
 @RunWith(DefaultServer.class)
 @ProxyIgnore
 public class ProxyForwardedTestCase {
-    protected static int PORT;
 
     @BeforeClass
     public static void setup() throws ServletException {
-        PORT = DefaultServer.getHostPort("default");
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
@@ -98,13 +95,12 @@ public class ProxyForwardedTestCase {
             HttpEntity entity = result.getEntity();
             String results = EntityUtils.toString(entity);
             Map<String, String> map = convertWithStream(results);
-            Socket socket = new Socket();
-            socket.connect(new InetSocketAddress(DefaultServer.getHostAddress(), PORT));
+            InetSocketAddress serverAddress = DefaultServer.getDefaultServerAddress();
 
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(socket.getLocalAddress().getHostAddress(), map.get(GenericServletConstants.LOCAL_ADDR));
-            Assert.assertEquals(socket.getLocalAddress().getHostName(), map.get(GenericServletConstants.LOCAL_NAME));
-            Assert.assertEquals(PORT, Integer.parseInt(map.get(GenericServletConstants.LOCAL_PORT)));
+            Assert.assertEquals(serverAddress.getAddress().getHostAddress(), map.get(GenericServletConstants.LOCAL_ADDR));
+            Assert.assertEquals(serverAddress.getAddress().getHostName(), map.get(GenericServletConstants.LOCAL_NAME));
+            Assert.assertEquals(serverAddress.getPort(), Integer.parseInt(map.get(GenericServletConstants.LOCAL_PORT)));
             Assert.assertEquals("192.0.2.10", map.get(GenericServletConstants.SERVER_NAME));
             Assert.assertEquals("8888", map.get(GenericServletConstants.SERVER_PORT));
             Assert.assertEquals("192.0.2.43", map.get(GenericServletConstants.REMOTE_ADDR));
