@@ -41,8 +41,6 @@ import java.nio.charset.StandardCharsets;
  * @author Stuart Douglas
  */
 public class AsyncReceiverImpl implements Receiver {
-
-
     private static final ErrorCallback END_EXCHANGE = new ErrorCallback() {
         @Override
         public void error(HttpServerExchange exchange, IOException e) {
@@ -58,6 +56,7 @@ public class AsyncReceiverImpl implements Receiver {
     private final StreamSourceChannel channel;
 
     private int maxBufferSize = -1;
+    private long maxContentSize = Integer.MAX_VALUE;
     private boolean paused = false;
     private boolean done = false;
 
@@ -72,6 +71,11 @@ public class AsyncReceiverImpl implements Receiver {
     @Override
     public void setMaxBufferSize(int maxBufferSize) {
         this.maxBufferSize = maxBufferSize;
+    }
+
+    @Override
+    public void setMaxContentSize(long maxContentSize) {
+        this.maxContentSize = maxContentSize;
     }
 
     @Override
@@ -120,6 +124,12 @@ public class AsyncReceiverImpl implements Receiver {
         } else {
             contentLength = -1;
             sb = new ByteArrayOutputStream();
+        }
+        if(maxContentSize > 0){
+            if(contentLength > maxContentSize){
+                error.error(exchange, new RequestToLargeException());
+                return;
+            }
         }
         if (maxBufferSize > 0) {
             if (contentLength > maxBufferSize) {
@@ -241,15 +251,11 @@ public class AsyncReceiverImpl implements Receiver {
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
-            if (contentLength > Integer.MAX_VALUE) {
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
         } else {
             contentLength = -1;
         }
-        if (maxBufferSize > 0) {
-            if (contentLength > maxBufferSize) {
+        if(maxContentSize > 0){
+            if(contentLength > maxContentSize){
                 error.error(exchange, new RequestToLargeException());
                 return;
             }
@@ -380,6 +386,12 @@ public class AsyncReceiverImpl implements Receiver {
             contentLength = -1;
             sb = new ByteArrayOutputStream();
         }
+        if(maxContentSize > 0){
+            if(contentLength > maxContentSize){
+                error.error(exchange, new RequestToLargeException());
+                return;
+            }
+        }
         if (maxBufferSize > 0) {
             if (contentLength > maxBufferSize) {
                 error.error(exchange, new RequestToLargeException());
@@ -498,15 +510,11 @@ public class AsyncReceiverImpl implements Receiver {
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
-            if (contentLength > Integer.MAX_VALUE) {
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
         } else {
             contentLength = -1;
         }
-        if (maxBufferSize > 0) {
-            if (contentLength > maxBufferSize) {
+        if(maxContentSize > 0){
+            if(contentLength > maxContentSize){
                 error.error(exchange, new RequestToLargeException());
                 return;
             }

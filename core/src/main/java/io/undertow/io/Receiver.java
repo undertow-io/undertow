@@ -41,6 +41,15 @@ public interface Receiver {
     void setMaxBufferSize(int maxBufferSize);
 
     /**
+     * Sets the maximum amount of data that will be transferred. If you call receive* method and the request
+     * size is larger than this amount then the error callback with be invoked with a
+     * {@link RequestTooBigException}.
+     *
+     * @param maxContentSize The maximum amount of data to be transferred
+     */
+    void setMaxContentSize(long maxContentSize);
+
+    /**
      *
      * Reads the request and invokes the callback when the request body has been fully read.
      *
