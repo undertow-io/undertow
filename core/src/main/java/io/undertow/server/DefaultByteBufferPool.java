@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
- * A byte buffer pool that supports reference counted pools.
+ * A  byte buffer pool that supports reference counted pools.
  *
  * TODO: move this somewhere more appropriate
  *
