@@ -108,7 +108,9 @@ class Http2FrameHeaderParser implements FrameHeaderData {
                         throw UndertowMessages.MESSAGES.http2ContinuationFrameNotExpected();
                     }
                     parser = continuationParser;
-                    continuationParser.moreData(length);
+                    if (!continuationParser.moreData(length)) {
+                        http2Channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
+                    }
                     break;
                 }
                 case FRAME_TYPE_PUSH_PROMISE: {
