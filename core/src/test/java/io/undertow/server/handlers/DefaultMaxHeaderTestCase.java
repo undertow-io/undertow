@@ -52,7 +52,7 @@ public class DefaultMaxHeaderTestCase {
     public static void setup() {
         // skip this test if we are running in a scenario with max header size property configured
         Assume.assumeTrue(System.getProperty(Http2Channel.HTTP2_MAX_HEADER_SIZE_PROPERTY) == null);
-        final BlockingHandler blockingHandler = new BlockingHandler();
+        final BlockingHandler this wont  compile blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
         blockingHandler.setRootHandler(exchange -> exchange.getResponseSender().send(exchange.getRelativePath()));
     }
