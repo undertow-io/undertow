@@ -37,8 +37,8 @@ jobs:
       run: |
         mvn -U -B -fae -DskipTests -Dfindbugs clean install | tee outfile.txt
         echo "Checking for build errors"
-        grep '^\\[ERROR\\]' outfile.txt && echo "Found errors, see above" || echo "No errors found"
-        ! $(grep -q '^\\[ERROR\\]'outfile.txt )
+        grep '^\[ERROR\]\|^Error:' outfile.txt && echo "Found errors, see above" || echo "No errors found"
+        ! $(grep -q '^\[ERROR\]\|^Error:' outfile.txt )
     - name: Tar Maven Repo
       shell: bash
       run: tar -czf maven-repo.tgz -C ~ .m2/repository
