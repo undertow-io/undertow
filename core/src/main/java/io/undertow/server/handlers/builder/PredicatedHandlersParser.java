@@ -363,6 +363,11 @@ public class PredicatedHandlersParser {
                 if(token.getToken().equals(";") && tokens.peek()!=null && tokens.peek().getToken().equals(ELSE)) {
                     // something() -> predicate; ELSE predicate; - dont end processing since its followed by ELSE and its singular block
                     continue;
+                } else if (token.getToken().equals("\n") && tokens.peek() != null && isOperator(tokens.peek().getToken())) {
+                    // predicate
+                    // OPERATOR predicate
+                    // -> handeler
+                    continue;
                 }
                 handleLineEnd(string, operatorStack, output, blocks);
             } else if (isSpecialChar(token.getToken())) {
