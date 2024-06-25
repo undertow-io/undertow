@@ -623,6 +623,7 @@ public class PredicatedHandlersParser {
         boolean inVariable = false;
 
         int pos = 0;
+        int braceCount = 0;
         StringBuilder current = new StringBuilder();
         Deque<Token> ret = new ArrayDeque<>();
         while (pos < string.length()) {
@@ -657,7 +658,9 @@ public class PredicatedHandlersParser {
                     }
                     case '\r':
                     case '\n': {
-                        if (current.length() != 0) {
+                        if(braceCount>0) {
+                            break;
+                        } else if (current.length() != 0) {
                             ret.add(new Token(current.toString(), pos));
                             current.setLength(0);
                         }
@@ -673,6 +676,19 @@ public class PredicatedHandlersParser {
                     case ']':
                     case '{':
                     case '}': {
+                        switch (c) {
+                            case '(':
+                            case '[':
+                            case '{':
+                                braceCount++;
+                                break;
+                            case ')':
+                            case ']':
+                            case '}':
+                                braceCount--;
+                                break;
+                            default:
+                        }
                         if (inVariable) {
                             current.append(c);
                             if (c == '}') {
