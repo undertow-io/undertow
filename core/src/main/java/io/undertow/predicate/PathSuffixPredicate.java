@@ -19,6 +19,7 @@
 package io.undertow.predicate;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -31,6 +32,7 @@ import io.undertow.UndertowLogger;
 public class PathSuffixPredicate implements Predicate {
 
     private final String suffix;
+    private final boolean caseSensitive;
     private static final boolean traceEnabled;
 
     static {
@@ -38,20 +40,29 @@ public class PathSuffixPredicate implements Predicate {
     }
 
     PathSuffixPredicate(final String suffix) {
+        this(true, suffix);
+    }
+
+    PathSuffixPredicate(final boolean caseSensitive, final String suffix) {
+        this.caseSensitive = caseSensitive;
+        if(this.caseSensitive) {
             this.suffix = suffix;
+        } else {
+            this.suffix = suffix.toLowerCase();
+        }
     }
 
     @Override
     public boolean resolve(final HttpServerExchange value) {
-        boolean matches = value.getRelativePath().endsWith(suffix);
+        boolean matches = (this.caseSensitive ? value.getRelativePath() : value.getRelativePath().toLowerCase()).endsWith(suffix);
         if (traceEnabled) {
-            UndertowLogger.PREDICATE_LOGGER.tracef("Path suffix [%s] %s input [%s] for %s.", suffix, (matches ? "MATCHES" : "DOES NOT MATCH" ), value.getRelativePath(), value);
+            UndertowLogger.PREDICATE_LOGGER.tracef("Path suffix [%s] %s %s input [%s] for %s.", suffix, caseSensitive? "[case-sensitive]" : "[case-insensitive]", (matches ? "MATCHES" : "DOES NOT MATCH" ), value.getRelativePath(), value);
         }
         return matches;
     }
 
     public String toString() {
-        return "path-suffix( '" + suffix +  "' )";
+        return "path-suffix( '" + suffix +  "' case-sensitive="+caseSensitive+" )";
     }
 
 
@@ -64,7 +75,10 @@ public class PathSuffixPredicate implements Predicate {
 
         @Override
         public Map<String, Class<?>> parameters() {
-            return Collections.<String, Class<?>>singletonMap("path", String[].class);
+            final Map<String, Class<?>> params = new HashMap<>();
+            params.put("path", String[].class);
+            params.put("case-sensitive", boolean.class);
+            return params;
         }
 
         @Override
@@ -80,7 +94,8 @@ public class PathSuffixPredicate implements Predicate {
         @Override
         public Predicate build(final Map<String, Object> config) {
             String[] path = (String[]) config.get("path");
-            return Predicates.suffixes(path);
+            boolean caseSensitive = (Boolean) config.getOrDefault("case-sensitive", Boolean.TRUE);
+            return Predicates.suffixes(caseSensitive, path);
         }
     }
 }
