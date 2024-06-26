@@ -193,7 +193,7 @@
                         </compilerArgs>
                         <!-- need to specify directly, for some reason properties are ignored -->
                         <showDeprecation>${maven.compiler.showDeprecation}</showDeprecation>
-                        <showWarnings>${maven.compilie${maven.compiler.showWarnings}</showWarnings>
+                        <showWarnings>${maven.compiler.showWarnings}</showWarnings>
                     </configuration>
                 </plugin>
 
