@@ -442,7 +442,8 @@ public class HPackHuffman {
             if(forceLowercase) {
                 c = Hpack.toLower(c);
             }
-            HuffmanCode code = HUFFMAN_CODES[c];
+            int index = c & 0xFF;
+            HuffmanCode code = HUFFMAN_CODES[index];
             length += code.length;
         }
         int byteLength = length / 8 + (length % 8 == 0 ? 0 : 1);
@@ -458,7 +459,8 @@ public class HPackHuffman {
             if(forceLowercase) {
                 c = Hpack.toLower(c);
             }
-            HuffmanCode code = HUFFMAN_CODES[c];
+            int index = c & 0xFF;
+            HuffmanCode code = HUFFMAN_CODES[index];
             if (code.length + bytePos <= 8) {
                 //it fits in the current byte
                 currentBufferByte |= ((code.value & 0xFF) << 8 - (code.length + bytePos));
