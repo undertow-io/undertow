@@ -17,6 +17,8 @@
  */
 package io.undertow.security.impl;
 
+import static io.undertow.security.api.SecurityNotification.EventType.AUTHENTICATED;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.security.api.AuthenticationMechanism;
@@ -24,6 +26,8 @@ import io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismO
 import io.undertow.security.api.AuthenticationMechanism.ChallengeResult;
 import io.undertow.security.api.AuthenticationMechanismContext;
 import io.undertow.security.api.AuthenticationMode;
+import io.undertow.security.api.NotificationReceiver;
+import io.undertow.security.api.SecurityNotification;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
@@ -167,6 +171,16 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
                 cur = cur.next;
             }
             cur.next = new Node<>(handler);
+        }
+        if (handler instanceof FormAuthenticationMechanism) {
+            registerNotificationReceiver(new NotificationReceiver() {
+                @Override
+                public void handleNotification(final SecurityNotification notification) {
+                    if (notification.getEventType() == AUTHENTICATED) {
+                        ((FormAuthenticationMechanism) handler).restoreOriginalSessionTimeout(exchange);
+                    }
+                }
+            });
         }
     }
 
