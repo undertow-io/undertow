@@ -172,10 +172,7 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
     protected void handleRedirectBack(final HttpServerExchange exchange) {
         final Session session = Sessions.getSession(exchange);
         if (session != null) {
-            final Integer originalSessionTimeout = (Integer) session.removeAttribute(ORIGINAL_SESSION_TIMEOUT);
-            if (originalSessionTimeout != null) {
-                session.setMaxInactiveInterval(originalSessionTimeout);
-            }
+            restoreOriginalSessionTimeout(session);
             final String location = (String) session.removeAttribute(LOCATION_ATTRIBUTE);
             if(location != null) {
                 exchange.addDefaultResponseListener(new DefaultResponseListener() {
@@ -189,6 +186,20 @@ public class FormAuthenticationMechanism implements AuthenticationMechanism {
                 });
             }
 
+        }
+    }
+
+    protected void restoreOriginalSessionTimeout(final HttpServerExchange exchange) {
+        final Session session = Sessions.getSession(exchange);
+        restoreOriginalSessionTimeout(session);
+    }
+
+    protected void restoreOriginalSessionTimeout(final Session session) {
+        if (session != null) {
+            final Integer originalSessionTimeout = (Integer) session.removeAttribute(ORIGINAL_SESSION_TIMEOUT);
+            if (originalSessionTimeout != null) {
+                session.setMaxInactiveInterval(originalSessionTimeout);
+            }
         }
     }
 
