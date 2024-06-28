@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2024 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,9 @@
 package io.undertow.server.handlers.encoding;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -28,10 +30,12 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
 import io.undertow.conduits.GzipStreamSourceConduit;
 import io.undertow.conduits.InflatingStreamSourceConduit;
 import io.undertow.io.IoCallback;
@@ -50,12 +54,14 @@ import io.undertow.util.StatusCodes;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class RequestContentEncodingTestCase {
+public class RequestContentEncodingTestCase4 {
 
     private static volatile String message;
+    private static ExecutorService executor;
 
     @BeforeClass
     public static void setup() {
+        executor = Executors.newFixedThreadPool(2);
         final ContentEncodingRepository contentEncodingRepository = new ContentEncodingRepository()
                 .addEncodingHandler("deflate", new DeflateEncodingProvider(), 50)
                 .addEncodingHandler("gzip", new GzipEncodingProvider(), 60);
@@ -71,13 +77,20 @@ public class RequestContentEncodingTestCase {
         final HttpHandler decode = new RequestEncodingHandler(new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.getRequestReceiver().receiveFullBytes(new Receiver.FullBytesCallback() {
+                exchange.startBlocking();
+                Future<?> result =  executor.submit(new Runnable() {
                     @Override
-                    public void handle(HttpServerExchange exchange, byte[] message) {
-                        Assert.assertTrue(exchange.getRequestContentLength()>0);
-                        exchange.getResponseSender().send(ByteBuffer.wrap(message));
+                    public void run() {
+                        exchange.getRequestReceiver().receiveFullString(new Receiver.FullStringCallback() {
+                            @Override
+                            public void handle(HttpServerExchange exchange, String message) {
+                                Assert.assertTrue(exchange.getRequestContentLength()>0);
+                                exchange.getResponseSender().send(message);
+                            }
+                        });
                     }
                 });
+                result.get();
             }
         }).addEncoding("deflate", InflatingStreamSourceConduit.WRAPPER)
                 .addEncoding("gzip", GzipStreamSourceConduit.WRAPPER);
@@ -87,6 +100,11 @@ public class RequestContentEncodingTestCase {
         pathHandler.addPrefixPath("/decode", decode);
 
         DefaultServer.setRootHandler(pathHandler);
+    }
+
+    @AfterClass
+    public static void boom() {
+        executor.shutdownNow();
     }
 
     /**
