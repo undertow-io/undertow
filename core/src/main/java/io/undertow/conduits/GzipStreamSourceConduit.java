@@ -119,4 +119,10 @@ public class GzipStreamSourceConduit extends InflatingStreamSourceConduit {
         totalOut += len;
     }
 
+    @Override
+    protected boolean isZlibHeaderPresent(ByteBuffer buf) {
+        //this will default to no wrapping object pool
+        return false;
+    }
+
 }

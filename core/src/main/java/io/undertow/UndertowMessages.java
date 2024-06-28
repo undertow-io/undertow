@@ -19,6 +19,7 @@
 package io.undertow;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.file.Path;
 
@@ -26,6 +27,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.RequestTooBigException;
 import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import io.undertow.util.UrlDecodeException;
@@ -646,5 +648,8 @@ public interface UndertowMessages {
 
     @Message(id = 208, value = "Failed to allocate resource")
     IOException failedToAllocateResource();
+
+    @Message(id = 209, value = "Buffer content underflow for exchange '%s', buffer '%s'")
+    IOException bufferUnderflow(final HttpServerExchange exchange,final ByteBuffer buf);
 
 }
