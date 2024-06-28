@@ -60,6 +60,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -360,8 +361,7 @@ public class HttpClientTestCase {
             latch.await(10, TimeUnit.SECONDS);
 
             Assert.assertEquals(0, responses.size());
-            // see UNDERTOW-2249: assert exception instanceof ClosedChannelException
-            Assert.assertNotNull(exception);
+            Assert.assertTrue(exception instanceof ClosedChannelException);
         } finally {
             connection.getIoThread().execute(() -> IoUtils.safeClose(connection));
             DefaultServer.stopSSLServer();
