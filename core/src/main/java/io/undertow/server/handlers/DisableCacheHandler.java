@@ -65,6 +65,11 @@ public class DisableCacheHandler implements HttpHandler {
             return new Wrapper();
         }
 
+        @Override
+        public int priority() {
+            return 0;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

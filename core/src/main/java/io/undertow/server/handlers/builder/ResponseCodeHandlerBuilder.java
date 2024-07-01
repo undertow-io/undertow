@@ -65,4 +65,9 @@ public class ResponseCodeHandlerBuilder implements HandlerBuilder {
             }
         };
     }
+
+    @Override
+    public int priority() {
+        return 0;
+    }
 }

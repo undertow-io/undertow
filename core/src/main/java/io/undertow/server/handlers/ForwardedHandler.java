@@ -286,6 +286,11 @@ public class ForwardedHandler implements HttpHandler {
             Boolean isChangeLocalAddrPort = (Boolean) config.get(CHANGE_LOCAL_ADDR_PORT);
             return new Wrapper(isChangeLocalAddrPort == null ? DEFAULT_CHANGE_LOCAL_ADDR_PORT : isChangeLocalAddrPort);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
     private static class Wrapper implements HandlerWrapper {
 

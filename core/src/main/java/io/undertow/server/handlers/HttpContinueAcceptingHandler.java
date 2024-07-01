@@ -129,5 +129,10 @@ public class HttpContinueAcceptingHandler implements HttpHandler {
         public HandlerWrapper build(Map<String, Object> config) {
             return new Wrapper(Predicates.truePredicate());
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

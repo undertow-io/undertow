@@ -177,6 +177,11 @@ public class ProxyPeerAddressHandler implements HttpHandler {
             return new Wrapper(isChangeLocalAddrPort == null ? DEFAULT_CHANGE_LOCAL_ADDR_PORT : isChangeLocalAddrPort);
         }
 
+        @Override
+        public int priority() {
+            return 0;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {
