@@ -647,4 +647,6 @@ public interface UndertowMessages {
     @Message(id = 208, value = "Failed to allocate resource")
     IOException failedToAllocateResource();
 
+    @Message(id = 209, value = "Failed to schedule access message. Access logger is closing.")
+    IllegalStateException failedToLogAccessOnClose();
 }
