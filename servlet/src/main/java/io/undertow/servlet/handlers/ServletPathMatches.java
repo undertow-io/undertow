@@ -79,9 +79,9 @@ public class ServletPathMatches {
         this.deployment = deployment;
         this.welcomePages = deployment.getDeploymentInfo().getWelcomePages().toArray(new String[deployment.getDeploymentInfo().getWelcomePages().size()]);
         this.resourceManager = deployment.getDeploymentInfo().getResourceManager();
-        this.pathMatchCacheFixed = new LRUCache<>(1000, -1, true);
+        this.pathMatchCacheFixed = new LRUCache<>(1000, LRUCache.MAX_AGE_NO_EXPIRY, true);
         this.pathMatchCacheResources = new LRUCache<>(1000,
-                resourceManager instanceof CachingResourceManager? ((CachingResourceManager) resourceManager).getMaxAge() : -1, true);
+                resourceManager instanceof CachingResourceManager ? ((CachingResourceManager) resourceManager).getMaxAge() : CachingResourceManager.MAX_AGE_NO_EXPIRY, true);
         // add change listener for welcome pages
         if (this.resourceManager.isResourceChangeListenerSupported()) {
             try {
