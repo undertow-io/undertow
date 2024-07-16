@@ -59,7 +59,7 @@ public class PathHandler implements HttpHandler {
 
     public PathHandler(int cacheSize) {
         if(cacheSize > 0) {
-            cache = new LRUCache<>(cacheSize, -1, true);
+            cache = new LRUCache<>(cacheSize, LRUCache.MAX_AGE_NO_EXPIRY, true);
         } else {
             cache = null;
         }
