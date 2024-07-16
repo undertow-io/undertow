@@ -32,7 +32,6 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,20 +46,31 @@ import java.util.Set;
 public class LearningPushHandler implements HttpHandler {
 
     private static final String SESSION_ATTRIBUTE = "io.undertow.PUSHED_RESOURCES";
-    private static final int DEFAULT_MAX_CACHE_ENTRIES = 1000;
-    private static final int DEFAULT_MAX_CACHE_AGE = -1;
+    private static final int DEFAULT_MAX_CACHE_ENTRIES = Integer.getInteger("io.undertow.handlers.learning-push.default-max-entries", 200);
+    private static final int DEFAULT_MAX_CACHE_AGE = Integer.getInteger("io.undertow.handlers.learning-push.default-max-age", LRUCache.MAX_AGE_NO_EXPIRY);
 
-    private final LRUCache<String, Map<String, PushedRequest>> cache;
+    private final LRUCache<String, LRUCache<String, PushedRequest>> cache;
 
     private final HttpHandler next;
+    private int maxPushCacheEntries;
+    private int maxPushCacheAge;
 
     public LearningPushHandler(final HttpHandler next) {
         this(DEFAULT_MAX_CACHE_ENTRIES, DEFAULT_MAX_CACHE_AGE, next);
     }
 
-    public LearningPushHandler(int maxEntries, int maxAge, HttpHandler next) {
+    public LearningPushHandler(int maxPathEtries, int maxPathAge, HttpHandler next) {
         this.next = next;
-        cache = new LRUCache<>(maxEntries, maxAge);
+        this.maxPushCacheEntries = maxPathEtries;
+        this.maxPushCacheAge = maxPathAge;
+        cache = new LRUCache<>(maxPathEtries, maxPathAge);
+    }
+
+    public LearningPushHandler(int maxPathEtries, int maxPathAge, int maxPushEtries, int maxPushAge, HttpHandler next) {
+        this.next = next;
+        this.maxPushCacheEntries = maxPushEtries;
+        this.maxPushCacheAge = maxPushAge;
+        cache = new LRUCache<>(maxPathEtries, maxPathAge);
     }
 
     @Override
@@ -92,18 +102,21 @@ public class LearningPushHandler implements HttpHandler {
 
     private void doPush(HttpServerExchange exchange, String fullPath) {
         if (exchange.getConnection().isPushSupported()) {
-            Map<String, PushedRequest> toPush = cache.get(fullPath);
+            LRUCache<String, PushedRequest> toPush = cache.get(fullPath);
             if (toPush != null) {
                 Session session = getSession(exchange);
                 if (session == null) {
                     return;
                 }
-                Map<String, Object> pushed = (Map<String, Object>) session.getAttribute(SESSION_ATTRIBUTE);
+                LRUCache<String, Object> pushed = (LRUCache<String, Object>) session.getAttribute(SESSION_ATTRIBUTE);
                 if (pushed == null) {
-                    pushed = Collections.synchronizedMap(new HashMap<String, Object>());
+                    pushed = new LRUCache<>(this.maxPushCacheEntries, this.maxPushCacheAge);
                 }
-                for (Map.Entry<String, PushedRequest> entry : toPush.entrySet()) {
-                    PushedRequest request = entry.getValue();
+                for (String entryKey : toPush.keySet()) {
+                    PushedRequest request = toPush.get(entryKey);
+                    if(request == null) {
+                        continue;
+                    }
                     Object pushedKey = pushed.get(request.getPath());
                     boolean doPush = pushedKey == null;
                     if (!doPush) {
@@ -114,11 +127,12 @@ public class LearningPushHandler implements HttpHandler {
                         }
                     }
                     if (doPush) {
+                        //pushResource will fill request headers.
                         exchange.getConnection().pushResource(request.getPath(), Methods.GET, request.getRequestHeaders());
                         if(request.getEtag() != null) {
-                            pushed.put(request.getPath(), request.getEtag());
+                            pushed.add(request.getPath(), request.getEtag());
                         } else {
-                            pushed.put(request.getPath(), request.getLastModified());
+                            pushed.add(request.getPath(), request.getLastModified());
                         }
                     }
                 }
@@ -166,16 +180,16 @@ public class LearningPushHandler implements HttpHandler {
                         lastModified = dt.getTime();
                     }
                 }
-                Map<String, PushedRequest> pushes = cache.get(referer);
+                LRUCache<String, PushedRequest> pushes = cache.get(referer);
                 if(pushes == null) {
                     synchronized (cache) {
                         pushes = cache.get(referer);
                         if(pushes == null) {
-                            cache.add(referer, pushes = Collections.synchronizedMap(new HashMap<String, PushedRequest>()));
+                            cache.add(referer, pushes = new LRUCache<String, LearningPushHandler.PushedRequest>(maxPushCacheEntries, maxPushCacheAge));
                         }
                     }
                 }
-                pushes.put(fullPath, new PushedRequest(new HeaderMap(), requestPath, etag, lastModified));
+                pushes.add(fullPath, new PushedRequest(new HeaderMap(), requestPath, etag, lastModified));
             }
 
             nextListener.proceed();
@@ -224,6 +238,8 @@ public class LearningPushHandler implements HttpHandler {
             Map<String, Class<?>> params = new HashMap<>();
             params.put("max-age", Integer.class);
             params.put("max-entries", Integer.class);
+            params.put("max-push-age", Integer.class);
+            params.put("max-push-entries", Integer.class);
             return params;
         }
 
@@ -241,11 +257,12 @@ public class LearningPushHandler implements HttpHandler {
         public HandlerWrapper build(Map<String, Object> config) {
             final int maxAge = config.containsKey("max-age") ? (Integer)config.get("max-age") : DEFAULT_MAX_CACHE_AGE;
             final int maxEntries = config.containsKey("max-entries") ? (Integer)config.get("max-entries") : DEFAULT_MAX_CACHE_ENTRIES;
-
+            final int maxPushAge = config.containsKey("max-push-age") ? (Integer)config.get("max-push-age") : DEFAULT_MAX_CACHE_AGE;
+            final int maxPushEntries = config.containsKey("max-push-entries") ? (Integer)config.get("max-push-entries") : DEFAULT_MAX_CACHE_ENTRIES;
             return new HandlerWrapper() {
                 @Override
                 public HttpHandler wrap(HttpHandler handler) {
-                    return new LearningPushHandler(maxEntries, maxAge, handler);
+                    return new LearningPushHandler(maxEntries, maxAge, maxPushEntries, maxPushAge, handler);
                 }
             };
         }
