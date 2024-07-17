@@ -643,4 +643,8 @@ public interface UndertowMessages {
 
     @Message(id = 207, value = "Invalid SNI hostname '%s'")
     IllegalArgumentException invalidSniHostname(String hostNameValue, @Cause Throwable t);
+
+    @Message(id = 209, value = "Failed to schedule access message. Access logger is closing.")
+    IllegalStateException failedToLogAccessOnClose();
+
 }
