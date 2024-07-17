@@ -629,6 +629,10 @@ public final class Undertow {
             }
         }
 
+        public synchronized void stop() {
+            IoUtils.safeClose(channel);
+        }
+
         public synchronized void suspend() {
             suspended = true;
             channel.suspendAccepts();
