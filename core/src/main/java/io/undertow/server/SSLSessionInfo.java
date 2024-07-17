@@ -101,15 +101,6 @@ public interface SSLSessionInfo {
     java.security.cert.Certificate[] getPeerCertificates() throws javax.net.ssl.SSLPeerUnverifiedException, RenegotiationRequiredException;
 
     /**
-     * This method is no longer supported on java 15 and should be avoided.
-     * @deprecated in favor of {@link #getPeerCertificates()} because {@link SSLSession#getPeerCertificateChain()}
-     *             throws java 15.
-     * @see SSLSession#getPeerCertificateChain()
-     */
-    @Deprecated(since="2.2.3", forRemoval=false)
-    javax.security.cert.X509Certificate[] getPeerCertificateChain() throws javax.net.ssl.SSLPeerUnverifiedException, RenegotiationRequiredException;
-
-    /**
      * Renegotiate in a blocking manner. This will set the client aut
      *
      * TODO: we also need a non-blocking version
