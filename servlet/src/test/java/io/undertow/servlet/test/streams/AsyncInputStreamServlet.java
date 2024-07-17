@@ -88,9 +88,12 @@ public class AsyncInputStreamServlet extends HttpServlet {
             //we don't use async writes for the off IO thread case
             //as we can't make it thread safe
             if (offIoThread || outputStream.isReady()) {
-                dataToWrite.writeTo(outputStream);
-                written += dataToWrite.size();
-                dataToWrite.reset();
+                // UNDERTOW-1818 synchronized with doOnDataAvailable to guarantee that bytes are written in the correct order
+                synchronized (this) {
+                    dataToWrite.writeTo(outputStream);
+                    written += dataToWrite.size();
+                    dataToWrite.reset();
+                }
                 if (done) {
                     context.complete();
                 }
@@ -115,14 +118,18 @@ public class AsyncInputStreamServlet extends HttpServlet {
             int read;
             try {
                 while (inputStream.isReady()) {
-                    read = inputStream.read();
-                    if (read == 0) {
-                        System.out.println("onDataAvailable> read 0x00");
-                    }
-                    if (read != -1) {
-                        dataToWrite.write(read);
-                    } else {
-                        onWritePossible();
+                    // UNDERTOW-1818 bytes may be read in parallel by two different threads and end up being written out of order
+                    // so we need to make sure that read and write be done in a single, non-concurrent, step
+                    synchronized (this) {
+                        read = inputStream.read();
+                        if (read == 0) {
+                            System.out.println("onDataAvailable> read 0x00");
+                        }
+                        if (read != -1) {
+                            dataToWrite.write(read);
+                        } else {
+                            onWritePossible();
+                        }
                     }
                 }
             } catch (IOException e) {
