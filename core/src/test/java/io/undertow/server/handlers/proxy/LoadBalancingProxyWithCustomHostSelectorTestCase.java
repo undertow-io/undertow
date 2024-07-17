@@ -2,6 +2,7 @@ package io.undertow.server.handlers.proxy;
 
 import io.undertow.Undertow;
 import io.undertow.client.UndertowClient;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
 import io.undertow.server.session.SessionCookieConfig;
@@ -53,10 +54,17 @@ public class LoadBalancingProxyWithCustomHostSelectorTestCase {
         server2.start();
 
         LoadBalancingProxyClient.HostSelector hostSelector = new LoadBalancingProxyClient.HostSelector() {
+
             @Override
             public int selectHost(LoadBalancingProxyClient.Host[] availableHosts) {
                 return 0;
             }
+
+            @Override
+            public int selectHost(LoadBalancingProxyClient.Host[] availableHosts, HttpServerExchange exchange) {
+                return 0;
+            }
+
         };
 
         DefaultServer.setRootHandler(ProxyHandler.builder().setProxyClient(new LoadBalancingProxyClient(UndertowClient.getInstance(), null, hostSelector)
