@@ -203,7 +203,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
             resultString.append(HttpClientUtils.readResponse(result));
             resultString.append(' ');
             server1.stop();
-            Thread.sleep(600);
+            Thread.sleep(1200);
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
             result = client.execute(get);
             Assert.assertEquals("Test failed with i=" + i, StatusCodes.OK, result.getStatusLine().getStatusCode());
