@@ -82,5 +82,10 @@ public class PathSuffixPredicate implements Predicate {
             String[] path = (String[]) config.get("path");
             return Predicates.suffixes(path);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

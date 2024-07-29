@@ -82,5 +82,10 @@ public class ExistsPredicate implements Predicate {
             ExchangeAttribute value = (ExchangeAttribute) config.get("value");
             return new ExistsPredicate(value);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

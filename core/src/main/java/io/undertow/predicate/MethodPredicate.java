@@ -89,5 +89,10 @@ public class MethodPredicate implements Predicate {
             String[] methods = (String[]) config.get("value");
             return new MethodPredicate(methods);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

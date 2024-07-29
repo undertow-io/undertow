@@ -105,6 +105,11 @@ public class DirectoryPredicate implements Predicate {
             }
             return new DirectoryPredicate(value);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 
 }
