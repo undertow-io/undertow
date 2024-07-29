@@ -332,6 +332,18 @@ public class Handlers {
     }
 
     /**
+     * Returns a new handler that can allow or deny access to a resource based an at attribute of the exchange
+     *
+     * @param next         The next handler in the chain
+     * @param defaultAllow Determine if a non-matching user agent will be allowed by default
+     * @param denyResponseCode response code that will be sent back from 400 range
+     * @return A new user agent access control handler
+     */
+    public static final AccessControlListHandler acl(final HttpHandler next, boolean defaultAllow, ExchangeAttribute attribute, final int denyResponseCode) {
+        return new AccessControlListHandler(next, attribute, denyResponseCode).setDefaultAllow(defaultAllow);
+    }
+
+    /**
      * A handler that automatically handles HTTP 100-continue responses, by sending a continue
      * response when the first attempt is made to read from the request channel.
      *
