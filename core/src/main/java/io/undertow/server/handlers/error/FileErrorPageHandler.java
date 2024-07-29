@@ -251,6 +251,11 @@ public class FileErrorPageHandler implements HttpHandler {
             return new Wrapper((String)config.get("file"), (Integer[]) config.get("response-codes"));
         }
 
+        @Override
+        public int priority() {
+            return 0;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

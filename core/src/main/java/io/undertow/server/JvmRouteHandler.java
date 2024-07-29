@@ -112,6 +112,11 @@ public class JvmRouteHandler implements HttpHandler {
             return new Wrapper((String)config.get("value"), sessionCookieName == null ? "JSESSIONID" : sessionCookieName);
         }
 
+        @Override
+        public int priority() {
+            return 0;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

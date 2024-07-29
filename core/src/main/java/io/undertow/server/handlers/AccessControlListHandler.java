@@ -222,6 +222,11 @@ public class AccessControlListHandler implements HttpHandler {
             return new Wrapper(peerMatches, defaultAllow == null ? false : defaultAllow, attribute);
         }
 
+        @Override
+        public int priority() {
+            return 0;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

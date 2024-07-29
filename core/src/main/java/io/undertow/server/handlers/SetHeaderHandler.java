@@ -143,5 +143,10 @@ public class SetHeaderHandler implements HttpHandler {
                 }
             };
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

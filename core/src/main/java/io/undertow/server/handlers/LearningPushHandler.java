@@ -266,5 +266,10 @@ public class LearningPushHandler implements HttpHandler {
                 }
             };
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

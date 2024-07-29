@@ -200,6 +200,11 @@ public class AccessLogHandler implements HttpHandler {
             return new Wrapper((String) config.get("format"), (String) config.get("category"));
         }
 
+        @Override
+        public int priority() {
+            return 0;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

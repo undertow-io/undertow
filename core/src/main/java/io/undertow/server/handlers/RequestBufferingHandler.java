@@ -203,5 +203,10 @@ public class RequestBufferingHandler implements HttpHandler {
         public HandlerWrapper build(Map<String, Object> config) {
             return new Wrapper((Integer) config.get("buffers"));
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }
