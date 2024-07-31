@@ -653,6 +653,23 @@ public class PredicatedHandlersParser {
                 }
             } else {
                 switch (c) {
+                    case '#':
+                        final Token previous = ret.peekLast();
+                        if(previous == null ||(previous != null && previous.getToken().equals("\n"))) {
+                            //its either first line ever or new line
+                            pos++;
+                            while (pos < string.length()) {
+                                char skip = string.charAt(pos);
+                                if(skip == '\n' || skip == '\r') {
+                                    break;
+                                }
+                                pos++;
+                            }
+                            break;
+                        } else {
+                            current.append(c);
+                            break;
+                        }
                     case ' ':
                     case '\t': {
                         if (current.length() != 0) {

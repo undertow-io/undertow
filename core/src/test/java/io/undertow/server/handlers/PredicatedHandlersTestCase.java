@@ -52,6 +52,7 @@ public class PredicatedHandlersTestCase {
                                         "regex('(.*).css') -> {rewrite['${1}.xcss'];set(attribute='%{o,chained}', value=true)} \n" +
                                         "regex('(.*).redirect$') -> redirect['${1}.redirected']\n\n\n\n\n" +
                                         "set[attribute='%{o,someHeader}', value=always]\n" +
+                                        "#ImJust a Comment\n"+
                                         "path-template('/foo/{bar}/{f}') -> set[attribute='%{o,template}', value='${bar}']\r\n" +
                                         "path-template('/bar->foo') -> redirect(/);" +
                                         "regex('(.*).css') -> set[attribute='%{o,css}', value='true'] else set[attribute='%{o,css}', value='false']; " +
