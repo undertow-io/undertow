@@ -22,6 +22,8 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.Cookie;
+import io.undertow.server.protocol.http.HttpRequestParser;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
@@ -446,7 +448,7 @@ public class Connectors {
         try {
             final boolean slashDecodingFlag = URLUtils.getSlashDecodingFlag(allowEncodedSlash, exchange.getConnection().getUndertowOptions().get(UndertowOptions.DECODE_SLASH));
             setExchangeRequestPath(exchange, encodedPath, charset, decode, slashDecodingFlag, decodeBuffer, exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS));
-        } catch (ParameterLimitException e) {
+        } catch (ParameterLimitException | BadRequestException e) {
             throw new RuntimeException(e);
         }
     }
@@ -459,8 +461,9 @@ public class Connectors {
      * @param encodedPath The encoded path to decode
      * @param decodeBuffer The decode buffer to use
      * @throws ParameterLimitException
+     * @throws BadRequestException
      */
-    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, StringBuilder decodeBuffer) throws ParameterLimitException {
+    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, StringBuilder decodeBuffer) throws ParameterLimitException, BadRequestException {
         final OptionMap options = exchange.getConnection().getUndertowOptions();
         boolean slashDecodingFlag = URLUtils.getSlashDecodingFlag(options);
         setExchangeRequestPath(exchange, encodedPath,
@@ -477,13 +480,19 @@ public class Connectors {
      * @param exchange    The exchange
      * @param encodedPath The encoded path
      * @param charset     The charset
+     * @throws BadRequestException
      */
-    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean decodeSlashFlag, StringBuilder decodeBuffer, int maxParameters) throws ParameterLimitException {
+    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean decodeSlashFlag, StringBuilder decodeBuffer, int maxParameters) throws ParameterLimitException, BadRequestException {
+        final OptionMap options = exchange.getConnection().getUndertowOptions();
+        final boolean allowUnescapedCharactersInUrl = options.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
         boolean requiresDecode = false;
         final StringBuilder pathBuilder = new StringBuilder();
         int currentPathPartIndex = 0;
         for (int i = 0; i < encodedPath.length(); ++i) {
             char c = encodedPath.charAt(i);
+            if(!allowUnescapedCharactersInUrl && !HttpRequestParser.isTargetCharacterAllowed(c)) {
+                throw new BadRequestException(UndertowMessages.MESSAGES.invalidCharacterInRequestTarget(c));
+            }
             if (c == '?') {
                 String part;
                 String encodedPart = encodedPath.substring(currentPathPartIndex, i);
@@ -496,9 +505,21 @@ public class Connectors {
                 part = pathBuilder.toString();
                 exchange.setRequestPath(part);
                 exchange.setRelativePath(part);
-                exchange.setRequestURI(encodedPath.substring(0, i));
+                if(requiresDecode && allowUnescapedCharactersInUrl) {
+                    final String uri = URLUtils.decode(encodedPath.substring(0, i), charset, decodeSlashFlag,false, decodeBuffer);
+                    exchange.setRequestURI(uri);
+                } else {
+                    exchange.setRequestURI(encodedPath.substring(0, i));
+                }
+
                 final String qs = encodedPath.substring(i + 1);
-                exchange.setQueryString(qs);
+                if(requiresDecode && allowUnescapedCharactersInUrl) {
+                    final String decodedQS = URLUtils.decode(qs, charset, decodeSlashFlag,false, decodeBuffer);
+                    exchange.setQueryString(decodedQS);
+                } else {
+                    exchange.setQueryString(qs);
+                }
+
                 URLUtils.parseQueryString(qs, exchange, charset, decode, maxParameters);
                 return;
             } else if(c == ';') {
@@ -510,10 +531,16 @@ public class Connectors {
                     part = encodedPart;
                 }
                 pathBuilder.append(part);
-                exchange.setRequestURI(encodedPath);
+                if(requiresDecode && allowUnescapedCharactersInUrl) {
+                    final String uri = URLUtils.decode(encodedPath, charset, decodeSlashFlag,false, decodeBuffer);
+                    exchange.setRequestURI(uri);
+                } else {
+                    exchange.setRequestURI(encodedPath);
+                }
+
                 currentPathPartIndex = i + 1 + URLUtils.parsePathParams(encodedPath.substring(i + 1), exchange, charset, decode, maxParameters);
                 i = currentPathPartIndex -1 ;
-            } else if(c == '%' || c == '+') {
+            } else if(decode && (c == '+' || c == '%' || c > 127)) {
                 requiresDecode = decode;
             }
         }
