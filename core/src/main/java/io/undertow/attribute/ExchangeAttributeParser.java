@@ -75,6 +75,7 @@ public class ExchangeAttributeParser {
         final List<ExchangeAttribute> attributes = new ArrayList<>();
         int pos = 0;
         int state = 0; //0 = literal, 1 = %, 2 = %{, 3 = $, 4 = ${
+        int braceDepth = 0; // Track the depth of curly braces
         for (int i = 0; i < valueString.length(); ++i) {
             char c = valueString.charAt(i);
             switch (state) {
@@ -95,6 +96,7 @@ public class ExchangeAttributeParser {
                 case 1: {
                     if (c == '{') {
                         state = 2;
+                        braceDepth++;
                     } else if (c == '%') {
                         //literal percent
                         attributes.add(wrap(new ConstantExchangeAttribute("%")));
@@ -108,16 +110,22 @@ public class ExchangeAttributeParser {
                     break;
                 }
                 case 2: {
-                    if (c == '}') {
-                        attributes.add(wrap(parseSingleToken(valueString.substring(pos, i + 1))));
-                        pos = i + 1;
-                        state = 0;
+                    if (c == '{') {
+                        braceDepth++;
+                    } else if (c == '}') {
+                        braceDepth--;
+                        if (braceDepth == 0) {
+                            attributes.add(wrap(parseSingleToken(valueString.substring(pos, i + 1))));
+                            pos = i + 1;
+                            state = 0;
+                        }
                     }
                     break;
                 }
                 case 3: {
                     if (c == '{') {
                         state = 4;
+                        braceDepth++;
                     } else if (c == '$') {
                         //literal dollars
                         attributes.add(wrap(new ConstantExchangeAttribute("$")));
@@ -132,30 +140,26 @@ public class ExchangeAttributeParser {
                 }
                 case 4: {
                     if (c == '}') {
-                        attributes.add(wrap(parseSingleToken(valueString.substring(pos, i + 1))));
-                        pos = i + 1;
-                        state = 0;
+                        braceDepth--;
+                        if (braceDepth == 0) {
+                            attributes.add(wrap(parseSingleToken(valueString.substring(pos, i + 1))));
+                            pos = i + 1;
+                            state = 0;
+                        }
+                    } else if (c == '{') {
+                        braceDepth++;
                     }
                     break;
                 }
-
             }
         }
-        switch (state) {
-            case 0:
-            case 1:
-            case 3:{
-                if(pos != valueString.length()) {
-                    attributes.add(wrap(parseSingleToken(valueString.substring(pos))));
-                }
-                break;
-            }
-            case 2:
-            case 4: {
-                throw UndertowMessages.MESSAGES.mismatchedBraces(valueString);
-            }
+        if (state != 0 || braceDepth != 0) {
+            throw UndertowMessages.MESSAGES.mismatchedBraces(valueString);
         }
-        if(attributes.size() == 1) {
+        if (pos != valueString.length()) {
+            attributes.add(wrap(parseSingleToken(valueString.substring(pos))));
+        }
+        if (attributes.size() == 1) {
             return attributes.get(0);
         }
         return new CompositeExchangeAttribute(attributes.toArray(new ExchangeAttribute[attributes.size()]));
