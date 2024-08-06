@@ -31,7 +31,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.ProtocolVersion;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -61,28 +60,6 @@ public class StatusLineTestCase {
     private static final String MESSAGE = "My HTTP Request!";
 
     private static volatile ServerConnection connection;
-
-    @BeforeClass
-    public static void setup() {
-        DefaultServer.setRootHandler(new HttpHandler() {
-
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                if (connection == null) {
-                    connection = exchange.getConnection();
-                } else if (!DefaultServer.isAjp()  && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
-                    Sender sender = exchange.getResponseSender();
-                    sender.send("Connection not persistent");
-                    return;
-                }
-                exchange.setProtocol(new HttpString(PROTOCOL_STRING));
-                exchange.setReasonPhrase(REASON_PHRASE);
-                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, MESSAGE.length() + "");
-                final Sender sender = exchange.getResponseSender();
-                sender.send(MESSAGE);
-            }
-        });
-    }
 
     @Test
     public void verifyStatusLine() throws IOException {
