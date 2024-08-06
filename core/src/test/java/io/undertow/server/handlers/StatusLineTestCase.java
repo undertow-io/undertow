@@ -23,6 +23,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
@@ -43,6 +44,7 @@ import java.io.IOException;
  * @author Jeff Okamoto
  */
 @RunWith(DefaultServer.class)
+@ProxyIgnore
 public class StatusLineTestCase {
 
     /*
