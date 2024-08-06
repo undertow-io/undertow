@@ -50,6 +50,9 @@ public class StatusLineTestCase {
      * For the purposes of the test, the protocol name has to be "HTTP" because the test
      * framework runs through a parser, and it rejects other strings.
      */
+    private static final String DEFAULT_PROTOCOL_NAME = "HTTP";
+    private static final String DEFAULT_PROTOCOL_MAJOR = "1";
+    private static final String DEFAULT_PROTOCOL_MINOR = "1";
     private static final String PROTOCOL_NAME = "HTTP";
     private static final String PROTOCOL_MAJOR = "3";
     private static final String PROTOCOL_MINOR = "4";
@@ -83,6 +86,25 @@ public class StatusLineTestCase {
 
     @Test
     public void verifyStatusLine() throws IOException {
+        DefaultServer.setRootHandler(new HttpHandler() {
+
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                if (connection == null) {
+                    connection = exchange.getConnection();
+                } else if (!DefaultServer.isAjp()  && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
+                    Sender sender = exchange.getResponseSender();
+                    sender.send("Connection not persistent");
+                    return;
+                }
+                exchange.setProtocol(new HttpString(PROTOCOL_STRING));
+                exchange.setReasonPhrase(REASON_PHRASE);
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, MESSAGE.length() + "");
+                final Sender sender = exchange.getResponseSender();
+                sender.send(MESSAGE);
+            }
+        });
+
         connection = null;
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
         TestHttpClient client = new TestHttpClient();
@@ -96,6 +118,42 @@ public class StatusLineTestCase {
             Assert.assertEquals(Integer.parseInt(PROTOCOL_MINOR), protocolVersion.getMinor());
 
             Assert.assertEquals(REASON_PHRASE, result.getStatusLine().getReasonPhrase());
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void verifyDefaultStatusLine() throws IOException {
+        DefaultServer.setRootHandler(new HttpHandler() {
+
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                if (connection == null) {
+                    connection = exchange.getConnection();
+                } else if (!DefaultServer.isAjp()  && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
+                    Sender sender = exchange.getResponseSender();
+                    sender.send("Connection not persistent");
+                    return;
+                }
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, MESSAGE.length() + "");
+                final Sender sender = exchange.getResponseSender();
+                sender.send(MESSAGE);
+            }
+        });
+
+        connection = null;
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+
+            ProtocolVersion protocolVersion = result.getStatusLine().getProtocolVersion();
+            Assert.assertEquals(DEFAULT_PROTOCOL_NAME, protocolVersion.getProtocol());
+            Assert.assertEquals(Integer.parseInt(DEFAULT_PROTOCOL_MAJOR), protocolVersion.getMajor());
+            Assert.assertEquals(Integer.parseInt(DEFAULT_PROTOCOL_MINOR), protocolVersion.getMinor());
+
         } finally {
             client.getConnectionManager().shutdown();
         }
