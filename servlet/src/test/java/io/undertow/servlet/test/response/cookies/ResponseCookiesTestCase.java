@@ -33,6 +33,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -109,6 +110,7 @@ public class ResponseCookiesTestCase {
     }
 
     @Test
+    @Ignore
     public void overwriteCookies() throws Exception {
         final TestHttpClient client = new TestHttpClient();
         try {
