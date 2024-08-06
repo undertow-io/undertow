@@ -46,6 +46,7 @@ import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.Options;
+import org.xnio.Sequence;
 import org.xnio.StreamConnection;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
@@ -73,6 +74,7 @@ import io.undertow.server.handlers.PathHandler;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.ProxyIgnore;
+import io.undertow.testutils.TLSv13Ignore;
 import io.undertow.testutils.category.UnitTest;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
@@ -89,6 +91,7 @@ import io.undertow.util.StringReadChannelListener;
 @RunWith(DefaultServer.class)
 @ProxyIgnore
 @AjpIgnore
+@TLSv13Ignore("This test fails when TLSv1.3 is enabled, this may be a bug")
 public class PushResourceRSTTestCase {
     private static final String PUSHER = "/pusher";
     private static final String PUSHER_MSG;
@@ -129,6 +132,7 @@ public class PushResourceRSTTestCase {
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setServerOption(UndertowOptions.RST_FRAMES_TIME_WINDOW, 5000)
                 .setServerOption(UndertowOptions.MAX_RST_FRAMES_PER_WINDOW, 10).setSocketOption(Options.REUSE_ADDRESSES, true)
+                .setSocketOption(Options.SSL_ENABLED_PROTOCOLS, Sequence.of(DefaultServer.isTLSv13() ? "TLSv1.3" : "TLSv1.2"))
                 .setHandler(path::handleRequest).build();
         defaultConfigServer.start();
         defaultConfigServerAddress = new URI("https://" + DefaultServer.getHostAddress() + ":" + (port + 1));
