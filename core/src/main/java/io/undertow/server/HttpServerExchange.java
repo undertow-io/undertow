@@ -1397,7 +1397,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             final WrapperStreamSinkConduitFactory factory = new WrapperStreamSinkConduitFactory(wrappers, responseWrapperCount, this, sinkChannel.getConduit());
             sinkChannel.setConduit(factory.create());
         } else {
-            sinkChannel.setConduit(connection.getSinkConduit(this, sinkChannel.getConduit()));
+            sinkChannel.setConduit(new ExchangeLifecycleDetachableStreamSinkConduit(connection.getSinkConduit(this, sinkChannel.getConduit()), this));
         }
         this.responseChannel = new WriteDispatchChannel(sinkChannel);
         this.startResponse();
@@ -2522,10 +2522,31 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public StreamSinkConduit create() {
             if (position == -1) {
-                return exchange.getConnection().getSinkConduit(exchange, first);
+                return new ExchangeLifecycleDetachableStreamSinkConduit(exchange.getConnection().getSinkConduit(exchange, first), exchange);
             } else {
                 return wrappers[position--].wrap(this, exchange);
             }
+        }
+    }
+
+    /**
+     * We must protect the underlying connection from being mutated after this exchange completes
+     * by code executed within wrappers. For example, DeflatingStreamSinkConduit calls
+     * {@code next.terminateWrites()} followed by {@code next.flush()}, however terminateWrites may internally
+     * flush and end the {@link HttpServerExchange exchange}.
+     */
+    private static final class ExchangeLifecycleDetachableStreamSinkConduit extends DetachableStreamSinkConduit {
+
+        private final HttpServerExchange exchange;
+
+        ExchangeLifecycleDetachableStreamSinkConduit(StreamSinkConduit delegate, HttpServerExchange exchange) {
+            super(delegate);
+            this.exchange = exchange;
+        }
+
+        @Override
+        protected boolean isFinished() {
+            return exchange.isResponseComplete();
         }
     }
 
