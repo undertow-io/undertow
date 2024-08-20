@@ -397,6 +397,10 @@ public class HPackHuffman {
                         eosCount = 0;
                     }
                 } else {
+                    // we need to check for EOS symbol in the string literal
+                    if (((val >> 16) & LOW_MASK) == 256) {
+                        throw UndertowMessages.MESSAGES.hpackFailed();
+                    }
                     //bit not set, we want the lower part of the tree
                     if ((val & HIGH_TERMINAL_BIT) == 0) {
                         treePos = (val >> 16) & LOW_MASK;
