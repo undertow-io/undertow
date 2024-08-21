@@ -477,12 +477,34 @@ public class Connectors {
     /**
      * Sets the request path and query parameters, decoding to the requested charset.
      *
-     * @param exchange    The exchange
-     * @param encodedPath The encoded path
-     * @param charset     The charset
-     * @throws BadRequestException
+     * @param exchange             the exchange
+     * @param encodedPath          the encoded path
+     * @param decode               indicates if the request path should be decoded
+     * @param decodeSlashFlag      indicates if slash characters contained in the encoded path should be decoded
+     * @param decodeBuffer         the buffer used for decoding
+     * @param maxParameters        maximum number of parameters allowed in the path
+     * @param charset                  the charset
+     * @throws BadRequestException if there is something wrong with the request, such as non-allowed characters
      */
     public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean decodeSlashFlag, StringBuilder decodeBuffer, int maxParameters) throws ParameterLimitException, BadRequestException {
+        setExchangeRequestPath(exchange, encodedPath, charset, decode, decode, decodeSlashFlag, decodeBuffer, maxParameters);
+    }
+
+    /**
+     * Sets the request path and query parameters, decoding to the requested charset.
+     *
+     * @param exchange             the exchange
+     * @param encodedPath          the encoded path
+     * @param decode               indicates if the request path should be decoded, apart from the query string part of the
+     *                             request (see next parameter)
+     * @param decodeQueryString    indicates if the query string of the path, when present, should be decoded
+     * @param decodeSlashFlag      indicates if slash characters contained in the request path should be decoded
+     * @param decodeBuffer         the buffer used for decoding
+     * @param maxParameters        maximum number of parameters allowed in the path
+     * @param charset                  the charset
+     * @throws BadRequestException if there is something wrong with the request, such as non-allowed characters
+     */
+    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, boolean decodeQueryString, final boolean decodeSlashFlag, StringBuilder decodeBuffer, int maxParameters) throws ParameterLimitException, BadRequestException {
         final OptionMap options = exchange.getConnection().getUndertowOptions();
         final boolean allowUnescapedCharactersInUrl = options.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
         boolean requiresDecode = false;
@@ -520,7 +542,7 @@ public class Connectors {
                     exchange.setQueryString(qs);
                 }
 
-                URLUtils.parseQueryString(qs, exchange, charset, decode, maxParameters);
+                URLUtils.parseQueryString(qs, exchange, charset, decodeQueryString, maxParameters);
                 return;
             } else if(c == ';') {
                 String part;
