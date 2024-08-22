@@ -43,6 +43,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.protocol.http.HttpRequestParser;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
@@ -193,7 +194,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
         try {
             Connectors.setExchangeRequestPath(exchange, path, encoding, decode, slashDecodingFlag, decodeBuffer, maxParameters);
-        } catch (ParameterLimitException e) {
+        } catch (ParameterLimitException | BadRequestException e) {
             //this can happen if max parameters is exceeded
             UndertowLogger.REQUEST_IO_LOGGER.debug("Failed to set request path", e);
             exchange.setStatusCode(StatusCodes.BAD_REQUEST);
@@ -217,6 +218,19 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
      * @param initial The initial upgrade request that started the HTTP2 connection
      */
     void handleInitialRequest(HttpServerExchange initial, Http2Channel channel, byte[] data) {
+        handleInitialRequest(initial, channel, data, this.decode, this.decode);
+    }
+
+    /**
+     * Handles the initial request when the exchange was started by a HTTP upgrade.
+     *
+     * @param initial               the initial upgrade request that started the HTTP2 connection
+     * @param channel               the channel that received the request
+     * @param data                  any extra data read by the channel that has not been parsed yet
+     * @param decode                indicates if the request path should be decoded, apart from the query string
+     * @param decodeQueryString     indicates if the query string of the path, when present, should be decoded
+     */
+    void handleInitialRequest(HttpServerExchange initial, Http2Channel channel, byte[] data, boolean decode, boolean decodeQueryString) {
         //we have a request
         Http2HeadersStreamSinkChannel sink = channel.createInitialUpgradeResponseStream();
         final Http2ServerConnection connection = new Http2ServerConnection(channel, sink, undertowOptions, bufferSize, rootHandler);
@@ -243,8 +257,8 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         Connectors.terminateRequest(exchange);
         String uri = exchange.getQueryString().isEmpty() ? initial.getRequestURI() : initial.getRequestURI() + '?' + exchange.getQueryString();
         try {
-            Connectors.setExchangeRequestPath(exchange, uri, encoding, decode, slashDecodingFlag, decodeBuffer, maxParameters);
-        } catch (ParameterLimitException e) {
+            Connectors.setExchangeRequestPath(exchange, uri, encoding, decode, decodeQueryString, slashDecodingFlag, decodeBuffer, maxParameters);
+        } catch (ParameterLimitException | BadRequestException e) {
             exchange.setStatusCode(StatusCodes.BAD_REQUEST);
             exchange.endExchange();
             return;
