@@ -372,11 +372,11 @@ public abstract class HttpRequestParser {
         //TODO: list type headers?
     }
 
-    abstract void handleHttpVerb(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder) throws BadRequestException;
+    abstract void handleHttpVerb(ByteBuffer buffer, ParseState currentState, HttpServerExchange builder) throws BadRequestException;
 
-    abstract void handleHttpVersion(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder) throws BadRequestException;
+    abstract void handleHttpVersion(ByteBuffer buffer, ParseState currentState, HttpServerExchange builder) throws BadRequestException;
 
-    abstract void handleHeader(ByteBuffer buffer, final ParseState currentState, final HttpServerExchange builder) throws BadRequestException;
+    abstract void handleHeader(ByteBuffer buffer, ParseState currentState, HttpServerExchange builder) throws BadRequestException;
 
     /**
      * The parse states for parsing the path.

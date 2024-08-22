@@ -36,7 +36,7 @@ public interface AuthenticatedSessionManager {
      */
     AttachmentKey<AuthenticatedSessionManager> ATTACHMENT_KEY = AttachmentKey.create(AuthenticatedSessionManager.class);
 
-    AuthenticatedSession lookupSession(final HttpServerExchange exchange);
+    AuthenticatedSession lookupSession(HttpServerExchange exchange);
 
     void clearSession(HttpServerExchange exchange);
 
