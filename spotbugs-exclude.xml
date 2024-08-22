@@ -302,4 +302,12 @@
         <Bug pattern="IS2_INCONSISTENT_SYNC"/>
         <Class name="io.undertow.protocols.ssl.SslConduit"/>
     </Match>
+    <Match>
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
+        <Class name="io.undertow.servlet.spec.ServletOutputStreamImpl"/>
+    </Match>
+    <!-- ignore benchmarks -->
+    <Match>
+        <Package name="io.undertow.benchmarks"/>
+    </Match>
 </FindBugsFilter>
