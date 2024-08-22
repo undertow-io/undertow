@@ -64,8 +64,8 @@ public interface AuthenticationMechanism {
      * @param exchange The exchange
      * @return
      */
-    AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange,
-                                                final SecurityContext securityContext);
+    AuthenticationMechanismOutcome authenticate(HttpServerExchange exchange,
+                                                SecurityContext securityContext);
 
     /**
      * Send an authentication challenge to the remote client.
@@ -80,7 +80,7 @@ public interface AuthenticationMechanism {
      * @param securityContext The security context
      * @return A {@link ChallengeResult} indicating if a challenge was sent and the desired response code.
      */
-    ChallengeResult sendChallenge(final HttpServerExchange exchange, final SecurityContext securityContext);
+    ChallengeResult sendChallenge(HttpServerExchange exchange, SecurityContext securityContext);
 
     /**
      * The AuthenticationOutcome is used by an AuthenticationMechanism to indicate the outcome of the call to authenticate, the

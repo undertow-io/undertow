@@ -33,6 +33,6 @@ public interface ConfidentialPortManager {
      * @param exchange The current {@link HttpServerExchange} being redirected.
      * @return The port to use in the redirection URI or {@code -1} if no configured port is available.
      */
-    int getConfidentialPort(final HttpServerExchange exchange);
+    int getConfidentialPort(HttpServerExchange exchange);
 
 }

@@ -32,43 +32,43 @@ public interface Cookie extends Comparable {
 
     String getValue();
 
-    Cookie setValue(final String value);
+    Cookie setValue(String value);
 
     String getPath();
 
-    Cookie setPath(final String path);
+    Cookie setPath(String path);
 
     String getDomain();
 
-    Cookie setDomain(final String domain);
+    Cookie setDomain(String domain);
 
     Integer getMaxAge();
 
-    Cookie setMaxAge(final Integer maxAge);
+    Cookie setMaxAge(Integer maxAge);
 
     boolean isDiscard();
 
-    Cookie setDiscard(final boolean discard);
+    Cookie setDiscard(boolean discard);
 
     boolean isSecure();
 
-    Cookie setSecure(final boolean secure);
+    Cookie setSecure(boolean secure);
 
     int getVersion();
 
-    Cookie setVersion(final int version);
+    Cookie setVersion(int version);
 
     boolean isHttpOnly();
 
-    Cookie setHttpOnly(final boolean httpOnly);
+    Cookie setHttpOnly(boolean httpOnly);
 
     Date getExpires();
 
-    Cookie setExpires(final Date expires);
+    Cookie setExpires(Date expires);
 
     String getComment();
 
-    Cookie setComment(final String comment);
+    Cookie setComment(String comment);
 
     default boolean isSameSite() {
         return false;

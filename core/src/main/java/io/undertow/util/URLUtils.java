@@ -302,7 +302,7 @@ public class URLUtils {
             return attrName;
         }
 
-        abstract void handle(final HttpServerExchange exchange, final String key, final String value);
+        abstract void handle(HttpServerExchange exchange, String key, String value);
     }
 
 

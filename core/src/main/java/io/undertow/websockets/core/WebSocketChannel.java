@@ -454,7 +454,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
         /**
          * @return The channel, or null if the channel is not available yet
          */
-        StreamSourceFrameChannel getChannel(final PooledByteBuffer data);
+        StreamSourceFrameChannel getChannel(PooledByteBuffer data);
 
         /**
          * Handles the data, any remaining data will be pushed back

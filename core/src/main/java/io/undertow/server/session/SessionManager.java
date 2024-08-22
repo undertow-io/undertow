@@ -74,12 +74,12 @@ public interface SessionManager {
      *
      * @return The created session
      */
-    Session createSession(final HttpServerExchange serverExchange, final SessionConfig sessionCookieConfig);
+    Session createSession(HttpServerExchange serverExchange, SessionConfig sessionCookieConfig);
 
     /**
      * @return An IoFuture that can be used to retrieve the session, or an IoFuture that will return null if not found
      */
-    Session getSession(final HttpServerExchange serverExchange, final SessionConfig sessionCookieConfig);
+    Session getSession(HttpServerExchange serverExchange, SessionConfig sessionCookieConfig);
 
     /**
      * Retrieves a session with the given session id
@@ -87,28 +87,28 @@ public interface SessionManager {
      * @param sessionId The session ID
      * @return The session, or null if it does not exist
      */
-    Session getSession(final String sessionId);
+    Session getSession(String sessionId);
 
     /**
      * Registers a session listener for the session manager
      *
      * @param listener The listener
      */
-    void registerSessionListener(final SessionListener listener);
+    void registerSessionListener(SessionListener listener);
 
     /**
      * Removes a session listener from the session manager
      *
      * @param listener the listener
      */
-    void removeSessionListener(final SessionListener listener);
+    void removeSessionListener(SessionListener listener);
 
     /**
      * Sets the default session timeout
      *
      * @param timeout the timeout
      */
-    void setDefaultSessionTimeout(final int timeout);
+    void setDefaultSessionTimeout(int timeout);
 
     /**
      * Returns the identifiers of those sessions that would be lost upon

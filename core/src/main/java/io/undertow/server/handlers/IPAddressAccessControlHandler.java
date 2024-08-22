@@ -349,7 +349,7 @@ public class IPAddressAccessControlHandler implements HttpHandler {
             this.pattern = pattern;
         }
 
-        abstract boolean matches(final InetAddress address);
+        abstract boolean matches(InetAddress address);
 
         boolean isDeny() {
             return deny;
@@ -378,7 +378,7 @@ public class IPAddressAccessControlHandler implements HttpHandler {
         }
 
         @Override
-        boolean matches(final InetAddress address) {
+        boolean matches(InetAddress address) {
             return Arrays.equals(address.getAddress(), this.address);
         }
     }
