@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>35</version>
+        <version>46</version>
     </parent>
 
     <groupId>io.undertow</groupId>
@@ -95,14 +95,13 @@
 
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
-        <version.io.undertow.build.checkstyle-config>1.0.1.Final</version.io.undertow.build.checkstyle-config>
+        <version.io.undertow.build.checkstyle-config>2.0.0.Final</version.io.undertow.build.checkstyle-config>
         <version.com.github.spotbugs-maven-plugin>4.7.3.4</version.com.github.spotbugs-maven-plugin>
 
         <version.com.twitter.hpack>1.0.2</version.com.twitter.hpack>
 
         <!-- Non-default maven plugin versions and configuration -->
         <version.org.wildfly.openssl>2.2.1.Final</version.org.wildfly.openssl>
-        <version.checkstyle>7.1</version.checkstyle>
         <version.bundle.plugin>5.1.1</version.bundle.plugin>
 
         <version.jmh>1.21</version.jmh>
