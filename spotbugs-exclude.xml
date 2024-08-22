@@ -925,8 +925,13 @@
     </Match>
     <Match>
         <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
-        <Class name="io.undertow.client.http.HttpClientConnection$ClientReadListener"/>
-        <Method name="handleEvent"/>
+        <Or>
+            <And>
+                <Class name="io.undertow.client.http.HttpClientConnection$ClientReadListener"/>
+                <Method name="handleEvent"/>
+            </And>
+            <Class name="io.undertow.servlet.spec.ServletOutputStreamImpl"/>
+        </Or>
     </Match>
     <!-- ignore benchmarks -->
     <Match>
