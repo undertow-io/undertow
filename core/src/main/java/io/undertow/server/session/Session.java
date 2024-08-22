@@ -51,7 +51,7 @@ public interface Session {
      *
      * @param serverExchange The http server exchange for this request
      */
-    void requestDone(final HttpServerExchange serverExchange);
+    void requestDone(HttpServerExchange serverExchange);
 
     /**
      * Returns the time when this session was created, measured
@@ -150,7 +150,7 @@ public interface Session {
      * @return An IOFuture containing the previous value
      * @throws IllegalStateException if this method is called on an invalidated session
      */
-    Object setAttribute(final String name, Object value);
+    Object setAttribute(String name, Object value);
 
     /**
      * Removes the object bound with the specified name from
@@ -161,7 +161,7 @@ public interface Session {
      * @throws IllegalStateException if this method is called on an
      *                               invalidated session
      */
-    Object removeAttribute(final String name);
+    Object removeAttribute(String name);
 
     /**
      * Invalidates this session then unbinds any objects bound
@@ -170,7 +170,7 @@ public interface Session {
      * @throws IllegalStateException if this method is called on an
      *                               already invalidated session
      */
-    void invalidate(final HttpServerExchange exchange);
+    void invalidate(HttpServerExchange exchange);
 
     /**
      * @return The session manager that is associated with this session
@@ -182,5 +182,5 @@ public interface Session {
      *
      * @return The new session ID
      */
-    String changeSessionId(final HttpServerExchange exchange, final SessionConfig config);
+    String changeSessionId(HttpServerExchange exchange, SessionConfig config);
 }

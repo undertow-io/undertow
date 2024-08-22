@@ -29,5 +29,5 @@ import io.undertow.server.session.SessionConfig;
  */
 public interface SessionConfigWrapper {
 
-    SessionConfig wrap(final SessionConfig sessionConfig, final Deployment deployment);
+    SessionConfig wrap(SessionConfig sessionConfig, Deployment deployment);
 }
