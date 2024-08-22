@@ -27,9 +27,9 @@ import org.xnio.channels.StreamSourceChannel;
  */
 public interface ClientExchange extends Attachable {
 
-    void setResponseListener(final ClientCallback<ClientExchange> responseListener);
+    void setResponseListener(ClientCallback<ClientExchange> responseListener);
 
-    void setContinueHandler(final ContinueNotification continueHandler);
+    void setContinueHandler(ContinueNotification continueHandler);
 
     void setPushHandler(PushCallback pushCallback);
 

@@ -55,7 +55,7 @@ public interface UndertowServletLogger extends BasicLogger {
 
     @LogMessage(level = ERROR)
     @Message(id = 15002, value = "Stopping servlet %s due to permanent unavailability")
-    void stoppingServletDueToPermanentUnavailability(final String servlet, @Cause UnavailableException e);
+    void stoppingServletDueToPermanentUnavailability(String servlet, @Cause UnavailableException e);
 
     @LogMessage(level = ERROR)
     @Message(id = 15003, value = "Stopping servlet %s till %s due to temporary unavailability")
@@ -67,7 +67,7 @@ public interface UndertowServletLogger extends BasicLogger {
 
     @LogMessage(level = ERROR)
     @Message(id = 15005, value = "Error invoking method %s on listener %s")
-    void errorInvokingListener(final String method, Class<?> listenerClass, @Cause Throwable t);
+    void errorInvokingListener(String method, Class<?> listenerClass, @Cause Throwable t);
 
     @LogMessage(level = ERROR)
     @Message(id = 15006, value = "IOException dispatching async event")

@@ -51,9 +51,9 @@ import java.util.Set;
  */
 public interface WebSocketHttpExchange extends Closeable {
 
-    <T> void putAttachment(final AttachmentKey<T> key, T value);
+    <T> void putAttachment(AttachmentKey<T> key, T value);
 
-    <T> T getAttachment(final AttachmentKey<T> key);
+    <T> T getAttachment(AttachmentKey<T> key);
 
     /**
      * gets the first request header with the specified name
@@ -61,7 +61,7 @@ public interface WebSocketHttpExchange extends Closeable {
      * @param headerName The header name
      * @return The header value, or null
      */
-    String getRequestHeader(final String headerName);
+    String getRequestHeader(String headerName);
 
     /**
      * @return An unmodifiable map of request headers
@@ -74,7 +74,7 @@ public interface WebSocketHttpExchange extends Closeable {
      * @param headerName The header name
      * @return The header value, or null
      */
-    String getResponseHeader(final String headerName);
+    String getResponseHeader(String headerName);
 
     /**
      * @return An unmodifiable map of response headers
@@ -85,7 +85,7 @@ public interface WebSocketHttpExchange extends Closeable {
     /**
      * Sets the response headers
      */
-    void setResponseHeaders(final Map<String, List<String>> headers);
+    void setResponseHeaders(Map<String, List<String>> headers);
 
     /**
      * Set a response header
@@ -93,21 +93,21 @@ public interface WebSocketHttpExchange extends Closeable {
      * @param headerName  The header name
      * @param headerValue The header value
      */
-    void setResponseHeader(final String headerName, final String headerValue);
+    void setResponseHeader(String headerName, String headerValue);
 
     /**
      * Upgrade the underlying channel
      *
      * @param upgradeCallback
      */
-    void upgradeChannel(final HttpUpgradeListener upgradeCallback);
+    void upgradeChannel(HttpUpgradeListener upgradeCallback);
 
     /**
      * Send some data
      *
      * @param data The data
      */
-    IoFuture<Void> sendData(final ByteBuffer data);
+    IoFuture<Void> sendData(ByteBuffer data);
 
     /**
      * Gets the body of the request.

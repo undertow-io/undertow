@@ -37,6 +37,6 @@ public interface NotificationReceiver {
      *
      * @param notification
      */
-    void handleNotification(final SecurityNotification notification);
+    void handleNotification(SecurityNotification notification);
 
 }

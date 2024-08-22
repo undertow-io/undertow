@@ -39,5 +39,5 @@ public interface DefaultResponseListener {
      * @param exchange The exchange
      * @return true if this listener is generating a default response.
      */
-    boolean handleDefaultResponse(final HttpServerExchange exchange);
+    boolean handleDefaultResponse(HttpServerExchange exchange);
 }

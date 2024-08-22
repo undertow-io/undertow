@@ -33,5 +33,5 @@ public interface DelegateOpenListener extends OpenListener {
      * @param channel The channel
      * @param additionalData Any additional data that was read from the stream as part of the handshake process
      */
-    void handleEvent(final StreamConnection channel, PooledByteBuffer additionalData);
+    void handleEvent(StreamConnection channel, PooledByteBuffer additionalData);
 }

@@ -22,7 +22,7 @@ public interface LifecycleInterceptor {
 
     void destroy(FilterInfo filterInfo, Filter filter, LifecycleContext context) throws ServletException;
 
-    public interface LifecycleContext {
+    interface LifecycleContext {
         void proceed() throws ServletException;
     }
 }

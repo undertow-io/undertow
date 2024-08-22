@@ -42,6 +42,6 @@ public interface SecurityContextFactory {
      * @param programmaticMechName a {@code String} representing the programmatic mechanism name. Can be null.
      * @return the constructed {@code SecurityContext} instance.
      */
-    SecurityContext createSecurityContext(final HttpServerExchange exchange, final AuthenticationMode mode,
-        final IdentityManager identityManager, final String programmaticMechName);
+    SecurityContext createSecurityContext(HttpServerExchange exchange, AuthenticationMode mode,
+        IdentityManager identityManager, String programmaticMechName);
 }

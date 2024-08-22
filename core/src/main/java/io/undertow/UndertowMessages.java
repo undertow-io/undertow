@@ -85,7 +85,7 @@ public interface UndertowMessages {
     IllegalStateException sessionManagerNotFound();
 
     @Message(id = 13, value = "Argument %s cannot be null")
-    IllegalArgumentException argumentCannotBeNull(final String argument);
+    IllegalArgumentException argumentCannotBeNull(String argument);
 
 //    @Message(id = 14, value = "close() called with data still to be flushed. Please call shutdownWrites() and then call flush() until it returns true before calling close()")
 //    IOException closeCalledWithDataStillToBeFlushed();
@@ -112,13 +112,13 @@ public interface UndertowMessages {
     IllegalArgumentException hashAlgorithmNotFound(String algorithmName);
 
     @Message(id = 23, value = "An invalid Base64 token has been received.")
-    IllegalArgumentException invalidBase64Token(@Cause final IOException cause);
+    IllegalArgumentException invalidBase64Token(@Cause IOException cause);
 
     @Message(id = 24, value = "An invalidly formatted nonce has been received.")
     IllegalArgumentException invalidNonceReceived();
 
     @Message(id = 25, value = "Unexpected token '%s' within header.")
-    IllegalArgumentException unexpectedTokenInHeader(final String name);
+    IllegalArgumentException unexpectedTokenInHeader(String name);
 
     @Message(id = 26, value = "Invalid header received.")
     IllegalArgumentException invalidHeader();
@@ -133,10 +133,10 @@ public interface UndertowMessages {
     IOException chunkedChannelClosedMidChunk();
 
     @Message(id = 30, value = "User %s successfully authenticated.")
-    String userAuthenticated(final String userName);
+    String userAuthenticated(String userName);
 
     @Message(id = 31, value = "User %s has logged out.")
-    String userLoggedOut(final String userName);
+    String userLoggedOut(String userName);
 //
 //    @Message(id = 33, value = "Authentication type %s cannot be combined with %s")
 //    IllegalStateException authTypeCannotBeCombined(String type, String existing);
@@ -154,7 +154,7 @@ public interface UndertowMessages {
     RuntimeException failedToParsePath();
 
     @Message(id = 38, value = "Authentication failed, requested user name '%s'")
-    String authenticationFailed(final String userName);
+    String authenticationFailed(String userName);
 
     @Message(id = 39, value = "Too many query parameters, cannot have more than %s query parameters")
     BadRequestException tooManyQueryParameters(int noParams);

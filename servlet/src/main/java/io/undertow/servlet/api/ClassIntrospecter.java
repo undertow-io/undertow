@@ -30,6 +30,6 @@ package io.undertow.servlet.api;
  */
 public interface ClassIntrospecter {
 
-    <T> InstanceFactory<T> createInstanceFactory(final Class<T> clazz) throws NoSuchMethodException;
+    <T> InstanceFactory<T> createInstanceFactory(Class<T> clazz) throws NoSuchMethodException;
 
 }

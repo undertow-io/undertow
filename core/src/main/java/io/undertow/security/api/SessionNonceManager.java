@@ -34,7 +34,7 @@ public interface SessionNonceManager extends NonceManager {
      * @param nonce - The nonce the hash is to be associated with.
      * @param hash - The hash to associate.
      */
-    void associateHash(final String nonce, final byte[] hash);
+    void associateHash(String nonce, byte[] hash);
 
     /**
      * Retrieve the existing hash associated with the nonce specified.
@@ -44,6 +44,6 @@ public interface SessionNonceManager extends NonceManager {
      * @param nonce - The nonce the hash is required for.
      * @return The associated hash or null if there is no association.
      */
-    byte[] lookupHash(final String nonce);
+    byte[] lookupHash(String nonce);
 
 }

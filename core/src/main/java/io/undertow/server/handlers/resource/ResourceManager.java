@@ -40,7 +40,7 @@ public interface ResourceManager extends Closeable {
      * @param path The path
      * @return The resource representing the path, or null if no resource was found.
      */
-    Resource getResource(final String path) throws IOException;
+    Resource getResource(String path) throws IOException;
 
     /**
      *
@@ -53,13 +53,13 @@ public interface ResourceManager extends Closeable {
      * @param listener The listener to register
      * @throws IllegalArgumentException If resource change listeners are not supported
      */
-    void registerResourceChangeListener(final ResourceChangeListener listener);
+    void registerResourceChangeListener(ResourceChangeListener listener);
 
     /**
      * Removes a resource change listener
      * @param listener
      */
-    void removeResourceChangeListener(final ResourceChangeListener listener);
+    void removeResourceChangeListener(ResourceChangeListener listener);
 
     ResourceManager EMPTY_RESOURCE_MANAGER = new ResourceManager() {
         @Override
