@@ -39,8 +39,14 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -109,32 +115,72 @@ public class DirectoryUtils {
             path += "/";
         }
 
-        String relative = null;
+        String relative = determineRelativePath(exchange, path);
+
+        String sortColumn = "name";
+        String currentSortOrder = "asc";
+
         if (exchange != null) {
-            final Map<String, Object> context = exchange.getAttachment(Predicate.PREDICATE_CONTEXT);
-            if (context != null) {
-                final PathPrefixPredicate.PathPrefixMatchRecord trans = (PathPrefixMatchRecord) context
-                        .get(PathPrefixPredicate.PREFIX_MATCH_RECORD);
-                if (trans != null) {
-                    if (trans.isOverWritten()) {
-                        relative = trans.getPrefix();
-                        if (!relative.endsWith("/") && !path.startsWith("/")) {
-                            relative += "/";
-                        }
-                    }
-                }
+            if (exchange.getQueryParameters().get("sort") != null) {
+                sortColumn = exchange.getQueryParameters().get("sort").getFirst();
+            }
+            if (exchange.getQueryParameters().get("order") != null) {
+                currentSortOrder = exchange.getQueryParameters().get("order").getFirst();
             }
         }
 
-        StringBuilder builder = new StringBuilder();
-        builder.append("<html>\n<head>\n<script src='").append(relative  == null ? path : relative + path).append("?js'></script>\n")
-                .append("<link rel='stylesheet' type='text/css' href='").append(relative  == null ? path : relative + path).append("?css' />\n</head>\n");
-        builder.append("<body onresize='growit()' onload='growit()'>\n<table id='thetable'>\n<thead>\n");
-        builder.append("<tr><th class='loc' colspan='3'>Directory Listing - ").append(relative  == null ? path : relative + path).append("</th></tr>\n")
-                .append("<tr><th class='label offset'>Name</th><th class='label'>Last Modified</th><th class='label'>Size</th></tr>\n</thead>\n")
-                .append("<tfoot>\n<tr><th class=\"loc footer\" colspan=\"3\">Powered by Undertow</th></tr>\n</tfoot>\n<tbody>\n");
+        String newSortOrder = "asc".equals(currentSortOrder) ? "desc" : "asc";
+        String sortUrl = relative == null ? path : relative + path;
+
+        StringBuilder builder = buildDirectoryListingTable(sortUrl, sortColumn, newSortOrder);
 
         int state = 0;
+        String parent = getParentPath(path, state);
+
+        int i = 0;
+        if (parent != null) {
+            i++;
+            appendParentDirectory(resource, builder, relative, parent);
+        }
+
+        List<Resource> directories = new ArrayList<>();
+        List<Resource> files = new ArrayList<>();
+        separateDirectoriesAndFiles(resource, directories, files);
+
+        Comparator<Resource> comparator = getComparator(sortColumn, currentSortOrder);
+        directories.sort(comparator);
+        files.sort(comparator);
+
+        appendDirectories(directories, builder, i, sortUrl);
+        appendFiles(files, builder, i, sortUrl);
+
+        builder.append("</tbody>\n</table>\n</body>\n</html>");
+
+        return builder;
+
+    }
+
+    private static String formatLastModified(Date lastModified) {
+        if (lastModified == null) {
+            return "-";
+        }
+        ZonedDateTime lastModifiedTime = ZonedDateTime.ofInstant(
+                lastModified.toInstant(),
+                ZoneId.systemDefault()
+        );
+        DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
+                .withLocale(Locale.getDefault());
+
+        return formatter.format(lastModifiedTime);
+    }
+
+    private static void appendParentDirectory(Resource resource, StringBuilder builder, String relative, String parent) {
+        builder.append("<tr class='odd'><td><a class='icon up' href='").append(relative == null ? parent : relative + parent).append(parent.endsWith("/") ? "" : "/").append("'>[..]</a></td><td>");
+        builder.append(formatLastModified(resource.getLastModified()))
+                .append("</td><td>--</td></tr>\n");
+    }
+
+    private static String getParentPath(String path, int state) {
         String parent = null;
         if(path.length() > 1) {
             for (int i = path.length() - 1; i >= 0; i--) {
@@ -154,33 +200,89 @@ public class DirectoryUtils {
                 parent = "/";
             }
         }
+        return parent;
+    }
 
-        SimpleDateFormat format = new SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.US);
-        int i = 0;
-        if (parent != null) {
-            i++;
-            builder.append("<tr class='odd'><td><a class='icon up' href='").append(relative  == null ? parent : relative + parent).append(parent.endsWith("/") ? "" : "/").append("'>[..]</a></td><td>");
-            builder.append(format.format((resource.getLastModified() == null ? new Date(0L) : resource.getLastModified())))
-                    .append("</td><td>--</td></tr>\n");
-        }
-
-        for (Resource entry : resource.list()) {
-            builder.append("<tr class='").append((++i & 1) == 1 ? "odd" : "even").append("'><td><a class='icon ");
-            builder.append(entry.isDirectory() ? "dir" : "file");
-            builder.append("' href='").append(relative  == null ? path : relative + path).append(entry.getName()).append(entry.isDirectory() ? "/" : "").append("'>").append(entry.getName()).append("</a></td><td>");
-            builder.append(format.format((entry.getLastModified() == null) ? new Date(0L) : entry.getLastModified()))
+    private static void appendFiles(List<Resource> files, StringBuilder builder, int i, String sortUrl) {
+        for (Resource entry : files) {
+            builder.append("<tr class='").append((++i & 1) == 1 ? "odd" : "even").append("'><td><a class='icon file' href='")
+                    .append(sortUrl).append(entry.getName()).append("'>")
+                    .append(entry.getName()).append("</a></td><td>")
+                    .append(formatLastModified(entry.getLastModified()))
                     .append("</td><td>");
-            if (entry.isDirectory()) {
-                builder.append("--");
-            } else {
-                formatSize(builder, entry.getContentLength());
-            }
+            formatSize(builder, entry.getContentLength());
             builder.append("</td></tr>\n");
         }
-        builder.append("</tbody>\n</table>\n</body>\n</html>");
+    }
 
+    private static void appendDirectories(List<Resource> directories, StringBuilder builder, int i, String sortUrl) {
+        for (Resource entry : directories) {
+            builder.append("<tr class='").append((++i & 1) == 1 ? "odd" : "even").append("'><td><a class='icon dir' href='")
+                    .append(sortUrl).append(entry.getName()).append("/'>")
+                    .append(entry.getName()).append("</a></td><td>")
+                    .append(formatLastModified(entry.getLastModified()))
+                    .append("</td><td>--</td></tr>\n");
+        }
+    }
+
+    private static Comparator<Resource> getComparator(String sortColumn, String currentSortOrder) {
+        Comparator<Resource> comparator;
+        if ("lastModified".equals(sortColumn)) {
+            comparator = Comparator.comparing(
+                    entry -> (entry.getLastModified() == null) ? new Date(0L) : entry.getLastModified()
+            );
+        } else {
+            comparator = Comparator.comparing(Resource::getName);
+        }
+
+        if ("desc".equals(currentSortOrder)) {
+            comparator = comparator.reversed();
+        }
+        return comparator;
+    }
+
+    private static void separateDirectoriesAndFiles(Resource resource, List<Resource> directories, List<Resource> files) {
+        for (Resource entry : resource.list()) {
+            if (entry.isDirectory()) {
+                directories.add(entry);
+            } else {
+                files.add(entry);
+            }
+        }
+    }
+
+    private static StringBuilder buildDirectoryListingTable(String sortUrl, String sortColumn, String newSortOrder) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("<html>\n<head>\n<script src='").append(sortUrl).append("?js'></script>\n")
+                .append("<link rel='stylesheet' type='text/css' href='").append(sortUrl).append("?css' />\n</head>\n");
+        builder.append("<body onresize='growit()' onload='growit()'>\n<table id='thetable'>\n<thead>\n");
+        builder.append("<tr><th class='loc' colspan='3'>Directory Listing - ").append(sortUrl).append("</th></tr>\n")
+                .append("<tr>")
+                .append("<th class='label offset'><a href='").append(sortUrl).append("?sort=name&order=").append("name".equals(sortColumn) ? newSortOrder : "asc").append("'>Name</a></th>")
+                .append("<th class='label'><a href='").append(sortUrl).append("?sort=lastModified&order=").append("lastModified".equals(sortColumn) ? newSortOrder : "asc").append("'>Last Modified</a></th>")
+                .append("<th class='label'>Size</th></tr>\n</thead>\n");
+        builder.append("<tfoot>\n<tr><th class=\"loc footer\" colspan=\"3\">Powered by Undertow</th></tr>\n</tfoot>\n<tbody>\n");
         return builder;
+    }
 
+    private static String determineRelativePath(HttpServerExchange exchange, String path) {
+        String relative = null;
+        if (exchange != null) {
+            final Map<String, Object> context = exchange.getAttachment(Predicate.PREDICATE_CONTEXT);
+            if (context != null) {
+                final PathPrefixMatchRecord trans = (PathPrefixMatchRecord) context
+                        .get(PathPrefixPredicate.PREFIX_MATCH_RECORD);
+                if (trans != null) {
+                    if (trans.isOverWritten()) {
+                        relative = trans.getPrefix();
+                        if (!relative.endsWith("/") && !path.startsWith("/")) {
+                            relative += "/";
+                        }
+                    }
+                }
+            }
+        }
+        return relative;
     }
 
     public static void renderDirectoryListing(HttpServerExchange exchange, Resource resource) {
