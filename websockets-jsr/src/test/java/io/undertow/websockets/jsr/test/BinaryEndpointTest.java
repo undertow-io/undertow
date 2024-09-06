@@ -42,6 +42,7 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.TLSv13Ignore;
 import io.undertow.websockets.jsr.DefaultWebSocketClientSslProvider;
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 import io.undertow.websockets.jsr.WebSocketDeploymentInfo;
@@ -58,6 +59,7 @@ import static org.junit.Assert.assertTrue;
  */
 @RunWith(DefaultServer.class)
 @HttpOneOnly
+@TLSv13Ignore("websocket tests time out using TLSv1.3")
 public class BinaryEndpointTest {
 
     private static ServerWebSocketContainer deployment;
