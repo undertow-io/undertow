@@ -109,6 +109,7 @@
         <maven.javadoc.plugin.quiet>true</maven.javadoc.plugin.quiet>
         <maven.compiler.showDeprecation>false</maven.compiler.showDeprecation>
         <maven.compiler.showWarnings>false</maven.compiler.showWarnings>
+        <version.maven.javadoc.plugin>3.8.0</version.maven.javadoc.plugin>
     </properties>
 
     <modules>
@@ -131,6 +132,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
+                <version>${version.maven.javadoc.plugin}</version>
                 <configuration>
                     <!--
                         The Javadoc comments contain a lot of warnings
