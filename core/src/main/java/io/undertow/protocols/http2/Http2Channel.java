@@ -1221,6 +1221,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             resetStreamTracker.store(streamId, holder);
             if(streamId % 2 == (isClient() ? 1 : 0)) {
                 sendConcurrentStreamsAtomicUpdater.getAndDecrement(this);
+                holder.sent = true;
             } else {
                 receiveConcurrentStreamsAtomicUpdater.getAndDecrement(this);
             }
@@ -1235,13 +1236,14 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     //Server side originated, no input from client other than RST
                     //this can happen on page refresh when push happens, but client
                     //still has valid cache entry
+                    //NOTE: this is specific case when its set.
                     holder.resetByPeer = receivedRst;
                 } else {
                     handleRstWindow();
                 }
             }
         } else if(receivedRst){
-            final StreamHolder resetStream = resetStreamTracker.find(streamId);
+            final StreamHolder resetStream = resetStreamTracker.find(streamId, true);
             if(resetStream != null && resetStream.resetByPeer) {
                 //This means other side reset stream at some point.
                 //depending on peer or network latency our frames might be late and
@@ -1374,6 +1376,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
          * This flag is set only in case of short lived server push that was reset by remote end.
          */
         boolean resetByPeer = false;
+        /**
+         * flag indicate whether our side originated. This is done for caching purposes, handlng differs.
+         */
+        boolean sent = false;
         Http2StreamSourceChannel sourceChannel;
         Http2StreamSinkChannel sinkChannel;
 
@@ -1384,6 +1390,13 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         StreamHolder(Http2StreamSinkChannel sinkChannel) {
             this.sinkChannel = sinkChannel;
         }
+
+        @Override
+        public String toString() {
+            return "StreamHolder [sourceClosed=" + sourceClosed + ", sinkClosed=" + sinkClosed + ", resetByPeer=" + resetByPeer
+                    + ", sent=" + sent + ", sourceChannel=" + sourceChannel + ", sinkChannel=" + sinkChannel + "]";
+        }
+
     }
 
     // cache that keeps track of streams until they can be evicted @see Http2Channel#RST_STREAM_EVICATION_TIME
@@ -1399,12 +1412,27 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             streamHolders.put(streamId, streamHolder);
             entries.add(new StreamCacheEntry(streamId));
         }
-        private StreamHolder find(int streamId) {
+
+        /**
+         * Method will return only sent
+         * @param streamId
+         * @return
+         */
+        private StreamHolder find(final int streamId) {
+            return find(streamId, false);
+        }
+
+        private StreamHolder find(final int streamId, final boolean all) {
             for (Iterator<StreamCacheEntry> iterator = entries.iterator(); iterator.hasNext();) {
                 StreamCacheEntry entry = iterator.next();
                 if (entry.shouldEvict()) {
                     iterator.remove();
                     StreamHolder holder = streamHolders.remove(entry.streamId);
+                    if(!holder.sent || holder.resetByPeer) {
+                        //if its not our end of chain, its just cached, so we only cache for purpose of
+                        // handling eager RST
+                        continue;
+                    }
                     AbstractHttp2StreamSourceChannel receiver = holder.sourceChannel;
                     if(receiver != null) {
                         IoUtils.safeClose(receiver);
@@ -1418,7 +1446,12 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     }
                 } else break;
             }
-            return streamHolders.get(streamId);
+            final StreamHolder holder = streamHolders.get(streamId);
+            if(holder != null && (!all && !holder.sent)) {
+                return null;
+            } else {
+                return holder;
+            }
         }
 
         private Map<Integer, StreamHolder> getStreamHolders() {
