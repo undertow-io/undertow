@@ -533,7 +533,6 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Collection<Part> getParts() throws IOException, ServletException {
-        verifyMultipartServlet();
         if (parts == null) {
             loadParts();
         }
@@ -550,11 +549,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Part getPart(final String name) throws IOException, ServletException {
-        verifyMultipartServlet();
-        if (parts == null) {
-            loadParts();
-        }
-        for (Part part : parts) {
+        for (Part part : getParts()) {
             if (part.getName().equals(name)) {
                 return part;
             }
@@ -580,6 +575,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         final ServletRequestContext requestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
 
         if (parts == null) {
+            verifyMultipartServlet();
             final List<Part> parts = new ArrayList<>();
             String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
             if (mimeType != null && mimeType.startsWith(MultiPartParserDefinition.MULTIPART_FORM_DATA)) {
