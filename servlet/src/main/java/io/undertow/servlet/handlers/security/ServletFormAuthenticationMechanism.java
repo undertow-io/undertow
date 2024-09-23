@@ -32,6 +32,7 @@ import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.util.SavedRequest;
+import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.Headers;
 import io.undertow.util.RedirectBuilder;
 
@@ -195,12 +196,25 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
             return;
         }
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        HttpSessionImpl httpSession = servletRequestContext.getCurrentServletContext().getSession(exchange, true);
+        final ServletContextImpl servletContextImpl =  servletRequestContext.getCurrentServletContext();
+        HttpSessionImpl httpSession = servletContextImpl.getSession(exchange, false);
+        boolean newSession = false;
+        if (httpSession == null) {
+            httpSession = servletContextImpl.getSession(exchange, true);
+            newSession = true;
+        }
         Session session;
         if (System.getSecurityManager() == null) {
             session = httpSession.getSession();
         } else {
             session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+        }
+        if (newSession) {
+            int originalMaxInactiveInterval = session.getMaxInactiveInterval();
+            if (originalMaxInactiveInterval > authenticationSessionTimeout) {
+                session.setAttribute(ORIGINAL_SESSION_TIMEOUT, session.getMaxInactiveInterval());
+                session.setMaxInactiveInterval(authenticationSessionTimeout);
+            }
         }
         SessionManager manager = session.getSessionManager();
         if (seenSessionManagers.add(manager)) {
@@ -225,6 +239,10 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
                 session = httpSession.getSession();
             } else {
                 session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+            }
+            Integer originalSessionTimeout = (Integer) session.removeAttribute(ORIGINAL_SESSION_TIMEOUT);
+            if (originalSessionTimeout != null) {
+                session.setMaxInactiveInterval(originalSessionTimeout);
             }
             String path = (String) session.getAttribute(SESSION_KEY);
             if ((path == null || overrideInitial) && defaultPage != null) {
