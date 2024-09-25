@@ -73,8 +73,6 @@ public class HpackDecoder {
 
     private boolean first = true;
 
-    private final StringBuilder stringBuilder = new StringBuilder();
-
     public HpackDecoder(int maxAllowedMemorySize) {
         this.specifiedMemorySize = Math.min(Hpack.DEFAULT_TABLE_SIZE, maxAllowedMemorySize);
         this.maxAllowedMemorySize = maxAllowedMemorySize;
@@ -247,11 +245,11 @@ public class HpackDecoder {
         if (huffman) {
             return readHuffmanString(length, buffer);
         }
+        StringBuilder stringBuilder = new StringBuilder(length);
         for (int i = 0; i < length; ++i) {
             stringBuilder.append((char) (buffer.get() & 0xFF));
         }
         String ret = stringBuilder.toString();
-        stringBuilder.setLength(0);
         if (ret.isEmpty()) {
             //return the interned empty string, rather than allocating a new one each time
             return "";
@@ -260,12 +258,12 @@ public class HpackDecoder {
     }
 
     private String readHuffmanString(int length, ByteBuffer buffer) throws HpackException {
+        StringBuilder stringBuilder = new StringBuilder(length);
         HPackHuffman.decode(buffer, length, stringBuilder);
         String ret = stringBuilder.toString();
         if (ret.isEmpty()) {
             return "";
         }
-        stringBuilder.setLength(0);
         return ret;
     }
 
