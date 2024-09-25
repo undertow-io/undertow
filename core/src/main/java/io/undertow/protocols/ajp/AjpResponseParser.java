@@ -225,11 +225,6 @@ class AjpResponseParser {
     public int stringLength = -1;
 
     /**
-     * The current string being read
-     */
-    public StringBuilder currentString;
-
-    /**
      * when reading the first byte of an integer this stores the first value. It is set to -1 to signify that
      * the first byte has not been read yet.
      */
@@ -248,7 +243,6 @@ class AjpResponseParser {
         reasonPhrase = null;
         headers = new HeaderMap();
         stringLength = -1;
-        currentString = null;
         currentIntegerPart = -1;
         readHeaders = 0;
     }
@@ -300,12 +294,8 @@ class AjpResponseParser {
             this.stringLength = -1;
             return new StringHolder(null, true, false);
         }
-        StringBuilder builder = this.currentString;
+        final StringBuilder builder = new StringBuilder();
 
-        if (builder == null) {
-            builder = new StringBuilder();
-            this.currentString = builder;
-        }
         int length = builder.length();
         while (length < stringLength) {
             if (!buf.hasRemaining()) {
@@ -323,7 +313,6 @@ class AjpResponseParser {
 
         if (buf.hasRemaining()) {
             buf.get(); //null terminator
-            this.currentString = null;
             this.stringLength = -1;
             this.containsUrlCharacters = false;
             return new StringHolder(builder.toString(), true, containsUrlCharacters);
