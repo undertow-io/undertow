@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jboss.logging.Logger;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -71,9 +70,7 @@ import io.undertow.io.Sender;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.category.UnitTest;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
@@ -88,8 +85,6 @@ import io.undertow.util.StringReadChannelListener;
  */
 @Category(UnitTest.class)
 @RunWith(DefaultServer.class)
-@ProxyIgnore
-@AjpIgnore
 public class PushResourceRSTTestCase {
     private static final Logger log = Logger.getLogger(PushResourceRSTTestCase.class);
     private static final String PUSHER = "/pusher";
@@ -167,7 +162,6 @@ public class PushResourceRSTTestCase {
 
     @Test
     public void testRstOnPush() throws Exception {
-        Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows"));
         final int totalNumberOfRequests = 250;
         final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(totalNumberOfRequests * 2);
