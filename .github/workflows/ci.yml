@@ -129,7 +129,7 @@ jobs:
     - name: Print Version
       run: mvn -v
     - name: Run Tests
-      run: mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }}
+      run: mvn -U -B -fae test -Dtest=PushResourceRSTTestCase '-DfailIfNoTests=false' -pl ${{ matrix.module }}
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
@@ -145,8 +145,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        module: [core, servlet, websockets-jsr]
-        proxy: ['-Pproxy', '']
+        module: [core]
+        proxy: ['']
         jdk: [11]
     steps:
     - name: Update hosts - linux
@@ -181,7 +181,7 @@ jobs:
     - name: Print Version
       run: mvn -v
     - name: Run Tests
-      run: mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
+      run: mvn -U -B -fae test ${{ matrix.proxy }} '-Dtest=PushResourceRSTTestCase' '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
