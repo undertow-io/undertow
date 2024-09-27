@@ -67,8 +67,6 @@ public class LotsOfHeadersResponseTestCase {
 
     @Test
     public void testLotsOfHeadersInResponse() throws IOException {
-        // FIXME UNDERTOW-2279
-        Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows"));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
