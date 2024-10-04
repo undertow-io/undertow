@@ -647,4 +647,7 @@ public interface UndertowMessages {
     @Message(id = 208, value = "Failed to allocate resource")
     IOException failedToAllocateResource();
 
+    @Message(id = 209, value = "Protocol string was too large for the buffer. Either provide a smaller message or a bigger buffer. Protocol: %s")
+    IllegalStateException protocolTooLargeForBuffer(String protocolString);
+
 }
