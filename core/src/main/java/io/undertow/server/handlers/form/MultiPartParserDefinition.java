@@ -44,12 +44,15 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.FileAttribute;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executor;
 
@@ -58,7 +61,13 @@ import java.util.concurrent.Executor;
  */
 public class MultiPartParserDefinition implements FormParserFactory.ParserDefinition<MultiPartParserDefinition> {
 
+
     public static final String MULTIPART_FORM_DATA = "multipart/form-data";
+    /**
+     * Proposed default MINSIZE as 16 KB for content in memory before persisting to disk if file content exceeds
+     * {@link #fileSizeThreshold} and the <i>filename</i> is not specified in the form.
+     */
+    private static final long MINSIZE = Long.getLong("io.undertow.multipart.minsize", 0x4000);
 
     private Executor executor;
 
@@ -69,6 +78,12 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
     private long maxIndividualFileSize = -1;
 
     private long fileSizeThreshold;
+
+    /**
+     * The threshold of form field size to persist to disk.
+     * It takes effect only for the form fields which do not have <i>filename</i> specified.
+     */
+    private long fieldSizeThreshold = MINSIZE;
 
     public MultiPartParserDefinition() {
         tempFileLocation = Paths.get(System.getProperty("java.io.tmpdir"));
@@ -87,7 +102,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 UndertowLogger.REQUEST_LOGGER.debugf("Could not find boundary in multipart request with ContentType: %s, multipart data will not be available", mimeType);
                 return null;
             }
-            final MultiPartUploadHandler parser = new MultiPartUploadHandler(exchange, boundary, maxIndividualFileSize, fileSizeThreshold, defaultEncoding);
+            final MultiPartUploadHandler parser = new MultiPartUploadHandler(exchange, boundary, maxIndividualFileSize, fileSizeThreshold, defaultEncoding, fieldSizeThreshold);
             exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
                 @Override
                 public void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener) {
@@ -113,6 +128,11 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
     public MultiPartParserDefinition setExecutor(final Executor executor) {
         this.executor = executor;
+        return this;
+    }
+
+    public MultiPartParserDefinition setFieldSizeThreshold(long fieldSizeThreshold) {
+        this.fieldSizeThreshold = fieldSizeThreshold;
         return this;
     }
 
@@ -164,13 +184,14 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         private HttpHandler handler;
         private long currentFileSize;
         private final MultipartParser.ParseState parser;
+        private final long fieldSizeThreshold;
 
-
-        private MultiPartUploadHandler(final HttpServerExchange exchange, final String boundary, final long maxIndividualFileSize, final long fileSizeThreshold, final String defaultEncoding) {
+        private MultiPartUploadHandler(final HttpServerExchange exchange, final String boundary, final long maxIndividualFileSize, final long fileSizeThreshold, final String defaultEncoding, final long fieldSizeThreshold) {
             this.exchange = exchange;
             this.maxIndividualFileSize = maxIndividualFileSize;
             this.defaultEncoding = defaultEncoding;
             this.fileSizeThreshold = fileSizeThreshold;
+            this.fieldSizeThreshold = fieldSizeThreshold;
             this.data = new FormData(exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, 1000));
             String charset = defaultEncoding;
             String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
@@ -217,22 +238,26 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 throw new IOException(UndertowMessages.MESSAGES.requestChannelAlreadyProvided());
             }
             try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()){
-                ByteBuffer buf = pooled.getBuffer();
-                while (true) {
-                    buf.clear();
-                    int c = inputStream.read(buf.array(), buf.arrayOffset(), buf.remaining());
-                    if (c == -1) {
-                        if (parser.isComplete()) {
-                            break;
-                        } else {
-                            throw UndertowMessages.MESSAGES.connectionTerminatedReadingMultiPartData();
+                if(pooled != null) {
+                    ByteBuffer buf = pooled.getBuffer();
+                    while (true) {
+                        buf.clear();
+                        int c = inputStream.read(buf.array(), buf.arrayOffset(), buf.remaining());
+                        if (c == -1) {
+                            if (parser.isComplete()) {
+                                break;
+                            } else {
+                                throw UndertowMessages.MESSAGES.connectionTerminatedReadingMultiPartData();
+                            }
+                        } else if (c != 0) {
+                            buf.limit(c);
+                            parser.parse(buf);
                         }
-                    } else if (c != 0) {
-                        buf.limit(c);
-                        parser.parse(buf);
                     }
+                    exchange.putAttachment(FORM_DATA, data);
+                } else {
+                    throw UndertowMessages.MESSAGES.failedToAllocateResource();
                 }
-                exchange.putAttachment(FORM_DATA, data);
             } catch (MalformedMessageException e) {
                 throw new IOException(e);
             }
@@ -251,7 +276,42 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                     if (fileName != null && fileSizeThreshold == 0) {
                         try {
                             if (tempFileLocation != null) {
-                                file = Files.createTempFile(tempFileLocation, "undertow", "upload");
+                                //Files impl is buggy, hence zero len
+                                final FileAttribute[] emptyFA = new FileAttribute[] {};
+                                final LinkOption[] emptyLO = new LinkOption[] {};
+                                final Path normalized = tempFileLocation.normalize();
+                                if (!Files.exists(normalized)) {
+                                    final int pathElementsCount = normalized.getNameCount();
+                                    Path tmp = normalized;
+                                    LinkedList<Path> dirsToGuard = new LinkedList<>();
+                                    for(int i=0;i<pathElementsCount;i++) {
+                                        if(Files.exists(tmp, emptyLO)) {
+                                            if(!Files.isDirectory(tmp, emptyLO)) {
+                                                //First existing element in path is a file,
+                                                //this will cause java.nio.file.FileSystemException
+                                                throw UndertowMessages.MESSAGES.pathElementIsRegularFile(tmp);
+                                            }
+                                            break;
+                                        } else {
+                                            dirsToGuard.addFirst(tmp);
+                                            tmp = tmp.getParent();
+                                        }
+                                    }
+                                    try {
+                                        Files.createDirectories(normalized, emptyFA);
+                                    } finally {
+                                        for (Path p : dirsToGuard) {
+                                            try {
+                                                p.toFile().deleteOnExit();
+                                            } catch (Exception e) {
+                                                break;
+                                            }
+                                        }
+                                    }
+                                } else if (!Files.isDirectory(normalized, emptyLO)) {
+                                    throw new IOException(UndertowMessages.MESSAGES.pathNotADirectory(normalized));
+                                }
+                                file = Files.createTempFile(normalized, "undertow", "upload");
                             } else {
                                 file = Files.createTempFile("undertow", "upload");
                             }
@@ -265,20 +325,59 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             }
         }
 
+        private Path createFile() throws IOException {
+            if (tempFileLocation != null) {
+                //Files impl is buggy, hence zero len
+                final FileAttribute[] emptyFA = new FileAttribute[] {};
+                final LinkOption[] emptyLO = new LinkOption[] {};
+                final Path normalized = tempFileLocation.normalize();
+                if (!Files.exists(normalized)) {
+                    final int pathElementsCount = normalized.getNameCount();
+                    Path tmp = normalized;
+                    LinkedList<Path> dirsToGuard = new LinkedList<>();
+                    for(int i=0;i<pathElementsCount;i++) {
+                        if(Files.exists(tmp, emptyLO)) {
+                            if(!Files.isDirectory(tmp, emptyLO)) {
+                                //First existing element in path is a file,
+                                //this will cause java.nio.file.FileSystemException
+                                throw UndertowMessages.MESSAGES.pathElementIsRegularFile(tmp);
+                            }
+                            break;
+                        } else {
+                            dirsToGuard.addFirst(tmp);
+                            tmp = tmp.getParent();
+                        }
+                    }
+                    try {
+                        Files.createDirectories(normalized, emptyFA);
+                    } finally {
+                        for (Path p : dirsToGuard) {
+                            try {
+                                p.toFile().deleteOnExit();
+                            } catch (Exception e) {
+                                break;
+                            }
+                        }
+                    }
+                } else if (!Files.isDirectory(normalized, emptyLO)) {
+                    throw new IOException(UndertowMessages.MESSAGES.pathNotADirectory(normalized));
+                }
+                file = Files.createTempFile(normalized, "undertow", "upload");
+            } else {
+                file = Files.createTempFile("undertow", "upload");
+            }
+            return file;
+        }
+
         @Override
         public void data(final ByteBuffer buffer) throws IOException {
             this.currentFileSize += buffer.remaining();
             if (this.maxIndividualFileSize > 0 && this.currentFileSize > this.maxIndividualFileSize) {
                 throw UndertowMessages.MESSAGES.maxFileSizeExceeded(this.maxIndividualFileSize);
             }
-            if (file == null && fileName != null && fileSizeThreshold < this.currentFileSize) {
+            if (file == null && fileSizeThreshold < this.currentFileSize && (fileName != null || this.currentFileSize > fieldSizeThreshold)) {
                 try {
-                    if (tempFileLocation != null) {
-                        file = Files.createTempFile(tempFileLocation, "undertow", "upload");
-                    } else {
-                        file = Files.createTempFile("undertow", "upload");
-                    }
-                    createdFiles.add(file);
+                    createdFiles.add(createFile());
 
                     FileOutputStream fileOutputStream = new FileOutputStream(file.toFile());
                     contentBytes.writeTo(fileOutputStream);
@@ -301,7 +400,11 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
         @Override
         public void endPart() {
             if (file != null) {
-                data.add(currentName, file, fileName, headers);
+                 if (fileName != null) {
+                     data.add(currentName, file, fileName, headers);
+                 } else {
+                     data.add(currentName, file, null, headers, true, getCharset());
+                 }
                 file = null;
                 contentBytes.reset();
                 try {
@@ -314,19 +417,9 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 data.add(currentName, Arrays.copyOf(contentBytes.toByteArray(), contentBytes.size()), fileName, headers);
                 contentBytes.reset();
             } else {
-
-
                 try {
-                    String charset = defaultEncoding;
-                    String contentType = headers.getFirst(Headers.CONTENT_TYPE);
-                    if (contentType != null) {
-                        String cs = Headers.extractQuotedValueFromHeader(contentType, "charset");
-                        if (cs != null) {
-                            charset = cs;
-                        }
-                    }
-
-                    data.add(currentName, new String(contentBytes.toByteArray(), charset), headers);
+                    String charset = getCharset();
+                    data.add(currentName, new String(contentBytes.toByteArray(), charset), charset, headers);
                 } catch (UnsupportedEncodingException e) {
                     throw new RuntimeException(e);
                 }
@@ -334,6 +427,17 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             }
         }
 
+        private String getCharset() {
+            String charset = defaultEncoding;
+            String contentType = headers.getFirst(Headers.CONTENT_TYPE);
+            if (contentType != null) {
+                String cs = Headers.extractQuotedValueFromHeader(contentType, "charset");
+                if (cs != null) {
+                    charset = cs;
+                }
+            }
+            return charset;
+        }
 
         public List<Path> getCreatedFiles() {
             return createdFiles;
@@ -357,6 +461,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                             }
                         }
                     }
+                    files.clear();
                 }
             });
 

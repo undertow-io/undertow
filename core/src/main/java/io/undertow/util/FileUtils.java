@@ -22,7 +22,9 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.UnsupportedCharsetException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -51,16 +53,32 @@ public class FileUtils {
         }
     }
 
+    public static String readFile(InputStream file, String charset) {
+        try {
+            Charset charSet = charset != null ? Charset.forName(charset) : StandardCharsets.UTF_8;
+            return readFile(file, charSet);
+        } catch (UnsupportedCharsetException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     /**
      * Reads the {@link InputStream file} and converting it to {@link String} using UTF-8 encoding.
      */
     public static String readFile(InputStream file) {
+        return readFile(file, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Reads the {@link InputStream file} and converting it to {@link String} using <code>charSet</code> encoding.
+     */
+    public static String readFile(InputStream file, Charset charSet) {
         try (BufferedInputStream stream = new BufferedInputStream(file)) {
             byte[] buff = new byte[1024];
             StringBuilder builder = new StringBuilder();
             int read;
             while ((read = stream.read(buff)) != -1) {
-                builder.append(new String(buff, 0, read, StandardCharsets.UTF_8));
+                builder.append(new String(buff, 0, read, charSet));
             }
             return builder.toString();
         } catch (IOException e) {
