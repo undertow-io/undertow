@@ -292,7 +292,7 @@ public class UndertowOptions {
      *
      * @see #MAX_HEADER_SIZE
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static final Option<Integer> HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE", Integer.class);
 
     /**
