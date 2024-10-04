@@ -32,9 +32,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.jboss.logging.Logger;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -70,9 +70,7 @@ import io.undertow.io.Sender;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.category.UnitTest;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
@@ -87,9 +85,8 @@ import io.undertow.util.StringReadChannelListener;
  */
 @Category(UnitTest.class)
 @RunWith(DefaultServer.class)
-@ProxyIgnore
-@AjpIgnore
 public class PushResourceRSTTestCase {
+    private static final Logger log = Logger.getLogger(PushResourceRSTTestCase.class);
     private static final String PUSHER = "/pusher";
     private static final String PUSHER_MSG;
     private static final String TRIGGER = "/trigger";
@@ -165,7 +162,6 @@ public class PushResourceRSTTestCase {
 
     @Test
     public void testRstOnPush() throws Exception {
-        Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows"));
         final int totalNumberOfRequests = 250;
         final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
         final CountDownLatch latch = new CountDownLatch(totalNumberOfRequests * 2);
@@ -240,18 +236,30 @@ public class PushResourceRSTTestCase {
             final CountDownLatch latch, final AtomicInteger pushRstCount) {
         return new ClientCallback<>() {
             @Override
-            public void completed(ClientExchange result) {
+            public void completed(final ClientExchange result) {
                 result.setPushHandler(new PushCallback() {
                     @Override
                     public boolean handlePush(ClientExchange originalRequest, ClientExchange pushedRequest) {
                         pushRstCount.incrementAndGet();
+                        log.debugf("Handling push %d", pushRstCount.get());
                         latch.countDown();
+                        setUpResponseListenerAndShutdownWrites(result);
                         return false;
                     }
                 });
+            }
+            @Override
+            public void failed(IOException e) {
+                e.printStackTrace();
+                exception = e;
+                latch.countDown();
+            }
+
+            private void setUpResponseListenerAndShutdownWrites(ClientExchange result) {
                 result.setResponseListener(new ClientCallback<>() {
                     @Override
                     public void completed(final ClientExchange result) {
+                        log.debugf("Got result %s", result);
                         responses.add(result.getResponse());
                         new StringReadChannelListener(result.getConnection().getBufferPool()) {
 
@@ -289,13 +297,6 @@ public class PushResourceRSTTestCase {
                     exception = e;
                     latch.countDown();
                 }
-            }
-
-            @Override
-            public void failed(IOException e) {
-                e.printStackTrace();
-                exception = e;
-                latch.countDown();
             }
         };
     }
