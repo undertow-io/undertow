@@ -300,6 +300,8 @@ public class UndertowOptions {
      */
     public static final Option<Integer> HTTP2_PADDING_SIZE = Option.simple(UndertowOptions.class, "HTTP2_PADDING_SIZE", Integer.class);
 
+    public static final Option<Integer> HTTP2_PADDING_SIZE2 = Option.simple(UndertowOptions.class, "HTTP2_PADDING_SIZE", Integer.class);
+
     /**
      * Undertow keeps a LRU cache of common huffman encodings. This sets the maximum size, setting this to 0 will disable the caching.
      *
