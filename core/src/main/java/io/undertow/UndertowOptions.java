@@ -401,6 +401,9 @@ public class UndertowOptions {
      *
      * If not specified, the default value is null.
      */
+
+    public static final Option<Integer> DEFAULT_QUEUED_FRAMES_LOW_WATER_MARK = null;
+
     public static final Option<String> AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN = Option.simple(UndertowOptions.class, "AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN", String.class);
 
     /**
