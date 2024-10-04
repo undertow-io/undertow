@@ -240,7 +240,7 @@ public class UndertowOptions {
      * If connector level statistics should be enabled. This has a slight performance impact, but allows statistics such
      * as bytes sent/recevied to be monitored.
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static final Option<Boolean> ENABLE_CONNECTOR_STATISTICS = ENABLE_STATISTICS;
 
 
