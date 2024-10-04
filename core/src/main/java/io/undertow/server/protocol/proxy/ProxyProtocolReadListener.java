@@ -49,6 +49,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     private final UndertowXnioSsl ssl;
     private final ByteBufferPool bufferPool;
     private final OptionMap sslOptionMap;
+    private final StringBuilder stringBuilder = new StringBuilder();
 
     private int byteCount;
     private String protocol;
@@ -222,7 +223,6 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     }
 
     private void parseProxyProtocolV1(PooledByteBuffer buffer, AtomicBoolean freeBuffer) throws IOException {
-        final StringBuilder stringBuilder = new StringBuilder();
         while (buffer.getBuffer().hasRemaining()) {
             char c = (char) buffer.getBuffer().get();
             if (byteCount < NAME.length) {
@@ -281,31 +281,46 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
                                 throw UndertowMessages.MESSAGES.invalidProxyHeader();
                             }
                         } else if (sourceAddress == null) {
-                            sourceAddress = parseAddress(stringBuilder.toString(), protocol);
-                            stringBuilder.setLength(0);
+                            try {
+                                sourceAddress = parseAddress(stringBuilder.toString(), protocol);
+                            } finally {
+                                stringBuilder.setLength(0);
+                            }
                         } else if (destAddress == null) {
-                            destAddress = parseAddress(stringBuilder.toString(), protocol);
-                            stringBuilder.setLength(0);
+                            try {
+                                destAddress = parseAddress(stringBuilder.toString(), protocol);
+                            } finally {
+                                stringBuilder.setLength(0);
+                            }
                         } else {
-                            sourcePort = Integer.parseInt(stringBuilder.toString());
-                            stringBuilder.setLength(0);
+                            try {
+                                sourcePort = Integer.parseInt(stringBuilder.toString());
+                            } finally {
+                                stringBuilder.setLength(0);
+                            }
                         }
                         break;
                     case '\r':
                         if (destPort == -1 && sourcePort != -1 && !carriageReturnSeen && stringBuilder.length() > 0) {
-                            destPort = Integer.parseInt(stringBuilder.toString());
-                            stringBuilder.setLength(0);
+                            try {
+                                destPort = Integer.parseInt(stringBuilder.toString());
+                            } finally {
+                                stringBuilder.setLength(0);
+                            }
                             carriageReturnSeen = true;
                         } else if (protocol == null) {
                             if (UNKNOWN.equals(stringBuilder.toString())) {
                                 parsingUnknown = true;
                                 carriageReturnSeen = true;
                             }
+                            stringBuilder.setLength(0);
                         } else {
+                            stringBuilder.setLength(0);
                             throw UndertowMessages.MESSAGES.invalidProxyHeader();
                         }
                         break;
                     case '\n':
+                        stringBuilder.setLength(0);
                         throw UndertowMessages.MESSAGES.invalidProxyHeader();
                     default:
                         stringBuilder.append(c);
