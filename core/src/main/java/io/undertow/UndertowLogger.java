@@ -474,4 +474,20 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = WARN)
     @Message(id = 5106, value = "Content mismatch for '%s'. Expected length '%s', but was '%s'.")
     void contentEntryMismatch(Object key, long indicatedSize, long written);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5107, value = "Access Log Worker failed to transition gracefuly.")
+    void accessLogWorkerFailureOnTransition();
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5108, value = "Access Log Worker failed to reschedule.")
+    void accessLogWorkerFailureOnReschedule();
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5109, value = "Access Log Worker did not terminate cleanly.")
+    void accessLogWorkerNoTermination();
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5110, value = "Interruption in close()")
+    void closeInterrupted(@Cause InterruptedException ie);
 }
