@@ -92,6 +92,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
 
     private final ServletPathMatches paths;
 
+    private final int myNewFieldGHC = 0;
+
     private final ExceptionHandler exceptionHandler;
     private final HttpHandler dispatchHandler = new HttpHandler() {
         @Override
