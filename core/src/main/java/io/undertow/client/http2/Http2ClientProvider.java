@@ -26,6 +26,7 @@ import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientProvider;
 import io.undertow.client.ClientStatistics;
+import io.undertow.client.http.HttpClientProvider;
 import io.undertow.conduits.ByteActivityCallback;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
@@ -78,7 +79,7 @@ public class Http2ClientProvider implements ClientProvider {
 
     @Override
     public Set<String> handlesSchemes() {
-        return new HashSet<>(Arrays.asList(new String[]{"h2"}));
+        return new HashSet<>(Arrays.asList(new String[]{HTTP2}));
     }
 
     @Override
@@ -87,7 +88,11 @@ public class Http2ClientProvider implements ClientProvider {
             listener.failed(UndertowMessages.MESSAGES.sslWasNull());
             return;
         }
-        OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
+        OptionMap tlsOptions = OptionMap.builder()
+                .set(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, HttpClientProvider.DISABLE_HTTPS_ENDPOINT_IDENTIFICATION? "" : "HTTPS")
+                .addAll(options)
+                .set(Options.SSL_STARTTLS, true)
+                .getMap();
         if(bindAddress == null) {
             ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
         } else {
@@ -102,11 +107,15 @@ public class Http2ClientProvider implements ClientProvider {
             listener.failed(UndertowMessages.MESSAGES.sslWasNull());
             return;
         }
+        OptionMap tlsOptions = OptionMap.builder()
+                .set(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, HttpClientProvider.DISABLE_HTTPS_ENDPOINT_IDENTIFICATION? "" : "HTTPS")
+                .addAll(options)
+                .set(Options.SSL_STARTTLS, true)
+                .getMap();
         if(bindAddress == null) {
-            OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
-            ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, tlsOptions), options).addNotifier(createNotifier(listener), null);
+            ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
         } else {
-            ssl.openSslConnection(ioThread, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+            ssl.openSslConnection(ioThread, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
         }
 
     }

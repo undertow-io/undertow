@@ -289,7 +289,7 @@ public class UndertowXnioSsl extends XnioSsl {
             sslParameters.setUseCipherSuitesOrder(true);
             engine.setSSLParameters(sslParameters);
         }
-        final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, null);
+        final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM);
         if (endpointIdentificationAlgorithm != null) {
             SSLParameters sslParameters = engine.getSSLParameters();
             sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);

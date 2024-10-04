@@ -35,6 +35,7 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -827,15 +828,33 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
      * cause an error.
      */
     public static void stopSSLServer() throws IOException {
+        boolean shuttingDown = false;
         if (sslServer != null) {
             sslServer.close();
             sslServer = null;
+            shuttingDown = true;
         }
         clientSslContext = null;
         if (proxyOpenListener != null) {
             proxyOpenListener.closeConnections();
+            shuttingDown = true;
         } else if (openListener != null) {
             openListener.closeConnections();
+            shuttingDown = true;
+        }
+        if (shuttingDown) {
+            // TODO replace this by the mechanism described in UNDERTOW-1648 once it is implemented
+            final CountDownLatch latch = new CountDownLatch(1);
+            worker.getIoThread().execute(() -> {
+                latch.countDown();
+            });
+            //some environments seem to need a small delay to re-bind the socket
+            try {
+                latch.await();
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                //ignore
+            }
         }
     }
 

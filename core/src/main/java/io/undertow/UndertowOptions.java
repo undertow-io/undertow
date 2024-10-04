@@ -246,9 +246,11 @@ public class UndertowOptions {
     public static final Option<Boolean> HTTP2_SETTINGS_ENABLE_PUSH = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_ENABLE_PUSH", Boolean.class);
 
     /**
-     * The maximum number of concurrent
+     * The maximum number of concurrent http2 streams.
      */
     public static final Option<Integer> HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS", Integer.class);
+
+    public static final int DEFAULT_HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS = -1;
 
     public static final Option<Integer> HTTP2_SETTINGS_INITIAL_WINDOW_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_INITIAL_WINDOW_SIZE", Integer.class);
     public static final Option<Integer> HTTP2_SETTINGS_MAX_FRAME_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_FRAME_SIZE", Integer.class);
@@ -332,7 +334,7 @@ public class UndertowOptions {
     public static final Option<Integer> SHUTDOWN_TIMEOUT = Option.simple(UndertowOptions.class, "SHUTDOWN_TIMEOUT", Integer.class);
 
     /**
-     * The endpoint identification algorithm.
+     * The endpoint identification algorithm, the empty string can be used to set none.
      *
      * @see javax.net.ssl.SSLParameters#setEndpointIdentificationAlgorithm(String)
      */
@@ -362,6 +364,29 @@ public class UndertowOptions {
      */
     public static final Option<String> AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN = Option.simple(UndertowOptions.class, "AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN", String.class);
 
+
+    /**
+     * Default value of {@link #RST_FRAMES_TIME_WINDOW} option.
+     */
+    public static final int DEFAULT_RST_FRAMES_TIME_WINDOW = 30000;
+    /**
+     * Default value of {@link #MAX_RST_FRAMES_PER_WINDOW} option.
+     */
+    public static final int DEFAULT_MAX_RST_FRAMES_PER_WINDOW = 200;
+
+    /**
+     * Window of time per which the number of HTTP2 RST received frames is measured, in milliseconds.
+     * If a number of RST frames bigger than {@link #MAX_RST_FRAMES_PER_WINDOW} is received during this time window,
+     * the server will send a GO_AWAY frame with error code 11 ({@code ENHANCE_YOUR_CALM}) and it will close the connection.
+     */
+    public static final Option<Integer> RST_FRAMES_TIME_WINDOW = Option.simple(UndertowOptions.class, "MAX_RST_STREAM_TIME_WINDOW", Integer.class);
+
+    /**
+     * Maximum number of HTTP2 RST frames received allowed during a time window.
+     * If a number of RST frames bigger than this limit is received during {@link #RST_FRAMES_TIME_WINDOW} milliseconds,
+     * the server will send a GO_AWAY frame with error code 11 ({@code ENHANCE_YOUR_CALM}) and it will close the connection.
+     */
+    public static final Option<Integer> MAX_RST_FRAMES_PER_WINDOW = Option.simple(UndertowOptions.class, "MAX_RST_STREAMS_PER_TIME_WINDOW", Integer.class);
 
     private UndertowOptions() {
 

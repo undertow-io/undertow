@@ -39,6 +39,8 @@ import org.xnio.ssl.XnioSsl;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -49,6 +51,21 @@ import java.util.Set;
  * @author Stuart Douglas
  */
 public class HttpClientProvider implements ClientProvider {
+
+    public static final String DISABLE_HTTPS_ENDPOINT_IDENTIFICATION_PROPERTY = "io.undertow.client.https.disableEndpointIdentification";
+    public static final boolean DISABLE_HTTPS_ENDPOINT_IDENTIFICATION;
+
+    static {
+        String disable = System.getSecurityManager() == null
+                ? System.getProperty(DISABLE_HTTPS_ENDPOINT_IDENTIFICATION_PROPERTY)
+                : AccessController.doPrivileged(new PrivilegedAction<String>() {
+                    @Override
+                    public String run() {
+                        return System.getProperty(DISABLE_HTTPS_ENDPOINT_IDENTIFICATION_PROPERTY);
+                    }
+                });
+        DISABLE_HTTPS_ENDPOINT_IDENTIFICATION = disable != null && (disable.isEmpty() || Boolean.parseBoolean(disable));
+    }
 
     @Override
     public Set<String> handlesSchemes() {
@@ -72,7 +89,11 @@ public class HttpClientProvider implements ClientProvider {
                 listener.failed(UndertowMessages.MESSAGES.sslWasNull());
                 return;
             }
-            OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
+            OptionMap tlsOptions = OptionMap.builder()
+                    .set(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, DISABLE_HTTPS_ENDPOINT_IDENTIFICATION? "" : "HTTPS")
+                    .addAll(options)
+                    .set(Options.SSL_STARTTLS, true)
+                    .getMap();
             if (bindAddress == null) {
                 ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions, uri), tlsOptions).addNotifier(createNotifier(listener), null);
             } else {
@@ -94,7 +115,11 @@ public class HttpClientProvider implements ClientProvider {
                 listener.failed(UndertowMessages.MESSAGES.sslWasNull());
                 return;
             }
-            OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
+            OptionMap tlsOptions = OptionMap.builder()
+                    .set(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, DISABLE_HTTPS_ENDPOINT_IDENTIFICATION? "" : "HTTPS")
+                    .addAll(options)
+                    .set(Options.SSL_STARTTLS, true)
+                    .getMap();
             if (bindAddress == null) {
                 ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions, uri), tlsOptions).addNotifier(createNotifier(listener), null);
             } else {
