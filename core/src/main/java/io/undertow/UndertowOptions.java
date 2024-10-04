@@ -116,12 +116,17 @@ public class UndertowOptions {
     public static final Option<Integer> MAX_COOKIES = Option.simple(UndertowOptions.class, "MAX_COOKIES", Integer.class);
 
     /**
+     * Default value of {@link #ALLOW_ENCODED_SLASH} option.
+     */
+    public static final Boolean DEFAULT_ALLOW_ENCODED_SLASH = Boolean.FALSE;
+
+    /**
      * If a request comes in with encoded / characters (i.e. %2F), will these be decoded.
      * <p>
      * This can cause security problems if a front end proxy does not perform the same decoding, and as a result
      * this is disabled by default.
      * <p>
-     * Defaults to false
+     * Defaults to {@link #DEFAULT_ALLOW_ENCODED_SLASH}
      * <p>
      * See <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2007-0450">CVE-2007-0450</a>
      * @deprecated - this option was interpreted improperly.
