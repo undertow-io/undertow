@@ -290,6 +290,10 @@ public class UndertowOptions {
      * Max frame size for HTTP2.
      *  <br>UNIT: Bytes.
      */
+    public static final int DEFAULT_HTTP2_SETTINGS_INITIAL_WINDOW_SIZE = 65535;
+    /**
+     * Default value of {@link #HTTP2_SETTINGS_INITIAL_WINDOW_SIZE}. <br>UNIT: Bytes.
+     */
     public static final Option<Integer> HTTP2_SETTINGS_MAX_FRAME_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_FRAME_SIZE", Integer.class);
 
     /**
