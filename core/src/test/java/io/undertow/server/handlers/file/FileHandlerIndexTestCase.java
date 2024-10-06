@@ -24,7 +24,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Locale;
 
 import io.undertow.server.handlers.CanonicalPathHandler;
@@ -103,9 +102,9 @@ public class FileHandlerIndexTestCase {
             Assert.assertEquals("text/html; charset=UTF-8", headers[0].getValue());
             Assert.assertTrue(response, response.contains("page.html"));
             Assert.assertTrue(response, response.contains("tmp2"));
-            // All invalid symlinks have their date set to epoch
+            // All invalid symlinks have their date set to "-"
             SimpleDateFormat format = new SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.US);
-            Assert.assertTrue(response, response.contains(format.format((new Date(0L)))));
+            Assert.assertTrue(response, response.contains("-"));
         } finally {
             client.getConnectionManager().shutdown();
             if (badSymlink != null) {
