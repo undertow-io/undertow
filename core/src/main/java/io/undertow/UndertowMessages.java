@@ -647,7 +647,4 @@ public interface UndertowMessages {
 
     @Message(id = 206, value = "Path '%s' is not a directory")
     IOException pathElementIsRegularFile(Path path);
-
-    @Message(id = 208, value = "Failed to allocate resource")
-    IOException failedToAllocateResource();
 }

@@ -18,7 +18,6 @@
 
 package io.undertow.security.impl;
 
-import io.undertow.UndertowLogger;
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.NotificationReceiver;
 import io.undertow.security.api.SecurityContext;
@@ -115,8 +114,6 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
                     });
                     log.tracef("Authenticated account %s using SSO", verified.getPrincipal().getName());
                     return AuthenticationMechanismOutcome.AUTHENTICATED;
-                } else {
-
                 }
             }
             clearSsoCookie(exchange);
@@ -165,13 +162,9 @@ public class SingleSignOnAuthenticationMechanism implements AuthenticationMechan
             Account account = sc.getAuthenticatedAccount();
             if (account != null) {
                 try (SingleSignOn sso = singleSignOnManager.createSingleSignOn(account, sc.getMechanismName())) {
-                    final Session session = getSession(exchange);
-                    if(sso != null) {
-                        registerSessionIfRequired(sso, session);
-                        exchange.setResponseCookie(new CookieImpl(cookieName, sso.getId()).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain).setPath(path));
-                    } else {
-                        UndertowLogger.SECURITY_LOGGER.failedToCreateSSOForSession(SSO_SESSION_ATTRIBUTE);
-                    }
+                    Session session = getSession(exchange);
+                    registerSessionIfRequired(sso, session);
+                    exchange.getResponseCookies().put(cookieName, new CookieImpl(cookieName, sso.getId()).setHttpOnly(httpOnly).setSecure(secure).setDomain(domain).setPath(path));
                 }
             }
             return factory.create();

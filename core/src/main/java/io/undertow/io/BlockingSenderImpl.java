@@ -196,26 +196,23 @@ public class BlockingSenderImpl implements Sender {
             }
         } else {
             try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()){
-                if(pooled != null) {
-                    ByteBuffer buffer = pooled.getBuffer();
-                    long pos = source.position();
-                    long size = source.size();
-                    while (size - pos > 0) {
-                        int ret = source.read(buffer);
-                        if (ret <= 0) {
-                            break;
-                        }
-                        pos += ret;
-                        outputStream.write(buffer.array(), buffer.arrayOffset(), ret);
-                        buffer.clear();
+                ByteBuffer buffer = pooled.getBuffer();
+                long pos = source.position();
+                long size = source.size();
+                while (size - pos > 0) {
+                    int ret = source.read(buffer);
+                    if (ret <= 0) {
+                        break;
                     }
-
-                    if (pos != size) {
-                        throw new EOFException("Unexpected EOF reading file");
-                    }
-                } else {
-                    throw UndertowMessages.MESSAGES.failedToAllocateResource();
+                    pos += ret;
+                    outputStream.write(buffer.array(), buffer.arrayOffset(), ret);
+                    buffer.clear();
                 }
+
+                if (pos != size) {
+                    throw new EOFException("Unexpected EOF reading file");
+                }
+
             }  catch (IOException e) {
                 callback.onException(exchange, this, e);
             }
@@ -262,23 +259,16 @@ public class BlockingSenderImpl implements Sender {
                 }
             } else {
                 try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
-                    if(pooled != null) {
-                        while (buffer.hasRemaining()) {
-                            int toRead = Math.min(buffer.remaining(), pooled.getBuffer().remaining());
-                            buffer.get(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), toRead);
-                            try {
-                                outputStream.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), toRead);
-                            } catch (IOException e) {
-                                callback.onException(exchange, this, e);
-                                return false;
-                            }
+                    while (buffer.hasRemaining()) {
+                        int toRead = Math.min(buffer.remaining(), pooled.getBuffer().remaining());
+                        buffer.get(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), toRead);
+                        try {
+                            outputStream.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), toRead);
+                        } catch (IOException e) {
+                            callback.onException(exchange, this, e);
+                            return false;
                         }
-                    } else {
-                        throw UndertowMessages.MESSAGES.failedToAllocateResource();
                     }
-                } catch (IOException e) {
-                    callback.onException(exchange, this, e);
-                    return false;
                 }
             }
         }

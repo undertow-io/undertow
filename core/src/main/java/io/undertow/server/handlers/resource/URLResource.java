@@ -150,16 +150,10 @@ public class URLResource implements Resource, RangeAwareResource {
         try {
             if (file != null) {
                 try (DirectoryStream<Path> stream = Files.newDirectoryStream(file)) {
-                    if (stream != null) {
-                        for (Path child : stream) {
-                            result.add(new URLResource(child.toUri().toURL(), child.toString()));
-                        }
-                    } else {
-                        UndertowLogger.ROOT_LOGGER.failedToListPathsForFile(file);
+                    for (Path child : stream) {
+                        result.add(new URLResource(child.toUri().toURL(), child.toString()));
                     }
                 }
-            } else {
-                UndertowLogger.ROOT_LOGGER.noSourceToListResourcesFrom();
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
