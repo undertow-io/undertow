@@ -29,6 +29,7 @@ import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
+import org.apache.log4j.BasicConfigurator;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.OptionMap;
@@ -106,6 +107,14 @@ public class AutobahnExtensionsServer {
     }
 
     public static void main(String[] args) {
+        /*
+            Use BasicConfigurator.configure() for fully debug
+         */
+        if (args.length == 1) {
+            if (args[0].equals("--debug")) {
+                BasicConfigurator.configure();
+            }
+        }
         new AutobahnExtensionsServer(7777).run();
     }
 }
