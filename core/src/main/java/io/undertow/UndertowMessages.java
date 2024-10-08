@@ -20,6 +20,7 @@ package io.undertow;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.file.Path;
 
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
@@ -640,4 +641,11 @@ public interface UndertowMessages {
 
     @Message(id = 204, value = "Out of flow control window: no WINDOW_UPDATE received from peer within %s miliseconds")
     IOException noWindowUpdate(long timeoutMiliseconds);
+
+    @Message(id = 205, value = "Path is not a directory '%s'")
+    IOException pathNotADirectory(Path path);
+
+    @Message(id = 206, value = "Path '%s' is not a directory")
+    IOException pathElementIsRegularFile(Path path);
+
 }
