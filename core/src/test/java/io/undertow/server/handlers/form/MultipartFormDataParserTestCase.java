@@ -365,8 +365,7 @@ public class MultipartFormDataParserTestCase {
 
             Assert.assertEquals("false", parsedResponse.get("in_memory"));
             Assert.assertEquals(DigestUtils.md5Hex(Files.newInputStream(file.toPath())), parsedResponse.get("hash"));
-            Assert.assertTrue(parsedResponse.get("file_name").startsWith("undertow"));
-            Assert.assertTrue(parsedResponse.get("file_name").endsWith("upload"));
+            Assert.assertEquals(parsedResponse.get("file_name"), "null");
         } finally {
             if (!file.delete()) {
                 file.deleteOnExit();
