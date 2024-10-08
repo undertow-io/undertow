@@ -48,7 +48,6 @@ import java.nio.file.LinkOption;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -273,54 +272,6 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 if (disposition.startsWith("form-data")) {
                     currentName = Headers.extractQuotedValueFromHeader(disposition, "name");
                     fileName = Headers.extractQuotedValueFromHeaderWithEncoding(disposition, "filename");
-                    if (fileName != null && fileSizeThreshold == 0) {
-                        try {
-                            if (tempFileLocation != null) {
-                                //Files impl is buggy, hence zero len
-                                final FileAttribute[] emptyFA = new FileAttribute[] {};
-                                final LinkOption[] emptyLO = new LinkOption[] {};
-                                final Path normalized = tempFileLocation.normalize();
-                                if (!Files.exists(normalized)) {
-                                    final int pathElementsCount = normalized.getNameCount();
-                                    Path tmp = normalized;
-                                    LinkedList<Path> dirsToGuard = new LinkedList<>();
-                                    for(int i=0;i<pathElementsCount;i++) {
-                                        if(Files.exists(tmp, emptyLO)) {
-                                            if(!Files.isDirectory(tmp, emptyLO)) {
-                                                //First existing element in path is a file,
-                                                //this will cause java.nio.file.FileSystemException
-                                                throw UndertowMessages.MESSAGES.pathElementIsRegularFile(tmp);
-                                            }
-                                            break;
-                                        } else {
-                                            dirsToGuard.addFirst(tmp);
-                                            tmp = tmp.getParent();
-                                        }
-                                    }
-                                    try {
-                                        Files.createDirectories(normalized, emptyFA);
-                                    } finally {
-                                        for (Path p : dirsToGuard) {
-                                            try {
-                                                p.toFile().deleteOnExit();
-                                            } catch (Exception e) {
-                                                break;
-                                            }
-                                        }
-                                    }
-                                } else if (!Files.isDirectory(normalized, emptyLO)) {
-                                    throw new IOException(UndertowMessages.MESSAGES.pathNotADirectory(normalized));
-                                }
-                                file = Files.createTempFile(normalized, "undertow", "upload");
-                            } else {
-                                file = Files.createTempFile("undertow", "upload");
-                            }
-                            createdFiles.add(file);
-                            fileChannel = FileChannel.open(file, StandardOpenOption.READ, StandardOpenOption.WRITE);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
                 }
             }
         }
