@@ -278,6 +278,7 @@ public class MultiPartTestCase {
                     "filename: null\r\n" +
                     "content-type: null\r\n" +
                     "Content-Disposition: form-data; name=\"formValue\"\r\n" +
+                    "value: " + myValue + "\r\n" +
                     "size: " + myValue.getBytes(StandardCharsets.UTF_8).length + "\r\n" +
                     "content: " + myValue + "\r\n" +
                     "name: file\r\n" +

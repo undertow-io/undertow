@@ -354,7 +354,8 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                  if (fileName != null) {
                      data.add(currentName, file, fileName, headers);
                  } else {
-                     data.add(currentName, file, null, headers, true, getCharset());
+                     final Path fileNamePath = file.getFileName();
+                     data.add(currentName, file, fileNamePath != null ? fileNamePath.toString() : "", headers);
                  }
                 file = null;
                 contentBytes.reset();
@@ -368,26 +369,24 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 data.add(currentName, Arrays.copyOf(contentBytes.toByteArray(), contentBytes.size()), fileName, headers);
                 contentBytes.reset();
             } else {
+
+
                 try {
-                    String charset = getCharset();
+                    String charset = defaultEncoding;
+                    String contentType = headers.getFirst(Headers.CONTENT_TYPE);
+                    if (contentType != null) {
+                        String cs = Headers.extractQuotedValueFromHeader(contentType, "charset");
+                        if (cs != null) {
+                            charset = cs;
+                        }
+                    }
+
                     data.add(currentName, new String(contentBytes.toByteArray(), charset), charset, headers);
                 } catch (UnsupportedEncodingException e) {
                     throw new RuntimeException(e);
                 }
                 contentBytes.reset();
             }
-        }
-
-        private String getCharset() {
-            String charset = defaultEncoding;
-            String contentType = headers.getFirst(Headers.CONTENT_TYPE);
-            if (contentType != null) {
-                String cs = Headers.extractQuotedValueFromHeader(contentType, "charset");
-                if (cs != null) {
-                    charset = cs;
-                }
-            }
-            return charset;
         }
 
         public List<Path> getCreatedFiles() {
