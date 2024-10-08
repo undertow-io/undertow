@@ -37,7 +37,6 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntity;
 import org.apache.http.entity.mime.content.FileBody;
@@ -126,7 +125,6 @@ public class MultiPartTestCase {
                     "filename: null\r\n" +
                     "content-type: null\r\n" +
                     "Content-Disposition: form-data; name=\"formValue\"\r\n" +
-                    "value: myValue\r\n" +
                     "size: 7\r\n" +
                     "content: myValue\r\n" +
                     "name: file\r\n" +
@@ -164,7 +162,6 @@ public class MultiPartTestCase {
                     "filename: null\r\n" +
                     "content-type: null\r\n" +
                     "Content-Disposition: form-data; name=\"formValue\"\r\n" +
-                    "value: myValue\r\n" +
                     "size: 7\r\n" +
                     "content: myValue\r\n" +
                     "name: file\r\n" +
@@ -219,88 +216,5 @@ public class MultiPartTestCase {
         } finally {
             client.getConnectionManager().shutdown();
         }
-    }
-
-    @Test
-    public void testMultiPartRequestUtf8CharsetInPart() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
-            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/1";
-            HttpPost post = new HttpPost(uri);
-
-            MultipartEntity entity = new MultipartEntity();
-
-            entity.addPart("formValue", new StringBody("myValue\u00E5", ContentType.create("text/plain", StandardCharsets.UTF_8)));
-
-            post.setEntity(entity);
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-
-            Assert.assertEquals("PARAMS:\r\n" +
-                    "parameter count: 1\r\n" +
-                    "parameter name count: 1\r\n" +
-                    "name: formValue\r\n" +
-                    "filename: null\r\n" +
-                    "content-type: text/plain; charset=UTF-8\r\n" +
-                    "Content-Disposition: form-data; name=\"formValue\"\r\n" +
-                    "value: " + "myValue" + '\u00E5' + "\r\n" +
-                    "Content-Transfer-Encoding: 8bit\r\n" +
-                    "Content-Type: text/plain; charset=UTF-8\r\n" +
-                    "size: 9\r\n" +
-                    "content: myValue\u00E5\r\n", response);
-        } finally {
-            client.getConnectionManager().shutdown();
-        }
-    }
-
-    @Test
-    public void testMultiPartRequestBigPostForm() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
-            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/getParam";
-            HttpPost post = new HttpPost(uri);
-
-            MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE, null, StandardCharsets.UTF_8);
-
-            String myValue = generateContent("myValue", 0x4000 * 2);
-            entity.addPart("formValue", new StringBody(myValue, "text/plain", StandardCharsets.UTF_8));
-            entity.addPart("file", new FileBody(new File(MultiPartTestCase.class.getResource("uploadfile.txt").getFile())));
-
-            post.setEntity(entity);
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("PARAMS:\r\n" +
-                    "parameter count: 1\r\n" +
-                    "parameter name count: 1\r\n" +
-                    "name: formValue\r\n" +
-                    "filename: null\r\n" +
-                    "content-type: null\r\n" +
-                    "Content-Disposition: form-data; name=\"formValue\"\r\n" +
-                    "value: " + myValue + "\r\n" +
-                    "size: " + myValue.getBytes(StandardCharsets.UTF_8).length + "\r\n" +
-                    "content: " + myValue + "\r\n" +
-                    "name: file\r\n" +
-                    "filename: uploadfile.txt\r\n" +
-                    "content-type: application/octet-stream\r\n" +
-                    "Content-Disposition: form-data; name=\"file\"; filename=\"uploadfile.txt\"\r\n" +
-                    "Content-Type: application/octet-stream\r\n" +
-                    "size: 13\r\n" +
-                    "content: file contents\r\n" +
-                    "param name: formValue\r\n" +
-                    "param value: " + myValue + "\r\n", response);
-        } finally {
-            client.getConnectionManager().shutdown();
-        }
-    }
-
-    private String generateContent(String chunk, int size) {
-        int checkLength = chunk.getBytes().length;
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < size / checkLength; i++) {
-            sb.append(chunk);
-        }
-        return sb.toString();
     }
 }

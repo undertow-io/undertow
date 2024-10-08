@@ -34,7 +34,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import io.undertow.UndertowMessages;
-import io.undertow.util.FileUtils;
 import io.undertow.util.HeaderMap;
 
 /**
@@ -84,34 +83,26 @@ public final class FormData implements Iterable<String> {
     }
 
     public void add(String name, String value) {
-        add(name, value, null, null);
+        add(name, value, null);
     }
 
     public void add(String name, String value, final HeaderMap headers) {
-        add(name, value, null, headers);
-    }
-
-    public void add(String name, String value, String charset, final HeaderMap headers) {
         Deque<FormValue> values = this.values.get(name);
         if (values == null) {
             this.values.put(name, values = new ArrayDeque<>(1));
         }
-        values.add(new FormValueImpl(value, charset, headers));
+        values.add(new FormValueImpl(value, headers));
         if (++valueCount > maxValues) {
             throw new RuntimeException(UndertowMessages.MESSAGES.tooManyParameters(maxValues));
         }
     }
 
     public void add(String name, Path value, String fileName, final HeaderMap headers) {
-        add(name, value, fileName, headers, false, null);
-    }
-
-    public void add(String name, Path value, String fileName, final HeaderMap headers, boolean bigField, String charset) {
         Deque<FormValue> values = this.values.get(name);
         if (values == null) {
             this.values.put(name, values = new ArrayDeque<>(1));
         }
-        values.add(new FormValueImpl(value, fileName, headers, bigField, charset));
+        values.add(new FormValueImpl(value, fileName, headers));
         if (values.size() > maxValues) {
             throw new RuntimeException(UndertowMessages.MESSAGES.tooManyParameters(maxValues));
         }
@@ -180,11 +171,6 @@ public final class FormData implements Iterable<String> {
         String getValue();
 
         /**
-         * @return The charset of the simple string value
-         */
-        String getCharset();
-
-        /**
          * Returns true if this is a file and not a simple string
          *
          * @return
@@ -217,15 +203,7 @@ public final class FormData implements Iterable<String> {
          */
         HeaderMap getHeaders();
 
-        /**
-         * @return true if size of the FormValue comes from a multipart request exceeds the fieldSizeThreshold of
-         * {@link MultiPartParserDefinition} without filename specified.
-         *
-         * A big field is stored in disk, it is a file based FileItem.
-         *
-         * getValue() returns getCharset() decoded string from the file if it is true.
-         */
-        boolean isBigField();
+
     }
 
     public static class FileItem {
@@ -298,34 +276,19 @@ public final class FormData implements Iterable<String> {
         private final String fileName;
         private final HeaderMap headers;
         private final FileItem fileItem;
-        private final String charset;
-        private final boolean bigField;
 
         FormValueImpl(String value, HeaderMap headers) {
             this.value = value;
             this.headers = headers;
             this.fileName = null;
             this.fileItem = null;
-            this.charset = null;
-            this.bigField = false;
         }
 
-        FormValueImpl(String value, String charset, HeaderMap headers) {
-            this.value = value;
-            this.charset = charset;
-            this.headers = headers;
-            this.fileName = null;
-            this.fileItem = null;
-            this.bigField = false;
-        }
-
-        FormValueImpl(Path file, final String fileName, HeaderMap headers, boolean bigField, String charset) {
+        FormValueImpl(Path file, final String fileName, HeaderMap headers) {
             this.fileItem = new FileItem(file);
             this.headers = headers;
             this.fileName = fileName;
             this.value = null;
-            this.charset = charset;
-            this.bigField = bigField;
         }
 
         FormValueImpl(byte[] data, String fileName, HeaderMap headers) {
@@ -333,29 +296,15 @@ public final class FormData implements Iterable<String> {
             this.fileName = fileName;
             this.headers = headers;
             this.value = null;
-            this.charset = null;
-            this.bigField = false;
         }
 
 
         @Override
         public String getValue() {
             if (value == null) {
-                if (bigField) {
-                    try (InputStream inputStream = getFileItem().getInputStream()) {
-                        return FileUtils.readFile(inputStream, this.charset);
-                    } catch (IOException e) {
-                        // ignore
-                    }
-                }
                 throw UndertowMessages.MESSAGES.formValueIsAFile();
             }
             return value;
-        }
-
-        @Override
-        public String getCharset() {
-            return charset;
         }
 
         @Override
@@ -385,10 +334,6 @@ public final class FormData implements Iterable<String> {
                 throw UndertowMessages.MESSAGES.formValueIsAString();
             }
             return fileItem;
-        }
-
-        public boolean isBigField() {
-            return bigField;
         }
 
         @Override

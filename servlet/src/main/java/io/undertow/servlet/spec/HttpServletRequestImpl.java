@@ -719,7 +719,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             final FormData parsedFormData = parseFormData();
             if (parsedFormData != null) {
                 FormData.FormValue res = parsedFormData.getFirst(name);
-                if (res == null || res.isFileItem() && !res.isBigField()) {
+                if (res == null || res.isFileItem()) {
                     return null;
                 } else {
                     return res.getValue();
@@ -742,7 +742,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             while (it.hasNext()) {
                 String name = it.next();
                 for(FormData.FormValue param : parsedFormData.get(name)) {
-                    if(!param.isFileItem() || param.isBigField()) {
+                    if(!param.isFileItem()) {
                         parameterNames.add(name);
                         break;
                     }
@@ -769,7 +769,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             Deque<FormData.FormValue> res = parsedFormData.get(name);
             if (res != null) {
                 for (FormData.FormValue value : res) {
-                    if(!value.isFileItem() || value.isBigField()) {
+                    if(!value.isFileItem()) {
                         ret.add(value.getValue());
                     }
                 }
@@ -800,14 +800,14 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 if (arrayMap.containsKey(name)) {
                     ArrayList<String> existing = arrayMap.get(name);
                     for (final FormData.FormValue v : val) {
-                        if(!v.isFileItem() || v.isBigField()) {
+                        if(!v.isFileItem()) {
                             existing.add(v.getValue());
                         }
                     }
                 } else {
                     final ArrayList<String> values = new ArrayList<>();
                     for (final FormData.FormValue v : val) {
-                        if(!v.isFileItem() || v.isBigField()) {
+                        if(!v.isFileItem()) {
                             values.add(v.getValue());
                         }
                     }
