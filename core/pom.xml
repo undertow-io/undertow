@@ -106,15 +106,9 @@
         
         <dependency>
             <groupId>org.apache.directory.server</groupId>
-            <artifactId>apacheds-test-framework</artifactId>
+            <artifactId>apacheds-all</artifactId>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.directory.server</groupId>
-            <artifactId>apacheds-interceptor-kerberos</artifactId>
-            <scope>test</scope>
-        </dependency>
+        </dependency>        
 
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>

@@ -24,7 +24,6 @@ import org.apache.http.HttpResponse;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
@@ -83,21 +82,5 @@ public class HttpClientUtils {
             b.write(data, 0, read);
         }
         return b.toByteArray();
-    }
-
-    public static String toString(InputStream is, Charset charset) throws IOException {
-        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            transfer(is, out);
-            return new String(out.toByteArray(), charset);
-        }
-    }
-
-    public static void transfer(InputStream is, OutputStream os) throws IOException {
-        byte[] buffer = new byte[8192];
-        int length = is.read(buffer);
-        while (length != -1) {
-            os.write(buffer, 0, length);
-            length = is.read(buffer);
-        }
     }
 }
