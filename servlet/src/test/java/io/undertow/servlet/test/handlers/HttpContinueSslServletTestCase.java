@@ -20,8 +20,8 @@ package io.undertow.servlet.test.handlers;
 
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
@@ -42,14 +42,14 @@ public class HttpContinueSslServletTestCase extends AbstractHttpContinueServletT
         return client;
     }
 
-    @Before
-    public void before() throws Exception {
-        super.before();
+    @BeforeClass
+    public static void before() throws Exception {
+        AbstractHttpContinueServletTestCase.before();
         DefaultServer.startSSLServer();
     }
 
-    @After
-    public void after() throws IOException {
+    @AfterClass
+    public static void after() throws IOException {
         DefaultServer.stopSSLServer();
     }
 }
