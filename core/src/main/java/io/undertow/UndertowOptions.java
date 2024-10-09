@@ -245,7 +245,7 @@ public class UndertowOptions {
      * If connector level statistics should be enabled. This has a slight performance impact, but allows statistics such
      * as bytes sent/recevied to be monitored.
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static final Option<Boolean> ENABLE_CONNECTOR_STATISTICS = ENABLE_STATISTICS;
 
 
@@ -290,6 +290,10 @@ public class UndertowOptions {
      * Max frame size for HTTP2.
      *  <br>UNIT: Bytes.
      */
+    public static final int DEFAULT_HTTP2_SETTINGS_INITIAL_WINDOW_SIZE = 65535;
+    /**
+     * Default value of {@link #HTTP2_SETTINGS_INITIAL_WINDOW_SIZE}. <br>UNIT: Bytes.
+     */
     public static final Option<Integer> HTTP2_SETTINGS_MAX_FRAME_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_FRAME_SIZE", Integer.class);
 
     /**
@@ -297,7 +301,7 @@ public class UndertowOptions {
      *
      * @see #MAX_HEADER_SIZE
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static final Option<Integer> HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE", Integer.class);
 
     /**
@@ -406,6 +410,9 @@ public class UndertowOptions {
      *
      * If not specified, the default value is null.
      */
+
+    public static final Option<Integer> DEFAULT_QUEUED_FRAMES_LOW_WATER_MARK = null;
+
     public static final Option<String> AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN = Option.simple(UndertowOptions.class, "AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN", String.class);
 
     /**

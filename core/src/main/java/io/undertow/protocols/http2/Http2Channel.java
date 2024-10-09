@@ -145,8 +145,6 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
     static final int CONTINUATION_FLAG_END_HEADERS = 0x4;
 
-    public static final int DEFAULT_INITIAL_WINDOW_SIZE = 65535;
-
     static final byte[] PREFACE_BYTES = {
             0x50, 0x52, 0x49, 0x20, 0x2a, 0x20, 0x48, 0x54,
             0x54, 0x50, 0x2f, 0x32, 0x2e, 0x30, 0x0d, 0x0a,
@@ -226,7 +224,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     /**
      * The initial window size for newly created channels, guarded by {@link #flowControlLock}
      */
-    private volatile int initialSendWindowSize = DEFAULT_INITIAL_WINDOW_SIZE;
+    private volatile int initialSendWindowSize = UndertowOptions.DEFAULT_HTTP2_SETTINGS_INITIAL_WINDOW_SIZE;
     /**
      * How much data we can send to the remote endpoint, at the connection level, guarded by {@link #flowControlLock}
      */
@@ -253,7 +251,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         streamIdCounter = clientSide ? (fromUpgrade ? 3 : 1) : 2;
 
         pushEnabled = settings.get(UndertowOptions.HTTP2_SETTINGS_ENABLE_PUSH, true);
-        this.initialReceiveWindowSize = settings.get(UndertowOptions.HTTP2_SETTINGS_INITIAL_WINDOW_SIZE, DEFAULT_INITIAL_WINDOW_SIZE);
+        this.initialReceiveWindowSize = settings.get(UndertowOptions.HTTP2_SETTINGS_INITIAL_WINDOW_SIZE, UndertowOptions.DEFAULT_HTTP2_SETTINGS_INITIAL_WINDOW_SIZE);
         this.receiveWindowSize = initialReceiveWindowSize;
         this.receiveMaxConcurrentStreams = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS, UndertowOptions.DEFAULT_HTTP2_SETTINGS_MAX_CONCURRENT_STREAMS);
 
