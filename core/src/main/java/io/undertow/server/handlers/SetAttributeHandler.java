@@ -161,6 +161,11 @@ public class SetAttributeHandler implements HttpHandler {
                 }
             };
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 
     public static class ClearBuilder implements HandlerBuilder {
@@ -200,6 +205,11 @@ public class SetAttributeHandler implements HttpHandler {
                     return new SetAttributeHandler(handler, attribute, NullAttribute.INSTANCE, preCommit == null ? false : preCommit);
                 }
             };
+        }
+
+        @Override
+        public int priority() {
+            return 0;
         }
     }
 

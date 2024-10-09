@@ -119,6 +119,11 @@ public class RequestEncodingHandler implements HttpHandler {
                 }
             };
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 
 }

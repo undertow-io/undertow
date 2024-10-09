@@ -136,7 +136,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             if(src.getErrorCode() > 0) {
                 return; //error already set
             }
-            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommitted();
         }
         if(servletContext.getDeployment().getDeploymentInfo().isSendCustomReasonPhraseOnError()) {
             exchange.setReasonPhrase(msg);
@@ -190,7 +190,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public void sendRedirect(final String location) throws IOException {
         if (responseStarted()) {
-            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommitted();
         }
         resetBuffer();
         exchange.getResponseHeaders().remove(Headers.CONTENT_LENGTH);
@@ -210,7 +210,14 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
                 } else {
                     current = "";
                 }
-                realPath = CanonicalPathUtils.canonicalize(servletContext.getContextPath() + current + location);
+                String precanonLocation = location;
+                String query = "";
+                int firstQuestionMark = location.indexOf("?");
+                if (firstQuestionMark >= 0) {
+                    precanonLocation = location.substring(0, firstQuestionMark);
+                    query = location.substring(firstQuestionMark);
+                }
+                realPath = CanonicalPathUtils.canonicalize(servletContext.getContextPath() + current + precanonLocation) + query;
             }
             String loc = exchange.getRequestScheme() + "://" + exchange.getHostAndPort() + realPath;
             exchange.getResponseHeaders().put(Headers.LOCATION, loc);
@@ -808,7 +815,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public void setTrailerFields(Supplier<Map<String, String>> supplier) {
         if(exchange.isResponseStarted()) {
-            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommitted();
         }
         if(exchange.getProtocol() == Protocols.HTTP_1_0) {
             throw UndertowServletMessages.MESSAGES.trailersNotSupported("HTTP/1.0 request");

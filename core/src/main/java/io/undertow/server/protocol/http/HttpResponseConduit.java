@@ -179,8 +179,20 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                 // we don't have a dangling flag that won't be cleared at the finally block
                 this.state |= POOLED_BUFFER_IN_USE;
                 assert buffer.remaining() >= 50;
-                // append response status and headers
-                Protocols.HTTP_1_1.appendTo(buffer);
+                // append protocol
+                HttpString protocol = exchange.getProtocol();
+                String protocolString = protocol.toString();
+                if (protocolString.isEmpty()) {
+                    protocol = Protocols.HTTP_1_1;
+                }
+                if (protocol.length() > buffer.remaining()) {
+                    pooledBuffer.close();
+                    pooledBuffer = null;
+                    truncateWrites();
+                    throw UndertowMessages.MESSAGES.protocolTooLargeForBuffer(protocolString);
+                }
+                protocol.appendTo(buffer);
+                // append status code, reason phrase, and headers
                 buffer.put((byte) ' ');
                 int code = exchange.getStatusCode();
                 assert 999 >= code && code >= 100;

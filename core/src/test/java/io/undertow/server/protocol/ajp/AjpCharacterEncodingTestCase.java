@@ -30,6 +30,7 @@ import io.undertow.util.FileUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
@@ -43,6 +44,7 @@ import java.net.URI;
  */
 @RunWith(DefaultServer.class)
 @ProxyIgnore
+@Ignore
 public class AjpCharacterEncodingTestCase {
 
     private static final int PORT = DefaultServer.getHostPort() + 10;

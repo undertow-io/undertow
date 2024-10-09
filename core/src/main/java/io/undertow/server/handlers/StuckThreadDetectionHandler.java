@@ -322,5 +322,10 @@ public class StuckThreadDetectionHandler implements HttpHandler {
                 return new Wrapper(threshhold);
             }
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

@@ -18,6 +18,7 @@
 package io.undertow.server.handlers;
 
 import io.undertow.testutils.category.UnitTest;
+
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 

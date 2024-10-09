@@ -91,6 +91,11 @@ public class DispatcherTypePredicate implements Predicate {
             String value = (String) config.get("value");
             return new DispatcherTypePredicate(DispatcherType.valueOf(value));
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 
 }

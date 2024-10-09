@@ -60,6 +60,7 @@ import io.undertow.servlet.handlers.ServletDebugPageHandler;
 import io.undertow.servlet.handlers.ServletPathMatch;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.util.DispatchUtils;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.CanonicalPathUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.ParameterLimitException;
@@ -84,8 +85,7 @@ public class AsyncContextImpl implements AsyncContext {
     private AsyncContextImpl previousAsyncContext; //the previous async context
 
 
-    //todo: make default configurable
-    private volatile long timeout = 30000;
+    private volatile long timeout = -1;
 
     private volatile XnioExecutor.Key timeoutKey;
 
@@ -113,6 +113,12 @@ public class AsyncContextImpl implements AsyncContext {
                 initialRequestDone();
             }
         });
+        //If its chain and non default value is set, use it
+        if(previousAsyncContext!=null && previousAsyncContext.getTimeout() != servletRequestContext.getDeployment().getDeploymentInfo().getDefaultAsyncConextTimeout()) {
+            this.timeout = previousAsyncContext.getTimeout();
+        } else {
+            this.timeout = servletRequestContext.getDeployment().getDeploymentInfo().getDefaultAsyncConextTimeout();
+        }
     }
 
     public void updateTimeout() {
@@ -223,7 +229,7 @@ public class AsyncContextImpl implements AsyncContext {
         ServletPathMatch info;
         try {
             info = DispatchUtils.dispatchAsync(path, requestImpl, responseImpl, (ServletContextImpl) context);
-        } catch (ParameterLimitException e) {
+        } catch (ParameterLimitException | BadRequestException e) {
             throw new IllegalStateException(e);
         }
 

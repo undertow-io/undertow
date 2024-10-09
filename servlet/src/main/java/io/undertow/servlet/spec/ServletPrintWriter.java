@@ -103,7 +103,9 @@ public class ServletPrintWriter {
                 underflow = null;
             }
             if (charsetEncoder != null) {
+                int remaining = 0;
                 do {
+                    // before we get the underlying buffer, we need to flush outputStream
                     ByteBuffer out = outputStream.underlyingBuffer();
                     if (out == null) {
                         //servlet output stream has already been closed
@@ -113,11 +115,13 @@ public class ServletPrintWriter {
                     CoderResult result = charsetEncoder.encode(buffer, out, true);
                     if (result.isOverflow()) {
                         outputStream.flushInternal();
-                        if (out.remaining() == 0) {
+                        if (out.remaining() == remaining) {
+                            // no progress in flush
                             outputStream.close();
                             error = true;
                             return;
-                        }
+                        } else
+                            remaining = out.remaining();
                     } else {
                         done = true;
                     }
@@ -177,7 +181,7 @@ public class ServletPrintWriter {
                 outputStream.updateWritten(writtenLength);
                 if (result.isOverflow() || !buffer.hasRemaining()) {
                     outputStream.flushInternal();
-                    if (!buffer.hasRemaining()) {
+                    if (buffer.remaining() == remaining) {
                         error = true;
                         return;
                     }

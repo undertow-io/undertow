@@ -58,6 +58,8 @@ public class ResponseWriterOnPostServlet extends ResponseWriterServlet {
     }
 
     public static Throwable getExceptionIfAny() {
-        return exception;
+        Throwable result = exception;
+        exception = null;
+        return result;
     }
 }

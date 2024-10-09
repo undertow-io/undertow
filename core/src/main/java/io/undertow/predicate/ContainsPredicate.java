@@ -106,5 +106,10 @@ public class ContainsPredicate implements Predicate {
             ExchangeAttribute values = (ExchangeAttribute) config.get("value");
             return new ContainsPredicate(values, search);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

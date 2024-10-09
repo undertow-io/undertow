@@ -26,19 +26,19 @@ import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 /**
  * A byte buffer pool that supports reference counted pools.
  *
- * TODO: move this somewhere more appropriate
- *
  * @author Stuart Douglas
  */
+// TODO: move this somewhere more appropriate
 public class DefaultByteBufferPool implements ByteBufferPool {
 
     private final ThreadLocalCache threadLocalCache = new ThreadLocalCache();
@@ -168,7 +168,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
     private void cleanupThreadLocalData() {
         // Called under lock, and only when at least quarter of the capacity has been collected.
 
-        int size = threadLocalDataList.size();
+        final int size = threadLocalDataList.size();
 
         if (reclaimedThreadLocals > (size / 4)) {
             int j = 0;
@@ -191,7 +191,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
             DirectByteBufferDeallocator.free(buffer);
             return; //GC will take care of it
         }
-        ThreadLocalData local = threadLocalCache.get();
+        final ThreadLocalData local = threadLocalCache.get();
         if(local != null) {
             if(local.allocationDepth > 0) {
                 local.allocationDepth--;
@@ -226,12 +226,12 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
         synchronized (threadLocalDataList) {
             for (WeakReference<ThreadLocalData> ref : threadLocalDataList) {
-                ThreadLocalData local = ref.get();
+                final ThreadLocalData local = ref.get();
+                ref.clear();
                 if (local != null) {
                     local.buffers.clear();
+                    threadLocalCache.remove(local);
                 }
-                ref.clear();
-                threadLocalCache.remove(local);
             }
             threadLocalDataList.clear();
         }
@@ -298,7 +298,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
     }
 
     private class ThreadLocalData {
-        ArrayDeque<ByteBuffer> buffers = new ArrayDeque<>(threadLocalCacheSize);
+        final ArrayDeque<ByteBuffer> buffers = new ArrayDeque<>(threadLocalCacheSize);
         int allocationDepth = 0;
 
         @Override
@@ -343,7 +343,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
     // class can be called by a different thread than the one that initialized the data.
     private static class ThreadLocalCache {
 
-        Map<Thread, ThreadLocalData> localsByThread = new HashMap<>();
+        final Map<Thread, ThreadLocalData> localsByThread = Collections.synchronizedMap(new WeakHashMap<>());
 
         ThreadLocalData get() {
             return localsByThread.get(Thread.currentThread());

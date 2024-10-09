@@ -133,6 +133,11 @@ public class EncodingHandler implements HttpHandler {
                 }
             };
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 
 }

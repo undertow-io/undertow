@@ -95,6 +95,11 @@ public class StoredResponseHandler implements HttpHandler {
                 }
             };
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 
 }

@@ -49,15 +49,42 @@ public class AccessControlListHandler implements HttpHandler {
     private volatile boolean defaultAllow = false;
     private final ExchangeAttribute attribute;
     private final List<AclMatch> acl = new CopyOnWriteArrayList<>();
+    private final int denyResponseCode;
 
     public AccessControlListHandler(final HttpHandler next, ExchangeAttribute attribute) {
         this.next = next;
         this.attribute = attribute;
+        this.denyResponseCode = StatusCodes.FORBIDDEN;
     }
 
     public AccessControlListHandler(ExchangeAttribute attribute) {
         this.attribute = attribute;
         this.next = ResponseCodeHandler.HANDLE_404;
+        this.denyResponseCode = StatusCodes.FORBIDDEN;
+    }
+
+    public AccessControlListHandler(final HttpHandler next, ExchangeAttribute attribute, final int denyResponseCode) {
+        this.next = next;
+        this.attribute = attribute;
+        if(denyResponseCode == -1) {
+            this.denyResponseCode = StatusCodes.FORBIDDEN;
+        } else {
+            assert denyResponseCode > 399;
+            assert denyResponseCode < 500;
+            this.denyResponseCode = denyResponseCode;
+        }
+    }
+
+    public AccessControlListHandler(ExchangeAttribute attribute, final int denyResponseCode) {
+        this.attribute = attribute;
+        this.next = ResponseCodeHandler.HANDLE_404;
+        if(denyResponseCode == -1) {
+            this.denyResponseCode = StatusCodes.FORBIDDEN;
+        } else {
+            assert denyResponseCode > 399;
+            assert denyResponseCode < 500;
+            this.denyResponseCode = denyResponseCode;
+        }
     }
 
     @Override
@@ -66,7 +93,7 @@ public class AccessControlListHandler implements HttpHandler {
         if (isAllowed(attribute)) {
             next.handleRequest(exchange);
         } else {
-            exchange.setStatusCode(StatusCodes.FORBIDDEN);
+            exchange.setStatusCode(this.denyResponseCode);
             exchange.endExchange();
         }
     }
@@ -182,6 +209,7 @@ public class AccessControlListHandler implements HttpHandler {
             params.put("acl", String[].class);
             params.put("default-allow", boolean.class);
             params.put("attribute", ExchangeAttribute.class);
+            params.put("failure-status", int.class);
             return params;
         }
 
@@ -219,7 +247,17 @@ public class AccessControlListHandler implements HttpHandler {
                     throw UndertowMessages.MESSAGES.invalidAclRule(rule);
                 }
             }
-            return new Wrapper(peerMatches, defaultAllow == null ? false : defaultAllow, attribute);
+            Integer failureStatus = (Integer) config.get("failure-status");
+            if(failureStatus == null) {
+                return new Wrapper(peerMatches, defaultAllow == null ? false : defaultAllow, attribute);
+            } else {
+                return new Wrapper(peerMatches, defaultAllow == null ? false : defaultAllow, attribute, failureStatus.intValue());
+            }
+        }
+
+        @Override
+        public int priority() {
+            return 0;
         }
 
     }
@@ -229,18 +267,25 @@ public class AccessControlListHandler implements HttpHandler {
         private final List<AclMatch> peerMatches;
         private final boolean defaultAllow;
         private final ExchangeAttribute attribute;
-
+        private final int denyResponseCode;
 
         private Wrapper(List<AclMatch> peerMatches, boolean defaultAllow, ExchangeAttribute attribute) {
             this.peerMatches = peerMatches;
             this.defaultAllow = defaultAllow;
             this.attribute = attribute;
+            this.denyResponseCode = -1;
         }
 
+        private Wrapper(List<AclMatch> peerMatches, boolean defaultAllow, ExchangeAttribute attribute, final int denyResponseCode) {
+            this.peerMatches = peerMatches;
+            this.defaultAllow = defaultAllow;
+            this.attribute = attribute;
+            this.denyResponseCode = denyResponseCode;
+        }
 
         @Override
         public HttpHandler wrap(HttpHandler handler) {
-            AccessControlListHandler res = new AccessControlListHandler(handler, attribute);
+            AccessControlListHandler res = new AccessControlListHandler(handler, attribute, denyResponseCode);
             for(AclMatch match: peerMatches) {
                 if(match.deny) {
                     res.addDeny(match.pattern.pattern());

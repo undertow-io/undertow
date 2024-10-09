@@ -79,5 +79,10 @@ public class RequestLargerThanPredicate implements Predicate {
             Long size = (Long) config.get("size");
             return new RequestLargerThanPredicate(size);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

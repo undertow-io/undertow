@@ -151,6 +151,11 @@ public class URLDecodingHandler implements HttpHandler {
             return new Wrapper(config.get("charset").toString());
         }
 
+        @Override
+        public int priority() {
+            return 0;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

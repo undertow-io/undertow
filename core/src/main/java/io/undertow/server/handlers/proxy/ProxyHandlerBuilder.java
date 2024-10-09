@@ -56,6 +56,11 @@ public class ProxyHandlerBuilder implements HandlerBuilder {
         return new Wrapper(uris, rewriteHostHeader);
     }
 
+    @Override
+    public int priority() {
+        return 0;
+    }
+
     private static class Wrapper implements HandlerWrapper {
 
         private final List<URI> uris;

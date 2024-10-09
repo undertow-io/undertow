@@ -108,11 +108,29 @@ public class DirectoryUtils {
         if (!path.endsWith("/")){
             path += "/";
         }
+
+        String relative = null;
+        if (exchange != null) {
+            final Map<String, Object> context = exchange.getAttachment(Predicate.PREDICATE_CONTEXT);
+            if (context != null) {
+                final PathPrefixPredicate.PathPrefixMatchRecord trans = (PathPrefixMatchRecord) context
+                        .get(PathPrefixPredicate.PREFIX_MATCH_RECORD);
+                if (trans != null) {
+                    if (trans.isOverWritten()) {
+                        relative = trans.getPrefix();
+                        if (!relative.endsWith("/") && !path.startsWith("/")) {
+                            relative += "/";
+                        }
+                    }
+                }
+            }
+        }
+
         StringBuilder builder = new StringBuilder();
-        builder.append("<html>\n<head>\n<script src='").append(path).append("?js'></script>\n")
-                .append("<link rel='stylesheet' type='text/css' href='").append(path).append("?css' />\n</head>\n");
+        builder.append("<html>\n<head>\n<script src='").append(relative  == null ? path : relative + path).append("?js'></script>\n")
+                .append("<link rel='stylesheet' type='text/css' href='").append(relative  == null ? path : relative + path).append("?css' />\n</head>\n");
         builder.append("<body onresize='growit()' onload='growit()'>\n<table id='thetable'>\n<thead>\n");
-        builder.append("<tr><th class='loc' colspan='3'>Directory Listing - ").append(path).append("</th></tr>\n")
+        builder.append("<tr><th class='loc' colspan='3'>Directory Listing - ").append(relative  == null ? path : relative + path).append("</th></tr>\n")
                 .append("<tr><th class='label offset'>Name</th><th class='label'>Last Modified</th><th class='label'>Size</th></tr>\n</thead>\n")
                 .append("<tfoot>\n<tr><th class=\"loc footer\" colspan=\"3\">Powered by Undertow</th></tr>\n</tfoot>\n<tbody>\n");
 
@@ -134,23 +152,6 @@ public class DirectoryUtils {
             }
             if(parent == null) {
                 parent = "/";
-            }
-        }
-
-        String relative = null;
-        if (exchange != null) {
-            final Map<String, Object> context = exchange.getAttachment(Predicate.PREDICATE_CONTEXT);
-            if (context != null) {
-                final PathPrefixPredicate.PathPrefixMatchRecord trans = (PathPrefixMatchRecord) context
-                        .get(PathPrefixPredicate.PREFIX_MATCH_RECORD);
-                if (trans != null) {
-                    if (trans.isOverWritten()) {
-                        relative = trans.getPrefix();
-                        if (!relative.endsWith("/") && !path.startsWith("/")) {
-                            relative += "/";
-                        }
-                    }
-                }
             }
         }
 

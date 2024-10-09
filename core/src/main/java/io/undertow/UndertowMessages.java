@@ -392,7 +392,7 @@ public interface UndertowMessages {
     @Message(id = 117, value = "Request was not a CONNECT request")
     IllegalStateException notAConnectRequest();
 
-    @Message(id = 118, value = "Cannot reset buffer, response has already been commited")
+    @Message(id = 118, value = "Cannot reset buffer, response has already been committed")
     IllegalStateException cannotResetBuffer();
 
     @Message(id = 119, value = "HTTP2 via prior knowledge failed")
@@ -518,8 +518,8 @@ public interface UndertowMessages {
 //    @Message(id = 159, value = "Max size must be larger than one")
 //    IllegalArgumentException maxSizeMustBeLargerThanOne();
 
-    @Message(id = 161, value = "HTTP/2 header block is too large")
-    String headerBlockTooLarge();
+    @Message(id = 161, value = "HTTP/2 header block is too large, maximum header size is %s")
+    String headerBlockTooLarge(int maxHeaderSize);
 
     @Message(id = 162, value = "An invalid SameSite attribute [%s] is specified. It must be one of %s")
     IllegalArgumentException invalidSameSiteMode(String mode, String validAttributes);
@@ -646,5 +646,8 @@ public interface UndertowMessages {
 
     @Message(id = 208, value = "Failed to allocate resource")
     IOException failedToAllocateResource();
+
+    @Message(id = 209, value = "Protocol string was too large for the buffer. Either provide a smaller message or a bigger buffer. Protocol: %s")
+    IllegalStateException protocolTooLargeForBuffer(String protocolString);
 
 }
