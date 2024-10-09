@@ -1,0 +1,50 @@
+diff --git a/servlet/src/main/java/io/undertow/servlet/spec/PartImpl.java b/servlet/src/main/java/io/undertow/servlet/spec/PartImpl.java
+index d8888dff6..1412e1cc0 100644
+--- a/servlet/src/main/java/io/undertow/servlet/spec/PartImpl.java
++++ b/servlet/src/main/java/io/undertow/servlet/spec/PartImpl.java
+@@ -62,15 +62,8 @@ public class PartImpl implements Part {
+         if (formValue.isFileItem()) {
+             return formValue.getFileItem().getInputStream();
+         } else {
+-            String charset;
+-            if (formValue.getCharset() != null) {
+-                charset = formValue.getCharset();
+-            } else if (servletRequest.getCharacterEncoding() != null) {
+-                charset = servletRequest.getCharacterEncoding();
+-            } else {
+-                charset = servletContext.getDeployment().getDefaultRequestCharset().name();
+-            }
+-
++            String requestedCharset = servletRequest.getCharacterEncoding();
++            String charset = requestedCharset != null ? requestedCharset : servletContext.getDeployment().getDefaultRequestCharset().name();
+             return new ByteArrayInputStream(formValue.getValue().getBytes(charset));
+         }
+     }
+@@ -95,8 +88,6 @@ public class PartImpl implements Part {
+         try {
+             if (formValue.isFileItem()) {
+                 return formValue.getFileItem().getFileSize();
+-            } else if (formValue.getCharset() != null) {
+-                return formValue.getValue().getBytes(formValue.getCharset()).length;
+             } else {
+                 return formValue.getValue().length();
+             }
+diff --git a/servlet/src/test/java/io/undertow/servlet/test/multipart/MultiPartServlet.java b/servlet/src/test/java/io/undertow/servlet/test/multipart/MultiPartServlet.java
+index c4345c99d..e89389b22 100644
+--- a/servlet/src/test/java/io/undertow/servlet/test/multipart/MultiPartServlet.java
++++ b/servlet/src/test/java/io/undertow/servlet/test/multipart/MultiPartServlet.java
+@@ -24,13 +24,13 @@ import java.util.Collection;
+ import java.util.Enumeration;
+ import java.util.TreeSet;
+ 
++import io.undertow.util.Headers;
+ import javax.servlet.ServletException;
+ import javax.servlet.http.HttpServlet;
+ import javax.servlet.http.HttpServletRequest;
+ import javax.servlet.http.HttpServletResponse;
+ import javax.servlet.http.Part;
+ 
+-import io.undertow.util.Headers;
+ import io.undertow.util.FileUtils;
+ 
+ /**
