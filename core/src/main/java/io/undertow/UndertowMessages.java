@@ -26,6 +26,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.RequestTooBigException;
 import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import io.undertow.util.UrlDecodeException;
@@ -650,4 +651,6 @@ public interface UndertowMessages {
     @Message(id = 209, value = "Protocol string was too large for the buffer. Either provide a smaller message or a bigger buffer. Protocol: %s")
     IllegalStateException protocolTooLargeForBuffer(String protocolString);
 
+    @Message(id = 210, value = "Exchange '%s' already has body or is blocking.")
+    IOException exhangeBlockingOrBlocking(final HttpServerExchange e);
 }
