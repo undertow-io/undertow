@@ -410,7 +410,7 @@ public class HttpClientTestCase {
             });
             Assert.assertTrue(latch.await(10, TimeUnit.SECONDS));
             //exception expected because of read timeout
-            Assert.assertTrue(exception instanceof ReadTimeoutException);
+            Assert.assertTrue("exception is " + exception, exception instanceof ReadTimeoutException);
         } finally {
             connection.getIoThread().execute(() -> IoUtils.safeClose(connection));
         }
@@ -433,7 +433,7 @@ public class HttpClientTestCase {
             });
             Assert.assertTrue(latch.await(10, TimeUnit.SECONDS));
             //exception expected because of read timeout
-            Assert.assertTrue(exception instanceof ReadTimeoutException);
+            Assert.assertTrue("exception is " + exception, exception instanceof ReadTimeoutException);
         } finally {
             connection.getIoThread().execute(() -> IoUtils.safeClose(connection));
         }
