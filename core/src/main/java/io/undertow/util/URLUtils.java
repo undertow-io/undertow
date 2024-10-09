@@ -354,7 +354,7 @@ public class URLUtils {
     }
 
     public static boolean getSlashDecodingFlag(final OptionMap options) {
-        final boolean allowEncodedSlash = options.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
+        final boolean allowEncodedSlash = options.get(UndertowOptions.ALLOW_ENCODED_SLASH, UndertowOptions.DEFAULT_ALLOW_ENCODED_SLASH);
         final Boolean decodeSlash = options.get(UndertowOptions.DECODE_SLASH);
         return getSlashDecodingFlag(allowEncodedSlash, decodeSlash);
     }
