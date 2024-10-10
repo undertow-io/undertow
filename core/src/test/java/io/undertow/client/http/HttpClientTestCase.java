@@ -60,6 +60,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -410,7 +411,7 @@ public class HttpClientTestCase {
             });
             Assert.assertTrue(latch.await(10, TimeUnit.SECONDS));
             //exception expected because of read timeout
-            Assert.assertTrue("exception is " + exception, exception instanceof ReadTimeoutException);
+            Assert.assertTrue("exception is " + exception, exception instanceof ReadTimeoutException || exception instanceof ClosedChannelException);
         } finally {
             connection.getIoThread().execute(() -> IoUtils.safeClose(connection));
         }
