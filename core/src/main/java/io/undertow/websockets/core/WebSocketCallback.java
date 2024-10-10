@@ -23,8 +23,8 @@ package io.undertow.websockets.core;
  */
 public interface WebSocketCallback<T> {
 
-    void complete(final WebSocketChannel channel, T context);
+    void complete(WebSocketChannel channel, T context);
 
-    void onError(final WebSocketChannel channel, T context, Throwable throwable);
+    void onError(WebSocketChannel channel, T context, Throwable throwable);
 
 }

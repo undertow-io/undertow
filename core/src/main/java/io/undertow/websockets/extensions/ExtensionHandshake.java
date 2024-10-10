@@ -45,7 +45,7 @@ public interface ExtensionHandshake {
      * @return          a new {@link WebSocketExtension} instance with parameters accepted;
      *                  {@code null} in case extension request is not accepted
      */
-    WebSocketExtension accept(final WebSocketExtension extension);
+    WebSocketExtension accept(WebSocketExtension extension);
 
     /**
      * Validate if current extension is compatible with previously negotiated in the server side.
@@ -54,7 +54,7 @@ public interface ExtensionHandshake {
      * @return           {@code true} if current extension is compatible;
      *                   {@code false} if current extension is not compatible
      */
-    boolean isIncompatible(final List<ExtensionHandshake> extensions);
+    boolean isIncompatible(List<ExtensionHandshake> extensions);
 
     /**
      * Create a new instance of the {@link ExtensionFunction} associated to this WebSocket Extension.

@@ -31,6 +31,6 @@ public interface ResourceChangeListener {
      * callback that is invoked when resources change.
      * @param changes The collection of changes
      */
-    void handleChanges(final Collection<ResourceChangeEvent> changes);
+    void handleChanges(Collection<ResourceChangeEvent> changes);
 
 }

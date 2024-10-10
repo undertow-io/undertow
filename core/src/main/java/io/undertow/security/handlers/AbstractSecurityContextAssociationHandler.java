@@ -43,6 +43,6 @@ public abstract class AbstractSecurityContextAssociationHandler implements HttpH
         next.handleRequest(exchange);
     }
 
-    public abstract SecurityContext createSecurityContext(final HttpServerExchange exchange);
+    public abstract SecurityContext createSecurityContext(HttpServerExchange exchange);
 
 }

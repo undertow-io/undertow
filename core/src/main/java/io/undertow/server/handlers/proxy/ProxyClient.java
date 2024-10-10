@@ -48,7 +48,7 @@ public interface ProxyClient {
      * @param exchange The exchange
      * @return The proxy target
      */
-    ProxyTarget findTarget(final HttpServerExchange exchange);
+    ProxyTarget findTarget(HttpServerExchange exchange);
 
     /**
      * Gets a proxy connection for the given request.
@@ -58,7 +58,7 @@ public interface ProxyClient {
      * @param timeout The timeout
      * @param timeUnit Time unit for the timeout
      */
-    void getConnection(final ProxyTarget target, final HttpServerExchange exchange, final ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit);
+    void getConnection(ProxyTarget target, HttpServerExchange exchange, ProxyCallback<ProxyConnection> callback, long timeout, TimeUnit timeUnit);
 
     /**
      * An opaque interface that may contain information about the proxy target

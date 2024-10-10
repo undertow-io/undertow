@@ -41,7 +41,7 @@ public interface ExchangeAttributeBuilder {
      * @param token The string token
      * @return The exchange attribute, or null
      */
-    ExchangeAttribute build(final String token);
+    ExchangeAttribute build(String token);
 
     /**
      * The priority of the builder. Builders will be tried in priority builder. Built in builders use the priority range 0-100,

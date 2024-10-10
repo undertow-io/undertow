@@ -33,6 +33,6 @@ public interface HttpUpgradeListener {
      * @param streamConnection The connection that can be used to send or receive data
      * @param exchange
      */
-    void handleUpgrade(final StreamConnection streamConnection, HttpServerExchange exchange);
+    void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange);
 
 }

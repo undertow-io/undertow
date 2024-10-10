@@ -269,7 +269,7 @@ public class HttpContinue {
 
         void awaitWritable() throws IOException;
 
-        void awaitWritable(long time, final TimeUnit timeUnit) throws IOException;
+        void awaitWritable(long time, TimeUnit timeUnit) throws IOException;
 
     }
 

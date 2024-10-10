@@ -46,6 +46,6 @@ public interface GSSAPIServerSubjectFactory {
      * @return The Subject to use for the specified host name or null if no match possible.
      * @throws GeneralSecurityException if there is a security failure obtaining the {@link Subject}
      */
-    Subject getSubjectForHost(final String hostName) throws GeneralSecurityException;
+    Subject getSubjectForHost(String hostName) throws GeneralSecurityException;
 
 }

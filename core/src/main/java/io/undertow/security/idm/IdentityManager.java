@@ -38,7 +38,7 @@ public interface IdentityManager {
      * @param account - The {@link Account} to verify.
      * @return An updates {@link Account} if verification is successful, null otherwise.
      */
-    Account verify(final Account account);
+    Account verify(Account account);
 
     /**
      * Verify a supplied {@link Credential} against a requested ID.
@@ -47,7 +47,7 @@ public interface IdentityManager {
      * @param credential - The {@link Credential} to verify.
      * @return The {@link Account} for the user if verification was successful, null otherwise.
      */
-    Account verify(final String id, final Credential credential);
+    Account verify(String id, Credential credential);
 
     /**
      * Perform verification when all we have is the Credential, in this case the IdentityManager is also responsible for mapping the Credential to an account.
@@ -57,6 +57,6 @@ public interface IdentityManager {
      * @param credential
      * @return
      */
-    Account verify(final Credential credential);
+    Account verify(Credential credential);
 
 }
