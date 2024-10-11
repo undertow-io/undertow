@@ -17,6 +17,8 @@
  */
 package io.undertow.util;
 
+import io.undertow.server.HttpHandler;
+
 /**
  * Routes requested URL paths to sets of underlying URL path templates.
  *
@@ -80,7 +82,7 @@ package io.undertow.util;
  * <li>It is assumed that most services that use routing based on path templates will setup a router once (when the service
  * starts) using a single thread and will then use that router to route millions of inbound requests using multiple concurrent
  * threads. Perhaps the setup will not happen exactly once, but the mutation of routes happen very few times when compared to
- * the number of times that requests are routed. For this reason this factory is heavily biased towards optimising the
+ * the number of times that requests are routed. For this reason this design is heavily biased towards optimising the
  * performance of routing requests - sometimes at the expense of the performance of mutating routes.</li>
  * <li>Taking point (1) above into consideration. Documentation and comments refer to two distinct phases of processing:<ol>
  * <li>"Setup phase" as the phase/process during which routes are mutated and a router instance is created.</li>
@@ -98,19 +100,31 @@ package io.undertow.util;
 public interface PathTemplateRouter<T> {
 
     /**
-     * @return The default target for requests that do no match any specific routes.
+     * @return The default target for requests that do not match any specific routes.
      */
     T getDefaultTarget();
 
     /**
-     * Routes the requested URL path to the set of underlying URL path templates.
+     * Routes the requested URL path to the best available target from the set of underlying URL path templates.
+     *
+     * <p>
+     * If the requested URL path matches any of the underlying URL path templates, then the most
+     * specific match (target and template) will be returned in the result. If the requested URL path does not match any of the
+     * underlying URL path templates, then the result will contain {@link #getDefaultTarget() } as the target and will contain an
+     * empty Optional in {@link PathTemplateRouteResult#getPathTemplate() }.
+     *
+     * <p>
+     * On completion of this method, the caller will have the best available target for the specified path. This method
+     * merely provides the best target and does not call / action the target.  That remains the responsibility of the caller.
+     * This design allows the router to support different use cases, i.e.:
+     * <ol>
+     * <li>Determine the best available {@link HttpHandler} to process a client request based on the requested path.</li>
+     * <li>Summarise HTTP access logs by normalising requested paths to available path templates.</li>
+     * </ol>
      *
      * @param path The requested URL path.
      *
-     * @return The routing result. If the requested URL path matches any of the underlying URL path templates, then the most
-     * specific match (target and template) will be returned in the result. If the requested URL path does not match any of the
-     * underlying URL path templates, then result will contain {@link #getDefaultTarget() } as the target and will contain an
-     * empty Optional in {@link PathTemplateRouteResult#getPathTemplate() }.
+     * @return The routing result.
      */
     PathTemplateRouteResult<T> route(String path);
 }
