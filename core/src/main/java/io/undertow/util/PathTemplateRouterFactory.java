@@ -1767,7 +1767,7 @@ public class PathTemplateRouterFactory {
         }
 
         /**
-         * @return A mutable map of {@link PathTemplatePatternEqualsAdapter}s for all templates added to this builder.
+         * @return A mutable map of {@link PathTemplateParser.PathTemplatePatternEqualsAdapter}s for all templates added to this builder.
          */
         public Map<PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<S>>, S> getTemplates() {
             return templates;
@@ -1936,7 +1936,7 @@ public class PathTemplateRouterFactory {
         }
 
         /**
-         * @return A mutable map of {@link PathTemplatePatternEqualsAdapter}s for all templates added to this builder.
+         * @return A mutable map of {@link PathTemplateParser.PathTemplatePatternEqualsAdapter}s for all templates added to this builder.
          */
         public Map<PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<Supplier<T>>>, Supplier<T>> getTemplates() {
             return builder.getTemplates();
