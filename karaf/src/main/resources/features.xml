@@ -27,6 +27,11 @@
         <bundle>mvn:io.undertow/undertow-core/${project.version}</bundle>
         <bundle>mvn:io.undertow/undertow-servlet/${project.version}</bundle>
         <bundle>mvn:io.undertow/undertow-websockets-jsr/${project.version}</bundle>
+	
+
+	<bundle dependency="true">wrap:mvn:org.jboss.threads/jboss-threads/${version.org.jboss.threads}</bundle>
+        <bundle dependency="true">wrap:mvn:org.wildfly.common/wildfly-common/${version.org.wildfly.common}$Export-Package=org.wildfly.common.*;-noimport:=true;version="${version.org.wildfly.common}"</bundle>
+        <bundle dependency="true">mvn:org.wildfly.client/wildfly-client-config/${version.org.wildfly.client-config}</bundle>
     </feature>
 
 </features>
