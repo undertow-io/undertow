@@ -74,7 +74,7 @@
         <version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>1.0.2.Final</version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.2_spec>
         <version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec>1.0.0.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec>
         <version.org.jboss.spec.javax.websockets>1.1.4.Final</version.org.jboss.spec.javax.websockets>
-        <version.xnio>3.3.8.Final</version.xnio>
+        <version.xnio>3.7.13.Final</version.xnio>
 
         <version.org.osgi.core>6.0.0</version.org.osgi.core>
 

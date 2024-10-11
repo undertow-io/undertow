@@ -72,6 +72,10 @@ public class HttpTunnelingViaConnectTestCase {
     public static void stop() {
         server.stop();
         server = null;
+        // sleep 1 s to prevent BindException (Address already in use) when running the CI
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ignore) {}
     }
 
     @Test
