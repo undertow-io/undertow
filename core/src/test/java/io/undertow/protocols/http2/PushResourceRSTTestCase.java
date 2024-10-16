@@ -17,41 +17,6 @@
  */
 package io.undertow.protocols.http2;
 
-import static io.undertow.server.protocol.http2.Http2OpenListener.HTTP2;
-import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
-import static java.security.AccessController.doPrivileged;
-
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.security.PrivilegedAction;
-import java.util.List;
-import java.util.ServiceLoader;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.FutureResult;
-import org.xnio.IoFuture;
-import org.xnio.IoUtils;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import org.xnio.StreamConnection;
-import org.xnio.Xnio;
-import org.xnio.XnioWorker;
-import org.xnio.channels.StreamSinkChannel;
-import org.xnio.ssl.SslConnection;
-
 import io.undertow.Undertow;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
@@ -70,15 +35,49 @@ import io.undertow.io.Sender;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
-import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.category.UnitTest;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.StringReadChannelListener;
+import org.jboss.logging.Logger;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.FutureResult;
+import org.xnio.IoFuture;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.StreamConnection;
+import org.xnio.Xnio;
+import org.xnio.XnioWorker;
+import org.xnio.channels.StreamSinkChannel;
+import org.xnio.ssl.SslConnection;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.security.PrivilegedAction;
+import java.util.List;
+import java.util.ServiceLoader;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static io.undertow.server.protocol.http2.Http2OpenListener.HTTP2;
+import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
+import static java.security.AccessController.doPrivileged;
 
 /**
  * Test RST frames handling on push. This test mimics rapid refresh on client side, which will result in push requests from
@@ -87,9 +86,9 @@ import io.undertow.util.StringReadChannelListener;
  */
 @Category(UnitTest.class)
 @RunWith(DefaultServer.class)
-@ProxyIgnore
-@AjpIgnore
+@Ignore
 public class PushResourceRSTTestCase {
+    private static final Logger log = Logger.getLogger(PushResourceRSTTestCase.class);
     private static final String PUSHER = "/pusher";
     private static final String PUSHER_MSG;
     private static final String TRIGGER = "/trigger";
@@ -240,18 +239,30 @@ public class PushResourceRSTTestCase {
             final CountDownLatch latch, final AtomicInteger pushRstCount) {
         return new ClientCallback<>() {
             @Override
-            public void completed(ClientExchange result) {
+            public void completed(final ClientExchange result) {
                 result.setPushHandler(new PushCallback() {
                     @Override
                     public boolean handlePush(ClientExchange originalRequest, ClientExchange pushedRequest) {
                         pushRstCount.incrementAndGet();
+                        log.debugf("Handling push %d", pushRstCount.get());
                         latch.countDown();
+                        setUpResponseListenerAndShutdownWrites(result);
                         return false;
                     }
                 });
+            }
+            @Override
+            public void failed(IOException e) {
+                e.printStackTrace();
+                exception = e;
+                latch.countDown();
+            }
+
+            private void setUpResponseListenerAndShutdownWrites(ClientExchange result) {
                 result.setResponseListener(new ClientCallback<>() {
                     @Override
                     public void completed(final ClientExchange result) {
+                        log.debugf("Got result %s", result);
                         responses.add(result.getResponse());
                         new StringReadChannelListener(result.getConnection().getBufferPool()) {
 
@@ -289,13 +300,6 @@ public class PushResourceRSTTestCase {
                     exception = e;
                     latch.countDown();
                 }
-            }
-
-            @Override
-            public void failed(IOException e) {
-                e.printStackTrace();
-                exception = e;
-                latch.countDown();
             }
         };
     }
