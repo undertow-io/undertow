@@ -42,7 +42,7 @@ public interface Sender {
      * @param buffer   The buffer to send.
      * @param callback The callback
      */
-    void send(final ByteBuffer buffer, final IoCallback callback);
+    void send(ByteBuffer buffer, IoCallback callback);
 
     /**
      * Write the given buffers using async IO, and calls the given callback on completion or error.
@@ -50,21 +50,21 @@ public interface Sender {
      * @param buffer   The buffers to send.
      * @param callback The callback
      */
-    void send(final ByteBuffer[] buffer, final IoCallback callback);
+    void send(ByteBuffer[] buffer, IoCallback callback);
 
     /**
      * Write the given buffer using async IO, and ends the exchange when done
      *
      * @param buffer   The buffer to send.
      */
-    void send(final ByteBuffer buffer);
+    void send(ByteBuffer buffer);
 
     /**
      * Write the given buffers using async IO, and ends the exchange when done
      *
      * @param buffer   The buffers to send.
      */
-    void send(final ByteBuffer[] buffer);
+    void send(ByteBuffer[] buffer);
 
     /**
      * Write the given String using async IO, and calls the given callback on completion or error.
@@ -74,7 +74,7 @@ public interface Sender {
      * @param data     The data to send
      * @param callback The callback
      */
-    void send(final String data, final IoCallback callback);
+    void send(String data, IoCallback callback);
 
     /**
      * Write the given String using async IO, and calls the given callback on completion or error.
@@ -83,7 +83,7 @@ public interface Sender {
      * @param charset  The charset to use
      * @param callback The callback
      */
-    void send(final String data, final Charset charset, final IoCallback callback);
+    void send(String data, Charset charset, IoCallback callback);
 
 
     /**
@@ -93,7 +93,7 @@ public interface Sender {
      *
      * @param data     The data to send
      */
-    void send(final String data);
+    void send(String data);
 
     /**
      * Write the given String using async IO, and ends the exchange when done
@@ -101,7 +101,7 @@ public interface Sender {
      * @param data     The buffer to end.
      * @param charset  The charset to use
      */
-    void send(final String data, final Charset charset);
+    void send(String data, Charset charset);
 
 
     /**
@@ -110,14 +110,14 @@ public interface Sender {
      * @param channel the file channel to transfer
      * @param callback The callback
      */
-    void transferFrom(final FileChannel channel, final IoCallback callback);
+    void transferFrom(FileChannel channel, IoCallback callback);
 
     /**
      * Closes this sender asynchronously. The given callback is notified on completion
      *
      * @param callback The callback that is notified when all data has been flushed and the channel is closed
      */
-    void close(final IoCallback callback);
+    void close(IoCallback callback);
 
     /**
      * Closes this sender asynchronously

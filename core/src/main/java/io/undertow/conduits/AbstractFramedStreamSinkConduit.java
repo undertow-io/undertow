@@ -256,7 +256,7 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
 
         void done();
 
-        void failed(final IOException e);
+        void failed(IOException e);
 
     }
 

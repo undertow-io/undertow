@@ -66,9 +66,9 @@ public class MultipartParser {
     private static final byte[] BOUNDARY_PREFIX = {CR, LF, DASH, DASH};
 
     public interface PartHandler {
-        void beginPart(final HeaderMap headers);
+        void beginPart(HeaderMap headers);
 
-        void data(final ByteBuffer buffer) throws IOException;
+        void data(ByteBuffer buffer) throws IOException;
 
         void endPart();
     }
@@ -355,7 +355,7 @@ public class MultipartParser {
 
 
     private interface Encoding {
-        void handle(final PartHandler handler, final ByteBuffer rawData) throws IOException;
+        void handle(PartHandler handler, ByteBuffer rawData) throws IOException;
     }
 
     private static class IdentityEncoding implements Encoding {

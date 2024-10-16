@@ -42,6 +42,6 @@ public interface HttpUpgradeHandshake {
      * @return <code>true</code> if the handshake is valid and should be upgraded. False if it is invalid
      * @throws IOException If the handshake is invalid
      */
-    boolean handleUpgrade(final HttpServerExchange exchange) throws IOException;
+    boolean handleUpgrade(HttpServerExchange exchange) throws IOException;
 
 }

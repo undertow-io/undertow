@@ -45,7 +45,7 @@ public interface FramePriority<C extends AbstractFramedChannel<C, R, S>, R exten
      * @param pendingFrames The pending frame list
      * @return true if the frame can be inserted into the pending frame list
      */
-    boolean insertFrame(S newFrame, final List<S> pendingFrames);
+    boolean insertFrame(S newFrame, List<S> pendingFrames);
 
     /**
      * Invoked when a new frame is successfully added to the pending frames queue.
@@ -60,6 +60,6 @@ public interface FramePriority<C extends AbstractFramedChannel<C, R, S>, R exten
      * @param pendingFrames The pending frame queue
      * @param holdFrames The held frame queue
      */
-    void frameAdded(S addedFrame, final List<S> pendingFrames, final Deque<S> holdFrames);
+    void frameAdded(S addedFrame, List<S> pendingFrames, Deque<S> holdFrames);
 
 }

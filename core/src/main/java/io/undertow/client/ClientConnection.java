@@ -56,7 +56,7 @@ public interface ClientConnection extends Channel {
      *
      * @param request The request to send.
      */
-    void sendRequest(final ClientRequest request, final ClientCallback<ClientExchange> clientCallback);
+    void sendRequest(ClientRequest request, ClientCallback<ClientExchange> clientCallback);
 
     /**
      * Upgrade the connection, if the underlying protocol supports it. This should only be called after an upgrade request

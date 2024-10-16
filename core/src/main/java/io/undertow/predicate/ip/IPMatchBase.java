@@ -284,7 +284,7 @@ public abstract class IPMatchBase<T extends IPMatchBase>{
             this.deny = deny;
         }
 
-        public abstract boolean matches(final InetAddress address);
+        public abstract boolean matches(InetAddress address);
 
         public boolean isDeny() {
             return this.deny;

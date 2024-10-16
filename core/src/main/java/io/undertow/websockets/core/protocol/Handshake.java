@@ -102,7 +102,7 @@ public abstract class Handshake {
         handshakeInternal(exchange);
     }
 
-    protected abstract void handshakeInternal(final WebSocketHttpExchange exchange);
+    protected abstract void handshakeInternal(WebSocketHttpExchange exchange);
 
     /**
      * Return {@code true} if this implementation can be used to issue a handshake.
@@ -112,7 +112,7 @@ public abstract class Handshake {
     /**
      * Create the {@link WebSocketChannel} from the {@link WebSocketHttpExchange}
      */
-    public abstract WebSocketChannel createChannel(WebSocketHttpExchange exchange, final StreamConnection channel, final ByteBufferPool pool);
+    public abstract WebSocketChannel createChannel(WebSocketHttpExchange exchange, StreamConnection channel, ByteBufferPool pool);
 
     /**
      * convenience method to perform the upgrade
