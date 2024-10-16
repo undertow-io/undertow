@@ -70,6 +70,29 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  */
 public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHttp2StreamSourceChannel, AbstractHttp2StreamSinkChannel> implements Attachable {
 
+    // HTTP2 MAX HEADER SIZE constants, to be properly replaced by UndertowOptions
+    /**
+     * Name of the system property for configuring HTTP2 max header size: {@code "io.undertow.http2-max-header-size"}.
+     * <p>This system property will be replaced by an {@link UndertowOptions Undertow option}.</p>
+     */
+    public static final String HTTP2_MAX_HEADER_SIZE_PROPERTY = "io.undertow.http2-max-header-size";
+    /**
+     * Default value of HTTP2 max header size. If the system property {@code "io.undertow.http2-max-header-size"} is left
+     * undefined, this value will be used for the corresponding {@link #HTTP2_MAX_HEADER_SIZE system property configuration}.
+     */
+    private static final int DEFAULT_HTTP2_MAX_HEADER_SIZE = 20000;
+    /**
+     * System property {@code "io.undertow.http2-max-header-size"} for configuring the max header size configuration for HTTP2
+     * messages.
+     * <p>
+     * The effective maximum size for headers to be used by this channel will be the minimum of the three: this system property,
+     * {@link UndertowOptions#MAX_HEADER_SIZE}, and {@link UndertowOptions#HTTP2_SETTINGS_HEADER_TABLE_SIZE}. When calculating
+     * the minimum, only positive values are taken into account, as values of -1 indicate the absence of a limit.
+     * <p>
+     * To be replaced by an {@link UndertowOptions Undertow option} in a future release.
+     */
+    private static final int HTTP2_MAX_HEADER_SIZE = Integer.getInteger(HTTP2_MAX_HEADER_SIZE_PROPERTY, DEFAULT_HTTP2_MAX_HEADER_SIZE);
+
     public static final String CLEARTEXT_UPGRADE_STRING = "h2c";
 
 
@@ -214,7 +237,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
      */
     private volatile int receiveWindowSize;
 
-    private final StreamCache sentRstStreams = new StreamCache();
+    private final StreamCache resetStreamTracker = new StreamCache();
 
 
     public Http2Channel(StreamConnection connectedStreamChannel, String protocol, ByteBufferPool bufferPool, PooledByteBuffer data, boolean clientSide, boolean fromUpgrade, OptionMap settings) {
@@ -240,7 +263,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         encoderHeaderTableSize = settings.get(UndertowOptions.HTTP2_SETTINGS_HEADER_TABLE_SIZE, Hpack.DEFAULT_TABLE_SIZE);
         receiveMaxFrameSize = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_FRAME_SIZE, DEFAULT_MAX_FRAME_SIZE);
         maxPadding = settings.get(UndertowOptions.HTTP2_PADDING_SIZE, 0);
-        maxHeaderListSize = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE, settings.get(UndertowOptions.MAX_HEADER_SIZE, -1));
+        maxHeaderListSize = getMaxHeaderSize(settings);
         if(maxPadding > 0) {
             paddingRandom = new SecureRandom();
         } else {
@@ -308,6 +331,42 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     parseTimeoutUpdater.close();
                 }
             });
+        }
+    }
+
+    private static int getMaxHeaderSize(OptionMap settings) {
+        final int maxHeaderSizeConfig = settings.get(UndertowOptions.MAX_HEADER_SIZE, HTTP2_MAX_HEADER_SIZE);
+        // soon to be removed http2 settings max header
+        final int http2SettingsMaxHeaderListSize = settings.get(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE, HTTP2_MAX_HEADER_SIZE);
+        if (HTTP2_MAX_HEADER_SIZE > 0) {
+            if (maxHeaderSizeConfig > 0) {
+                if (http2SettingsMaxHeaderListSize > 0) {
+                    return Math.min(Math.min(HTTP2_MAX_HEADER_SIZE, maxHeaderSizeConfig), http2SettingsMaxHeaderListSize);
+                } else {
+                    return Math.min(HTTP2_MAX_HEADER_SIZE, maxHeaderSizeConfig);
+                }
+            } else {
+                if (http2SettingsMaxHeaderListSize > 0) {
+                    return Math.min(HTTP2_MAX_HEADER_SIZE, http2SettingsMaxHeaderListSize);
+                } else {
+                    return HTTP2_MAX_HEADER_SIZE;
+                }
+            }
+        } else {
+            if (maxHeaderSizeConfig > 0) {
+                if (http2SettingsMaxHeaderListSize > 0) {
+                    return Math.min(maxHeaderSizeConfig, http2SettingsMaxHeaderListSize);
+                } else {
+                    return maxHeaderSizeConfig;
+                }
+            } else {
+                if (http2SettingsMaxHeaderListSize > 0) {
+                    return http2SettingsMaxHeaderListSize;
+                } else {
+                    // replace any value <= 0 by -1
+                    return -1;
+                }
+            }
         }
     }
 
@@ -411,10 +470,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     //make sure it exists
                     StreamHolder existing = currentStreams.get(frameParser.streamId);
                     if (existing == null) {
-                        existing = sentRstStreams.find(frameParser.streamId);
+                        existing = resetStreamTracker.find(frameParser.streamId);
                     }
                     if(existing == null || existing.sourceClosed) {
-                        if (existing != null || sentRstStreams.find(frameParser.streamId) == null) {
+                        if (existing != null || resetStreamTracker.find(frameParser.streamId) == null) {
                             sendGoAway(ERROR_PROTOCOL_ERROR);
                         }
                         frameData.close();
@@ -448,7 +507,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
 
                 StreamHolder holder = currentStreams.get(frameParser.streamId);
                 if(holder == null) {
-                    holder = sentRstStreams.find(frameParser.streamId);
+                    holder = resetStreamTracker.find(frameParser.streamId);
                     if (holder != null) {
                         holder.sourceChannel = (Http2StreamSourceChannel) channel;
                     } else {
@@ -664,7 +723,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     @Override
     protected void closeSubChannels() {
         closeSubChannels(currentStreams);
-        closeSubChannels(sentRstStreams.getStreamHolders());
+        closeSubChannels(resetStreamTracker.getStreamHolders());
     }
 
     private void closeSubChannels(Map<Integer, StreamHolder> streams) {
@@ -690,7 +749,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         List<AbstractFramedStreamSourceChannel<Http2Channel, AbstractHttp2StreamSourceChannel, AbstractHttp2StreamSinkChannel>> channels = new ArrayList<>(currentStreams.size());
         for(Map.Entry<Integer, StreamHolder> entry : currentStreams.entrySet()) {
             if(!entry.getValue().sourceClosed) {
-                channels.add(entry.getValue().sourceChannel);
+                final Http2StreamSourceChannel sourceChannel = entry.getValue().sourceChannel;
+                if (sourceChannel != null) {
+                    channels.add(sourceChannel);
+                }
             }
         }
         return channels;
@@ -797,7 +859,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             StreamHolder holder = currentStreams.get(streamId);
             Http2StreamSinkChannel stream = holder != null ? holder.sinkChannel : null;
             if (stream == null) {
-                if (sentRstStreams.find(streamId) == null && isIdle(streamId)) {
+                if (resetStreamTracker.find(streamId) == null && isIdle(streamId)) {
                     sendGoAway(ERROR_PROTOCOL_ERROR);
                 }
             } else {
@@ -1145,7 +1207,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
             //no point sending if the channel is closed
             return;
         }
-        sentRstStreams.store(streamId, handleRstStream(streamId, false));
+        handleRstStream(streamId, false);
         if(UndertowLogger.REQUEST_IO_LOGGER.isDebugEnabled()) {
             UndertowLogger.REQUEST_IO_LOGGER.debugf(new ClosedChannelException(), "Sending rststream on channel %s stream %s", this, streamId);
         }
@@ -1156,6 +1218,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private StreamHolder handleRstStream(int streamId, boolean receivedRst) {
         final StreamHolder holder = currentStreams.remove(streamId);
         if(holder != null) {
+            resetStreamTracker.store(streamId, holder);
             if(streamId % 2 == (isClient() ? 1 : 0)) {
                 sendConcurrentStreamsAtomicUpdater.getAndDecrement(this);
             } else {
@@ -1168,22 +1231,44 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 holder.sourceChannel.rstStream();
             }
             if (receivedRst) {
-                long currentTimeMillis = System.currentTimeMillis();
-                // reset the window tracking
-                if (currentTimeMillis - lastRstFrameMillis >= rstFramesTimeWindow) {
-                    lastRstFrameMillis = currentTimeMillis;
-                    receivedRstFramesPerWindow = 1;
+                if (holder.sinkChannel != null && holder.sourceChannel == null) {
+                    //Server side originated, no input from client other than RST
+                    //this can happen on page refresh when push happens, but client
+                    //still has valid cache entry
+                    holder.resetByPeer = receivedRst;
                 } else {
-                    //
-                    receivedRstFramesPerWindow ++;
-                    if (receivedRstFramesPerWindow > maxRstFramesPerWindow) {
-                        sendGoAway(Http2Channel.ERROR_ENHANCE_YOUR_CALM);
-                        UndertowLogger.REQUEST_IO_LOGGER.debugf("Reached maximum number of rst frames %s during %s ms, sending GO_AWAY 11", maxRstFramesPerWindow, rstFramesTimeWindow);
-                    }
+                    handleRstWindow();
                 }
+            }
+        } else if(receivedRst){
+            final StreamHolder resetStream = resetStreamTracker.find(streamId);
+            if(resetStream != null && resetStream.resetByPeer) {
+                //This means other side reset stream at some point.
+                //depending on peer or network latency our frames might be late and
+                //cause other end to flare up with RST, this RST can be safely ignored.
+                //TODO: do we need to check error code?
+            } else {
+                handleRstWindow();
             }
         }
         return holder;
+    }
+
+    private void handleRstWindow() {
+        long currentTimeMillis = System.currentTimeMillis();
+        // reset the window tracking
+        if (currentTimeMillis - lastRstFrameMillis >= rstFramesTimeWindow) {
+            lastRstFrameMillis = currentTimeMillis;
+            receivedRstFramesPerWindow = 1;
+        } else {
+            receivedRstFramesPerWindow++;
+            if (receivedRstFramesPerWindow > maxRstFramesPerWindow) {
+                sendGoAway(Http2Channel.ERROR_ENHANCE_YOUR_CALM);
+                UndertowLogger.REQUEST_IO_LOGGER.debugf(
+                        "Reached maximum number of rst frames %s during %s ms, sending GO_AWAY 11",
+                        maxRstFramesPerWindow, rstFramesTimeWindow);
+            }
+        }
     }
 
     /**
@@ -1220,7 +1305,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     Http2StreamSourceChannel removeStreamSource(int streamId) {
         StreamHolder existing = currentStreams.get(streamId);
         if (existing == null) {
-            existing = sentRstStreams.find(streamId);
+            existing = resetStreamTracker.find(streamId);
             return existing == null? null : existing.sourceChannel;
         }
         existing.sourceClosed = true;
@@ -1240,7 +1325,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     Http2StreamSourceChannel getIncomingStream(int streamId) {
         StreamHolder existing = currentStreams.get(streamId);
         if(existing == null){
-            existing = sentRstStreams.find(streamId);
+            existing = resetStreamTracker.find(streamId);
             if (existing == null) {
                 return null;
             }
@@ -1285,6 +1370,10 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private static final class StreamHolder {
         boolean sourceClosed = false;
         boolean sinkClosed = false;
+        /**
+         * This flag is set only in case of short lived server push that was reset by remote end.
+         */
+        boolean resetByPeer = false;
         Http2StreamSourceChannel sourceChannel;
         Http2StreamSinkChannel sinkChannel;
 

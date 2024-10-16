@@ -200,6 +200,9 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
 
     @Override
     public void truncateWrites() throws IOException {
+        if (anyAreSet(state, FLAG_FINISHED)) {
+            return;
+        }
         try {
             if (lastChunkBuffer != null) {
                 lastChunkBuffer.close();
@@ -259,6 +262,9 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
 
     @Override
     public boolean flush() throws IOException {
+        if (anyAreSet(state, FLAG_FINISHED)) {
+            return true;
+        }
         this.state |= FLAG_FIRST_DATA_WRITTEN;
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             if (anyAreSet(state, FLAG_NEXT_SHUTDOWN)) {

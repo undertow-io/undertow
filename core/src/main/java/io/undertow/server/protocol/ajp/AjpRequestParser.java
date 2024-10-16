@@ -66,6 +66,7 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.URLUtils;
+import io.undertow.util.UrlDecodeException;
 
 /**
  * @author Stuart Douglas
@@ -77,7 +78,6 @@ public class AjpRequestParser {
     private final boolean slashDecodingFlag;
     private final int maxParameters;
     private final int maxHeaders;
-    private StringBuilder decodeBuffer;
     private final boolean allowUnescapedCharactersInUrl;
     private final Pattern allowedRequestAttributesPattern;
 
@@ -269,7 +269,7 @@ public class AjpRequestParser {
                     int colon = result.value.indexOf(';');
                     if (colon == -1) {
                         String res = decode(result.value, result.containsUrlCharacters);
-                        if(result.containsUnencodedCharacters) {
+                        if(result.containsUnencodedCharacters || (allowUnescapedCharactersInUrl && result.containsUrlCharacters)) {
                             //we decode if the URL was non-compliant, and contained incorrectly encoded characters
                             //there is not really a 'correct' thing to do in this situation, but this seems the least incorrect
                             exchange.setRequestURI(res);
@@ -447,8 +447,14 @@ public class AjpRequestParser {
                             state.state = AjpRequestParseState.READING_ATTRIBUTES;
                             return;
                         }
-                        if(resultHolder.containsUnencodedCharacters) {
-                            result = decode(resultHolder.value, true);
+                        if(resultHolder.containsUnencodedCharacters || (resultHolder.containsUrlCharacters && allowUnescapedCharactersInUrl)) {
+                            try {
+                                result = decode(resultHolder.value, true);
+                            } catch (UrlDecodeException | UnsupportedEncodingException e) {
+                                UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
+                                state.badRequest = true;
+                                result = resultHolder.value;
+                            }
                             decodingAlreadyDone = true;
                         } else {
                             result = resultHolder.value;
@@ -509,9 +515,7 @@ public class AjpRequestParser {
     private String decode(String url, final boolean containsUrlCharacters) throws UnsupportedEncodingException {
         if (doDecode && containsUrlCharacters) {
             try {
-                if(decodeBuffer == null) {
-                    decodeBuffer = new StringBuilder();
-                }
+                final StringBuilder decodeBuffer = new StringBuilder();
                 return URLUtils.decode(url, this.encoding, slashDecodingFlag, false, decodeBuffer);
             } catch (Exception e) {
                 throw UndertowMessages.MESSAGES.failedToDecodeURL(url, encoding, e);
@@ -583,8 +587,8 @@ public class AjpRequestParser {
                 return new StringHolder(null, false, false, false);
             }
             byte c = buf.get();
-            if(type == StringType.QUERY_STRING && (c == '+' || c == '%' || c < 0 )) {
-                if (c < 0) {
+            if(type == StringType.QUERY_STRING && (c == '+' || c == '%' || c < 0 || c > 127 )) {
+                if (c < 0 || c > 127) {
                     if (!allowUnescapedCharactersInUrl) {
                         throw new BadRequestException();
                     } else {
@@ -592,7 +596,7 @@ public class AjpRequestParser {
                     }
                 }
                 containsUrlCharacters = true;
-            } else if(type == StringType.URL && (c == '%' || c < 0 )) {
+            } else if(type == StringType.URL && (c == '%' || c < 0 || c > 127 )) {
                 if(c < 0 ) {
                     if(!allowUnescapedCharactersInUrl) {
                         throw new BadRequestException();

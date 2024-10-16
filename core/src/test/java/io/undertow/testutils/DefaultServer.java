@@ -472,7 +472,13 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                 loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER)
                     .setMaxQueueSize(20)
-                    .addHost(new URI("h2", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, new UndertowXnioSsl(xnio, OptionMap.EMPTY, SSL_BUFFER_POOL, clientContext), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
+                    .addHost(new URI("h2", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null,
+                            new UndertowXnioSsl(xnio, OptionMap.EMPTY, SSL_BUFFER_POOL, clientContext),
+                            // TODO config UndertowOptions.HTTP2_MAX_HEADER_SIZE here
+                            // for testing purposes, we will disable the max header size for the proxy client, because
+                            // this cannot be changed per test (the host is not available after this code is run, and
+                            // it doesn't have a way of setting options afterward either
+                            OptionMap.create(UndertowOptions.ENABLE_HTTP2, true/*, UndertowOptions.MAX_HEADER_SIZE, -1*/));
                 ProxyHandler proxyHandler = ProxyHandler.builder()
                     .setProxyClient(loadBalancingProxyClient)
                     .setMaxRequestTime(60000)
@@ -494,7 +500,14 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 proxyServer = worker.createStreamConnectionServer(new InetSocketAddress(Inet4Address.getByName(getHostAddress(DEFAULT)), getHostPort(DEFAULT)), proxyAcceptListener, serverOptions);
                 loadBalancingProxyClient = new LoadBalancingProxyClient(GSSAPIAuthenticationMechanism.EXCLUSIVITY_CHECKER)
                         .setMaxQueueSize(20)
-                        .addHost(new URI(h2cUpgrade ? "http" : "h2c-prior", null, getHostAddress(DEFAULT), getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null), null, null, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
+                        .addHost(new URI(h2cUpgrade ? "http" : "h2c-prior", null, getHostAddress(DEFAULT),
+                                        getHostPort(DEFAULT) + PROXY_OFFSET, "/", null, null),
+                                null, null,
+                                // TODO add UndertowOptions.HTTP2_MAX_HEADER_SIZE config here
+                                // for testing purposes, we will disable the max header size for the proxy client, because
+                                // this cannot be changed per test (the host is not available after this code is run, and
+                                // it doesn't have a way of setting options afterward either
+                                OptionMap.create(UndertowOptions.ENABLE_HTTP2, true/*, UndertowOptions.HTTP2_MAX_HEADER_SIZE, -1*/));
                 ProxyHandler proxyHandler = ProxyHandler.builder()
                     .setProxyClient(loadBalancingProxyClient)
                     .setMaxRequestTime(60000)

@@ -18,14 +18,10 @@
 
 package io.undertow.servlet.handlers.security;
 
-import static io.undertow.security.api.SecurityNotification.EventType.AUTHENTICATED;
 import static io.undertow.util.StatusCodes.OK;
 
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
-import io.undertow.security.api.SecurityContext;
-import io.undertow.security.api.NotificationReceiver;
-import io.undertow.security.api.SecurityNotification;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.server.HttpServerExchange;
@@ -158,19 +154,6 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
     }
 
     @Override
-    public AuthenticationMechanismOutcome authenticate(final HttpServerExchange exchange, final SecurityContext securityContext) {
-        securityContext.registerNotificationReceiver(new NotificationReceiver() {
-            @Override
-            public void handleNotification(final SecurityNotification notification) {
-                if (notification.getEventType() == AUTHENTICATED) {
-                    getAndInitializeSession(exchange, false);
-                }
-            }
-        });
-        return super.authenticate(exchange, securityContext);
-    }
-
-    @Override
     protected Integer servePage(final HttpServerExchange exchange, final String location) {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         ServletRequest req = servletRequestContext.getServletRequest();
@@ -271,13 +254,15 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
                 session.setMaxInactiveInterval(authenticationSessionTimeout);
             }
         } else {
-            final Integer originalSessionTimeout = (Integer) session.removeAttribute(ORIGINAL_SESSION_TIMEOUT);
-            if (originalSessionTimeout != null) {
-                session.setMaxInactiveInterval(originalSessionTimeout);
-            }
+            restoreOriginalSessionTimeout(session);
         }
 
         return session;
+    }
+
+    @Override
+    protected void restoreOriginalSessionTimeout(final HttpServerExchange exchange) {
+        getAndInitializeSession(exchange, false);
     }
 
     private static class FormResponseWrapper extends HttpServletResponseWrapper {

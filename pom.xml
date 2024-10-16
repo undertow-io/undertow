@@ -28,7 +28,7 @@
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-parent</artifactId>
-    <version>2.2.33.Final-SNAPSHOT</version>
+    <version>2.2.37.Final-SNAPSHOT</version>
 
     <name>Undertow</name>
     <description>Undertow</description>
@@ -73,7 +73,7 @@
         <version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.3_spec>2.0.1.Final</version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.3_spec>
         <version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec>2.0.0.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec>
         <version.org.jboss.spec.javax.websockets>2.0.0.Final</version.org.jboss.spec.javax.websockets>
-        <version.xnio>3.8.7.Final</version.xnio>
+        <version.xnio>3.8.16.Final</version.xnio>
         <!-- TODO remove this dependency once xnio upgrades to latest jboss threads -->
         <version.org.jboss.threads>3.1.0.Final</version.org.jboss.threads>
         <version.org.wildfly.common>1.5.4.Final</version.org.wildfly.common>
@@ -109,6 +109,7 @@
         <maven.javadoc.plugin.quiet>true</maven.javadoc.plugin.quiet>
         <maven.compiler.showDeprecation>false</maven.compiler.showDeprecation>
         <maven.compiler.showWarnings>false</maven.compiler.showWarnings>
+        <version.maven.javadoc.plugin>3.8.0</version.maven.javadoc.plugin>
     </properties>
 
     <modules>
@@ -131,6 +132,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
+                <version>${version.maven.javadoc.plugin}</version>
                 <configuration>
                     <!--
                         The Javadoc comments contain a lot of warnings

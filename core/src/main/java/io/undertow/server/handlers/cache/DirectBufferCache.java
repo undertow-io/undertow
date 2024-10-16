@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.ConcurrentHashMap;
 
 import io.undertow.UndertowLogger;
-import io.undertow.server.handlers.resource.CachingResourceManager;
 import io.undertow.util.ConcurrentDirectDeque;
 import org.xnio.BufferAllocator;
 
@@ -49,6 +48,14 @@ import org.xnio.BufferAllocator;
  */
 public class DirectBufferCache {
     private static final int SAMPLE_INTERVAL = 5;
+    /**
+     * Max age 0, indicating that entries expire upon creation and are not retained;
+     */
+    public static final int MAX_AGE_NO_CACHING = 0;
+    /**
+     * Mage age -1, entries dont expire
+     */
+    public static final int MAX_AGE_NO_EXPIRY = -1;
 
     private final LimitedBufferSlicePool pool;
     private final ConcurrentMap<Object, CacheEntry> cache;
@@ -98,12 +105,12 @@ public class DirectBufferCache {
         }
 
         final long expires = cacheEntry.getExpires();
-        if(expires == CachingResourceManager.MAX_AGE_NO_CACHING || (expires > 0 && System.currentTimeMillis() > expires)) {
+        if(expires == MAX_AGE_NO_CACHING || (expires > 0 && System.currentTimeMillis() > expires)) {
                 remove(key);
                 return null;
         }
 
-        //either did not expire or CachingResourceManager.MAX_AGE_NO_EXPIRY
+        //either did not expire or MAX_AGE_NO_EXPIRY
         if (cacheEntry.hit() % SAMPLE_INTERVAL == 0) {
 
             bumpAccess(cacheEntry);
@@ -235,18 +242,18 @@ public class DirectBufferCache {
         }
 
         public void enable() {
-            if(this.maxAge == CachingResourceManager.MAX_AGE_NO_CACHING) {
-                this.expires = CachingResourceManager.MAX_AGE_NO_CACHING;
+            if(this.maxAge == MAX_AGE_NO_CACHING) {
+                this.expires = MAX_AGE_NO_CACHING;
                 disable();
-            } else if(this.maxAge == CachingResourceManager.MAX_AGE_NO_EXPIRY) {
-                this.expires = CachingResourceManager.MAX_AGE_NO_EXPIRY;
+            } else if(this.maxAge == MAX_AGE_NO_EXPIRY) {
+                this.expires = MAX_AGE_NO_EXPIRY;
                 this.enabled = 2;
             } else if(this.maxAge > 0) {
                 this.expires = System.currentTimeMillis() + maxAge;
                 this.enabled = 2;
             } else {
-                this.expires = CachingResourceManager.MAX_AGE_NO_CACHING;
-                UndertowLogger.ROOT_LOGGER.wrongCacheTTLValue(this.maxAge, CachingResourceManager.MAX_AGE_NO_CACHING);
+                this.expires = MAX_AGE_NO_CACHING;
+                UndertowLogger.ROOT_LOGGER.wrongCacheTTLValue(this.maxAge, MAX_AGE_NO_CACHING);
                 disable();
             }
         }

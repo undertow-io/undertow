@@ -175,7 +175,13 @@ public class Http2UpgradeHandler implements HttpHandler {
                     }
                 }, undertowOptions, exchange.getConnection().getBufferSize(), null);
                 channel.getReceiveSetter().set(receiveListener);
-                receiveListener.handleInitialRequest(exchange, channel, data);
+                // don't decode requests from upgrade, they are already decoded by the parser for protocol HTTP 1.1 (HttpRequestParser)
+                // however, the queries have to be decoded, since this is decoded only once, when the connector parses the query string
+                // to fill in the query param collection of the HttpServerExchange (see Connectors invoking URLUtils.QUERY_STRING_PARSER)
+                final boolean decodeURL = undertowOptions.get(UndertowOptions.DECODE_URL, true);
+                final boolean allowUnescapedCharactersInURL = undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
+                // if allowUnescapedCharactersInURL is true, the decoding has already been done
+                receiveListener.handleInitialRequest(exchange, channel, data, decodeURL && !allowUnescapedCharactersInURL, decodeURL);
                 channel.resumeReceives();
             }
         });

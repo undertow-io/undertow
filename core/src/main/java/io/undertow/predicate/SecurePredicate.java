@@ -19,10 +19,13 @@
 package io.undertow.predicate;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.SSLSessionInfo;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+
+import javax.net.ssl.SSLSession;
 
 /**
  * @author Stuart Douglas
@@ -33,7 +36,10 @@ public class SecurePredicate implements Predicate {
 
     @Override
     public boolean resolve(HttpServerExchange value) {
-        return value.getRequestScheme().equals("https");
+        final SSLSession session = value.getConnection().getSslSession();
+        final SSLSessionInfo info = value.getConnection().getSslSessionInfo();
+        return (session != null && session.isValid())
+                || (info != null && info.getSSLSession() != null && info.getSSLSession().isValid());
     }
 
     public String toString() {

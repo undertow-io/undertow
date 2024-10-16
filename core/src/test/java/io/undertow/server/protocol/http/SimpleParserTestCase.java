@@ -673,7 +673,7 @@ public class SimpleParserTestCase {
         HttpRequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true)).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
         Assert.assertEquals("/bår", result.getRequestPath());
-        Assert.assertEquals("/bÃ¥r", result.getRequestURI()); //not decoded
+        Assert.assertEquals("/bår", result.getRequestURI()); //!not decoded
     }
 
     @Test
@@ -714,7 +714,6 @@ public class SimpleParserTestCase {
         Assert.assertEquals("/path/..~/", result.getRelativePath());
         Assert.assertEquals("", result.getQueryString());
     }
-
 
     private void runTest(final byte[] in) throws BadRequestException {
         runTest(in, "some value");
