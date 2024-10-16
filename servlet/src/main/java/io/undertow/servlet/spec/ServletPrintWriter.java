@@ -172,8 +172,10 @@ public class ServletPrintWriter {
                 remainingContentLength -= writtenLength;
                 outputStream.updateWritten(writtenLength);
                 if (result.isOverflow() || !buffer.hasRemaining()) {
+                    final int remainingBytesBeforeFlush = buffer.remaining();
                     outputStream.flushInternal();
-                    if (buffer.remaining() == remaining) {
+                    if (buffer.remaining() == remainingBytesBeforeFlush) {
+                        // no progress has been made, set error to true
                         error = true;
                         return;
                     }

@@ -643,4 +643,10 @@ public interface UndertowMessages {
 
     @Message(id = 207, value = "Invalid SNI hostname '%s'")
     IllegalArgumentException invalidSniHostname(String hostNameValue, @Cause Throwable t);
+
+    // 208 placeholder
+
+    @Message(id = 209, value = "Protocol string was too large for the buffer. Either provide a smaller message or a bigger buffer. Protocol: %s")
+    IllegalStateException protocolTooLargeForBuffer(String protocolString);
+
 }

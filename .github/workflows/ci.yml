@@ -40,11 +40,11 @@ jobs:
       shell: bash
       run: tar -czf maven-repo.tgz -C ~ .m2/repository
     - name: Persist Maven Repo
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
         name: maven-repo
         path: maven-repo.tgz
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: surefire-reports-build
@@ -110,7 +110,7 @@ jobs:
        hostname || true
     - uses: actions/checkout@v2
     - name: Download Maven Repo
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v4
       with:
         name: maven-repo
         path: .
@@ -130,7 +130,7 @@ jobs:
       run: mvn -v
     - name: Run Tests
       run: mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }}
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: surefire-reports-${{ matrix.jdk }}-${{ matrix.module }}-${{ matrix.os }}
@@ -163,7 +163,7 @@ jobs:
        hostname || true
     - uses: actions/checkout@v2
     - name: Download Maven Repo
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v4
       with:
         name: maven-repo
         path: .
@@ -182,7 +182,7 @@ jobs:
       run: mvn -v
     - name: Run Tests
       run: mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: surefire-reports-${{ matrix.jdk }}-ipv6-${{ matrix.module }}${{ matrix.proxy }}-${{ matrix.os }}
