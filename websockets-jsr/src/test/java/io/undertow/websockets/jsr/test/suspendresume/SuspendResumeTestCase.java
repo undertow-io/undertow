@@ -109,26 +109,7 @@ public class SuspendResumeTestCase {
         final AtomicReference<String> message = new AtomicReference<>();
         WebSocketChannel channel = WebSocketClient.connectionBuilder(DefaultServer.getWorker(), DefaultServer.getBufferPool(), new URI(DefaultServer.getDefaultServerURL() + "/"))
                 .connect().get();
-        channel.getReceiveSetter().set(new AbstractReceiveListener() {
-            @Override
-            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage msg) {
-                message.set(msg.getData());
-                done.countDown();
-            }
-
-            @Override
-            protected void onError(WebSocketChannel channel, Throwable error) {
-                error.printStackTrace();
-                message.set("error");
-                done.countDown();
-            }
-
-            @Override
-            protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
-                message.getData().free();
-                done.countDown();
-            }
-        });
+        channel.getReceiveSetter().set(new ReceiveListener(message, done));
         channel.resumeReceives();
         Assert.assertTrue(channel.isOpen());
         WebSockets.sendText("Hello World", channel, null);
@@ -193,5 +174,34 @@ public class SuspendResumeTestCase {
             serverContainer.resume();
         }
 
+    }
+
+    private static class ReceiveListener extends AbstractReceiveListener {
+        private final CountDownLatch done;
+        private final AtomicReference<String> message;
+
+        ReceiveListener(AtomicReference<String> message, CountDownLatch done) {
+            this.message = message;
+            this.done = done;
+        }
+
+        @Override
+        protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage msg) {
+            message.set(msg.getData());
+            done.countDown();
+        }
+
+        @Override
+        protected void onError(WebSocketChannel channel, Throwable error) {
+            error.printStackTrace();
+            message.set("error");
+            done.countDown();
+        }
+
+        @Override
+        protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
+            message.getData().free();
+            done.countDown();
+        }
     }
 }
