@@ -49,6 +49,7 @@ import org.xnio.IoUtils;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.server.handlers.form.MultiPartParserDefinition.FileTooLargeException;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -198,33 +199,44 @@ public class MultipartFormDataParserTestCase {
             client.getConnectionManager().shutdown();
         }
     }
-
     private static HttpHandler createInMemoryReadingHandler(final long fileSizeThreshold) {
+        return createInMemoryReadingHandler(fileSizeThreshold, -1, null);
+    }
+
+    private static HttpHandler createInMemoryReadingHandler(final long fileSizeThreshold, final long maxInvidualFileThreshold, final HttpHandler async) {
         return new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 MultiPartParserDefinition multiPartParserDefinition = new MultiPartParserDefinition();
                 multiPartParserDefinition.setFileSizeThreshold(fileSizeThreshold);
+                multiPartParserDefinition.setMaxIndividualFileSize(maxInvidualFileThreshold);
                 final FormDataParser parser = FormParserFactory.builder(false)
                         .addParsers(new FormEncodedDataDefinition(), multiPartParserDefinition)
                         .build().createParser(exchange);
-                try {
-                    FormData data = parser.parseBlocking();
-                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                    if (data.getFirst("formValue").getValue().equals("myValue")) {
-                        FormData.FormValue file = data.getFirst("file");
-                        if (file.isFileItem()) {
-                            exchange.setStatusCode(StatusCodes.OK);
-                            logResult(exchange, file.getFileItem().isInMemory(), file.getFileName(), stream2String(file));
+                if (async == null) {
+                    try {
+                        FormData data = parser.parseBlocking();
+                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                        if (data.getFirst("formValue").getValue().equals("myValue")) {
+                            FormData.FormValue file = data.getFirst("file");
+                            if (file.isFileItem()) {
+                                exchange.setStatusCode(StatusCodes.OK);
+                                logResult(exchange, file.getFileItem().isInMemory(), file.getFileName(), stream2String(file));
+                            }
                         }
+                        exchange.endExchange();
+                    } catch (FileTooLargeException e) {
+                        exchange.setStatusCode(StatusCodes.REQUEST_ENTITY_TOO_LARGE);
+                        exchange.endExchange();
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                        exchange.endExchange();
+                    } finally {
+                        IoUtils.safeClose(parser);
                     }
-                    exchange.endExchange();
-                } catch (Throwable e) {
-                    e.printStackTrace();
-                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                    exchange.endExchange();
-                } finally {
-                    IoUtils.safeClose(parser);
+                } else {
+                    parser.parse(async);
                 }
             }
 
@@ -370,6 +382,56 @@ public class MultipartFormDataParserTestCase {
             if (!file.delete()) {
                 file.deleteOnExit();
             }
+        }
+    }
+
+    @Test
+    public void testFileUploadWithFileSizeThresholdOverflow_Sync() throws Exception {
+        DefaultServer.setRootHandler(new BlockingHandler(createInMemoryReadingHandler(10, 1, null)));
+
+        TestHttpClient client = new TestHttpClient();
+        try {
+
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
+            MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
+            entity.addPart("file", new FileBody(new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile())));
+
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.REQUEST_ENTITY_TOO_LARGE, result.getStatusLine().getStatusCode());
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testFileUploadWithFileSizeThresholdOverflow_ASync() throws Exception {
+        DefaultServer.setRootHandler(new BlockingHandler(createInMemoryReadingHandler(10, 1, new HttpHandler() {
+
+            @Override
+            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                throw new Exception();
+            }
+        })));
+
+        TestHttpClient client = new TestHttpClient();
+        try {
+
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
+            MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
+            entity.addPart("file", new FileBody(new File(MultipartFormDataParserTestCase.class.getResource("uploadfile.txt").getFile())));
+
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.REQUEST_ENTITY_TOO_LARGE, result.getStatusLine().getStatusCode());
+
+        } finally {
+            client.getConnectionManager().shutdown();
         }
     }
 
