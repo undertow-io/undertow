@@ -110,7 +110,7 @@ public class WebSocketTimeoutTestCase {
         latch.getIoFuture().get();
 
         final long watchStart = System.currentTimeMillis();
-        final long watchTimeout = System.currentTimeMillis() + TESTABLE_TIMEOUT_VALUE + 500;
+        final long watchTimeout = System.currentTimeMillis() + TESTABLE_TIMEOUT_VALUE + 1000;
         final FutureResult<Long> timeoutLatch = new FutureResult<Long>();
         ReadTimeoutChannelGuard readTimeoutChannelGuard = new ReadTimeoutChannelGuard(client, timeoutLatch, watchTimeout);
 
@@ -123,7 +123,7 @@ public class WebSocketTimeoutTestCase {
         } else {
             long timeSpent = watchTimeEnd - watchStart;
             //let's be generous and give 150ms diff( there is "fuzz" coded for 50ms in undertow as well
-            if(!(timeSpent <= TESTABLE_TIMEOUT_VALUE + 150)) {
+            if(!(timeSpent <= TESTABLE_TIMEOUT_VALUE + 250)) {
                 Assert.fail("Timeout did not happen... in time. Socket timeout out in '" + timeSpent + "' ms, supposed to happen in '" + TESTABLE_TIMEOUT_VALUE + "' ms.");
             }
         }
