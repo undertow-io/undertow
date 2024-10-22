@@ -20,7 +20,6 @@ package io.undertow.websockets.jsr.test.dynamicupgrade;
 
 import javax.websocket.Endpoint;
 import javax.websocket.EndpointConfig;
-import javax.websocket.MessageHandler;
 import javax.websocket.Session;
 
 /**
@@ -31,11 +30,6 @@ public class EchoProgramaticEndpoint extends Endpoint {
     @Override
     public void onOpen(final Session session, EndpointConfig config) {
         final String foo = session.getPathParameters().get("foo");
-        session.addMessageHandler(String.class, new MessageHandler.Whole<String>() {
-            @Override
-            public void onMessage(String message) {
-                session.getAsyncRemote().sendText(foo + " " + message);
-            }
-        });
+        session.addMessageHandler(String.class, message -> session.getAsyncRemote().sendText(foo + " " + message));
     }
 }
