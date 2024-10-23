@@ -480,6 +480,10 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                         pooled.close();
                     }
 
+                } catch(FileTooLargeException e) {
+                    UndertowLogger.REQUEST_IO_LOGGER.debug("Exception parsing data", e);
+                    exchange.setStatusCode(StatusCodes.REQUEST_ENTITY_TOO_LARGE);
+                    exchange.endExchange();
                 } catch (Throwable e) {
                     UndertowLogger.REQUEST_IO_LOGGER.debug("Exception parsing data", e);
                     exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
