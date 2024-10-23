@@ -39,5 +39,5 @@ public interface ConduitWrapper<T extends Conduit> {
      * @param exchange the in-flight HTTP exchange
      * @return the replacement conduit
      */
-    T wrap(final ConduitFactory<T> factory, final HttpServerExchange exchange);
+    T wrap(ConduitFactory<T> factory, HttpServerExchange exchange);
 }

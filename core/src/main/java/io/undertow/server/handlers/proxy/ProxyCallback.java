@@ -27,21 +27,21 @@ import io.undertow.server.HttpServerExchange;
  */
 public interface ProxyCallback<T> {
 
-    void completed(final HttpServerExchange exchange, T result);
+    void completed(HttpServerExchange exchange, T result);
 
     /**
      * Callback if establishing the connection to a backend server fails.
      *
      * @param exchange    the http server exchange
      */
-    void failed(final HttpServerExchange exchange);
+    void failed(HttpServerExchange exchange);
 
     /**
      * Callback if no backend server could be found.
      *
      * @param exchange    the http server exchange
      */
-    void couldNotResolveBackend(final HttpServerExchange exchange);
+    void couldNotResolveBackend(HttpServerExchange exchange);
 
     /**
      * This is invoked when the target connection pool transitions to problem status. It will be called once for each queued request

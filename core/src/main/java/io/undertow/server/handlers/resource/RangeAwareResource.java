@@ -36,7 +36,7 @@ public interface RangeAwareResource extends Resource {
      * @param sender The sender to use.
      * @param exchange The exchange
      */
-    void serveRange(final Sender sender, final HttpServerExchange exchange, long start, long end, final IoCallback completionCallback);
+    void serveRange(Sender sender, HttpServerExchange exchange, long start, long end, IoCallback completionCallback);
 
     /**
      * It is possible that some resources managers may only support range requests on a subset of their resources,

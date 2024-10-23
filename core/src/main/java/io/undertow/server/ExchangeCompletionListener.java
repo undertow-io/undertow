@@ -35,7 +35,7 @@ package io.undertow.server;
  */
 public interface ExchangeCompletionListener {
 
-    void exchangeEvent(final HttpServerExchange exchange, final NextListener nextListener);
+    void exchangeEvent(HttpServerExchange exchange, NextListener nextListener);
 
     interface NextListener {
 

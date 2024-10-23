@@ -48,7 +48,7 @@ public interface SessionConfig {
      * @param exchange The exchange
      * @param sessionId  The session
      */
-    void setSessionId(final HttpServerExchange exchange, final String sessionId);
+    void setSessionId(HttpServerExchange exchange, String sessionId);
 
     /**
      * Clears this session from the exchange, removing the attachment and making any changes to the response necessary,
@@ -57,7 +57,7 @@ public interface SessionConfig {
      * @param exchange The exchange
      * @param sessionId  The session id
      */
-    void clearSession(final HttpServerExchange exchange, final String sessionId);
+    void clearSession(HttpServerExchange exchange, String sessionId);
 
     /**
      * Retrieves a session id of an existing session from an exchange.
@@ -65,11 +65,11 @@ public interface SessionConfig {
      * @param exchange The exchange
      * @return The session id, or null
      */
-    String findSessionId(final HttpServerExchange exchange);
+    String findSessionId(HttpServerExchange exchange);
 
-    SessionCookieSource sessionCookieSource(final HttpServerExchange exchange);
+    SessionCookieSource sessionCookieSource(HttpServerExchange exchange);
 
-    String rewriteUrl(final String originalUrl, final String sessionId);
+    String rewriteUrl(String originalUrl, String sessionId);
 
     enum SessionCookieSource {
         URL,

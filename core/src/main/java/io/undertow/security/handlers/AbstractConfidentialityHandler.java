@@ -91,6 +91,6 @@ public abstract class AbstractConfidentialityHandler implements HttpHandler {
      * @param exchange - The {@link HttpServerExchange} for the request being processed.
      * @return The {@link URI} to redirect to.
      */
-    protected abstract URI getRedirectURI(final HttpServerExchange exchange) throws URISyntaxException;
+    protected abstract URI getRedirectURI(HttpServerExchange exchange) throws URISyntaxException;
 
 }
