@@ -18,27 +18,6 @@
 
 package io.undertow.websockets.jsr.test.stress;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import javax.servlet.ServletException;
-import javax.websocket.CloseReason;
-import javax.websocket.ContainerProvider;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.MessageHandler;
-import javax.websocket.Session;
-import javax.websocket.WebSocketContainer;
-
 import io.undertow.Handlers;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -53,6 +32,25 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import javax.servlet.ServletException;
+import javax.websocket.CloseReason;
+import javax.websocket.ContainerProvider;
+import javax.websocket.Endpoint;
+import javax.websocket.EndpointConfig;
+import javax.websocket.Session;
+import javax.websocket.WebSocketContainer;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -119,21 +117,7 @@ public class WebsocketStressTestCase {
         for (int i = 0; i < NUM_THREADS; ++i) {
             final CountDownLatch latch = new CountDownLatch(1);
             latches.add(latch);
-            final Session session = deployment.connectToServer(new Endpoint() {
-                @Override
-                public void onOpen(Session session, EndpointConfig config) {
-                }
-
-                @Override
-                public void onClose(Session session, CloseReason closeReason) {
-                    latch.countDown();
-                }
-
-                @Override
-                public void onError(Session session, Throwable thr) {
-                    latch.countDown();
-                }
-            }, null, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/stress"));
+            final Session session = deployment.connectToServer(new StringTestEndpoint(latch), null, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/stress"));
             final int thread = i;
             executor.submit(() -> {
                 try {
@@ -167,36 +151,7 @@ public class WebsocketStressTestCase {
             sb.append(i);
         }
         String toSend = sb.toString();
-        final Session session = defaultContainer.connectToServer(new Endpoint() {
-            @Override
-            public void onOpen(Session session, EndpointConfig config) {
-                session.addMessageHandler(new MessageHandler.Partial<byte[]>() {
-                    @Override
-                    public void onMessage(byte[] bytes, boolean b) {
-                        try {
-                            out.write(bytes);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            done.countDown();
-                        }
-                        if (b) {
-                            done.countDown();
-                        }
-                    }
-                });
-            }
-
-            @Override
-            public void onClose(Session session, CloseReason closeReason) {
-                done.countDown();
-            }
-
-            @Override
-            public void onError(Session session, Throwable thr) {
-                thr.printStackTrace();
-                done.countDown();
-            }
-        }, null, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/stress"));
+        final Session session = defaultContainer.connectToServer(new FragmentationTestEndpoint(out, done), null, new URI("ws://" + DefaultServer.getHostAddress("default") + ":" + DefaultServer.getHostPort("default") + "/ws/stress"));
 
         OutputStream stream = session.getBasicRemote().getSendStream();
         for (int i = 0; i < toSend.length(); ++i) {
@@ -240,6 +195,64 @@ public class WebsocketStressTestCase {
                     });
                 }
             });
+        }
+    }
+
+    private static class StringTestEndpoint extends Endpoint {
+        final CountDownLatch latch;
+
+        StringTestEndpoint(CountDownLatch latch) {
+            this.latch = latch;
+        }
+
+        @Override
+        public void onOpen(Session session, EndpointConfig config) {
+        }
+
+        @Override
+        public void onClose(Session session, CloseReason closeReason) {
+            latch.countDown();
+        }
+
+        @Override
+        public void onError(Session session, Throwable thr) {
+            latch.countDown();
+        }
+    }
+
+    private static class FragmentationTestEndpoint extends Endpoint {
+        final ByteArrayOutputStream out;
+        final CountDownLatch done;
+
+        FragmentationTestEndpoint(ByteArrayOutputStream out, CountDownLatch done) {
+            this.out = out;
+            this.done = done;
+        }
+
+        @Override
+        public void onOpen(Session session, EndpointConfig config) {
+            session.addMessageHandler(byte[].class, (bytes, b) -> {
+                try {
+                    out.write(bytes);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    done.countDown();
+                }
+                if (b) {
+                    done.countDown();
+                }
+            });
+        }
+
+        @Override
+        public void onClose(Session session, CloseReason closeReason) {
+            done.countDown();
+        }
+
+        @Override
+        public void onError(Session session, Throwable thr) {
+            thr.printStackTrace();
+            done.countDown();
         }
     }
 }
