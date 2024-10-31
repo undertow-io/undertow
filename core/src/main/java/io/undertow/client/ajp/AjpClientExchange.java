@@ -35,6 +35,7 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static org.xnio.Bits.anyAreSet;
 
@@ -58,7 +59,9 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
     private AjpClientResponseStreamSourceChannel responseChannel;
     private AjpClientRequestClientStreamSinkChannel requestChannel;
 
-    private int state = 0;
+    @SuppressWarnings("unused")
+    private volatile int state = 0;
+    private static final AtomicIntegerFieldUpdater<AjpClientExchange> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(AjpClientExchange.class, "state");
     private static final int REQUEST_TERMINATED = 1;
     private static final int RESPONSE_TERMINATED = 1 << 1;
 
@@ -78,9 +81,9 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
     }
 
     void terminateRequest() {
-        state |= REQUEST_TERMINATED;
+        stateUpdater.accumulateAndGet(this, REQUEST_TERMINATED, (currentState, flag)-> currentState | flag);
         if(!clientConnection.isOpen()) {
-            state |= RESPONSE_TERMINATED;
+            stateUpdater.accumulateAndGet(this, RESPONSE_TERMINATED, (currentState, flag)-> currentState | flag);
         }
         if (anyAreSet(state, RESPONSE_TERMINATED)) {
             clientConnection.requestDone();
@@ -88,9 +91,9 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
     }
 
     void terminateResponse() {
-        state |= RESPONSE_TERMINATED;
+        stateUpdater.accumulateAndGet(this, RESPONSE_TERMINATED, (currentState, flag)-> currentState | flag);
         if(!clientConnection.isOpen()) {
-            state |= REQUEST_TERMINATED;
+            stateUpdater.accumulateAndGet(this, REQUEST_TERMINATED, (currentState, flag)-> currentState | flag);
         }
         if (anyAreSet(state, REQUEST_TERMINATED)) {
             clientConnection.requestDone();
@@ -155,7 +158,7 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
         return new DetachableStreamSinkChannel(requestChannel) {
             @Override
             protected boolean isFinished() {
-                return anyAreSet(state, REQUEST_TERMINATED);
+                return anyAreSet(AjpClientExchange.this.state, REQUEST_TERMINATED);
             }
         };
     }
@@ -165,7 +168,7 @@ class AjpClientExchange extends AbstractAttachable implements ClientExchange {
         return new DetachableStreamSourceChannel(responseChannel) {
             @Override
             protected boolean isFinished() {
-                return anyAreSet(state, RESPONSE_TERMINATED);
+                return anyAreSet(AjpClientExchange.this.state, RESPONSE_TERMINATED);
             }
         };
     }
