@@ -21,6 +21,7 @@ package io.undertow.server.handlers;
 import static io.undertow.util.Headers.SSL_CIPHER;
 import static io.undertow.util.Headers.SSL_CIPHER_USEKEYSIZE;
 import static io.undertow.util.Headers.SSL_CLIENT_CERT;
+import static io.undertow.util.Headers.SECURE_PROTOCOL;
 import static io.undertow.util.Headers.SSL_SESSION_ID;
 
 import java.util.Collections;
@@ -83,6 +84,7 @@ public class SSLHeaderHandler implements HttpHandler {
         final String cipher = requestHeaders.getFirst(SSL_CIPHER);
         String clientCert = requestHeaders.getFirst(SSL_CLIENT_CERT);
         String keySizeStr = requestHeaders.getFirst(SSL_CIPHER_USEKEYSIZE);
+        final String sslProtocol = requestHeaders.getFirst(SECURE_PROTOCOL);
         Integer keySize = null;
         if (keySizeStr != null) {
             try {
@@ -108,7 +110,7 @@ public class SSLHeaderHandler implements HttpHandler {
                 }
             }
             try {
-                SSLSessionInfo info = new BasicSSLSessionInfo(sessionId, cipher, clientCert, keySize);
+                SSLSessionInfo info = new BasicSSLSessionInfo(sessionId, cipher, clientCert, keySize, sslProtocol);
                 exchange.setRequestScheme(HTTPS);
                 exchange.getConnection().setSslSessionInfo(info);
                 exchange.addExchangeCompleteListener(CLEAR_SSL_LISTENER);

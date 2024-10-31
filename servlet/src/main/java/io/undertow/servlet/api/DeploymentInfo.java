@@ -74,7 +74,7 @@ public class DeploymentInfo implements Cloneable {
     private int majorVersion = DEFAULT_MAJOR_VERSION;
     private int minorVersion = 0;
     private int containerMajorVersion = DEFAULT_MAJOR_VERSION;
-    private int containerMinorVersion = 0;
+    private int containerMinorVersion = 1;
     private Executor executor;
     private Executor asyncExecutor;
     private Path tempDir;

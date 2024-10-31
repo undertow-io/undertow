@@ -20,6 +20,8 @@ package io.undertow.server.handlers;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Map;
+import java.util.TreeMap;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -43,14 +45,17 @@ public class CookieImpl implements Cookie {
     private String comment;
     private boolean sameSite;
     private String sameSiteMode;
+    private final Map<String, String> attributes;
 
     public CookieImpl(final String name, final String value) {
         this.name = name;
         this.value = value;
+        this.attributes = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     }
 
     public CookieImpl(final String name) {
         this.name = name;
+        this.attributes = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     }
 
     public String getName() {
@@ -174,6 +179,26 @@ public class CookieImpl implements Cookie {
             UndertowLogger.REQUEST_LOGGER.warnf(UndertowMessages.MESSAGES.invalidSameSiteMode(mode, Arrays.toString(CookieSameSiteMode.values())), "Ignoring specified SameSite mode [%s] for cookie [%s]", mode, this.name);
         }
         return this;
+    }
+
+    @Override
+    public String getAttribute(final String name) {
+        return attributes.get(name);
+    }
+
+    @Override
+    public Cookie setAttribute(final String name, final String value) {
+        if (value != null) {
+            attributes.put(name, value);
+        } else {
+            attributes.remove(name);
+        }
+        return this;
+    }
+
+    @Override
+    public Map<String, String> getAttributes() {
+        return Map.copyOf(attributes);
     }
 
     @Override

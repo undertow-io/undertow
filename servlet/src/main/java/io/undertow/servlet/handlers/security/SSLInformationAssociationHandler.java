@@ -105,6 +105,10 @@ public class SSLInformationAssociationHandler implements HttpHandler {
         if (ssl != null) {
             String cipherSuite = ssl.getCipherSuite();
             byte[] sessionId = ssl.getSessionId();
+            // Required since Jakarta Servlet 6.1
+            if (ssl.getSecureProtocol() != null) {
+                request.setAttribute("jakarta.servlet.request.secure_protocol", ssl.getSecureProtocol());
+            }
             request.setAttribute("jakarta.servlet.request.cipher_suite", cipherSuite);
             request.setAttribute("jakarta.servlet.request.key_size", ssl.getKeySize());
             request.setAttribute("jakarta.servlet.request.ssl_session_id", sessionId != null? HexConverter.convertToHexString(sessionId) : null);
