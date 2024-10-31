@@ -70,11 +70,13 @@ public class SSLMetaDataProxyTestCase extends SSLMetaDataTestCase {
         String id = "1633d36df6f28e1325912b46f7d214f97370c39a6b3fc24ee374a76b3f9b0fba";
         String cipher = "ECDHE-RSA-AES128-GCM-SHA256";
         String keySize = "128";
+        final String sslProtocol = "TLSv1.2";
         Header[] headers = {
             new BasicHeader(Headers.SSL_SESSION_ID_STRING, id),
             new BasicHeader(Headers.SSL_CLIENT_CERT_STRING, cert),
             new BasicHeader(Headers.SSL_CIPHER_STRING, cipher),
-            new BasicHeader(Headers.SSL_CIPHER_USEKEYSIZE_STRING, keySize)
+            new BasicHeader(Headers.SSL_CIPHER_USEKEYSIZE_STRING, keySize),
+            new BasicHeader(Headers.SECURE_PROTOCOL_STRING, sslProtocol),
         };
         String response = internalTest("/cert-dn", headers);
         Assert.assertEquals(dummyCertificate.getSubjectDN().toString(), response);
@@ -82,6 +84,8 @@ public class SSLMetaDataProxyTestCase extends SSLMetaDataTestCase {
         Assert.assertEquals(id, response);
         response = internalTest("/cipher-suite", headers);
         Assert.assertEquals(cipher, response);
+        response = internalTest("/secure-protocol", headers);
+        Assert.assertEquals(sslProtocol, response);
         response = internalTest("/key-size", headers);
         Assert.assertEquals(keySize, response);
     }

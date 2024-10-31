@@ -95,6 +95,7 @@ public final class Headers {
     public static final String SEC_WEB_SOCKET_ORIGIN_STRING = "Sec-WebSocket-Origin";
     public static final String SEC_WEB_SOCKET_PROTOCOL_STRING = "Sec-WebSocket-Protocol";
     public static final String SEC_WEB_SOCKET_VERSION_STRING = "Sec-WebSocket-Version";
+    public static final String SECURE_PROTOCOL_STRING = "SECURE_PROTOCOL";
     public static final String SERVER_STRING = "Server";
     public static final String SERVLET_ENGINE_STRING = "Servlet-Engine";
     public static final String SET_COOKIE_STRING = "Set-Cookie";
@@ -124,6 +125,7 @@ public final class Headers {
     public static final String X_FORWARDED_SERVER_STRING = "X-Forwarded-Server";
     public static final String X_FRAME_OPTIONS_STRING = "X-Frame-Options";
     public static final String X_XSS_PROTECTION_STRING = "X-Xss-Protection";
+
     // Header names
 
     public static final HttpString ACCEPT = new HttpString(ACCEPT_STRING, 1);
@@ -181,35 +183,36 @@ public final class Headers {
     public static final HttpString SEC_WEB_SOCKET_ORIGIN = new HttpString(SEC_WEB_SOCKET_ORIGIN_STRING, 53);
     public static final HttpString SEC_WEB_SOCKET_PROTOCOL = new HttpString(SEC_WEB_SOCKET_PROTOCOL_STRING, 54);
     public static final HttpString SEC_WEB_SOCKET_VERSION = new HttpString(SEC_WEB_SOCKET_VERSION_STRING, 55);
-    public static final HttpString SERVER = new HttpString(SERVER_STRING, 56);
-    public static final HttpString SERVLET_ENGINE = new HttpString(SERVLET_ENGINE_STRING, 57);
-    public static final HttpString SET_COOKIE = new HttpString(SET_COOKIE_STRING, 58);
-    public static final HttpString SET_COOKIE2 = new HttpString(SET_COOKIE2_STRING, 59);
-    public static final HttpString SSL_CIPHER = new HttpString(SSL_CIPHER_STRING, 60);
-    public static final HttpString SSL_CIPHER_USEKEYSIZE = new HttpString(SSL_CIPHER_USEKEYSIZE_STRING, 61);
-    public static final HttpString SSL_CLIENT_CERT = new HttpString(SSL_CLIENT_CERT_STRING, 62);
-    public static final HttpString SSL_SESSION_ID = new HttpString(SSL_SESSION_ID_STRING, 63);
-    public static final HttpString STATUS = new HttpString(STATUS_STRING, 64);
-    public static final HttpString STRICT_TRANSPORT_SECURITY = new HttpString(STRICT_TRANSPORT_SECURITY_STRING, 65);
-    public static final HttpString TE = new HttpString(TE_STRING, 66);
-    public static final HttpString TRAILER = new HttpString(TRAILER_STRING, 67);
-    public static final HttpString TRANSFER_ENCODING = new HttpString(TRANSFER_ENCODING_STRING, 68);
-    public static final HttpString UPGRADE = new HttpString(UPGRADE_STRING, 69);
-    public static final HttpString USER_AGENT = new HttpString(USER_AGENT_STRING, 70);
-    public static final HttpString VARY = new HttpString(VARY_STRING, 71);
-    public static final HttpString VIA = new HttpString(VIA_STRING, 72);
-    public static final HttpString WARNING = new HttpString(WARNING_STRING, 73);
-    public static final HttpString WWW_AUTHENTICATE = new HttpString(WWW_AUTHENTICATE_STRING, 74);
-    public static final HttpString X_CONTENT_LENGTH = new HttpString(X_CONTENT_LENGTH_STRING, 75);
-    public static final HttpString X_CONTENT_TYPE_OPTIONS = new HttpString(X_CONTENT_TYPE_OPTIONS_STRING, 76);
-    public static final HttpString X_DISABLE_PUSH = new HttpString(X_DISABLE_PUSH_STRING, 77);
-    public static final HttpString X_FORWARDED_FOR = new HttpString(X_FORWARDED_FOR_STRING, 78);
-    public static final HttpString X_FORWARDED_HOST = new HttpString(X_FORWARDED_HOST_STRING, 79);
-    public static final HttpString X_FORWARDED_PORT = new HttpString(X_FORWARDED_PORT_STRING, 80);
-    public static final HttpString X_FORWARDED_PROTO = new HttpString(X_FORWARDED_PROTO_STRING, 81);
-    public static final HttpString X_FORWARDED_SERVER = new HttpString(X_FORWARDED_SERVER_STRING, 82);
-    public static final HttpString X_FRAME_OPTIONS = new HttpString(X_FRAME_OPTIONS_STRING, 83);
-    public static final HttpString X_XSS_PROTECTION = new HttpString(X_XSS_PROTECTION_STRING, 84);
+    public static final HttpString SECURE_PROTOCOL = new HttpString(SECURE_PROTOCOL_STRING, 56);
+    public static final HttpString SERVER = new HttpString(SERVER_STRING, 57);
+    public static final HttpString SERVLET_ENGINE = new HttpString(SERVLET_ENGINE_STRING, 58);
+    public static final HttpString SET_COOKIE = new HttpString(SET_COOKIE_STRING, 59);
+    public static final HttpString SET_COOKIE2 = new HttpString(SET_COOKIE2_STRING, 60);
+    public static final HttpString SSL_CIPHER = new HttpString(SSL_CIPHER_STRING, 61);
+    public static final HttpString SSL_CIPHER_USEKEYSIZE = new HttpString(SSL_CIPHER_USEKEYSIZE_STRING, 62);
+    public static final HttpString SSL_CLIENT_CERT = new HttpString(SSL_CLIENT_CERT_STRING, 63);
+    public static final HttpString SSL_SESSION_ID = new HttpString(SSL_SESSION_ID_STRING, 64);
+    public static final HttpString STATUS = new HttpString(STATUS_STRING, 65);
+    public static final HttpString STRICT_TRANSPORT_SECURITY = new HttpString(STRICT_TRANSPORT_SECURITY_STRING, 66);
+    public static final HttpString TE = new HttpString(TE_STRING, 67);
+    public static final HttpString TRAILER = new HttpString(TRAILER_STRING, 68);
+    public static final HttpString TRANSFER_ENCODING = new HttpString(TRANSFER_ENCODING_STRING, 69);
+    public static final HttpString UPGRADE = new HttpString(UPGRADE_STRING, 70);
+    public static final HttpString USER_AGENT = new HttpString(USER_AGENT_STRING, 71);
+    public static final HttpString VARY = new HttpString(VARY_STRING, 72);
+    public static final HttpString VIA = new HttpString(VIA_STRING, 73);
+    public static final HttpString WARNING = new HttpString(WARNING_STRING, 74);
+    public static final HttpString WWW_AUTHENTICATE = new HttpString(WWW_AUTHENTICATE_STRING, 75);
+    public static final HttpString X_CONTENT_LENGTH = new HttpString(X_CONTENT_LENGTH_STRING, 76);
+    public static final HttpString X_CONTENT_TYPE_OPTIONS = new HttpString(X_CONTENT_TYPE_OPTIONS_STRING, 77);
+    public static final HttpString X_DISABLE_PUSH = new HttpString(X_DISABLE_PUSH_STRING, 78);
+    public static final HttpString X_FORWARDED_FOR = new HttpString(X_FORWARDED_FOR_STRING, 79);
+    public static final HttpString X_FORWARDED_HOST = new HttpString(X_FORWARDED_HOST_STRING, 80);
+    public static final HttpString X_FORWARDED_PORT = new HttpString(X_FORWARDED_PORT_STRING, 81);
+    public static final HttpString X_FORWARDED_PROTO = new HttpString(X_FORWARDED_PROTO_STRING, 82);
+    public static final HttpString X_FORWARDED_SERVER = new HttpString(X_FORWARDED_SERVER_STRING, 83);
+    public static final HttpString X_FRAME_OPTIONS = new HttpString(X_FRAME_OPTIONS_STRING, 84);
+    public static final HttpString X_XSS_PROTECTION = new HttpString(X_XSS_PROTECTION_STRING, 85);
     // Content codings
 
     public static final HttpString COMPRESS = new HttpString("compress");
