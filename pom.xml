@@ -129,7 +129,7 @@
         <version.com.h2database>2.1.214</version.com.h2database>
         <version.easymock>4.3</version.easymock>
         <version.jakarta.annotation.jakarta-annotation-api>2.1.1</version.jakarta.annotation.jakarta-annotation-api>
-        <version.jakarta.servlet.jakarta-servlet-api>6.0.0</version.jakarta.servlet.jakarta-servlet-api>
+        <version.jakarta.servlet.jakarta-servlet-api>6.1.0</version.jakarta.servlet.jakarta-servlet-api>
         <version.jakarta.websocket.jakarta-websocket-api>2.1.0</version.jakarta.websocket.jakarta-websocket-api>
         <version.junit>4.13.2</version.junit>
         <version.netty>4.1.82.Final</version.netty>
@@ -177,6 +177,7 @@
         <maven.javadoc.plugin.quiet>true</maven.javadoc.plugin.quiet>
         <maven.compiler.showDeprecation>false</maven.compiler.showDeprecation>
         <maven.compiler.showWarnings>false</maven.compiler.showWarnings>
+        <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     </properties>
 
     <modules>
@@ -321,7 +322,6 @@
                     <version>${version.surefire.plugin}</version>
                     <configuration>
                         <groups>${test.categories}</groups>
-                        <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     </configuration>
                 </plugin>
                 <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
