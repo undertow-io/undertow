@@ -1674,7 +1674,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * If the exchange is already complete this method is a noop
      */
     public HttpServerExchange endExchange() {
-        final int state = this.state;
+        //TODO: check if this required or even desired?
         if (allAreSet(state, FLAG_REQUEST_TERMINATED | FLAG_RESPONSE_TERMINATED)) {
             if(blockingHttpExchange != null) {
                 //we still have to close the blocking exchange in this case,
@@ -1819,7 +1819,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                                 channel.suspendWrites();
                                 channel.getWriteSetter().set(null);
                                 //defensive programming, should never happen
-                                if (anyAreClear(state, FLAG_RESPONSE_TERMINATED)) {
+                                if (anyAreClear(HttpServerExchange.this.state, FLAG_RESPONSE_TERMINATED)) {
                                     //make sure the listeners have been invoked
                                     invokeExchangeCompleteListeners();
                                     UndertowLogger.ROOT_LOGGER.responseWasNotTerminated(connection, HttpServerExchange.this);
@@ -2070,14 +2070,14 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         protected boolean isFinished() {
-            return allAreSet(state, FLAG_RESPONSE_TERMINATED);
+            return allAreSet(HttpServerExchange.this.state, FLAG_RESPONSE_TERMINATED);
         }
 
         @Override
         public void resumeWrites() {
             if (isInCall()) {
                 setFlags(FLAG_SHOULD_RESUME_WRITES);
-                if(anyAreSet(state, FLAG_DISPATCHED)) {
+                if(anyAreSet(HttpServerExchange.this.state, FLAG_DISPATCHED)) {
                     throw UndertowMessages.MESSAGES.resumedAndDispatched();
                 }
             } else if(!isFinished()){
@@ -2099,7 +2099,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             if (isInCall()) {
                 wakeup = true;
                 setFlags(FLAG_SHOULD_RESUME_WRITES);
-                if(anyAreSet(state, FLAG_DISPATCHED)) {
+                if(anyAreSet(HttpServerExchange.this.state, FLAG_DISPATCHED)) {
                     throw UndertowMessages.MESSAGES.resumedAndDispatched();
                 }
             } else {
@@ -2109,7 +2109,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public boolean isWriteResumed() {
-            return anyAreSet(state, FLAG_SHOULD_RESUME_WRITES) || super.isWriteResumed();
+            return anyAreSet(HttpServerExchange.this.state, FLAG_SHOULD_RESUME_WRITES) || super.isWriteResumed();
         }
 
         public void runResume() {
@@ -2242,7 +2242,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         protected boolean isFinished() {
-            return allAreSet(state, FLAG_REQUEST_TERMINATED);
+            return allAreSet(HttpServerExchange.this.state, FLAG_REQUEST_TERMINATED);
         }
 
         @Override
@@ -2250,7 +2250,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             readsResumed = true;
             if (isInCall()) {
                 setFlags(FLAG_SHOULD_RESUME_READS);
-                if(anyAreSet(state, FLAG_DISPATCHED)) {
+                if(anyAreSet(HttpServerExchange.this.state, FLAG_DISPATCHED)) {
                     throw UndertowMessages.MESSAGES.resumedAndDispatched();
                 }
             } else if (!isFinished()) {
@@ -2263,7 +2263,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             if (isInCall()) {
                 wakeup = true;
                 setFlags(FLAG_SHOULD_RESUME_READS);
-                if(anyAreSet(state, FLAG_DISPATCHED)) {
+                if(anyAreSet(HttpServerExchange.this.state, FLAG_DISPATCHED)) {
                     throw UndertowMessages.MESSAGES.resumedAndDispatched();
                 }
             } else {
@@ -2445,7 +2445,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             if(isFinished()) {
                 return false;
             }
-            return anyAreSet(state, FLAG_SHOULD_RESUME_READS) || super.isReadResumed();
+            return anyAreSet(HttpServerExchange.this.state, FLAG_SHOULD_RESUME_READS) || super.isReadResumed();
         }
 
         @Override
