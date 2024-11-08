@@ -71,7 +71,7 @@ class ChunkReader<T extends Conduit> {
         long oldVal = state;
         long chunkRemaining = state & MASK_COUNT;
 
-        if (chunkRemaining > 0 && !anyAreSet(state, FLAG_READING_AFTER_LAST | FLAG_READING_LENGTH | FLAG_READING_NEWLINE | FLAG_READING_TILL_END_OF_LINE)) {
+        if (chunkRemaining > 0 && !anyAreSet(oldVal, FLAG_READING_AFTER_LAST | FLAG_READING_LENGTH | FLAG_READING_NEWLINE | FLAG_READING_TILL_END_OF_LINE)) {
             return chunkRemaining;
         }
         long newVal = oldVal & ~MASK_COUNT;
@@ -159,10 +159,11 @@ class ChunkReader<T extends Conduit> {
     }
 
     public void setChunkRemaining(final long remaining) {
-        if (remaining < 0 || anyAreSet(state, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_READING_AFTER_LAST)) {
+        long old = state;
+        if (remaining < 0 || anyAreSet(old, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_READING_AFTER_LAST)) {
             return;
         }
-        long old = state;
+
         long oldRemaining = old & MASK_COUNT;
         if (remaining == 0 && oldRemaining != 0) {
             //if oldRemaining is zero it could be that no data has been read yet
