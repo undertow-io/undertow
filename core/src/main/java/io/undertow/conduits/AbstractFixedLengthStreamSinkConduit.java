@@ -19,6 +19,7 @@
 package io.undertow.conduits;
 
 import io.undertow.UndertowLogger;
+
 import org.xnio.Buffers;
 import org.xnio.channels.FixedLengthOverflowException;
 import org.xnio.channels.StreamSourceChannel;
@@ -31,6 +32,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import static java.lang.Math.min;
 import static org.xnio.Bits.allAreClear;
@@ -46,7 +48,9 @@ import static org.xnio.Bits.longBitMask;
 public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
     private int config;
 
-    private long state;
+    @SuppressWarnings("unused")
+    private volatile long state;
+    protected static final AtomicLongFieldUpdater<AbstractFixedLengthStreamSinkConduit> stateUpdater = AtomicLongFieldUpdater.newUpdater(AbstractFixedLengthStreamSinkConduit.class, "state");
 
     private boolean broken = false;
 
@@ -78,7 +82,7 @@ public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStrea
     }
 
     protected void reset(long contentLength, boolean propagateClose) {
-        this.state = contentLength;
+        stateUpdater.set(this, contentLength);
         if (propagateClose) {
             config |= CONF_FLAG_PASS_CLOSE;
         } else {
@@ -256,7 +260,7 @@ public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStrea
                 next.truncateWrites();
             } finally {
                 if (!anyAreSet(state, FLAG_FINISHED_CALLED)) {
-                    state |= FLAG_FINISHED_CALLED;
+                    stateUpdater.accumulateAndGet(this, FLAG_FINISHED_CALLED, (current, flag)-> current | flag);
                     channelFinished();
                 }
             }
@@ -270,7 +274,7 @@ public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStrea
     public void truncateWrites() throws IOException {
         try {
             if (!anyAreSet(state, FLAG_FINISHED_CALLED)) {
-                state |= FLAG_FINISHED_CALLED;
+                stateUpdater.accumulateAndGet(this, FLAG_FINISHED_CALLED, (current, flag)-> current | flag);
                 channelFinished();
             }
         } finally {
@@ -298,7 +302,7 @@ public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStrea
 
     private void exitWrite(long oldVal, long consumed) {
         long newVal = oldVal - consumed;
-        state = newVal;
+        stateUpdater.set(this, newVal);
     }
 
     private void exitFlush(long oldVal, boolean flushed) {
@@ -311,7 +315,7 @@ public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStrea
                 newVal |= FLAG_FINISHED_CALLED;
                 callFinish = true;
             }
-            state = newVal;
+            stateUpdater.set(this, newVal);
             if (callFinish) {
                 channelFinished();
             }
@@ -322,18 +326,20 @@ public abstract class AbstractFixedLengthStreamSinkConduit extends AbstractStrea
     }
 
     private long enterShutdown() {
-        long oldVal, newVal;
-        oldVal = state;
+        long oldVal;
+        oldVal = stateUpdater.get(this);
         if (anyAreSet(oldVal, FLAG_CLOSE_REQUESTED | FLAG_CLOSE_COMPLETE)) {
             // no action necessary
             return oldVal;
         }
-        newVal = oldVal | FLAG_CLOSE_REQUESTED;
+        stateUpdater.accumulateAndGet(this, FLAG_CLOSE_REQUESTED, (currentState, flag)-> currentState | flag);
         if (anyAreSet(oldVal, MASK_COUNT)) {
             // error: channel not filled.  set both close flags.
-            newVal |= FLAG_CLOSE_COMPLETE;
+            stateUpdater.accumulateAndGet(this, FLAG_CLOSE_REQUESTED, (currentState, flag)-> currentState | flag);
+        } else {
+            stateUpdater.accumulateAndGet(this, FLAG_CLOSE_REQUESTED, (currentState, flag)-> currentState | flag);
         }
-        state = newVal;
+        //state = newVal;
         return oldVal;
     }
 
