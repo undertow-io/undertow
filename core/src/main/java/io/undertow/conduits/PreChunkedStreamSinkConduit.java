@@ -33,6 +33,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
@@ -52,7 +53,9 @@ public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<Strea
     private static final int FLAG_WRITES_SHUTDOWN = 1;
     private static final int FLAG_FINISHED = 1 << 2;
 
-    int state = 0;
+    private volatile int state = 0;
+    private static final AtomicIntegerFieldUpdater<PreChunkedStreamSinkConduit> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(
+            PreChunkedStreamSinkConduit.class, "state");
     final ChunkReader<PreChunkedStreamSinkConduit> chunkReader;
 
     /**
@@ -183,7 +186,7 @@ public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<Strea
     }
 
     private void invokeFinishListener() {
-        state |= FLAG_FINISHED;
+        stateUpdater.accumulateAndGet(this, FLAG_FINISHED, (current, flag) -> current | flag);
         if (finishListener != null) {
             finishListener.handleEvent(this);
         }
@@ -197,7 +200,7 @@ public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<Strea
         if (chunkReader.getChunkRemaining() != -1) {
             throw UndertowMessages.MESSAGES.chunkedChannelClosedMidChunk();
         }
-        state |= FLAG_WRITES_SHUTDOWN;
+        stateUpdater.accumulateAndGet(this, FLAG_WRITES_SHUTDOWN, (current, flag) -> current | flag);
     }
 
     @Override
