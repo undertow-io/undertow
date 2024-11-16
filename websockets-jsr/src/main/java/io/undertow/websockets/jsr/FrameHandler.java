@@ -269,8 +269,9 @@ class FrameHandler extends AbstractReceiveListener {
             @Override
             public void run() {
                 MessageHandler mHandler = handler.getHandler();
+                ClassLoader oldCL = Thread.currentThread().getContextClassLoader();
+                Thread.currentThread().setContextClassLoader(mHandler.getClass().getClassLoader());
                 try {
-
                     if (mHandler instanceof MessageHandler.Partial) {
                         if (handler.decodingNeeded) {
                             Object object = getSession().getEncoding().decodeText(handler.getMessageType(), message);
@@ -292,6 +293,8 @@ class FrameHandler extends AbstractReceiveListener {
                     }
                 } catch (Exception e) {
                     invokeOnError(e);
+                } finally {
+                    Thread.currentThread().setContextClassLoader(oldCL);
                 }
             }
         });
