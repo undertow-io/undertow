@@ -113,6 +113,7 @@ public class ClientEndpointReconnectTestCase {
         session.getBasicRemote().sendText("close");
         Assert.assertEquals("CLOSE", endpoint.message());
         Assert.assertEquals("OPEN", endpoint.message());
+        Assert.assertTrue(session.isOpen()); // Verify session is open before sending the next message
         session.getBasicRemote().sendText("hi");
         Assert.assertEquals("MESSAGE-ECHO-hi", endpoint.message());
         session.getBasicRemote().sendText("close");
