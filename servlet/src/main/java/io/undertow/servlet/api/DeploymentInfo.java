@@ -320,14 +320,14 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
-    public long getDefaultAsyncConextTimeout() {
+    public long getDefaultAsyncContextTimeout() {
         return defaultAsyncContextTimeout;
     }
 
     /**
      * @param defaultAsyncContextTimeout The default async context timeout, in milliseconds
      */
-    public DeploymentInfo setDefaultAsyncConextTimeout(final long defaultAsyncContextTimeout) {
+    public DeploymentInfo setDefaultAsyncContextTimeout(final long defaultAsyncContextTimeout) {
         this.defaultAsyncContextTimeout = defaultAsyncContextTimeout;
         return this;
     }
