@@ -234,7 +234,7 @@ public class DefaultAccessLogReceiver implements AccessLogReceiver, Runnable, Cl
      * <p>
      * DO NOT USE THIS OUTSIDE OF A TEST
      */
-    void awaitWrittenForTest() throws InterruptedException {
+    protected void awaitWrittenForTest() throws InterruptedException {
         while (!pendingMessages.isEmpty() || forceLogRotation) {
             Thread.sleep(10);
         }
