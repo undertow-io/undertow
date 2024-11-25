@@ -25,6 +25,6 @@ import io.undertow.server.handlers.PathHandler;
  */
 interface NodeTestHandlers {
 
-    void setup(final PathHandler handler, final NodeTestConfig config);
+    void setup(PathHandler handler, NodeTestConfig config);
 
 }

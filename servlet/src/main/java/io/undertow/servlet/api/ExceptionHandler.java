@@ -49,5 +49,5 @@ public interface ExceptionHandler {
      * @param throwable       The exception
      * @return <code>true</code> true if the error was handled by this method
      */
-    boolean handleThrowable(final HttpServerExchange exchange, ServletRequest request, ServletResponse response, Throwable throwable);
+    boolean handleThrowable(HttpServerExchange exchange, ServletRequest request, ServletResponse response, Throwable throwable);
 }

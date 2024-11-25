@@ -44,6 +44,6 @@ public interface Predicate {
      */
     AttachmentKey<Map<String, Object>> PREDICATE_CONTEXT = AttachmentKey.create(Map.class);
 
-    boolean resolve(final HttpServerExchange value);
+    boolean resolve(HttpServerExchange value);
 
 }
