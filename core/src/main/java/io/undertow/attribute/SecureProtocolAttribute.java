@@ -33,10 +33,7 @@ public class SecureProtocolAttribute implements ExchangeAttribute {
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
         final SSLSessionInfo ssl = exchange.getConnection().getSslSessionInfo();
-        if (ssl == null || ssl.getSecureProtocol() == null) {
-            return null;
-        }
-        return ssl.getSecureProtocol();
+        return (ssl == null ) ? null : ssl.getSecureProtocol();
     }
 
     @Override

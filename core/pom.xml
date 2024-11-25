@@ -529,6 +529,11 @@
                                 </configuration>
                             </execution>
                         </executions>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <undertow.proxied>true</undertow.proxied>
+                            </systemPropertyVariables>
+                        </configuration>
                     </plugin>
                 </plugins>
             </build>
