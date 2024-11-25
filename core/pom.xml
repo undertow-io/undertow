@@ -102,7 +102,7 @@
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
-        
+
         <dependency>
             <groupId>org.apache.directory.server</groupId>
             <artifactId>apacheds-test-framework</artifactId>
@@ -530,6 +530,11 @@
                                 </configuration>
                             </execution>
                         </executions>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <undertow.proxied>true</undertow.proxied>
+                            </systemPropertyVariables>
+                        </configuration>
                     </plugin>
                 </plugins>
             </build>
