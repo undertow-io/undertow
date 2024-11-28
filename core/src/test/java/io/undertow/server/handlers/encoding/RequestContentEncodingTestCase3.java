@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2024 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +20,9 @@ package io.undertow.server.handlers.encoding;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -28,6 +31,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -50,12 +54,14 @@ import io.undertow.util.StatusCodes;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-public class RequestContentEncodingTestCase {
+public class RequestContentEncodingTestCase3 {
 
     private static volatile String message;
+    private static ExecutorService executor;
 
     @BeforeClass
     public static void setup() {
+        executor = Executors.newFixedThreadPool(2);
         final ContentEncodingRepository contentEncodingRepository = new ContentEncodingRepository()
                 .addEncodingHandler("deflate", new DeflateEncodingProvider(), 50)
                 .addEncodingHandler("gzip", new GzipEncodingProvider(), 60);
@@ -71,13 +77,20 @@ public class RequestContentEncodingTestCase {
         final HttpHandler decode = new RequestEncodingHandler(new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.getRequestReceiver().receiveFullBytes(new Receiver.FullBytesCallback() {
+                exchange.startBlocking();
+                Future<?> result =  executor.submit(new Runnable() {
                     @Override
-                    public void handle(HttpServerExchange exchange, byte[] message) {
-                        Assert.assertTrue(exchange.getRequestContentLength()>0);
-                        exchange.getResponseSender().send(ByteBuffer.wrap(message));
+                    public void run() {
+                        exchange.getRequestReceiver().receiveFullBytes(new Receiver.FullBytesCallback() {
+                            @Override
+                            public void handle(HttpServerExchange exchange, byte[] message) {
+                                Assert.assertTrue(exchange.getRequestContentLength()>0);
+                                exchange.getResponseSender().send(ByteBuffer.wrap(message));
+                            }
+                        });
                     }
                 });
+                result.get();
             }
         }).addEncoding("deflate", InflatingStreamSourceConduit.WRAPPER)
                 .addEncoding("gzip", GzipStreamSourceConduit.WRAPPER);
@@ -89,6 +102,10 @@ public class RequestContentEncodingTestCase {
         DefaultServer.setRootHandler(pathHandler);
     }
 
+    @AfterClass
+    public static void boom() {
+        executor.shutdownNow();
+    }
     /**
      * Tests the use of the deflate contentent encoding
      *
@@ -115,25 +132,6 @@ public class RequestContentEncodingTestCase {
         runTest(sb.toString(), "gzip");
     }
 
-    private static final String MESSAGE = "COMPRESSED I'AM";
-    private static final byte[] COMPRESSED_MESSAGE = { 0x78, (byte) (0x9C & 0xFF), 0x73, (byte) (0xF6 & 0xFF),
-            (byte) (0xF7 & 0xFF), 0x0D, 0x08, 0x72, 0x0D, 0x0E, 0x76, 0x75, 0x51, (byte) (0xF0 & 0xFF), 0x54, 0x77,
-            (byte) (0xF4 & 0xFF), 0x05, 0x00, 0x22, 0x35, 0x04, 0x14 };
-
-    @Test
-    public void testDeflateWithNoWrapping() throws IOException {
-        HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/decode");
-        post.setEntity(new ByteArrayEntity(COMPRESSED_MESSAGE));
-        post.addHeader(Headers.CONTENT_ENCODING_STRING, "deflate");
-
-        try (CloseableHttpClient client = HttpClientBuilder.create().disableContentCompression().build()) {
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String sb = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(MESSAGE.length(), sb.length());
-            Assert.assertEquals(MESSAGE, sb);
-        }
-    }
 
     public void runTest(final String theMessage, String encoding) throws IOException {
         try (CloseableHttpClient client = HttpClientBuilder.create().disableContentCompression().build()){
