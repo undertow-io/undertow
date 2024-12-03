@@ -105,8 +105,9 @@
         <version.bundle.plugin>5.1.1</version.bundle.plugin>
 
         <version.jmh>1.21</version.jmh>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.release>11</maven.compiler.release>
+        <maven.compiler.source>${maven.compiler.release}</maven.compiler.source>
+        <maven.compiler.target>${maven.compiler.release}</maven.compiler.target>
         <maven.javadoc.plugin.quiet>true</maven.javadoc.plugin.quiet>
         <maven.compiler.showDeprecation>false</maven.compiler.showDeprecation>
         <maven.compiler.showWarnings>false</maven.compiler.showWarnings>
@@ -182,7 +183,6 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>${version.compiler.plugin}</version>
                     <configuration>
                         <!-- fork is needed so compiler args can be used -->
                         <fork>true</fork>
