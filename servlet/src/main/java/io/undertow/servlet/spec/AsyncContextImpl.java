@@ -114,10 +114,10 @@ public class AsyncContextImpl implements AsyncContext {
             }
         });
         //If its chain and non default value is set, use it
-        if(previousAsyncContext!=null && previousAsyncContext.getTimeout() != servletRequestContext.getDeployment().getDeploymentInfo().getDefaultAsyncConextTimeout()) {
+        if(previousAsyncContext!=null && previousAsyncContext.getTimeout() != servletRequestContext.getDeployment().getDeploymentInfo().getDefaultAsyncContextTimeout()) {
             this.timeout = previousAsyncContext.getTimeout();
         } else {
-            this.timeout = servletRequestContext.getDeployment().getDeploymentInfo().getDefaultAsyncConextTimeout();
+            this.timeout = servletRequestContext.getDeployment().getDeploymentInfo().getDefaultAsyncContextTimeout();
         }
     }
 
