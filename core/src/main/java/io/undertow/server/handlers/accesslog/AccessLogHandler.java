@@ -72,11 +72,10 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
  * commonly utilized patterns:</p>
  * <ul>
  * <li><b>common</b> - <code>%h %l %u %t "%r" %s %b</code>
- * <li><b>combined</b> -
- * <code>%h %l %u %t "%r" %s %b "%{i,Referer}" "%{i,User-Agent}"</code>
+ * <li><b>commonv</b> - <code>%h %l %u %t "%r" %s %b %T "%I"</code>
+ * <li><b>combined</b> - <code>%h %l %u %t "%r" %s %b "%{i,Referer}" "%{i,User-Agent}"</code>
  * <li><b>commonobf</b> - <code>%o %l %u %t "%r" %s %b</code>
- * <li><b>combinedobf</b> -
- * <code>%o %l %u %t "%r" %s %b "%{i,Referer}" "%{i,User-Agent}"</code>
+ * <li><b>combinedobf</b> - <code>%o %l %u %t "%r" %s %b "%{i,Referer}" "%{i,User-Agent}"</code>
  * </ul>
  * <p>
  * <p>
