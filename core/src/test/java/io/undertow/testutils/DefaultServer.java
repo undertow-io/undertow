@@ -318,6 +318,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
 
     @SuppressWarnings("deprecation")
     public static void setupProxyHandlerForSSL(ProxyHandler proxyHandler) {
+        proxyHandler.addRequestHeader(Headers.SECURE_PROTOCOL, "%{SECURE_PROTOCOL}", DefaultServer.class.getClassLoader());
         proxyHandler.addRequestHeader(Headers.SSL_CLIENT_CERT, "%{SSL_CLIENT_CERT}", DefaultServer.class.getClassLoader());
         proxyHandler.addRequestHeader(Headers.SSL_CIPHER, "%{SSL_CIPHER}", DefaultServer.class.getClassLoader());
         proxyHandler.addRequestHeader(Headers.SSL_SESSION_ID, "%{SSL_SESSION_ID}", DefaultServer.class.getClassLoader());

@@ -39,6 +39,8 @@ import static jakarta.servlet.AsyncContext.ASYNC_SERVLET_PATH;
 import static jakarta.servlet.RequestDispatcher.ERROR_EXCEPTION;
 import static jakarta.servlet.RequestDispatcher.ERROR_EXCEPTION_TYPE;
 import static jakarta.servlet.RequestDispatcher.ERROR_MESSAGE;
+import static jakarta.servlet.RequestDispatcher.ERROR_METHOD;
+import static jakarta.servlet.RequestDispatcher.ERROR_QUERY_STRING;
 import static jakarta.servlet.RequestDispatcher.ERROR_REQUEST_URI;
 import static jakarta.servlet.RequestDispatcher.ERROR_SERVLET_NAME;
 import static jakarta.servlet.RequestDispatcher.ERROR_STATUS_CODE;
@@ -161,6 +163,8 @@ public final class DispatchUtils {
         }
         // specific attributes for error
         requestImpl.setAttribute(ERROR_REQUEST_URI, requestImpl.getRequestURI());
+        // Required since Jakarta Servlet 6.1
+        requestImpl.setAttribute(ERROR_QUERY_STRING, requestImpl.getQueryString());
         requestImpl.setAttribute(ERROR_SERVLET_NAME, servletName);
         if (exception != null) {
             if (exception instanceof ServletException && ((ServletException)exception).getRootCause() != null) {
@@ -172,6 +176,8 @@ public final class DispatchUtils {
             }
         }
         requestImpl.setAttribute(ERROR_MESSAGE, message);
+        // Required since Jakarta Servlet 6.1
+        requestImpl.setAttribute(ERROR_METHOD, requestImpl.getMethod());
         requestImpl.setAttribute(ERROR_STATUS_CODE, responseImpl.getStatus());
 
         final String newRequestPath = assignRequestPath(path, requestImpl, servletContext, false);

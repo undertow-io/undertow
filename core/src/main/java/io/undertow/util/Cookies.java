@@ -175,6 +175,8 @@ public class Cookies {
         } else if (key.equalsIgnoreCase("samesite")) {
             cookie.setSameSite(true);
             cookie.setSameSiteMode(value);
+        } else {
+            cookie.setAttribute(key, value);
         }
         //otherwise ignore this key-value pair
     }
@@ -211,17 +213,18 @@ public class Cookies {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, LegacyCookieSupport.COMMA_IS_SEPARATOR);
     }
 
+    @Deprecated(since = "2.4.0", forRemoval=true)
     public static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies) {
-        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, LegacyCookieSupport.COMMA_IS_SEPARATOR);
+        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, LegacyCookieSupport.COMMA_IS_SEPARATOR, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0, false);
+    }
+
+    public static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean rfc6265ParsingDisabled) {
+        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, LegacyCookieSupport.COMMA_IS_SEPARATOR, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0, rfc6265ParsingDisabled);
     }
 
     @Deprecated
     static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator) {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0);
-    }
-
-    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean commaIsSeperator) {
-        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0);
     }
 
     static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
@@ -230,7 +233,7 @@ public class Cookies {
         }
         final Set<Cookie> parsedCookies = new HashSet<>();
         for (String cookie : cookies) {
-            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0);
+            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0, true);
         }
 
         final Map<String, Cookie> retVal = new TreeMap<>();
@@ -240,19 +243,20 @@ public class Cookies {
         return retVal;
     }
 
-    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
+    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0, boolean rfc6265ParsingDisabled) {
         if (cookies != null) {
             for (String cookie : cookies) {
-                parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0);
+                parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0, rfc6265ParsingDisabled);
             }
         }
     }
 
-    private static void parseCookie(final String cookie, final Set<Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
+    private static void parseCookie(final String cookie, final Set<Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator, boolean allowHttpSepartorsV0, boolean rfc6265ParsingDisabled) {
         int state = 0;
         String name = null;
         int start = 0;
         boolean containsEscapedQuotes = false;
+        boolean inQuotes = false;
         int cookieCount = parsedCookies.size();
         final Map<String, String> cookies = new HashMap<>();
         final Map<String, String> additional = new HashMap<>();
@@ -293,6 +297,7 @@ public class Cookies {
                         start = i + 1;
                     } else if (c == '"' && start == i) { //only process the " if it is the first character
                         containsEscapedQuotes = false;
+                        inQuotes = true;
                         state = 3;
                         start = i + 1;
                     } else if (c == '=') {
@@ -315,7 +320,14 @@ public class Cookies {
                 case 3: {
                     //extract quoted value
                     if (c == '"') {
-                        cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        if (!rfc6265ParsingDisabled && inQuotes) {
+                            start = start - 1;
+                            inQuotes = false;
+                            i++;
+                            cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        } else {
+                            cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        }
                         state = 0;
                         start = i + 1;
                     } else if (c == ';' || (commaIsSeperator && c == ',')) {
@@ -335,6 +347,7 @@ public class Cookies {
                         // Skip the next double quote char ('"' behind '\') in the cookie value
                         i++;
                         containsEscapedQuotes = true;
+                        inQuotes = false;
                     }
                     break;
                 }

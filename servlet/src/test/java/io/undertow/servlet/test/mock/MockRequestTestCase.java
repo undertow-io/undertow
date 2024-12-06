@@ -532,6 +532,10 @@ public class MockRequestTestCase {
         }
 
         @Override
+        public void sendRedirect(final String location, final int sc, final boolean clearBuffer) throws IOException {
+        }
+
+        @Override
         public void setHeader(String name, String value) {
         }
 
