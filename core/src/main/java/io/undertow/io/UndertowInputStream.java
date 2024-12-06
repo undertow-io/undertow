@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.undertow.UndertowLogger.REQUEST_IO_LOGGER;
 import static io.undertow.UndertowOptions.DEFAULT_READ_TIMEOUT;
@@ -56,7 +57,9 @@ public class UndertowInputStream extends InputStream {
     private static final int FLAG_CLOSED = 1;
     private static final int FLAG_FINISHED = 1 << 1;
 
-    private int state;
+    @SuppressWarnings("unused")
+    private volatile int state;
+    private static final AtomicIntegerFieldUpdater<UndertowInputStream> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(UndertowInputStream.class, "state");
     private PooledByteBuffer pooled;
 
     public UndertowInputStream(final HttpServerExchange exchange) {
@@ -133,7 +136,7 @@ public class UndertowInputStream extends InputStream {
             int res = Channels.readBlocking(channel, pooled.getBuffer(), readTimeout, TimeUnit.MILLISECONDS);
             pooled.getBuffer().flip();
             if (res == -1) {
-                state |= FLAG_FINISHED;
+                stateUpdater.getAndAccumulate(this, FLAG_FINISHED, (currentState, flag)-> currentState | flag);
                 pooled.close();
                 pooled = null;
             } else if (res == 0) {
@@ -153,7 +156,7 @@ public class UndertowInputStream extends InputStream {
             }
             pooled.getBuffer().flip();
             if (res == -1) {
-                state |= FLAG_FINISHED;
+                stateUpdater.getAndAccumulate(this, FLAG_FINISHED, (currentState, flag)-> currentState | flag);
                 pooled.close();
                 pooled = null;
             }
@@ -180,7 +183,7 @@ public class UndertowInputStream extends InputStream {
         if (anyAreSet(state, FLAG_CLOSED)) {
             return;
         }
-        state |= FLAG_CLOSED;
+        stateUpdater.getAndAccumulate(this, FLAG_CLOSED, (currentState, flag)-> currentState | flag);
         try {
             while (allAreClear(state, FLAG_FINISHED)) {
                 readIntoBuffer();
@@ -195,7 +198,7 @@ public class UndertowInputStream extends InputStream {
                 pooled = null;
             }
             channel.shutdownReads();
-            state |= FLAG_FINISHED;
+            stateUpdater.getAndAccumulate(this, FLAG_FINISHED, (currentState, flag)-> currentState | flag);
         }
     }
 }

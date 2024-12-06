@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import static java.lang.Math.min;
 import static org.xnio.Bits.allAreClear;
@@ -60,7 +61,9 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
     private final ConduitListener<? super FixedLengthStreamSourceConduit> finishListener;
 
     @SuppressWarnings("unused")
-    private long state;
+    private volatile long state;
+    private static final AtomicLongFieldUpdater<FixedLengthStreamSourceConduit> stateUpdater = AtomicLongFieldUpdater.newUpdater(
+            FixedLengthStreamSourceConduit.class, "state");
 
     private static final long FLAG_CLOSED = 1L << 63L;
     private static final long FLAG_FINISHED = 1L << 62L;
@@ -169,11 +172,11 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
                     Connectors.terminateRequest(exchange);
                     exchange.setPersistent(false);
                     finishListener.handleEvent(this);
-                    this.state |= FLAG_FINISHED | FLAG_CLOSED;
+                    stateUpdater.accumulateAndGet(this, FLAG_FINISHED | FLAG_CLOSED, (current, flag ) -> current | flag );
                     throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getMaxEntitySize());
                 }
             }
-            this.state |= FLAG_LENGTH_CHECKED;
+            stateUpdater.accumulateAndGet(this, FLAG_LENGTH_CHECKED, (current, flag ) -> current | flag );
         }
     }
 
@@ -336,7 +339,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
             return oldVal;
         }
         newVal = oldVal | FLAG_CLOSED;
-        state = newVal;
+        stateUpdater.set(this, newVal);
         return oldVal;
     }
 
@@ -360,7 +363,7 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
         if(consumed == -1) {
             if (anyAreSet(oldVal, MASK_COUNT)) {
                 invokeFinishListener();
-                state &= ~MASK_COUNT;
+                stateUpdater.accumulateAndGet(this, ~MASK_COUNT, (current, flag ) -> current & flag );
                 final IOException couldNotReadAll = UndertowMessages.MESSAGES.couldNotReadContentLengthData();
                 if (readError != null) {
                     couldNotReadAll.addSuppressed(readError);
@@ -370,11 +373,11 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
             return;
         }
         long newVal = oldVal - consumed;
-        state = newVal;
+        stateUpdater.set(this, newVal);
     }
 
     private void invokeFinishListener() {
-        this.state |= FLAG_FINISHED;
+        stateUpdater.accumulateAndGet(this, FLAG_FINISHED, (current, flag ) -> current | flag );
         finishListener.handleEvent(this);
     }
 

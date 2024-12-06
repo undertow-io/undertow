@@ -19,6 +19,7 @@
 package io.undertow.conduits;
 
 import io.undertow.UndertowMessages;
+
 import org.xnio.Buffers;
 import org.xnio.IoUtils;
 import io.undertow.connector.PooledByteBuffer;
@@ -33,6 +34,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
@@ -58,8 +60,9 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
      */
     private int bufferCount = 0;
 
-    private int state;
-
+    private volatile int state;
+    private static final AtomicIntegerFieldUpdater<AbstractFramedStreamSinkConduit> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(
+            AbstractFramedStreamSinkConduit.class, "state");
     private static final int FLAG_WRITES_TERMINATED = 1;
     private static final int FLAG_DELEGATE_SHUTDOWN = 2;
 
@@ -191,11 +194,12 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
             return;
         }
         queueCloseFrames();
-        state |= FLAG_WRITES_TERMINATED;
         if (queuedData == 0) {
-            state |= FLAG_DELEGATE_SHUTDOWN;
+            stateUpdater.accumulateAndGet(this, FLAG_WRITES_TERMINATED | FLAG_DELEGATE_SHUTDOWN, (current, flag) -> current | flag);
             doTerminateWrites();
             finished();
+        } else {
+            stateUpdater.accumulateAndGet(this, FLAG_WRITES_TERMINATED, (current, flag) -> current | flag);
         }
     }
 
@@ -212,7 +216,7 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
         }
         if (anyAreSet(state, FLAG_WRITES_TERMINATED) && allAreClear(state, FLAG_DELEGATE_SHUTDOWN)) {
             doTerminateWrites();
-            state |= FLAG_DELEGATE_SHUTDOWN;
+            stateUpdater.accumulateAndGet(this, FLAG_DELEGATE_SHUTDOWN, (current, flag) -> current | flag);
             finished();
         }
         return next.flush();
