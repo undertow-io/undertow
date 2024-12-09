@@ -35,52 +35,56 @@ public final class BinaryPartialEndpoint extends Endpoint {
 
     @Override
     public void onOpen(final Session session, EndpointConfig config) {
-        session.addMessageHandler(new MessageHandler.Partial<byte[]>() {
+        session.addMessageHandler(new BinaryPartialMessageHandler(session));
 
-            private ByteArrayOutputStream buffer;
+    }
 
-            @Override
-            public void onMessage(byte[] bytes, boolean last) {
-                if (last) {
-                    if (buffer == null) {
-                        onRequest(bytes);
-                    } else {
-                        try {
-                            buffer(bytes);
-                            byte[] tmp = buffer.toByteArray();
-                            onRequest(tmp);
-                        } finally {
-                            buffer = null;
-                        }
-                    }
-                } else {
-                    buffer(bytes);
-                }
-            }
+    private static class BinaryPartialMessageHandler implements MessageHandler.Partial<byte[]> {
 
-            private void onRequest(final byte[] bytes) {
-                // Just return the received bytes for the test
-                DefaultServer.getWorker().execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            session.getBasicRemote().sendBinary(
-                                    ByteBuffer.wrap(bytes));
-                        } catch (IOException e) {
-                            throw new IllegalStateException(e);
-                        }
-                    }
-                });
-            }
+        private final Session session;
+        private ByteArrayOutputStream buffer;
 
-            private void buffer(byte[] data) {
+        BinaryPartialMessageHandler(Session session) {
+            this.session = session;
+        }
+
+        @Override
+        public void onMessage(byte[] bytes, boolean last) {
+            if (last) {
                 if (buffer == null) {
-                    buffer = new ByteArrayOutputStream(8096);
+                    onRequest(bytes);
+                } else {
+                    try {
+                        buffer(bytes);
+                        byte[] tmp = buffer.toByteArray();
+                        onRequest(tmp);
+                    } finally {
+                        buffer = null;
+                    }
                 }
-                buffer.write(data, 0, data.length);
+            } else {
+                buffer(bytes);
             }
+        }
 
-        });
+        private void onRequest(final byte[] bytes) {
+            // Just return the received bytes for the test
+            DefaultServer.getWorker().execute(() -> {
+                try {
+                    session.getBasicRemote().sendBinary(
+                            ByteBuffer.wrap(bytes));
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+            });
+        }
+
+        private void buffer(byte[] data) {
+            if (buffer == null) {
+                buffer = new ByteArrayOutputStream(8096);
+            }
+            buffer.write(data, 0, data.length);
+        }
 
     }
 }
