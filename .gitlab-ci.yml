@@ -22,6 +22,10 @@ stages:          # List of stages for jobs, andstages:          # List of stages
 
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
+  image: registry.access.redhat.com/ubi8/openjdk-8@sha256:94b60957d01ac36b700cb3cce8433eb65e59d2b40bdaf7edbc190755c5d37215
+  tags:
+    - shared-podman
+    - x86_64
   script:
     - echo "Compiling the code..."
     - mvn -U -B -fae -DskipTests -Dfindbugs clean install
@@ -29,7 +33,34 @@ build-job:       # This job runs in the build stage, which runs first.
 
 unit-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
-  script:
-    - echo "Running unit tests..."
-    - mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false'
-    - echo "Tests finished running"
+  image: registry.access.redhat.com/ubi8/openjdk-8@sha256:94b60957d01ac36b700cb3cce8433eb65e59d2b40bdaf7edbc190755c5d37215
+  tags:
+    - shared-podman
+    - x86_64
+  script: |
+    echo "Running unit tests..."
+    mvn -U -B -fn test -Pproxy '-DfailIfNoTests=false' | tee test.log
+    echo "Tests finished running"
+    ! grep "There are test failures" test.log
+    if [ $? -eq 1 ]
+        then
+            exit 1
+    fi
+    ! grep "BUILD FAILURE" test.log
+    if [ $? -eq 1 ]
+        then
+            exit 1
+    fi
+    ! grep "Build failures were ignored." test.log
+    exit $?
+
+    #This ^ is required to detect build failre. -fae skip modules that depend on failing module, -fn does not fail at all.
+    #We want full build to report all failures, caveat is that enignieer will have to maual go through log to pinpoint those
+    #Given above we need to manually detect failure. If by any chance job should fail, this needs a tweak.
+    #IMPORTANT: this has to be multilne, seems like gitlab reactor treats each single line as separate bash run 
+  artifacts:
+    reports:
+      junit:
+        - '**/target/surefire-*/TEST-*.xml'
+        # txt excludedd for now as it breaks gitlab test result report
+        #- '**/target/surefire-*/*.txt'

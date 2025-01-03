@@ -79,8 +79,6 @@
 	<version.org.wildfly.common>1.5.2.Final</version.org.wildfly.common>
         <version.org.wildfly.client-config>1.0.1.Final</version.org.wildfly.client-config>
 
-        <version.org.osgi.core>6.0.0</version.org.osgi.core>
-
         <!-- jacoco -->
         <version.org.jacoco>0.7.9</version.org.jacoco>
         <jacoco.agent.argLine></jacoco.agent.argLine>
@@ -113,7 +111,6 @@
         <module>servlet</module>
         <module>examples</module>
         <module>websockets-jsr</module>
-        <module>karaf</module>
         <module>benchmarks</module>
     </modules>
 
@@ -268,10 +265,6 @@
                             </pluginExecutions>
                         </lifecycleMappingMetadata>
                     </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.felix</groupId>
-                    <artifactId>maven-bundle-plugin</artifactId>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -451,12 +444,6 @@
                 <groupId>org.jboss.xnio</groupId>
                 <artifactId>xnio-nio</artifactId>
                 <version>${version.xnio}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.osgi</groupId>
-                <artifactId>org.osgi.core</artifactId>
-                <version>${version.org.osgi.core}</version>
             </dependency>
 
             <dependency>
