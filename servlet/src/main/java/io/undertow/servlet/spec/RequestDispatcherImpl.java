@@ -401,6 +401,13 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         final ServletRequest oldRequest = servletRequestContext.getServletRequest();
         final ServletResponse oldResponse = servletRequestContext.getServletResponse();
 
+        request.removeAttribute(INCLUDE_REQUEST_URI);
+        request.removeAttribute(INCLUDE_CONTEXT_PATH);
+        request.removeAttribute(INCLUDE_SERVLET_PATH);
+        request.removeAttribute(INCLUDE_PATH_INFO);
+        request.removeAttribute(INCLUDE_QUERY_STRING);
+        request.removeAttribute(INCLUDE_MAPPING);
+
         ServletPathMatch pathMatch;
         try {
             pathMatch = DispatchUtils.dispatchError(path, servletName, exception, message, requestImpl, responseImpl, servletContext);
