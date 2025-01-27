@@ -97,4 +97,9 @@ class Http2SslSessionInfo implements SSLSessionInfo {
     public SSLSession getSSLSession() {
         return channel.getSslSession();
     }
+
+    @Override
+    public String getSecureProtocol() {
+        return channel.getSslSession().getProtocol();
+    }
 }

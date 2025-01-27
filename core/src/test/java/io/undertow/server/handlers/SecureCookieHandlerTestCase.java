@@ -61,7 +61,7 @@ public class SecureCookieHandlerTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("foo=bar; secure", header.getValue());
+            Assert.assertEquals("foo=bar; Secure", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL());
@@ -94,7 +94,7 @@ public class SecureCookieHandlerTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
 
             Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("cookie=value; secure", header.getValue());
+            Assert.assertEquals("cookie=value; Secure", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
         } finally {
             client.getConnectionManager().shutdown();
