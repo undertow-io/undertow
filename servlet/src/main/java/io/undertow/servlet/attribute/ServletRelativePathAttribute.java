@@ -88,7 +88,7 @@ public class ServletRelativePathAttribute implements ExchangeAttribute {
 
         @Override
         public int priority() {
-            return 0;
+            return 1;
         }
     }
 }
