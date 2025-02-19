@@ -24,6 +24,7 @@ import java.nio.channels.Channel;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
@@ -59,8 +60,9 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
     private static final int DELEGATE_SHUTDOWN = 1 << 1;
     private static final int FLUSHING = 1 << 3;
 
-    private int state;
-
+    @SuppressWarnings("unused")
+    private volatile int state;
+    private static final AtomicIntegerFieldUpdater<PipeliningBufferingStreamSinkConduit> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(PipeliningBufferingStreamSinkConduit.class, "state");
     private final ByteBufferPool pool;
     private PooledByteBuffer buffer;
 
@@ -157,7 +159,7 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
         }
 
         if (!anyAreSet(state, FLUSHING)) {
-            state |= FLUSHING;
+            stateUpdater.accumulateAndGet(this, FLUSHING, (current, flag) -> current | flag);
             byteBuffer.flip();
         }
         int originalBufferedRemaining = byteBuffer.remaining();
@@ -178,7 +180,7 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
                 if (written > originalBufferedRemaining) {
                     buffer.close();
                     this.buffer = null;
-                    state &= ~FLUSHING;
+                    stateUpdater.accumulateAndGet(this, ~FLUSHING, (current, flag) -> current & flag);
                     return written - originalBufferedRemaining;
                 }
                 return 0;
@@ -186,7 +188,7 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
         } while (written < toWrite);
         buffer.close();
         this.buffer = null;
-        state &= ~FLUSHING;
+        stateUpdater.accumulateAndGet(this, ~FLUSHING, (current, flag) -> current & flag);
         return written - originalBufferedRemaining;
     }
 
@@ -221,7 +223,7 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
         }
         final ByteBuffer byteBuffer = buffer.getBuffer();
         if (!anyAreSet(state, FLUSHING)) {
-            state |= FLUSHING;
+            stateUpdater.accumulateAndGet(this, FLUSHING, (current, flag) -> current | flag);
             byteBuffer.flip();
         }
         while (byteBuffer.hasRemaining()) {
@@ -234,7 +236,7 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
         }
         buffer.close();
         this.buffer = null;
-        state &= ~FLUSHING;
+        stateUpdater.accumulateAndGet(this, ~FLUSHING, (current, flag) -> current & flag);
         return true;
     }
 
@@ -266,7 +268,7 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
             }
             if (anyAreSet(state, SHUTDOWN) &&
                     anyAreClear(state, DELEGATE_SHUTDOWN)) {
-                state |= DELEGATE_SHUTDOWN;
+                stateUpdater.accumulateAndGet(this, DELEGATE_SHUTDOWN, (current, flag) -> current | flag);
                 next.terminateWrites();
             }
             return next.flush();
@@ -276,9 +278,9 @@ public class PipeliningBufferingStreamSinkConduit extends AbstractStreamSinkCond
 
     @Override
     public void terminateWrites() throws IOException {
-        state |= SHUTDOWN;
+        stateUpdater.accumulateAndGet(this, SHUTDOWN, (current, flag) -> current | flag);
         if (buffer == null) {
-            state |= DELEGATE_SHUTDOWN;
+            stateUpdater.accumulateAndGet(this, DELEGATE_SHUTDOWN, (current, flag) -> current | flag);
             next.terminateWrites();
         }
     }

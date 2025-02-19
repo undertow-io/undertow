@@ -35,6 +35,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.client.ClientStatistics;
 import org.jboss.logging.Logger;
@@ -103,23 +104,30 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     private static final int CLOSE_REQ = 1 << 30;
     private static final int CLOSED = 1 << 31;
 
-    private int state;
+    @SuppressWarnings("unused")
+    private volatile int state;
+    private static final AtomicIntegerFieldUpdater<AjpClientConnection> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(AjpClientConnection.class, "state");
 
     private final ChannelListener.SimpleSetter<AjpClientConnection> closeSetter = new ChannelListener.SimpleSetter<>();
     private final ClientStatistics clientStatistics;
     private final List<ChannelListener<ClientConnection>> closeListeners = new CopyOnWriteArrayList<>();
 
-    AjpClientConnection(final AjpClientChannel connection, final OptionMap options, final ByteBufferPool bufferPool, ClientStatistics clientStatistics) {
+    AjpClientConnection(final AjpClientChannel channel, final OptionMap options, final ByteBufferPool bufferPool, ClientStatistics clientStatistics) {
         this.clientStatistics = clientStatistics;
         this.options = options;
-        this.connection = connection;
+        this.connection = channel;
         this.bufferPool = bufferPool;
 
-        connection.addCloseTask(new ChannelListener<AjpClientChannel>() {
+        channel.addCloseTask(new ChannelListener<AjpClientChannel>() {
             @Override
             public void handleEvent(AjpClientChannel channel) {
                 log.debugf("connection to %s closed", getPeerAddress());
-                AjpClientConnection.this.state |= CLOSED;
+                final int oldVal = stateUpdater.getAndAccumulate(AjpClientConnection.this, CLOSED, (currentState, flag)-> currentState | flag);
+                if(anyAreSet(oldVal, CLOSED)) {
+                    //this was closed already?
+                    UndertowLogger.ROOT_LOGGER.failedToTransitionToState("CLOSED", AjpClientConnection.this);
+                    return;
+                }
                 ChannelListeners.invokeChannelListener(AjpClientConnection.this, closeSetter.get());
                 for(ChannelListener<ClientConnection> listener : closeListeners) {
                     listener.handleEvent(AjpClientConnection.this);
@@ -135,8 +143,8 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                 }
             }
         });
-        connection.getReceiveSetter().set(new ClientReceiveListener());
-        connection.resumeReceives();
+        channel.getReceiveSetter().set(new ClientReceiveListener());
+        channel.resumeReceives();
     }
 
     @Override
@@ -236,7 +244,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED)) {
             clientCallback.failed(UndertowClientMessages.MESSAGES.invalidConnectionState());
             return;
-        } else if (anyAreSet(state, CLOSE_REQ | CLOSED)) {
+        } else if (anyAreSet(state, CLOSED | CLOSE_REQ)) {
             clientCallback.failed(UndertowClientMessages.MESSAGES.closedConnectionState());
             return;
         }
@@ -266,13 +274,13 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         String connectionString = request.getRequestHeaders().getFirst(CONNECTION);
         if (connectionString != null) {
             if (CLOSE.equalToString(connectionString)) {
-                state |= CLOSE_REQ;
+                stateUpdater.getAndAccumulate(AjpClientConnection.this, CLOSE_REQ, (currentState, flag)-> currentState | flag);
             }
         } else if (request.getProtocol() != Protocols.HTTP_1_1) {
-            state |= CLOSE_REQ;
+            stateUpdater.getAndAccumulate(AjpClientConnection.this, CLOSE_REQ, (currentState, flag)-> currentState | flag);
         }
         if (request.getRequestHeaders().contains(UPGRADE)) {
-            state |= UPGRADE_REQUESTED;
+            stateUpdater.getAndAccumulate(AjpClientConnection.this, UPGRADE_REQUESTED, (currentState, flag)-> currentState | flag);
         }
 
         long length = 0;
@@ -327,7 +335,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         if (anyAreSet(state, CLOSED)) {
             return;
         }
-        state |= CLOSED | CLOSE_REQ;
+        stateUpdater.accumulateAndGet(this, CLOSED | CLOSE_REQ, (currentState, flag)-> currentState | flag);
         connection.close();
     }
 
@@ -336,7 +344,6 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
      */
     public void requestDone() {
         currentRequest = null;
-
         if (anyAreSet(state, CLOSE_REQ)) {
             safeClose(connection);
         } else if (anyAreSet(state, UPGRADE_REQUESTED)) {
@@ -352,7 +359,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     }
 
     public void requestClose() {
-        state |= CLOSE_REQ;
+        stateUpdater.getAndAccumulate(AjpClientConnection.this, CLOSE_REQ, (currentState, flag)-> currentState | flag);
     }
 
 

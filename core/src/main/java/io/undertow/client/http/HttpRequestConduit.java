@@ -52,8 +52,6 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
 
     private final ByteBufferPool pool;
 
-    private volatile int state = STATE_START;
-
     private Iterator<HttpString> nameIterator;
     private String string;
     private HttpString headerName;
@@ -79,6 +77,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
     private static final int FLAG_SHUTDOWN      = 0x00000010;
     private static final int FLAG_WRITING       = 0x00000020;
 
+    private volatile int state = STATE_START;
     private static final AtomicIntegerFieldUpdater<HttpRequestConduit> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(
             HttpRequestConduit.class, "state");
 
@@ -465,7 +464,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                                 if (res == 0) {
                                     log.trace("Continuation");
                                     this.charIndex = i;
-                                    this.state = STATE_URL;
+                                    stateUpdater.set(this, STATE_URL) ;
                                     return STATE_URL;
                                 }
                             } while (buffer.hasRemaining());
@@ -534,14 +533,14 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
             }
             return alreadyWritten;
         } catch (IOException | RuntimeException | Error e) {
-            this.state |= FLAG_SHUTDOWN;
+            setFlags(FLAG_SHUTDOWN);
             if(pooledBuffer != null) {
                 pooledBuffer.close();
                 pooledBuffer = null;
             }
             throw e;
         } finally {
-            this.state = oldState & ~MASK_STATE | state;
+            stateUpdater.set(this, oldState & ~MASK_STATE | state);
         }
     }
 
@@ -576,14 +575,14 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
             }
             return length == 1 ? next.write(srcs[offset]) : next.write(srcs, offset, length);
         } catch (IOException | RuntimeException | Error e) {
-            this.state |= FLAG_SHUTDOWN;
+            setFlags(FLAG_SHUTDOWN);
             if(pooledBuffer != null) {
                 pooledBuffer.close();
                 pooledBuffer = null;
             }
             throw e;
         } finally {
-            this.state = oldVal & ~MASK_STATE | state;
+            stateUpdater.set(this, oldVal & ~MASK_STATE | state);
         }
     }
 
@@ -630,7 +629,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
             }
             throw e;
         } finally {
-            this.state = oldVal & ~MASK_STATE | state;
+            stateUpdater.set(this, oldVal & ~MASK_STATE | state);
         }
     }
 
@@ -661,14 +660,14 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
             }
             return next.transferFrom(source, count, throughBuffer);
         } catch (IOException | RuntimeException | Error e) {
-            this.state |= FLAG_SHUTDOWN;
+            setFlags(FLAG_SHUTDOWN);
             if(pooledBuffer != null) {
                 pooledBuffer.close();
                 pooledBuffer = null;
             }
             throw e;
         } finally {
-            this.state = oldVal & ~MASK_STATE | state;
+            stateUpdater.set(this, oldVal & ~MASK_STATE | state);
         }
     }
 
@@ -698,14 +697,14 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
             log.trace("Delegating flush");
             return next.flush();
         } catch (IOException | RuntimeException | Error e) {
-            this.state |= FLAG_SHUTDOWN;
+            setFlags(FLAG_SHUTDOWN);
             if(pooledBuffer != null) {
                 pooledBuffer.close();
                 pooledBuffer = null;
             }
             throw e;
         } finally {
-            this.state = oldVal & ~MASK_STATE | state;
+            stateUpdater.set(this, oldVal & ~MASK_STATE | state);
         }
     }
 
@@ -717,7 +716,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
             next.terminateWrites();
             return;
         }
-        this.state = oldVal | FLAG_SHUTDOWN;
+        stateUpdater.set(this, oldVal | FLAG_SHUTDOWN);
     }
 
     public void truncateWrites() throws IOException {
@@ -734,7 +733,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
             }
             return;
         }
-        this.state = oldVal & ~MASK_STATE | FLAG_SHUTDOWN;
+        stateUpdater.set(this, oldVal & ~MASK_STATE | FLAG_SHUTDOWN);
         throw new TruncatedResponseException();
     }
 
@@ -746,7 +745,24 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         if(pooledBuffer != null) {
             pooledBuffer.close();
             pooledBuffer = null;
-            this.state = state & ~MASK_STATE | FLAG_SHUTDOWN;
+            //this.state = state & ~MASK_STATE | FLAG_SHUTDOWN;
+            clearFlags(MASK_STATE);
+            setFlags(FLAG_SHUTDOWN);
         }
+    }
+
+
+    private void setFlags(int flags) {
+        int old;
+        do {
+            old = state;
+        } while (!stateUpdater.compareAndSet(this, old, old | flags));
+    }
+
+    private void clearFlags(int flags) {
+        int old;
+        do {
+            old = state;
+        } while (!stateUpdater.compareAndSet(this, old, old & ~flags));
     }
 }

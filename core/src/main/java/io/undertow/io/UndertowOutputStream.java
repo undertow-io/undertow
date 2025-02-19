@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
@@ -51,7 +52,9 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
     private ByteBuffer buffer;
     private PooledByteBuffer pooledBuffer;
     private StreamSinkChannel channel;
-    private int state;
+    @SuppressWarnings("unused")
+    private volatile int state;
+    private static final AtomicIntegerFieldUpdater<UndertowOutputStream> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(UndertowOutputStream.class, "state");
     private long written;
     private final long contentLength;
 
@@ -230,7 +233,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
                 channel = exchange.getResponseChannel();
             }
             Channels.writeBlocking(channel, buffers, 0, buffers.length);
-            state |= FLAG_WRITE_STARTED;
+            stateUpdater.getAndAccumulate(this, FLAG_WRITE_STARTED, (currentState, flag)-> currentState | flag);
         } else {
             ByteBuffer buffer = buffer();
             if (len < buffer.remaining()) {
@@ -249,7 +252,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
                     Channels.writeBlocking(channel, newBuffers, 0, newBuffers.length);
                     buffer.clear();
                 }
-                state |= FLAG_WRITE_STARTED;
+                stateUpdater.getAndAccumulate(this, FLAG_WRITE_STARTED, (currentState, flag)-> currentState | flag);
             }
         }
         updateWritten(len);
@@ -304,7 +307,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
             }
         }
         buffer.clear();
-        state |= FLAG_WRITE_STARTED;
+        stateUpdater.getAndAccumulate(this, FLAG_WRITE_STARTED, (currentState, flag)-> currentState | flag);
     }
 
     @Override
@@ -330,7 +333,7 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
     public void close() throws IOException {
         if (anyAreSet(state, FLAG_CLOSED)) return;
         try {
-            state |= FLAG_CLOSED;
+            stateUpdater.getAndAccumulate(this, FLAG_CLOSED, (currentState, flag)-> currentState | flag);
             if (anyAreClear(state, FLAG_WRITE_STARTED)
                     && channel == null
                     && !isHeadRequestWithContentLength(exchange)) {
