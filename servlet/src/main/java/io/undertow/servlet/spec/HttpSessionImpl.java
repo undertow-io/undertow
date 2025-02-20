@@ -23,10 +23,10 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpSession;
-
 import io.undertow.server.session.Session;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
@@ -173,6 +173,18 @@ public class HttpSessionImpl implements HttpSession {
             throw UndertowServletMessages.MESSAGES.sessionIsInvalid();
         }
         return newSession;
+    }
+
+    @Override
+    public Accessor getAccessor() {
+        Session detached = this.session.detach();
+        ServletContext context = this.servletContext;
+        return new Accessor() {
+            @Override
+            public void access(Consumer<HttpSession> consumer) {
+                consumer.accept(new HttpSessionImpl(detached, context, false, null));
+            }
+        };
     }
 
     public Session getSession() {
