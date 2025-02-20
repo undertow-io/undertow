@@ -189,4 +189,12 @@ public interface Session {
      * @return <ul><li><b>true</b> - if session is no longer valid</li><li><b>false</b> - otherwise</li></ul>
      */
     boolean isInvalid();
+
+    /**
+     * Returns a detached view of this session for use outside of request scope.
+     * @return a detached view of this session for use outside of request scope.
+     */
+    default Session detach() {
+        return this;
+    }
 }
