@@ -25,7 +25,7 @@ public final class ServletPrintWriterDelegate extends PrintWriter {
             @Override
             public Constructor<ServletPrintWriterDelegate> run() {
                 try {
-                    return ReflectionFactory.getReflectionFactory().newConstructorForSerialization(ServletPrintWriterDelegate.class, Object.class.getDeclaredConstructor());
+                    return (Constructor<ServletPrintWriterDelegate>) ReflectionFactory.getReflectionFactory().newConstructorForSerialization(ServletPrintWriterDelegate.class, Object.class.getDeclaredConstructor());
                 } catch (NoSuchMethodException e) {
                     throw new RuntimeException(e);
                 }

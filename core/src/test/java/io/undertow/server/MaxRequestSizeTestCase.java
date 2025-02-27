@@ -55,23 +55,13 @@ public class MaxRequestSizeTestCase {
         DefaultServer.setRootHandler(blockingHandler);
         blockingHandler.setRootHandler(new HttpHandler() {
             @Override
-            public void handleRequest(final HttpServerExchange exchange) {
-                try {
-                    final OutputStream outputStream = exchange.getOutputStream();
-                    final InputStream inputStream = exchange.getInputStream();
-                    String m = HttpClientUtils.readResponse(inputStream);
-                    Assert.assertEquals(A_MESSAGE, m);
-                    inputStream.close();
-                    outputStream.close();
-                } catch (IOException e) {
-                    try {
-                        exchange.getResponseHeaders().put(Headers.CONNECTION, "close");
-                        exchange.setResponseCode(500);
-                    } catch (Exception ignore) {
-
-                    }
-                    throw new RuntimeException(e);
-                }
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                final OutputStream outputStream = exchange.getOutputStream();
+                final InputStream inputStream = exchange.getInputStream();
+                String m = HttpClientUtils.readResponse(inputStream);
+                Assert.assertEquals(A_MESSAGE, m);
+                inputStream.close();
+                outputStream.close();
             }
         });
     }

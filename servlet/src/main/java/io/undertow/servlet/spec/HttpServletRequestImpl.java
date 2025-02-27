@@ -21,6 +21,7 @@ package io.undertow.servlet.spec;
 import io.undertow.security.api.SecurityContext;
 import io.undertow.security.idm.Account;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.RequestTooBigException;
 import io.undertow.server.handlers.form.FormData;
 import io.undertow.server.handlers.form.FormDataParser;
 import io.undertow.server.handlers.form.MultiPartParserDefinition;
@@ -110,6 +111,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     private volatile AsyncContextImpl asyncContext = null;
     private Map<String, Deque<String>> queryParameters;
     private FormData parsedFormData;
+    private RuntimeException formParsingException;
     private Charset characterEncoding;
     private boolean readStarted;
     private SessionConfig.SessionCookieSource sessionCookieSource;
@@ -711,6 +713,9 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     private FormData parseFormData() {
+        if(formParsingException != null) {
+            throw formParsingException;
+        }
         if (parsedFormData == null) {
             if (readStarted) {
                 return null;
@@ -723,8 +728,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             }
             try {
                 return parsedFormData = parser.parseBlocking();
+            } catch (RequestTooBigException e) {
+                throw formParsingException = new IllegalStateException(e);
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                throw formParsingException = new RuntimeException(e);
             }
         }
         return parsedFormData;
