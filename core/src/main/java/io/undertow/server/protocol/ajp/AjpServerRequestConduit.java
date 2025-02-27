@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit;
 import io.undertow.UndertowMessages;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.RequestTooBigException;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.conduits.AbstractStreamSourceConduit;
@@ -135,21 +136,25 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
-        long state = this.state;
-        if (anyAreSet(state, STATE_FINISHED)) {
-            return -1;
-        } else if (anyAreSet(state, STATE_SEND_REQUIRED)) {
-            state = this.state = (state & STATE_MASK) | STATE_READING;
-            if (!ajpResponseConduit.doGetRequestBodyChunk(READ_BODY_CHUNK.duplicate(), this)) {
-                return 0;
+        try {
+            long state = this.state;
+            if (anyAreSet(state, STATE_FINISHED)) {
+                return -1;
+            } else if (anyAreSet(state, STATE_SEND_REQUIRED)) {
+                state = this.state = (state & STATE_MASK) | STATE_READING;
+                if (!ajpResponseConduit.doGetRequestBodyChunk(READ_BODY_CHUNK.duplicate(), this)) {
+                    return 0;
+                }
             }
+            //we might have gone into state_reading above
+            if (anyAreSet(state, STATE_READING)) {
+                return doRead(dst, state);
+            }
+            assert STATE_FINISHED == state;
+            return -1;
+        } catch (RequestTooBigException e) {
+            throw e;
         }
-        //we might have gone into state_reading above
-        if (anyAreSet(state, STATE_READING)) {
-            return doRead(dst, state);
-        }
-        assert STATE_FINISHED == state;
-        return -1;
     }
 
     private int doRead(final ByteBuffer dst, long state) throws IOException {
