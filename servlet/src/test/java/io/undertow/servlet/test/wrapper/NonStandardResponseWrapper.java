@@ -331,6 +331,21 @@ public class NonStandardResponseWrapper implements HttpServletResponse {
         this._getHttpServletResponse().sendRedirect(location);
     }
 
+    @Override
+    public void sendRedirect(final String location, final boolean clearBuffer) throws IOException {
+        this._getHttpServletResponse().sendRedirect(location, clearBuffer);
+    }
+
+    @Override
+    public void sendRedirect(final String location, final int sc) throws IOException {
+        this._getHttpServletResponse().sendRedirect(location, sc);
+    }
+
+    @Override
+    public void sendRedirect(final String location, final int sc, final boolean clearBuffer) throws IOException {
+        this._getHttpServletResponse().sendRedirect(location, sc, clearBuffer);
+    }
+
     /**
      * The default behavior of this method is to call setDateHeader(String name, long date)
      * on the wrapped response object.

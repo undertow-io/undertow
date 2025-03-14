@@ -18,10 +18,10 @@
 
 package io.undertow.server;
 
-import org.xnio.SslClientAuthMode;
-
-import javax.net.ssl.SSLSession;
 import java.io.IOException;
+import javax.net.ssl.SSLSession;
+
+import org.xnio.SslClientAuthMode;
 
 /**
  * SSL session information.
@@ -125,5 +125,14 @@ public interface SSLSessionInfo {
      * @return The SSL session, or null if it is not applicable
      */
     SSLSession getSSLSession();
+
+    /**
+     * Returns the {@linkplain SSLSession#getProtocol() secure protocol}, if applicable, for the curren session.
+     *
+     * @return the secure protocol or {@code null} if one could not be found
+     */
+    default String getSecureProtocol() {
+        return getSSLSession() == null ? null : getSSLSession().getProtocol();
+    }
 
 }

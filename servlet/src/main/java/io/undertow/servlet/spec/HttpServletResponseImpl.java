@@ -189,12 +189,20 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendRedirect(final String location) throws IOException {
+        sendRedirect(location, StatusCodes.FOUND, true);
+    }
+
+    @Override
+    public void sendRedirect(final String location, final int sc, final boolean clearBuffer) throws IOException {
         if (responseStarted()) {
             throw UndertowServletMessages.MESSAGES.responseAlreadyCommitted();
         }
-        resetBuffer();
+        if (clearBuffer) {
+            resetBuffer();
+        }
+        // TODO (jrp) should this only be cleared if clearBuffer is set to false? I somewhat think no.
         exchange.getResponseHeaders().remove(Headers.CONTENT_LENGTH);
-        setStatus(StatusCodes.FOUND);
+        setStatus(sc);
         String realPath;
         if (isAbsoluteUrl(location)) {//absolute url
             exchange.getResponseHeaders().put(Headers.LOCATION, location);

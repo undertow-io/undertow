@@ -145,6 +145,11 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
         return channel.getSslSession();
     }
 
+    @Override
+    public String getSecureProtocol() {
+        return channel.getSslSession().getProtocol();
+    }
+
     //Suppress incorrect resource leak warning.
     @SuppressWarnings("resource")
     public void renegotiateBufferRequest(HttpServerExchange exchange, SslClientAuthMode newAuthMode) throws IOException {

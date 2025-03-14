@@ -60,6 +60,7 @@ public class SSLMetaDataTestCase {
                 .addMapping("/cert")
                 .addMapping("/cert-dn")
                 .addMapping("/key-size")
+                .addMapping("/secure-protocol")
                 .addMapping("/cipher-suite");
 
         DeploymentInfo info = new DeploymentInfo()
