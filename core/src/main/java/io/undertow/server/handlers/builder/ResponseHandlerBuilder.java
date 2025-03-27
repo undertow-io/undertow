@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2023 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,56 +18,66 @@
 
 package io.undertow.server.handlers.builder;
 
-import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.ResponseCodeHandler;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import io.undertow.server.HandlerWrapper;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.ResponseHandler;
+
 /**
- * @author Stuart Douglas
+ * @author <a href="mailto:bbaranow@redhat.com">Bartosz Baranowski</a>
  */
-public class ResponseCodeHandlerBuilder implements HandlerBuilder {
+public class ResponseHandlerBuilder implements HandlerBuilder {
     @Override
     public String name() {
-        return "response-code";
+        return "response";
     }
 
     @Override
     public Map<String, Class<?>> parameters() {
         Map<String, Class<?>> parameters = new HashMap<>();
-        parameters.put("value", Integer.class);
+        parameters.put("code", Integer.class);
+        parameters.put("reason", String.class);
+        parameters.put("type", String.class);
+        parameters.put("body", String.class);
         return parameters;
     }
 
     @Override
     public Set<String> requiredParameters() {
         final Set<String> req = new HashSet<>();
-        req.add("value");
+        req.add("code");
         return req;
     }
 
     @Override
     public String defaultParameter() {
-        return "value";
+        // default parameter - name(paramValue) not supported
+        return null;
     }
 
     @Override
     public HandlerWrapper build(final Map<String, Object> config) {
-        final Integer value = (Integer) config.get("value");
+        final Integer code = (Integer) config.get("code");
+        final String reason = (String) config.get("reason");
+        final String type = (String) config.get("type");
+        final String body = (String) config.get("body");
         return new HandlerWrapper() {
             @Override
             public HttpHandler wrap(HttpHandler handler) {
-                return new ResponseCodeHandler(handler, value);
+                if (body == null) {
+                    return new ResponseHandler(code, reason);
+                } else {
+                    if (type == null) {
+                        return new ResponseHandler(code, reason, body);
+                    } else {
+                        return new ResponseHandler(code, reason, body, type);
+                    }
+                }
             }
         };
-    }
-
-    @Override
-    public int priority() {
-        return 0;
     }
 }
