@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSourceChannel;
@@ -43,7 +44,9 @@ public final class HeadStreamSinkConduit extends AbstractStreamSinkConduit<Strea
 
     private final ConduitListener<? super HeadStreamSinkConduit> finishListener;
 
-    private int state;
+    @SuppressWarnings("unused")
+    private volatile int state;
+    private static final AtomicIntegerFieldUpdater<HeadStreamSinkConduit> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(HeadStreamSinkConduit.class, "state");
     private final boolean shutdownDelegate;
 
     private static final int FLAG_CLOSE_REQUESTED = 1;
@@ -122,29 +125,26 @@ public final class HeadStreamSinkConduit extends AbstractStreamSinkConduit<Strea
     }
 
     public boolean flush() throws IOException {
-        int val = state;
-        if (anyAreSet(val, FLAG_CLOSE_COMPLETE)) {
+        if (anyAreSet(state, FLAG_CLOSE_COMPLETE)) {
             return true;
         }
         boolean flushed = false;
         try {
             return flushed = next.flush();
         } finally {
-            exitFlush(val, flushed);
+            exitFlush(flushed);
         }
     }
 
     public void suspendWrites() {
-        long val = state;
-        if (anyAreSet(val, FLAG_CLOSE_COMPLETE)) {
+        if (anyAreSet(state, FLAG_CLOSE_COMPLETE)) {
             return;
         }
         next.suspendWrites();
     }
 
     public void resumeWrites() {
-        long val = state;
-        if (anyAreSet(val, FLAG_CLOSE_COMPLETE)) {
+        if (anyAreSet(state, FLAG_CLOSE_COMPLETE)) {
             return;
         }
         next.resumeWrites();
@@ -156,37 +156,31 @@ public final class HeadStreamSinkConduit extends AbstractStreamSinkConduit<Strea
     }
 
     public void wakeupWrites() {
-        long val = state;
-        if (anyAreSet(val, FLAG_CLOSE_COMPLETE)) {
+        if (anyAreSet(state, FLAG_CLOSE_COMPLETE)) {
             return;
         }
         next.wakeupWrites();
     }
 
     public void terminateWrites() throws IOException {
-        int oldVal, newVal;
-        oldVal = state;
-        if (anyAreSet(oldVal, FLAG_CLOSE_REQUESTED | FLAG_CLOSE_COMPLETE)) {
+        if (anyAreSet(state, FLAG_CLOSE_REQUESTED | FLAG_CLOSE_COMPLETE)) {
             // no action necessary
             return;
         }
-        newVal = oldVal | FLAG_CLOSE_REQUESTED;
-        state = newVal;
+        stateUpdater.accumulateAndGet(this, FLAG_CLOSE_REQUESTED, (currentState, flag)-> currentState | flag);
         if(shutdownDelegate) {
             next.terminateWrites();
         }
     }
 
-    private void exitFlush(int oldVal, boolean flushed) {
-        int newVal = oldVal;
+    private void exitFlush( boolean flushed) {
         boolean callFinish = false;
-        if (anyAreSet(oldVal, FLAG_CLOSE_REQUESTED) && flushed) {
-            newVal |= FLAG_CLOSE_COMPLETE;
-            if (!anyAreSet(oldVal, FLAG_FINISHED_CALLED)) {
-                newVal |= FLAG_FINISHED_CALLED;
+        if (anyAreSet(state, FLAG_CLOSE_REQUESTED) && flushed) {
+            stateUpdater.accumulateAndGet(this, FLAG_CLOSE_COMPLETE, (currentState, flag)-> currentState | flag);
+            if (!anyAreSet(state, FLAG_FINISHED_CALLED)) {
+                stateUpdater.accumulateAndGet(this, FLAG_FINISHED_CALLED, (currentState, flag)-> currentState | flag);
                 callFinish = true;
             }
-            state = newVal;
             if (callFinish) {
                 if (finishListener != null) {
                     finishListener.handleEvent(this);

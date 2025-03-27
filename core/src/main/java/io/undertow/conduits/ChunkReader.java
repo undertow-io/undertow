@@ -24,6 +24,7 @@ import static org.xnio.Bits.longBitMask;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import org.xnio.conduits.Conduit;
 import io.undertow.UndertowMessages;
@@ -44,12 +45,17 @@ class ChunkReader<T extends Conduit> {
     private static final long FLAG_READING_TILL_END_OF_LINE = 1L << 60L;
     private static final long FLAG_READING_NEWLINE = 1L << 59L;
     private static final long FLAG_READING_AFTER_LAST = 1L << 58L;
+    private static final long FLAG_COMPOUND = FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_READING_AFTER_LAST;
 
     private static final long MASK_COUNT = longBitMask(0, 56);
 
     private static final long LIMIT = Long.MAX_VALUE >> 4;
 
-    private long state;
+    @SuppressWarnings("unused")
+    private volatile long state;
+    private static final AtomicLongFieldUpdater<ChunkReader> stateUpdater = AtomicLongFieldUpdater.newUpdater(
+            ChunkReader.class, "state");
+
     private final Attachable attachable;
     private final AttachmentKey<HeaderMap> trailerAttachmentKey;
     /**
@@ -71,7 +77,7 @@ class ChunkReader<T extends Conduit> {
         long oldVal = state;
         long chunkRemaining = state & MASK_COUNT;
 
-        if (chunkRemaining > 0 && !anyAreSet(state, FLAG_READING_AFTER_LAST | FLAG_READING_LENGTH | FLAG_READING_NEWLINE | FLAG_READING_TILL_END_OF_LINE)) {
+        if (chunkRemaining > 0 && !anyAreSet(oldVal, FLAG_READING_AFTER_LAST | FLAG_READING_LENGTH | FLAG_READING_NEWLINE | FLAG_READING_TILL_END_OF_LINE)) {
             return chunkRemaining;
         }
         long newVal = oldVal & ~MASK_COUNT;
@@ -144,7 +150,7 @@ class ChunkReader<T extends Conduit> {
             }
             return chunkRemaining;
         } finally {
-            state = newVal | chunkRemaining;
+            stateUpdater.set(this, newVal | chunkRemaining);
         }
     }
 
@@ -152,24 +158,25 @@ class ChunkReader<T extends Conduit> {
         if (anyAreSet(state, FLAG_FINISHED)) {
             return -1;
         }
-        if (anyAreSet(state, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_READING_AFTER_LAST)) {
+        if (anyAreSet(state, FLAG_COMPOUND)) {
             return 0;
         }
         return state & MASK_COUNT;
     }
 
     public void setChunkRemaining(final long remaining) {
-        if (remaining < 0 || anyAreSet(state, FLAG_READING_LENGTH | FLAG_READING_TILL_END_OF_LINE | FLAG_READING_NEWLINE | FLAG_READING_AFTER_LAST)) {
+        long old = state;
+        if (remaining < 0 || anyAreSet(old, FLAG_COMPOUND)) {
             return;
         }
-        long old = state;
+
         long oldRemaining = old & MASK_COUNT;
         if (remaining == 0 && oldRemaining != 0) {
             //if oldRemaining is zero it could be that no data has been read yet
             //and the correct state is READING_LENGTH
             old |= FLAG_READING_NEWLINE;
         }
-        state = (old & ~MASK_COUNT) | remaining;
+        stateUpdater.set(this, (old & ~MASK_COUNT) | remaining);
     }
 
     private int handleChunkedRequestEnd(ByteBuffer buffer) throws IOException {

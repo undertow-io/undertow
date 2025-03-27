@@ -63,6 +63,7 @@ public class GracefulShutdownHandler implements HttpHandler {
 
     private final Object lock = new Object();
 
+    @SuppressWarnings("unused")
     private volatile long state = 0;
     private static final AtomicLongFieldUpdater<GracefulShutdownHandler> stateUpdater =
             AtomicLongFieldUpdater.newUpdater(GracefulShutdownHandler.class, "state");

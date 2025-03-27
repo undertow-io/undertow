@@ -27,6 +27,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.zip.Deflater;
 
 import io.undertow.server.Connectors;
@@ -77,7 +78,9 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
      */
     private ByteBuffer trailerBuffer;
 
-    private int state = 0;
+    @SuppressWarnings("unused")
+    private volatile int state = 0;
+    private static final AtomicIntegerFieldUpdater<DeflatingStreamSinkConduit> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(DeflatingStreamSinkConduit.class, "state");
 
     private static final int SHUTDOWN = 1;
     private static final int NEXT_SHUTDOWN = 1 << 1;
@@ -220,7 +223,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     @Override
     public void suspendWrites() {
         if (next == null) {
-            state = state & ~WRITES_RESUMED;
+            stateUpdater.getAndAccumulate(DeflatingStreamSinkConduit.this, ~WRITES_RESUMED, (currentState, flag)-> currentState & flag);
         } else {
             next.suspendWrites();
         }
@@ -248,7 +251,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     @Override
     public void resumeWrites() {
         if (next == null) {
-            state |= WRITES_RESUMED;
+            stateUpdater.getAndAccumulate(DeflatingStreamSinkConduit.this, WRITES_RESUMED, (currentState, flag)-> currentState | flag);
             queueWriteListener();
         } else {
             next.resumeWrites();
@@ -278,7 +281,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         if (deflater != null) {
             deflater.finish();
         }
-        state |= SHUTDOWN;
+        stateUpdater.getAndAccumulate(DeflatingStreamSinkConduit.this, SHUTDOWN, (currentState, flag)-> currentState | flag);
     }
 
     @Override
@@ -343,7 +346,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                         }
                         final ByteBuffer buffer = currentBuffer.getBuffer();
                         if (allAreClear(state, WRITTEN_TRAILER)) {
-                            state |= WRITTEN_TRAILER;
+                            stateUpdater.getAndAccumulate(DeflatingStreamSinkConduit.this, WRITTEN_TRAILER, (currentState, flag)-> currentState | flag);
                             byte[] data = getTrailer();
                             if (data != null) {
                                 Connectors.updateResponseBytesSent(exchange, data.length);
@@ -364,14 +367,14 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                         //ok the deflater is flushed, now we need to flush the buffer
                         if (!anyAreSet(state, FLUSHING_BUFFER)) {
                             buffer.flip();
-                            state |= FLUSHING_BUFFER;
+                            stateUpdater.getAndAccumulate(DeflatingStreamSinkConduit.this, FLUSHING_BUFFER, (currentState, flag)-> currentState | flag);
                             if (next == null) {
                                 nextCreated = true;
                                 this.next = createNextChannel();
                             }
                         }
                         if (performFlushIfRequired()) {
-                            state |= NEXT_SHUTDOWN;
+                            stateUpdater.getAndAccumulate(DeflatingStreamSinkConduit.this, NEXT_SHUTDOWN, (currentState, flag)-> currentState | flag);
                             freeBuffer();
                             next.terminateWrites();
                             return next.flush();
@@ -389,7 +392,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                         if(allAreClear(state, FLUSHING_BUFFER)) {
                             //deflateData can cause this to be change
                             currentBuffer.getBuffer().flip();
-                            this.state |= FLUSHING_BUFFER;
+                            stateUpdater.getAndAccumulate(DeflatingStreamSinkConduit.this, FLUSHING_BUFFER, (currentState, flag)-> currentState | flag);
                         }
                     }
                     if(!performFlushIfRequired()) {
@@ -450,7 +453,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
             } while (total < totalLength);
         }
         currentBuffer.getBuffer().clear();
-        state = state & ~FLUSHING_BUFFER;
+        stateUpdater.getAndAccumulate(DeflatingStreamSinkConduit.this, ~FLUSHING_BUFFER, (currentState, flag)-> currentState & flag);
         return true;
     }
 
@@ -472,7 +475,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         }
         trailerBuffer = null;
         currentBuffer.getBuffer().clear();
-        state = state & ~FLUSHING_BUFFER;
+        stateUpdater.getAndAccumulate(DeflatingStreamSinkConduit.this, ~FLUSHING_BUFFER, (currentState, flag)-> currentState & flag);
         return true;
     }
 
@@ -514,7 +517,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
                     Connectors.updateResponseBytesSent(exchange, count);
                     if (!outputBuffer.hasRemaining()) {
                         outputBuffer.flip();
-                        this.state |= FLUSHING_BUFFER;
+                        stateUpdater.getAndAccumulate(DeflatingStreamSinkConduit.this, FLUSHING_BUFFER, (currentState, flag)-> currentState | flag);
                         if (next == null) {
                             nextCreated = true;
                             this.next = createNextChannel();
@@ -540,7 +543,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
     @Override
     public void truncateWrites() throws IOException {
         freeBuffer();
-        state |= CLOSED;
+        stateUpdater.getAndAccumulate(DeflatingStreamSinkConduit.this, CLOSED, (currentState, flag)-> currentState | flag);
         next.truncateWrites();
     }
 
@@ -548,7 +551,7 @@ public class DeflatingStreamSinkConduit implements StreamSinkConduit {
         if (currentBuffer != null) {
             currentBuffer.close();
             currentBuffer = null;
-            state = state & ~FLUSHING_BUFFER;
+            stateUpdater.getAndAccumulate(DeflatingStreamSinkConduit.this, ~FLUSHING_BUFFER, (currentState, flag)-> currentState & flag);
         }
         if (deflater != null) {
             deflater = null;

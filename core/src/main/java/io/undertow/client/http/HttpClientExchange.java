@@ -34,6 +34,7 @@ import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static org.xnio.Bits.anyAreSet;
 
@@ -57,7 +58,9 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
     private IOException failedReason;
     private HttpRequestConduit requestConduit;
 
-    private int state = 0;
+    @SuppressWarnings("unused")
+    private volatile int state;
+    private static final AtomicIntegerFieldUpdater<HttpClientExchange> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpClientExchange.class, "state");
     private static final int REQUEST_TERMINATED = 1;
     private static final int RESPONSE_TERMINATED = 1 << 1;
 
@@ -81,28 +84,28 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
     }
 
     void terminateRequest() {
-        if(anyAreSet(state, REQUEST_TERMINATED)) {
+        if(anyAreSet(HttpClientExchange.this.state, REQUEST_TERMINATED)) {
             return;
         }
         log.debugf("request terminated for request to %s %s", clientConnection.getPeerAddress(), getRequest().getPath());
-        state |= REQUEST_TERMINATED;
+        stateUpdater.accumulateAndGet(this, REQUEST_TERMINATED, (currentState, flag)-> currentState | flag);
         clientConnection.requestDataSent();
-        if (anyAreSet(state, RESPONSE_TERMINATED)) {
+        if (anyAreSet(HttpClientExchange.this.state, RESPONSE_TERMINATED)) {
             clientConnection.exchangeDone();
         }
     }
 
     boolean isRequestDataSent() {
-        return anyAreSet(state, REQUEST_TERMINATED);
+        return anyAreSet(HttpClientExchange.this.state, REQUEST_TERMINATED);
     }
 
     void terminateResponse() {
-        if(anyAreSet(state, RESPONSE_TERMINATED)) {
+        if(anyAreSet(HttpClientExchange.this.state, RESPONSE_TERMINATED)) {
             return;
         }
         log.debugf("response terminated for request to %s %s", clientConnection.getPeerAddress(), getRequest().getPath());
-        state |= RESPONSE_TERMINATED;
-        if (anyAreSet(state, REQUEST_TERMINATED)) {
+        stateUpdater.accumulateAndGet(this, RESPONSE_TERMINATED, (currentState, flag)-> currentState | flag);
+        if (anyAreSet(HttpClientExchange.this.state, REQUEST_TERMINATED)) {
             clientConnection.exchangeDone();
         }
     }
@@ -168,7 +171,7 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
         return new DetachableStreamSinkChannel(clientConnection.getConnection().getSinkChannel()) {
             @Override
             protected boolean isFinished() {
-                return anyAreSet(state, REQUEST_TERMINATED);
+                return anyAreSet(HttpClientExchange.this.state, REQUEST_TERMINATED);
             }
         };
     }
@@ -178,7 +181,7 @@ class HttpClientExchange extends AbstractAttachable implements ClientExchange {
         return new DetachableStreamSourceChannel(clientConnection.getConnection().getSourceChannel()) {
             @Override
             protected boolean isFinished() {
-                return anyAreSet(state, RESPONSE_TERMINATED);
+                return anyAreSet(HttpClientExchange.this.state, RESPONSE_TERMINATED);
             }
         };
     }

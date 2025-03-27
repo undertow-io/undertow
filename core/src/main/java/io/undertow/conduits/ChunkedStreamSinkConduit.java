@@ -25,6 +25,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Supplier;
 
 import io.undertow.UndertowLogger;
@@ -82,7 +83,9 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     private static final byte[] CRLF = new byte[] {(byte) 13, (byte) 10};
 
     private final Attachable attachable;
-    private int state;
+    @SuppressWarnings("unused")
+    private volatile int state;
+    private static final AtomicIntegerFieldUpdater<ChunkedStreamSinkConduit> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(ChunkedStreamSinkConduit.class, "state");
     private int chunkleft = 0;
 
     private final ByteBuffer chunkingBuffer = ByteBuffer.allocate(12); //12 is the most
@@ -136,7 +139,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         if(src.remaining() == 0) {
             return 0;
         }
-        this.state |= FLAG_FIRST_DATA_WRITTEN;
+        stateUpdater.accumulateAndGet(this, FLAG_FIRST_DATA_WRITTEN, (currentState, flag)-> currentState | flag);
         int oldLimit = src.limit();
         boolean dataRemaining = false; //set to true if there is data in src that still needs to be written out
         if (chunkleft == 0 && !chunkingSepBuffer.hasRemaining()) {
@@ -147,7 +150,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             chunkingSepBuffer.clear();
             chunkingSepBuffer.put(CRLF);
             chunkingSepBuffer.flip();
-            state |= FLAG_WRITTEN_FIRST_CHUNK;
+            stateUpdater.accumulateAndGet(this, FLAG_WRITTEN_FIRST_CHUNK, (currentState, flag)-> currentState | flag);
             chunkleft = src.remaining();
         } else {
             if (src.remaining() > chunkleft) {
@@ -172,10 +175,10 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                         result = next.write(buf, 0, buf.length);
                     }
                     if (!src.hasRemaining()) {
-                        state |= FLAG_WRITES_SHUTDOWN;
+                        stateUpdater.accumulateAndGet(this, FLAG_WRITES_SHUTDOWN, (currentState, flag)-> currentState | flag);
                     }
                     if (!lastChunkBuffer.getBuffer().hasRemaining()) {
-                        state |= FLAG_NEXT_SHUTDOWN;
+                        stateUpdater.accumulateAndGet(this, FLAG_NEXT_SHUTDOWN, (currentState, flag)-> currentState | flag);
                         lastChunkBuffer.close();
                     }
                 }
@@ -265,7 +268,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         if (anyAreSet(state, FLAG_FINISHED)) {
             return true;
         }
-        this.state |= FLAG_FIRST_DATA_WRITTEN;
+        stateUpdater.accumulateAndGet(this, FLAG_FIRST_DATA_WRITTEN, (currentState, flag)-> currentState | flag);
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             if (anyAreSet(state, FLAG_NEXT_SHUTDOWN)) {
                 boolean val = next.flush();
@@ -280,7 +283,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
                     if (anyAreSet(config, CONF_FLAG_PASS_CLOSE)) {
                         next.terminateWrites();
                     }
-                    state |= FLAG_NEXT_SHUTDOWN;
+                    stateUpdater.accumulateAndGet(this, FLAG_NEXT_SHUTDOWN, (currentState, flag)-> currentState | flag);
                     boolean val = next.flush();
                     if (val && allAreClear(state, FLAG_FINISHED)) {
                         invokeFinishListener();
@@ -296,7 +299,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
     }
 
     private void invokeFinishListener() {
-        state |= FLAG_FINISHED;
+        stateUpdater.accumulateAndGet(this, FLAG_FINISHED, (currentState, flag)-> currentState | flag);
         if (finishListener != null) {
             finishListener.handleEvent(this);
         }
@@ -313,7 +316,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             //todo: should we make this behaviour configurable?
             responseHeaders.put(Headers.CONTENT_LENGTH, "0"); //according to the spec we don't actually need this, but better to be safe
             responseHeaders.remove(Headers.TRANSFER_ENCODING);
-            state |= FLAG_NEXT_SHUTDOWN | FLAG_WRITES_SHUTDOWN;
+            stateUpdater.accumulateAndGet(this, FLAG_NEXT_SHUTDOWN | FLAG_WRITES_SHUTDOWN, (currentState, flag)-> currentState | flag);
             try {
                 flush();
             } catch (IOException ignore) {
@@ -325,7 +328,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             }
         } else {
             createLastChunk(false);
-            state |= FLAG_WRITES_SHUTDOWN;
+            stateUpdater.accumulateAndGet(this, FLAG_WRITES_SHUTDOWN, (currentState, flag)-> currentState | flag);
             try {
                 flush();
             } catch (IOException ignore) {
