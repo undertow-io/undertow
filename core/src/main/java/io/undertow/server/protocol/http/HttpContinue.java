@@ -139,9 +139,15 @@ public class HttpContinue {
             };
         }
 
+        final String contentLengthHeader = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
         exchange.putAttachment(ALREADY_SENT, true);
-        newExchange.setStatusCode(StatusCodes.CONTINUE);
+        if (contentLengthHeader != null && exchange.getMaxEntitySize() > 0 && exchange.getMaxEntitySize() < HttpTransferEncoding.parsePositiveLong(contentLengthHeader)) {
+            newExchange.setStatusCode(StatusCodes.EXPECTATION_FAILED);
+            newExchange.setPersistent(false);
+        } else {
+            newExchange.setStatusCode(StatusCodes.CONTINUE);
+        }
         final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
         return new ContinueResponseSender() {
             boolean shutdown = false;
@@ -189,9 +195,15 @@ public class HttpContinue {
         if(exchange.getAttachment(ALREADY_SENT) != null) {
             return;
         }
+        final String contentLengthHeader = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
         exchange.putAttachment(ALREADY_SENT, true);
-        newExchange.setStatusCode(StatusCodes.CONTINUE);
+        if (contentLengthHeader != null && exchange.getMaxEntitySize() > 0 && exchange.getMaxEntitySize() < HttpTransferEncoding.parsePositiveLong(contentLengthHeader)) {
+            newExchange.setStatusCode(StatusCodes.EXPECTATION_FAILED);
+            newExchange.setPersistent(false);
+        } else {
+            newExchange.setStatusCode(StatusCodes.CONTINUE);
+        }
         newExchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 0);
         newExchange.startBlocking();
         newExchange.getOutputStream().close();
@@ -215,9 +227,15 @@ public class HttpContinue {
             callback.onComplete(exchange, null);
             return;
         }
+        final String contentLengthHeader = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
         HttpServerExchange newExchange = exchange.getConnection().sendOutOfBandResponse(exchange);
         exchange.putAttachment(ALREADY_SENT, true);
-        newExchange.setStatusCode(StatusCodes.CONTINUE);
+        if (contentLengthHeader != null && exchange.getMaxEntitySize() > 0 && exchange.getMaxEntitySize() < HttpTransferEncoding.parsePositiveLong(contentLengthHeader)) {
+            newExchange.setStatusCode(StatusCodes.EXPECTATION_FAILED);
+            newExchange.setPersistent(false);
+        } else {
+            newExchange.setStatusCode(StatusCodes.CONTINUE);
+        }
         final StreamSinkChannel responseChannel = newExchange.getResponseChannel();
         try {
             responseChannel.shutdownWrites();
