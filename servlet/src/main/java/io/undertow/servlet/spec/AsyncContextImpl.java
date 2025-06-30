@@ -87,7 +87,7 @@ public class AsyncContextImpl implements AsyncContext {
 
     //todo: make default configurable
     private volatile long timeout = 30000;
-
+    public static final String ASYNC_CONTEXT_TIMEOUT = "io.undertow.servlet.ASYNC_CONTEXT_TIMEOUT";
     private volatile XnioExecutor.Key timeoutKey;
 
     private boolean dispatched;
@@ -106,6 +106,7 @@ public class AsyncContextImpl implements AsyncContext {
         this.servletRequestContext = servletRequestContext;
         this.requestSupplied = requestSupplied;
         this.previousAsyncContext = previousAsyncContext;
+        this.timeout = Integer.parseInt(System.getProperty(ASYNC_CONTEXT_TIMEOUT, timeout+""));
         initiatingThread = Thread.currentThread();
         exchange.dispatch(SameThreadExecutor.INSTANCE, new Runnable() {
             @Override
