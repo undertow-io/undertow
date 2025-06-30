@@ -551,6 +551,7 @@ public abstract class HttpRequestParser {
         int queryParamPos = state.pos;
         int mapCount = state.mapCount;
         boolean urlDecodeRequired = state.urlDecodeRequired;
+        boolean nextQueryParamDecodeRequired = state.urlDecodeRequired;
         String nextQueryParam = state.nextQueryParam;
 
         //so this is a bit funky, because it not only deals with parsing, but
@@ -574,10 +575,10 @@ public abstract class HttpRequestParser {
                 exchange.setQueryString(queryString);
                 if (nextQueryParam == null) {
                     if (queryParamPos != stringBuilder.length()) {
-                        exchange.addQueryParam(decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true, true), "");
+                        exchange.addQueryParam(decode(stringBuilder.substring(queryParamPos), nextQueryParamDecodeRequired, state, true, true), "");
                     }
                 } else {
-                    exchange.addQueryParam(nextQueryParam, decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true, true));
+                    exchange.addQueryParam(nextQueryParam, decode(stringBuilder.substring(queryParamPos), nextQueryParamDecodeRequired, state, true, true));
                 }
                 state.state = ParseState.VERSION;
                 state.stringBuilder.setLength(0);
@@ -590,26 +591,26 @@ public abstract class HttpRequestParser {
                 throw UndertowMessages.MESSAGES.failedToParsePath();
             } else {
                 if (decode && (next == '+' || next == '%' || next > 127)) { //+ is only a whitespace substitute in the query part of the URL
-                    urlDecodeRequired = true;
+                    nextQueryParamDecodeRequired = urlDecodeRequired = true;
                 } else if (next == '=' && nextQueryParam == null) {
-                    nextQueryParam = decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true, true);
-                    urlDecodeRequired = false;
+                    nextQueryParam = decode(stringBuilder.substring(queryParamPos), nextQueryParamDecodeRequired, state, true, true);
+                    nextQueryParamDecodeRequired = false;
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&' && nextQueryParam == null) {
                     if (++mapCount >= maxParameters) {
                         throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
                     }
                     if (queryParamPos != stringBuilder.length()) {
-                        exchange.addQueryParam(decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true, true), "");
+                        exchange.addQueryParam(decode(stringBuilder.substring(queryParamPos), nextQueryParamDecodeRequired, state, true, true), "");
                     }
-                    urlDecodeRequired = false;
+                    nextQueryParamDecodeRequired = false;
                     queryParamPos = stringBuilder.length() + 1;
                 } else if (next == '&') {
                     if (++mapCount >= maxParameters) {
                         throw UndertowMessages.MESSAGES.tooManyQueryParameters(maxParameters);
                     }
-                    exchange.addQueryParam(nextQueryParam, decode(stringBuilder.substring(queryParamPos), urlDecodeRequired, state, true, true));
-                    urlDecodeRequired = false;
+                    exchange.addQueryParam(nextQueryParam, decode(stringBuilder.substring(queryParamPos), nextQueryParamDecodeRequired, state, true, true));
+                    nextQueryParamDecodeRequired = false;
                     queryParamPos = stringBuilder.length() + 1;
                     nextQueryParam = null;
                 }
