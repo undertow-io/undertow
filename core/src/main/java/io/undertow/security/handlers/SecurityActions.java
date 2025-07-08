@@ -17,23 +17,20 @@
  */
 package io.undertow.security.handlers;
 
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import io.undertow.security.api.SecurityContext;
 import io.undertow.server.HttpServerExchange;
 
+@SuppressWarnings("removal")
 class SecurityActions {
     static void setSecurityContext(final HttpServerExchange exchange, final SecurityContext securityContext) {
         if (System.getSecurityManager() == null) {
             exchange.setSecurityContext(securityContext);
         } else {
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    exchange.setSecurityContext(securityContext);
-                    return null;
-                }
+            java.security.AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                exchange.setSecurityContext(securityContext);
+                return null;
             });
         }
     }

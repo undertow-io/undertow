@@ -1961,6 +1961,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         return securityContext;
     }
 
+    @SuppressWarnings("removal")
     public void setSecurityContext(SecurityContext securityContext) {
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {

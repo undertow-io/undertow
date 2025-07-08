@@ -441,7 +441,6 @@ public class Cookies {
      * Cookie headers form: https://www.rfc-editor.org/rfc/rfc6265#section-4.2.1
      * If more than one header entry exist for "Cookie", it will be assembled into one that conforms to rfc.
      * @param headerMap
-     * @return
      */
     public static void assembleCrumbs(final HeaderMap headerMap) {
         final HeaderValues cookieValues = headerMap.get(Headers.COOKIE);

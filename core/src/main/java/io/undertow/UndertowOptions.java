@@ -474,13 +474,13 @@ public class UndertowOptions {
 
 
     /**
-     * Configure a read timeout for a web socket, in milliseconds. If its present it will override {@link org.xnio.Options.READ_TIMEOUT}. If the given amount of time elapses without
+     * Configure a read timeout for a web socket, in milliseconds. If its present it will override {@link org.xnio.Options#READ_TIMEOUT}. If the given amount of time elapses without
      * a successful read taking place, the socket's next read will throw a {@link ReadTimeoutException}.
      */
     public static final Option<Integer> WEB_SOCKETS_READ_TIMEOUT = Option.simple(Options.class, "WEB_SOCKETS_READ_TIMEOUT", Integer.class);
 
     /**
-     * Configure a write timeout for a web socket, in milliseconds. If its present it will override {@link org.xnio.Options.WRITE_TIMEOUT}. If the given amount of time elapses without
+     * Configure a write timeout for a web socket, in milliseconds. If its present it will override {@link org.xnio.Options#WRITE_TIMEOUT}. If the given amount of time elapses without
      * a successful write taking place, the socket's next write will throw a {@link WriteTimeoutException}.
      */
     public static final Option<Integer> WEB_SOCKETS_WRITE_TIMEOUT = Option.simple(Options.class, "WEB_SOCKETS_WRITE_TIMEOUT", Integer.class);

@@ -17,8 +17,6 @@
  */
 package io.undertow.security.impl;
 
-import static io.undertow.security.api.SecurityNotification.EventType.AUTHENTICATED;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.security.api.AuthenticationMechanism;
@@ -34,11 +32,12 @@ import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.StatusCodes;
 
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
+import static io.undertow.security.api.SecurityNotification.EventType.AUTHENTICATED;
 
 /**
  * The internal SecurityContext used to hold the state of security for the current exchange.
@@ -67,6 +66,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
         this(exchange, AuthenticationMode.PRO_ACTIVE, identityManager);
     }
 
+    @SuppressWarnings("removal")
     public SecurityContextImpl(final HttpServerExchange exchange, final AuthenticationMode authenticationMode, final IdentityManager identityManager) {
         super(exchange);
         this.authenticationMode = authenticationMode;
@@ -203,20 +203,17 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
     }
 
     @Override
+    @SuppressWarnings("removal")
     public boolean login(final String username, final String password) {
 
-        UndertowLogger.SECURITY_LOGGER.debugf("Attempting programatic login for user %s for request %s", username, exchange);
+        UndertowLogger.SECURITY_LOGGER.debugf("Attempting programmatic login for user %s for request %s", username, exchange);
 
         final Account account;
         if(System.getSecurityManager() == null) {
             account = identityManager.verify(username, new PasswordCredential(password.toCharArray()));
         } else {
-            account = AccessController.doPrivileged(new PrivilegedAction<Account>() {
-                @Override
-                public Account run() {
-                    return identityManager.verify(username, new PasswordCredential(password.toCharArray()));
-                }
-            });
+            account = java.security.AccessController.doPrivileged(
+                    (PrivilegedAction<Account>) () -> identityManager.verify(username, new PasswordCredential(password.toCharArray())));
         }
 
         if (account == null) {

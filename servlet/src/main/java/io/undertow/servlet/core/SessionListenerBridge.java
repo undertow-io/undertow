@@ -18,13 +18,6 @@
 
 package io.undertow.servlet.core;
 
-import java.security.AccessController;
-import java.util.HashSet;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpSessionBindingEvent;
-import jakarta.servlet.http.HttpSessionBindingListener;
-
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionListener;
@@ -32,6 +25,12 @@ import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpSessionBindingEvent;
+import jakarta.servlet.http.HttpSessionBindingListener;
+
+import java.util.HashSet;
 
 /**
  * Class that bridges between Undertow native session listeners and servlet ones.
@@ -65,6 +64,7 @@ public class SessionListenerBridge implements SessionListener {
     }
 
     @Override
+    @SuppressWarnings("removal")
     public void sessionDestroyed(final Session session, final HttpServerExchange exchange, final SessionDestroyedReason reason) {
 
         if (reason == SessionDestroyedReason.TIMEOUT) {
@@ -84,7 +84,7 @@ public class SessionListenerBridge implements SessionListener {
             if (System.getSecurityManager() == null) {
                 underlying = current.getSession().getSession();
             } else {
-                underlying = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(current.getSession()));
+                underlying = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(current.getSession()));
             }
         }
 

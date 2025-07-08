@@ -23,7 +23,6 @@ import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 
 /**
@@ -33,6 +32,7 @@ import java.security.PrivilegedExceptionAction;
  *
  * @author Jason T. Greene
  */
+@SuppressWarnings("removal")
 public class FlexBase64 {
     /*
      * Note that this code heavily favors performance over reuse and clean style.
@@ -61,17 +61,14 @@ public class FlexBase64 {
 
         Constructor<String> c = null;
         try {
-            PrivilegedExceptionAction<Constructor<String>> runnable = new PrivilegedExceptionAction<Constructor<String>>() {
-                @Override
-                public Constructor<String> run() throws Exception {
-                    Constructor<String> c;
-                    c = String.class.getDeclaredConstructor(char[].class, boolean.class);
-                    c.setAccessible(true);
-                    return c;
-                }
+            PrivilegedExceptionAction<Constructor<String>> runnable = () -> {
+                Constructor<String> c1;
+                c1 = String.class.getDeclaredConstructor(char[].class, boolean.class);
+                c1.setAccessible(true);
+                return c1;
             };
             if (System.getSecurityManager() != null) {
-                c = AccessController.doPrivileged(runnable);
+                c = java.security.AccessController.doPrivileged(runnable);
             } else {
                 c = runnable.run();
             }
