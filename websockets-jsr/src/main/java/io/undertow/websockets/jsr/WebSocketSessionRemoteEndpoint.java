@@ -244,10 +244,8 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         private StreamSinkFrameChannel textFrameSender;
 
         public void assertNotInFragment() {
-            synchronized (this) {
-                if (textFrameSender != null || binaryFrameSender != null) {
-                    throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
-                }
+            if (textFrameSender != null || binaryFrameSender != null) {
+                throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
         }
 
@@ -275,55 +273,50 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if(partialMessage == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-
-            synchronized (this) {
-                if (binaryFrameSender != null) {
-                    throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
+            if (binaryFrameSender != null) {
+                throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
+            }
+            if (textFrameSender == null) {
+                textFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.TEXT);
+            }
+            try {
+                Channels.writeBlocking(textFrameSender, WebSocketUtils.fromUtf8String(partialMessage));
+                if(isLast) {
+                    textFrameSender.shutdownWrites();
                 }
-                if(textFrameSender == null) {
-                    textFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.TEXT);
-                }
-                try {
-                    Channels.writeBlocking(textFrameSender, WebSocketUtils.fromUtf8String(partialMessage));
-                    if(isLast) {
-                        textFrameSender.shutdownWrites();
-                    }
-                    Channels.flushBlocking(textFrameSender);
-                } finally {
-                    if(isLast) {
-                        textFrameSender = null;
-                    }
+                Channels.flushBlocking(textFrameSender);
+            } finally {
+                if (isLast) {
+                    textFrameSender = null;
                 }
             }
+
         }
 
         @Override
         public void sendBinary(final ByteBuffer partialByte, final boolean isLast) throws IOException {
+
             if(partialByte == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-
-            synchronized (this) {
-                if (textFrameSender != null) {
-                    throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
-                }
-                if (binaryFrameSender == null) {
-                    binaryFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.BINARY);
-                }
-                try {
-                    Channels.writeBlocking(binaryFrameSender, partialByte);
-                    if (isLast) {
-                        binaryFrameSender.shutdownWrites();
-                    }
-                    Channels.flushBlocking(binaryFrameSender);
-                }
-                finally {
-                    if (isLast) {
-                        binaryFrameSender = null;
-                    }
-                }
-                partialByte.clear();
+            if (textFrameSender != null) {
+                throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
+            if (binaryFrameSender == null) {
+                binaryFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.BINARY);
+            }
+            try {
+                Channels.writeBlocking(binaryFrameSender, partialByte);
+                if(isLast) {
+                    binaryFrameSender.shutdownWrites();
+                }
+                Channels.flushBlocking(binaryFrameSender);
+            } finally {
+                if (isLast) {
+                    binaryFrameSender = null;
+                }
+            }
+            partialByte.clear();
         }
 
         @Override
