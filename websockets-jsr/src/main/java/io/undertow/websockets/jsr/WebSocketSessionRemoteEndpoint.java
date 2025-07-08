@@ -17,6 +17,17 @@
  */
 package io.undertow.websockets.jsr;
 
+import io.undertow.websockets.core.BinaryOutputStream;
+import io.undertow.websockets.core.StreamSinkFrameChannel;
+import io.undertow.websockets.core.WebSocketCallback;
+import io.undertow.websockets.core.WebSocketFrameType;
+import io.undertow.websockets.core.WebSocketUtils;
+import io.undertow.websockets.core.WebSockets;
+import org.xnio.channels.Channels;
+
+import jakarta.websocket.EncodeException;
+import jakarta.websocket.RemoteEndpoint;
+import jakarta.websocket.SendHandler;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -24,17 +35,6 @@ import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Future;
-
-import io.undertow.websockets.core.BinaryOutputStream;
-import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.WebSocketCallback;
-import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.WebSocketUtils;
-import io.undertow.websockets.core.WebSockets;
-import jakarta.websocket.EncodeException;
-import jakarta.websocket.RemoteEndpoint;
-import jakarta.websocket.SendHandler;
-import org.xnio.channels.Channels;
 
 /**
  * {@link RemoteEndpoint} implementation which uses a WebSocketSession for all its operation.
@@ -243,7 +243,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         private StreamSinkFrameChannel binaryFrameSender;
         private StreamSinkFrameChannel textFrameSender;
 
-        public synchronized void assertNotInFragment() {
+        public void assertNotInFragment() {
             if (textFrameSender != null || binaryFrameSender != null) {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
@@ -268,76 +268,57 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             data.clear(); //for some reason the TCK expects this, might as well just match the RI behaviour
         }
 
-       @Override
+        @Override
         public void sendText(final String partialMessage, final boolean isLast) throws IOException {
-            if (partialMessage == null) {
+            if(partialMessage == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-
-            StreamSinkFrameChannel sender = getTextFrameSender();
-
+            if (binaryFrameSender != null) {
+                throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
+            }
+            StreamSinkFrameChannel textFrameSender = this.textFrameSender;
+            if (textFrameSender == null) {
+                textFrameSender = this.textFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.TEXT);
+            }
             try {
-                Channels.writeBlocking(sender, WebSocketUtils.fromUtf8String(partialMessage));
-                if (isLast) {
-                    sender.shutdownWrites();
+                Channels.writeBlocking(textFrameSender, WebSocketUtils.fromUtf8String(partialMessage));
+                if(isLast) {
+                    textFrameSender.shutdownWrites();
                 }
-                Channels.flushBlocking(sender);
+                Channels.flushBlocking(textFrameSender);
             } finally {
                 if (isLast) {
-                    clearTextFrameSender();
+                    this.textFrameSender = null;
                 }
             }
+
         }
 
         @Override
         public void sendBinary(final ByteBuffer partialByte, final boolean isLast) throws IOException {
+
             if(partialByte == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
-
-            StreamSinkFrameChannel sender = getBinaryFrameSender();
-
-            try {
-                Channels.writeBlocking(sender, partialByte);
-                if (isLast) {
-                    sender.shutdownWrites();
-                }
-                Channels.flushBlocking(sender);
-            }
-            finally {
-                if (isLast) {
-                    clearBinaryFrameSender();
-                }
-            }
-            partialByte.clear();
-        }
-
-        private synchronized StreamSinkFrameChannel getTextFrameSender() throws IOException {
-            if (binaryFrameSender != null) {
-                throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
-            }
-            if (textFrameSender == null) {
-                textFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.TEXT);
-            }
-            return textFrameSender;
-        }
-
-        private synchronized void clearTextFrameSender() {
-            textFrameSender = null;
-        }
-
-        private synchronized StreamSinkFrameChannel getBinaryFrameSender() throws IOException {
             if (textFrameSender != null) {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
+            StreamSinkFrameChannel binaryFrameSender = this.binaryFrameSender;
             if (binaryFrameSender == null) {
-                binaryFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.BINARY);
+                binaryFrameSender = this.binaryFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.BINARY);
             }
-            return binaryFrameSender;
-        }
-
-        private synchronized void clearBinaryFrameSender() {
-            binaryFrameSender = null;
+            try {
+                Channels.writeBlocking(binaryFrameSender, partialByte);
+                if(isLast) {
+                    binaryFrameSender.shutdownWrites();
+                }
+                Channels.flushBlocking(binaryFrameSender);
+            } finally {
+                if (isLast) {
+                    this.binaryFrameSender = null;
+                }
+            }
+            partialByte.clear();
         }
 
         @Override
