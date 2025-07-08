@@ -17,7 +17,6 @@
  */
 package io.undertow.servlet.spec;
 
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import javax.servlet.ServletContext;
@@ -25,18 +24,14 @@ import javax.servlet.ServletContext;
 import io.undertow.server.session.Session;
 import io.undertow.servlet.handlers.ServletRequestContext;
 
-
+@SuppressWarnings("removal")
 class SecurityActions {
     static ServletRequestContext currentServletRequestContext() {
         if (System.getSecurityManager() == null) {
             return ServletRequestContext.current();
         } else {
-            return AccessController.doPrivileged(new PrivilegedAction<ServletRequestContext>() {
-                @Override
-                public ServletRequestContext run() {
-                    return ServletRequestContext.current();
-                }
-            });
+            return java.security.AccessController.doPrivileged(
+                    (PrivilegedAction<ServletRequestContext>) ServletRequestContext::current);
         }
     }
 
@@ -44,12 +39,8 @@ class SecurityActions {
         if (System.getSecurityManager() == null) {
             return HttpSessionImpl.forSession(session, servletContext, newSession);
         } else {
-            return AccessController.doPrivileged(new PrivilegedAction<HttpSessionImpl>() {
-                @Override
-                public HttpSessionImpl run() {
-                    return HttpSessionImpl.forSession(session, servletContext, newSession);
-                }
-            });
+            return java.security.AccessController.doPrivileged(
+                    (PrivilegedAction<HttpSessionImpl>) () -> HttpSessionImpl.forSession(session, servletContext, newSession));
         }
     }
 
@@ -57,12 +48,9 @@ class SecurityActions {
         if (System.getSecurityManager() == null) {
             ServletRequestContext.setCurrentRequestContext(servletRequestContext);
         } else {
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    ServletRequestContext.setCurrentRequestContext(servletRequestContext);
-                    return null;
-                }
+            java.security.AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                ServletRequestContext.setCurrentRequestContext(servletRequestContext);
+                return null;
             });
         }
     }
@@ -71,25 +59,9 @@ class SecurityActions {
         if (System.getSecurityManager() == null) {
             ServletRequestContext.clearCurrentServletAttachments();
         } else {
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    ServletRequestContext.clearCurrentServletAttachments();
-                    return null;
-                }
-            });
-        }
-    }
-
-    static ServletRequestContext requireCurrentServletRequestContext() {
-        if (System.getSecurityManager() == null) {
-            return ServletRequestContext.requireCurrent();
-        } else {
-            return AccessController.doPrivileged(new PrivilegedAction<ServletRequestContext>() {
-                @Override
-                public ServletRequestContext run() {
-                    return ServletRequestContext.requireCurrent();
-                }
+            java.security.AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                ServletRequestContext.clearCurrentServletAttachments();
+                return null;
             });
         }
     }

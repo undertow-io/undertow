@@ -18,7 +18,6 @@
 
 package io.undertow.servlet.core;
 
-import java.security.AccessController;
 import java.util.HashSet;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -69,6 +68,7 @@ public class SessionListenerBridge implements SessionListener {
     }
 
     @Override
+    @SuppressWarnings("removal")
     public void sessionDestroyed(final Session session, final HttpServerExchange exchange, final SessionDestroyedReason reason) {
 
         if (reason == SessionDestroyedReason.TIMEOUT) {
@@ -88,7 +88,7 @@ public class SessionListenerBridge implements SessionListener {
             if (System.getSecurityManager() == null) {
                 underlying = current.getSession().getSession();
             } else {
-                underlying = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(current.getSession()));
+                underlying = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(current.getSession()));
             }
         }
 
