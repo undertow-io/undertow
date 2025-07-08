@@ -26,12 +26,12 @@ import io.undertow.util.Headers;
 
 import java.util.List;
 
+/**
+ * @author Dimitris Kafetzis
+ */
 @UndertowExample("Predicate Parser")
 public class PredicateParser {
 
-    /**
-     * @author Dimitris Kafetzis
-     */
     public static void main(final String[] args) {
 
         //The predicate parser accepts either a File, Path, InputStream or String containing the rules in order to generate the handlers and predicates.

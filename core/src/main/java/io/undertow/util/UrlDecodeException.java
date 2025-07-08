@@ -19,7 +19,7 @@
 package io.undertow.util;
 
 /**
- * Created by Marek Marusic <mmarusic@redhat.com> on 7/25/19.
+ * Created by Marek Marusic {@literal <mmarusic@redhat.com>} on 7/25/19.
  */
 public class UrlDecodeException extends IllegalArgumentException {
 

@@ -1283,7 +1283,7 @@ public class DeploymentInfo implements Cloneable {
 
     /**
      * If this is true then the message parameter of {@link jakarta.servlet.http.HttpServletResponse#sendError(int, String)} and
-     * {@link jakarta.servlet.http.HttpServletResponse#setStatus(int, String)} will be used as the HTTP reason phrase in
+     * {@code jakarta.servlet.http.HttpServletResponse.setStatus(int, String)} will be used as the HTTP reason phrase in
      * the response.
      *
      * @param sendCustomReasonPhraseOnError If the parameter to sendError should be used as a HTTP reason phrase
