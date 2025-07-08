@@ -376,6 +376,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
+    @SuppressWarnings("removal")
     public String changeSessionId() {
         HttpSessionImpl session = servletContext.getSession(originalServletContext, exchange, false);
         if (session == null) {

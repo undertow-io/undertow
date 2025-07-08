@@ -17,13 +17,11 @@
  */
 package io.undertow.server;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.security.Permission;
-import java.security.Policy;
 import java.security.ProtectionDomain;
-
-import org.junit.Assert;
 
 /**
  * Test for UNDERTOW-1558, it cannot instantiate the class if a security manager is set on JDK1.8
@@ -34,9 +32,10 @@ import org.junit.Assert;
 public class DirectByteBufferDeallocatorTestCase {
 
     @Test
+    @SuppressWarnings({"removal"})
     public void directByteBufferDeallocatorInstantiationTest() {
         Exception exception = null;
-        Policy.setPolicy(new Policy() {
+        java.security.Policy.setPolicy(new java.security.Policy() {
             @Override
             public boolean implies(ProtectionDomain pd, Permission perm) {
                 return true;

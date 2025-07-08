@@ -17,22 +17,18 @@
  */
 package io.undertow.servlet.websockets;
 
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import io.undertow.servlet.handlers.ServletRequestContext;
 
+@SuppressWarnings("removal")
 class SecurityActions {
     static ServletRequestContext requireCurrentServletRequestContext() {
         if (System.getSecurityManager() == null) {
             return ServletRequestContext.requireCurrent();
         } else {
-            return AccessController.doPrivileged(new PrivilegedAction<ServletRequestContext>() {
-                @Override
-                public ServletRequestContext run() {
-                    return ServletRequestContext.requireCurrent();
-                }
-            });
+            return java.security.AccessController.doPrivileged(
+                    (PrivilegedAction<ServletRequestContext>) ServletRequestContext::requireCurrent);
         }
     }
 }
