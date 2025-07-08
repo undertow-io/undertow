@@ -81,8 +81,8 @@ import sun.misc.Unsafe;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+
  * Based on revision 1.50 of ConcurrentLinkedDeque
- * (see http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/src/main/java/util/concurrent/ConcurrentLinkedDeque.java?revision=1.50&amp;view=markup)
  * This is the version used in JDK 1.8.0_121.
  *
  * @since 1.7

@@ -1018,7 +1018,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
      * Gets the host name for this IP address.
      * If this InetAddress was created with a host name, this host name will be remembered and returned; otherwise, a reverse name lookup will be performed and the result will be returned based on the system configured name lookup service. If a lookup of the name service is required, call getCanonicalHostName.
      * If there is a security manager, its checkConnect method is first called with the hostname and -1 as its arguments to see if the operation is allowed. If the operation is not allowed, it will return the textual representation of the IP address.
-     * @see InetAddres#getHostName
+     * @see InetAddress#getHostName(boolean)
      */
     @Override
     public String getLocalName() {
