@@ -148,7 +148,7 @@
                             <head>Implementation Note:</head>
                         </tag>
                     </tags>
-                    <source>1.8</source> 
+                    <source>${maven.compiler.release}</source>
                 </configuration>
                 <executions>
                     <execution>
