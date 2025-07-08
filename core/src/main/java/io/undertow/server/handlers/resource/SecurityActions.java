@@ -19,21 +19,16 @@ package io.undertow.server.handlers.resource;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+@SuppressWarnings("removal")
 class SecurityActions {
 
     static Boolean isSymbolicLink(Path file) {
         if (System.getSecurityManager() == null) {
             return Files.isSymbolicLink(file);
         } else {
-            return AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                @Override
-                public Boolean run() {
-                    return Files.isSymbolicLink(file);
-                }
-            });
+            return java.security.AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Files.isSymbolicLink(file));
         }
     }
 

@@ -44,7 +44,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpServletResponseWrapper;
 
 import java.io.IOException;
-import java.security.AccessController;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -228,6 +227,7 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         }
     }
 
+    @SuppressWarnings("removal")
     private Session getAndInitializeSession(final HttpServerExchange exchange, final boolean createNewSession) {
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         final ServletContextImpl servletContextImpl =  servletRequestContext.getCurrentServletContext();
@@ -244,7 +244,7 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         if (System.getSecurityManager() == null) {
             session = httpSession.getSession();
         } else {
-            session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+            session = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
         }
 
         if (newSession) {

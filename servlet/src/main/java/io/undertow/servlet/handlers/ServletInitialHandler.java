@@ -66,7 +66,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -93,25 +92,21 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     private final ServletPathMatches paths;
 
     private final ExceptionHandler exceptionHandler;
-    private final HttpHandler dispatchHandler = new HttpHandler() {
-        @Override
-        public void handleRequest(final HttpServerExchange exchange) throws Exception {
-            final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-            if (System.getSecurityManager() == null) {
+    @SuppressWarnings("removal")
+    private final HttpHandler dispatchHandler = exchange -> {
+        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        if (System.getSecurityManager() == null) {
+            dispatchRequest(exchange, servletRequestContext, servletRequestContext.getOriginalServletPathMatch().getServletChain(), DispatcherType.REQUEST);
+        } else {
+            //sometimes thread pools inherit some random
+            java.security.AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
                 dispatchRequest(exchange, servletRequestContext, servletRequestContext.getOriginalServletPathMatch().getServletChain(), DispatcherType.REQUEST);
-            } else {
-                //sometimes thread pools inherit some random
-                AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
-                    @Override
-                    public Object run() throws Exception {
-                        dispatchRequest(exchange, servletRequestContext, servletRequestContext.getOriginalServletPathMatch().getServletChain(), DispatcherType.REQUEST);
-                        return null;
-                    }
-                });
-            }
+                return null;
+            });
         }
     };
 
+    @SuppressWarnings("removal")
     public ServletInitialHandler(final ServletPathMatches paths, final HttpHandler next, final Deployment deployment, final ServletContextImpl servletContext) {
         this.next = next;
         this.servletContext = servletContext;
@@ -119,7 +114,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         this.listeners = servletContext.getDeployment().getApplicationListeners();
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
-            //handle request can use doPrivilidged
+            //handle request can use doPrivileged
             //we need to make sure this is not abused
             sm.checkPermission(PERMISSION);
         }

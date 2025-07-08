@@ -25,7 +25,6 @@ import io.undertow.server.session.Session;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 
-import java.security.AccessController;
 
 /**
  * Servlet version of the single sign on authentication mechanism.
@@ -38,13 +37,14 @@ public class ServletSingleSignOnAuthenticationMechanism extends SingleSignOnAuth
     }
 
     @Override
+    @SuppressWarnings("removal")
     protected Session getSession(HttpServerExchange exchange) {
         ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
         final HttpSessionImpl session = servletRequestContext.getCurrentServletContext().getSession(exchange, true);
         if(System.getSecurityManager() == null) {
             return session.getSession();
         } else {
-            return AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
+            return java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
         }
     }
 }

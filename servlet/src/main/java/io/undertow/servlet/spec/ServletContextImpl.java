@@ -84,7 +84,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collections;
@@ -990,6 +989,7 @@ public class ServletContextImpl implements ServletContext {
         return getSession(this, exchange, create);
     }
 
+    @SuppressWarnings("removal")
     public void updateSessionAccessTime(final HttpServerExchange exchange) {
         HttpSessionImpl httpSession = getSession(exchange, false);
         if (httpSession != null) {
@@ -997,7 +997,7 @@ public class ServletContextImpl implements ServletContext {
             if (System.getSecurityManager() == null) {
                 underlyingSession = httpSession.getSession();
             } else {
-                underlyingSession = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+                underlyingSession = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
             }
             underlyingSession.requestDone(exchange);
         }
@@ -1032,11 +1032,12 @@ public class ServletContextImpl implements ServletContext {
         deploymentInfo = null;
     }
 
+    @SuppressWarnings("removal")
     private void readServletAnnotations(ServletInfo servlet, DeploymentInfo deploymentInfo) {
         if (System.getSecurityManager() == null) {
             new ReadServletAnnotationsTask(servlet, deploymentInfo).run();
         } else {
-            AccessController.doPrivileged(new ReadServletAnnotationsTask(servlet, deploymentInfo));
+            java.security.AccessController.doPrivileged(new ReadServletAnnotationsTask(servlet, deploymentInfo));
         }
     }
 

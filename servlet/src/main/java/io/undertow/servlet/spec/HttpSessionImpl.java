@@ -187,6 +187,7 @@ public class HttpSessionImpl implements HttpSession {
         };
     }
 
+    @SuppressWarnings("removal")
     public Session getSession() {
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
