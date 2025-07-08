@@ -52,7 +52,6 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
     private InetAddress destAddress;
     private int sourcePort = -1;
     private int destPort = -1;
-    private StringBuilder stringBuilder = new StringBuilder();
     private boolean carriageReturnSeen = false;
     private boolean parsingUnknown = false;
 
@@ -70,6 +69,7 @@ class ProxyProtocolReadListener implements ChannelListener<StreamSourceChannel> 
 
     @Override
     public void handleEvent(StreamSourceChannel streamSourceChannel) {
+      final StringBuilder stringBuilder = new StringBuilder();
         PooledByteBuffer buffer = bufferPool.allocate();
         boolean freeBuffer = true;
         try {
