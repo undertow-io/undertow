@@ -194,9 +194,10 @@ public class ServletInputStreamImpl extends ServletInputStream {
         return copied;
     }
 
-    private PooledByteBuffer readIntoBuffer() throws IOException {
+    private void readIntoBuffer() throws IOException {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
-            final PooledByteBuffer buffer = pooled = bufferPool.allocate();
+            pooled = bufferPool.allocate();
+
             int res = Channels.readBlocking(channel, pooled.getBuffer());
             pooled.getBuffer().flip();
             if (res == -1) {
@@ -204,9 +205,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 pooled.close();
                 pooled = null;
             }
-            return buffer;
         }
-        return null;
     }
 
     private void readIntoBufferNonBlocking() throws IOException {
@@ -264,12 +263,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
         setFlags(FLAG_CLOSED);
         try {
             while (allAreClear(state, FLAG_FINISHED)) {
-                // read is always supposed to run from the same thread, but
-                // close is a different story... specially in tests
-                PooledByteBuffer buffer = readIntoBuffer();
-                if (buffer != null) {
-                    buffer.close();
-                }
+                readIntoBuffer();
                 if (pooled != null) {
                     pooled.close();
                     pooled = null;
