@@ -106,7 +106,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 }
             });
             Long sizeLimit = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MULTIPART_MAX_ENTITY_SIZE);
-            if(sizeLimit != null) {
+            if(sizeLimit != null && sizeLimit > 0) { // do not overwrite the entity size with sizeLimit that is <= 0
                 exchange.setMaxEntitySize(sizeLimit);
             }
             UndertowLogger.REQUEST_LOGGER.tracef("Created multipart parser for %s", exchange);
