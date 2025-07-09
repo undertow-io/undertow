@@ -34,7 +34,7 @@ final class SecurityActions {
     }
 
     static String getSystemProperty(final String key, final String def) {
-        return getSecurityManager() == null ? getProperty(key) : doPrivileged(new PrivilegedAction<String>() {
+        return getSecurityManager() == null ? getProperty(key,def) : doPrivileged(new PrivilegedAction<String>() {
             @Override
             public String run() {
                 return getProperty(key,def);
