@@ -40,13 +40,11 @@ import org.xnio.FutureResult;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 @RunWith(DefaultServer.class)
 @HttpOneOnly
@@ -64,12 +62,6 @@ public class WebSocketTimeoutTestCase {
                 .set(Options.WRITE_TIMEOUT, DEFAULTS_IO_TIMEOUT_VALUE)
                 .set(UndertowOptions.WEB_SOCKETS_READ_TIMEOUT, TESTABLE_TIMEOUT_VALUE)
                 .set(UndertowOptions.WEB_SOCKETS_WRITE_TIMEOUT, NON_TESTABLE_TIMEOUT_VALUE).getMap());
-/*
-        DefaultServer.setUndertowOptions(OptionMap.builder()
-                .set(Options.READ_TIMEOUT, regularTimeouts)
-                .set(Options.WRITE_TIMEOUT, regularTimeouts)
-                .set(UndertowOptions.WEB_SOCKETS_READ_TIMEOUT, wsReadTimeout)
-                .set(UndertowOptions.WEB_SOCKETS_WRITE_TIMEOUT, wsWriteTimeout).getMap());*/
         SCHEDULER = Executors.newScheduledThreadPool(2);
     }
 
@@ -85,13 +77,11 @@ public class WebSocketTimeoutTestCase {
 
     @Test
     public void testServerReadTimeout() throws Exception {
-        final AtomicBoolean connected = new AtomicBoolean(false);
         DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(
                 (WebSocketConnectionCallback) (exchange, channel) -> {
-                    connected.set(true);
                     channel.getReceiveSetter().set(new AbstractReceiveListener() {
                         @Override
-                        protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) throws IOException {
+                        protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) {
                             String string = message.getData();
 
                             if (string.equals("hello")) {
@@ -104,7 +94,7 @@ public class WebSocketTimeoutTestCase {
                     channel.resumeReceives();
                 }));
 
-        final FutureResult<?> latch = new FutureResult();
+        final FutureResult<?> latch = new FutureResult<>();
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII)), new FrameChecker(TextWebSocketFrame.class, "world".getBytes(CharsetUtil.US_ASCII), latch));
@@ -112,10 +102,10 @@ public class WebSocketTimeoutTestCase {
 
         final long watchStart = System.currentTimeMillis();
         final long watchTimeout = System.currentTimeMillis() + TESTABLE_TIMEOUT_VALUE + 1000;
-        final FutureResult<Long> timeoutLatch = new FutureResult<Long>();
+        final FutureResult<Long> timeoutLatch = new FutureResult<>();
         ReadTimeoutChannelGuard readTimeoutChannelGuard = new ReadTimeoutChannelGuard(client, timeoutLatch, watchTimeout);
 
-        final ScheduledFuture sf = SCHEDULER.scheduleAtFixedRate(readTimeoutChannelGuard, 0, 50, TimeUnit.MILLISECONDS);
+        final ScheduledFuture<?> sf = SCHEDULER.scheduleAtFixedRate(readTimeoutChannelGuard, 0, 50, TimeUnit.MILLISECONDS);
         readTimeoutChannelGuard.setTaskScheduledFuture(sf);
 
         final Long watchTimeEnd = timeoutLatch.getIoFuture().get();
@@ -143,7 +133,7 @@ public class WebSocketTimeoutTestCase {
             this.watchEnd = watchEnd;
         }
 
-        public void setTaskScheduledFuture(ScheduledFuture sf2) {
+        public void setTaskScheduledFuture(ScheduledFuture<?> sf2) {
             this.sf = sf2;
         }
 
@@ -152,7 +142,7 @@ public class WebSocketTimeoutTestCase {
             if (System.currentTimeMillis() > watchEnd) {
                 sf.cancel(false);
                 if(channelActive()) {
-                    resultHandler.setResult(new Long(-1));
+                    resultHandler.setResult((long) -1);
                 } else {
                     resultHandler.setResult(System.currentTimeMillis());
                 }
