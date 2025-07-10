@@ -36,8 +36,8 @@ public class CloseMessage {
     */
   public static final int NORMAL_CLOSURE = 1000;
    public static final int GOING_AWAY = 1001;
-   public static final int WRONG_CODE = 1002;
-   public static final int PROTOCOL_ERROR = 1003;
+   public static final int PROTOCOL_ERROR = 1002;
+   public static final int WRONG_CODE = 1003;
    public static final int MSG_CONTAINS_INVALID_DATA = 1007;
    public static final int MSG_VIOLATES_POLICY = 1008;
    public static final int MSG_TOO_BIG = 1009;
