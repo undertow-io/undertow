@@ -525,6 +525,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 }
                 channel.getSourceChannel().wakeupReads();
             }
+            // race condition, asynchronous close while reading
+            if (channel.isWriteShutdown() && channel.isReadShutdown()) {
+                pooled.close();
+            }
         }
     }
 
