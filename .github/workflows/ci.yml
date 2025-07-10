@@ -13,23 +13,23 @@ jobs:
     name: Compile (no tests) with JDK 8
     runs-on: ubuntu-latest
     steps:
-    - uses: n1hility/cancel-previous-runs@v2
+    - uses: n1hility/cancel-previous-runs@v3
       with:
           token: ${{ secrets.GITHUB_TOKEN }}
-    - uses: actions/cache@v1
+    - uses: actions/cache@v4
       with:
         path: ~/.m2/repository
         key: m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
             m2-
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up JDK 8
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: 8
     - name: Generate settings.xml for Maven Builds
-      uses: whelk-io/maven-settings-xml-action@v20
+      uses: whelk-io/maven-settings-xml-action@v21
       with:
         repositories: '[{ "id": "jboss", "name": "JBoss", "url": "https://repository.jboss.org/nexus/content/groups/public" }]'
     - name: Print Version
@@ -102,13 +102,13 @@ jobs:
         echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' >	%SystemRoot%\System32\drivers\etc\hosts
         echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> %SystemRoot%\System32\drivers\etc\hosts
       shell: cmd
-    - uses: n1hility/cancel-previous-runs@v2
+    - uses: n1hility/cancel-previous-runs@v3
       with:
           token: ${{ secrets.GITHUB_TOKEN }}
     - name: Host information
       run: |
        hostname || true
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Download Maven Repo
       uses: actions/download-artifact@v4
       with:
@@ -118,12 +118,12 @@ jobs:
       shell: bash
       run: tar -xzf maven-repo.tgz -C ~
     - name: Set up JDK ${{ matrix.java }}
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         distribution: ${{ matrix.openjdk_impl }}
         java-version: ${{ matrix.jdk }}
     - name: Generate settings.xml for Maven Builds
-      uses: whelk-io/maven-settings-xml-action@v20
+      uses: whelk-io/maven-settings-xml-action@v21
       with:
         repositories: '[{ "id": "jboss", "name": "JBoss", "url": "https://repository.jboss.org/nexus/content/groups/public" }]'
     - name: Print Version
@@ -155,13 +155,13 @@ jobs:
         sudo bash -c "echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' > /etc/hosts"
         sudo bash -c "echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> /etc/hosts"
         sudo sysctl -w fs.file-max=2097152
-    - uses: n1hility/cancel-previous-runs@v2
+    - uses: n1hility/cancel-previous-runs@v3
       with:
           token: ${{ secrets.GITHUB_TOKEN }}
     - name: Host information
       run: |
        hostname || true
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Download Maven Repo
       uses: actions/download-artifact@v4
       with:
@@ -175,7 +175,7 @@ jobs:
       with:
         java-version: ${{ matrix.jdk }}
     - name: Generate settings.xml for Maven Builds
-      uses: whelk-io/maven-settings-xml-action@v20
+      uses: whelk-io/maven-settings-xml-action@v21
       with:
         repositories: '[{ "id": "jboss", "name": "JBoss", "url": "https://repository.jboss.org/nexus/content/groups/public" }]'
     - name: Print Version
