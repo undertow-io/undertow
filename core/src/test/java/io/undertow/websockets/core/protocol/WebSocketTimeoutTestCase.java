@@ -39,13 +39,11 @@ import org.xnio.FutureResult;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 @RunWith(DefaultServer.class)
 @HttpOneOnly
@@ -61,12 +59,6 @@ public class WebSocketTimeoutTestCase {
         DefaultServer.setServerOptions(OptionMap.builder()
                 .set(Options.READ_TIMEOUT, DEFAULTS_IO_TIMEOUT_VALUE)
                 .set(Options.WRITE_TIMEOUT, DEFAULTS_IO_TIMEOUT_VALUE).getMap());
-/*
-        DefaultServer.setUndertowOptions(OptionMap.builder()
-                .set(Options.READ_TIMEOUT, regularTimeouts)
-                .set(Options.WRITE_TIMEOUT, regularTimeouts).getMap());
-        System.setProperty(WebSocketChannel.WEB_SOCKETS_READ_TIMEOUT, ""+wsReadTimeout);
-        System.setProperty(WebSocketChannel.WEB_SOCKETS_WRITE_TIMEOUT, ""+wsWriteTimeout);*/
         System.setProperty(WebSocketChannel.WEB_SOCKETS_READ_TIMEOUT, "" + TESTABLE_TIMEOUT_VALUE);
         System.setProperty(WebSocketChannel.WEB_SOCKETS_WRITE_TIMEOUT, "" + NON_TESTABLE_TIMEOUT_VALUE);
         SCHEDULER = Executors.newScheduledThreadPool(2);
@@ -84,13 +76,11 @@ public class WebSocketTimeoutTestCase {
 
     @Test
     public void testServerReadTimeout() throws Exception {
-        final AtomicBoolean connected = new AtomicBoolean(false);
         DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(
                 (WebSocketConnectionCallback) (exchange, channel) -> {
-                    connected.set(true);
                     channel.getReceiveSetter().set(new AbstractReceiveListener() {
                         @Override
-                        protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) throws IOException {
+                        protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) {
                             String string = message.getData();
 
                             if (string.equals("hello")) {
@@ -111,7 +101,7 @@ public class WebSocketTimeoutTestCase {
 
         final long watchStart = System.currentTimeMillis();
         final long watchTimeout = System.currentTimeMillis() + TESTABLE_TIMEOUT_VALUE + 1000;
-        final FutureResult<Long> timeoutLatch = new FutureResult<Long>();
+        final FutureResult<Long> timeoutLatch = new FutureResult<>();
         ReadTimeoutChannelGuard readTimeoutChannelGuard = new ReadTimeoutChannelGuard(client, timeoutLatch, watchTimeout);
 
         final ScheduledFuture<?> sf = SCHEDULER.scheduleAtFixedRate(readTimeoutChannelGuard, 0, 50, TimeUnit.MILLISECONDS);
@@ -142,7 +132,7 @@ public class WebSocketTimeoutTestCase {
             this.watchEnd = watchEnd;
         }
 
-        public void setTaskScheduledFuture(ScheduledFuture sf2) {
+        public void setTaskScheduledFuture(ScheduledFuture<?> sf2) {
             this.sf = sf2;
         }
 
@@ -151,7 +141,7 @@ public class WebSocketTimeoutTestCase {
             if (System.currentTimeMillis() > watchEnd) {
                 sf.cancel(false);
                 if(channelActive()) {
-                    resultHandler.setResult(new Long(-1));
+                    resultHandler.setResult((long) -1);
                 } else {
                     resultHandler.setResult(System.currentTimeMillis());
                 }
