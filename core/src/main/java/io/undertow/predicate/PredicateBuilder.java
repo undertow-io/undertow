@@ -60,6 +60,6 @@ public interface PredicateBuilder {
      * @param config The predicate config
      * @return The new predicate
      */
-    Predicate build(final Map<String, Object> config);
+    Predicate build(Map<String, Object> config);
 
 }

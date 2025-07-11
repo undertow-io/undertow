@@ -49,7 +49,7 @@ public interface FormDataParser extends Closeable {
      * The method can either invoke the next handler directly, or may delegate to the IO thread
      * to perform the parsing.
      */
-    void parse(final HttpHandler next) throws Exception;
+    void parse(HttpHandler next) throws Exception;
 
     /**
      * Parse the data, blocking the current thread until parsing is complete. For blocking handlers this method is

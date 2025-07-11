@@ -210,6 +210,10 @@ public final class HttpServerExchange extends AbstractAttachable {
      * the query string
      */
     private String queryString = "";
+    /**
+     * the non-decoded query string. Set only when query string goes through decoding
+     */
+    private String nonDecodedQueryString = null;
 
     private int requestWrapperCount = 0;
     private ConduitWrapper<StreamSourceConduit>[] requestWrappers; //we don't allocate these by default, as for get requests they are not used
@@ -465,6 +469,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Examples:
      * GET http://localhost:8080/myFile.jsf?foo=bar HTTP/1.1 -&gt; 'http://localhost:8080/myFile.jsf'
      * POST /my+File.jsf?foo=bar HTTP/1.1 -&gt; '/my+File.jsf'
+     * For the query string, see {@link #getQueryString} and {@link #getNonDecodedQueryString} .
      */
     public String getRequestURI() {
         return requestURI;
@@ -583,15 +588,45 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Set query string.  Leading ? char will be removed automatically.
+     * Set query string.  Leading {@code '?'} char will be removed automatically.
+     *
+     * @return this http server exchange
      */
     public HttpServerExchange setQueryString(final String queryString) {
         // Clean leading ?
         if( queryString.length() > 0 && queryString.charAt(0) == '?' ) {
-                this.queryString = queryString.substring(1);
-            } else {
-                this.queryString = queryString;
-            }
+            this.queryString = queryString.substring(1);
+        } else {
+            this.queryString = queryString;
+        }
+        return this;
+    }
+
+    /**
+     * Returns the query string as originally contained in the request, without any decoding.
+     * The returned string does not contain the leading {@code '?'} char.
+     *
+     * @return The request query string, without the leading {@code '?'}, non-decoded.
+     */
+    public String getNonDecodedQueryString() {
+        return this.nonDecodedQueryString == null? this.queryString: this.nonDecodedQueryString;
+    }
+
+    /**
+     * Sets the non-decoded query string.  Leading {@code '?'} char will be removed automatically.<p>
+     * Must be invoked only if the {@link #getQueryString() query string} has gone through decoding. In such case, we expect
+     * that both forms of the query string will be set in the exchange: {@link #setQueryString decoded} and non-decoded.
+     *
+     * @param nonDecodedQueryString the query string as originally contained in the request, without any decoding
+     * @return this http server exchange
+     */
+    public HttpServerExchange setNonDecodedQueryString(String nonDecodedQueryString) {
+        // Clean leading ?
+        if( nonDecodedQueryString.length() > 0 && nonDecodedQueryString.charAt(0) == '?' ) {
+            this.nonDecodedQueryString = nonDecodedQueryString.substring(1);
+        } else {
+            this.nonDecodedQueryString = nonDecodedQueryString;
+        }
         return this;
     }
 
