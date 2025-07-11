@@ -205,7 +205,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
      *
      * @return The source conduit
      */
-    protected abstract StreamSinkConduit getSinkConduit(HttpServerExchange exchange, final StreamSinkConduit conduit);
+    protected abstract StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit);
 
     /**
      *
@@ -285,6 +285,6 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
 
     public interface CloseListener {
 
-        void closed(final ServerConnection connection);
+        void closed(ServerConnection connection);
     }
 }

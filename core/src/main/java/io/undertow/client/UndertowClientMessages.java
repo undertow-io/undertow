@@ -45,7 +45,7 @@ public interface UndertowClientMessages {
 
     // 1020
     @Message(id = 1020, value = "Failed to upgrade channel due to response %s (%s)")
-    String failedToUpgradeChannel(final int responseCode, String reason);
+    String failedToUpgradeChannel(int responseCode, String reason);
 
     // 1030
     @Message(id = 1030, value = "invalid content length %d")

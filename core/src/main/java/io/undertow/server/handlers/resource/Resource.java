@@ -78,7 +78,7 @@ public interface Resource {
      * mime mappings, however in some cases the resource may have additional information as
      * to the actual content type.
      */
-    String getContentType(final MimeMappings mimeMappings);
+    String getContentType(MimeMappings mimeMappings);
 
     /**
      * Serve the resource, and call the provided callback when complete.
@@ -86,7 +86,7 @@ public interface Resource {
      * @param sender The sender to use.
      * @param exchange The exchange
      */
-    void serve(final Sender sender, final HttpServerExchange exchange, final IoCallback completionCallback);
+    void serve(Sender sender, HttpServerExchange exchange, IoCallback completionCallback);
 
     /**
      * @return The content length, or null if it is unknown

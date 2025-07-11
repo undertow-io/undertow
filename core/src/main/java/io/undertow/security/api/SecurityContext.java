@@ -162,7 +162,7 @@ public interface SecurityContext {
      * @param mechanismName - The name of the mechanism used to authenticate the account.
      * @param cachingRequired - If this mechanism requires caching
      */
-    void authenticationComplete(final Account account, final String mechanismName, final boolean cachingRequired);
+    void authenticationComplete(Account account, String mechanismName, boolean cachingRequired);
 
     /**
      * Called by the {@link AuthenticationMechanism} to indicate that an authentication attempt has failed.
@@ -176,7 +176,7 @@ public interface SecurityContext {
      * @param message - The message describing the failure.
      * @param mechanismName - The name of the mechanism reporting the failure.
      */
-    void authenticationFailed(final String message, final String mechanismName);
+    void authenticationFailed(String message, String mechanismName);
 
     /*
      * Methods for the management of NotificationHandler registrations.
@@ -187,7 +187,7 @@ public interface SecurityContext {
      *
      * @param receiver - The {@link NotificationReceiver} to register.
      */
-    void registerNotificationReceiver(final NotificationReceiver receiver);
+    void registerNotificationReceiver(NotificationReceiver receiver);
 
     /**
      * Remove a previously registered {@link NotificationReceiver} from this SecurityContext.
@@ -196,5 +196,5 @@ public interface SecurityContext {
      *
      * @param receiver - The {@link NotificationReceiver} to remove.
      */
-    void removeNotificationReceiver(final NotificationReceiver receiver);
+    void removeNotificationReceiver(NotificationReceiver receiver);
 }

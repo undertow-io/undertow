@@ -57,7 +57,7 @@ public interface HandlerBuilder {
      * @param config The handler config
      * @return The new predicate
      */
-    HandlerWrapper build(final Map<String, Object> config);
+    HandlerWrapper build(Map<String, Object> config);
 
 
 }

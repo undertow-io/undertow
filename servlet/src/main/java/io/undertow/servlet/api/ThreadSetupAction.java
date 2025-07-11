@@ -35,9 +35,9 @@ public interface ThreadSetupAction {
      * @param exchange The exchange, this may be null
      * @return A handle to tear down the request when the invocation is finished, or null
      */
-    Handle setup(final HttpServerExchange exchange);
+    Handle setup(HttpServerExchange exchange);
 
-    public interface Handle {
+    interface Handle {
         void tearDown();
     }
 

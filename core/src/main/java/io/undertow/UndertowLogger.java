@@ -81,7 +81,7 @@ public interface UndertowLogger extends BasicLogger {
 
 //    @LogMessage(level = INFO)
 //    @Message(id = 5002, value = "Exception reading file %s: %s")
-//    void exceptionReadingFile(final Path file, final IOException e);
+//    void exceptionReadingFile(Path file, IOException e);
 
     @LogMessage(level = ERROR)
     @Message(id = 5003, value = "IOException reading from channel")
@@ -101,15 +101,15 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = DEBUG)
     @Message(id = 5008, value = "An invalid token '%s' with value '%s' has been received.")
-    void invalidTokenReceived(final String tokenName, final String tokenValue);
+    void invalidTokenReceived(String tokenName, String tokenValue);
 
     @LogMessage(level = DEBUG)
     @Message(id = 5009, value = "A mandatory token %s is missing from the request.")
-    void missingAuthorizationToken(final String tokenName);
+    void missingAuthorizationToken(String tokenName);
 
     @LogMessage(level = DEBUG)
     @Message(id = 5010, value = "Verification of authentication tokens for user '%s' has failed using mechanism '%s'.")
-    void authenticationFailed(final String userName, final String mechanism);
+    void authenticationFailed(String userName, String mechanism);
 
     @LogMessage(level = ERROR)
     @Message(id = 5011, value = "Ignoring AJP request with prefix %s")
@@ -443,15 +443,15 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = DEBUG)
     @Message(id = 5096, value = "Authentication failed for digest header %s in %s")
-    void authenticationFailedFor(final String header, final HttpServerExchange exchange, final @Cause Exception e);
+    void authenticationFailedFor(String header, HttpServerExchange exchange, @Cause Exception e);
 
     @LogMessage(level = DEBUG)
     @Message(id = 5097, value = "Failed to obtain subject for %s")
-    void failedToObtainSubject(final HttpServerExchange exchange, final @Cause GeneralSecurityException e);
+    void failedToObtainSubject(HttpServerExchange exchange, @Cause GeneralSecurityException e);
 
     @LogMessage(level = DEBUG)
     @Message(id = 5098, value = "GSSAPI negotiation failed for %s")
-    void failedToNegotiateAtGSSAPI(final HttpServerExchange exchange, final @Cause Throwable e);
+    void failedToNegotiateAtGSSAPI(HttpServerExchange exchange, @Cause Throwable e);
 
     // place holder for 5099, 5100 and 5101
 
