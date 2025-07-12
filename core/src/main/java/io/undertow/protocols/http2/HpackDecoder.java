@@ -251,11 +251,15 @@ public class HpackDecoder {
         if (huffman) {
             return readHuffmanString(length, buffer);
         }
-        for (int i = 0; i < length; ++i) {
-            stringBuilder.append((char) (buffer.get() & 0xFF));
+        final String ret;
+        try {
+            for (int i = 0; i < length; ++i) {
+                stringBuilder.append((char) (buffer.get() & 0xFF));
+            }
+            ret = stringBuilder.toString();
+        } finally {
+            stringBuilder.setLength(0);
         }
-        String ret = stringBuilder.toString();
-        stringBuilder.setLength(0);
         if (ret.isEmpty()) {
             //return the interned empty string, rather than allocating a new one each time
             return "";
@@ -264,12 +268,17 @@ public class HpackDecoder {
     }
 
     private String readHuffmanString(int length, ByteBuffer buffer) throws HpackException {
-        HPackHuffman.decode(buffer, length, stringBuilder);
-        String ret = stringBuilder.toString();
+        final String ret;
+        try {
+            HPackHuffman.decode(buffer, length, stringBuilder);
+            ret = stringBuilder.toString();
+        } finally {
+            stringBuilder.setLength(0);
+        }
         if (ret.isEmpty()) {
             return "";
         }
-        stringBuilder.setLength(0);
+
         return ret;
     }
 
