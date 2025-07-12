@@ -430,6 +430,9 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                         readData = null;
                     }
                     if(frameDataRemaining == 0) {
+                        if (isLastFrameReceived()) {
+                            forceFree = true;
+                        }
                         receiver = null;
                     }
                     return null;
@@ -503,16 +506,21 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         }finally {
             //if the receive caused the channel to break the close listener may be have been called
             //which will make readData null
-            if (readData != null) {
-                if (!pooled.getBuffer().hasRemaining() || forceFree) {
-                    if(pooled.getBuffer().capacity() < 1024 || forceFree) {
-                        //if there is less than 1k left we don't allow it to be re-aquired
-                        readData = null;
+            if (readData != null || pooled != null) {
+                if (pooled.isOpen()) {
+                    try {
+                        if (forceFree || !pooled.getBuffer().hasRemaining()) {
+                            if (forceFree || pooled.getBuffer().capacity() < 1024) {
+                                //if there is less than 1k left we don't allow it to be re-aquired
+                                readData = null;
+                            }
+                            //even though this is freed we may un-free it if we get a new packet
+                            //this prevents many small reads resulting in a large number of allocated buffers
+                            pooled.close();
+                        }
+                    } catch (IllegalStateException illegalStateException) {
+                        // ignore, it can happen if we are racing with a close that has closed the pooled
                     }
-                    //even though this is freed we may un-free it if we get a new packet
-                    //this prevents many small reads resulting in a large number of allocated buffers
-                    pooled.close();
-
                 }
             }
             if(requiresReinvoke) {
@@ -524,6 +532,10 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     }
                 }
                 channel.getSourceChannel().wakeupReads();
+            }
+            // race condition, asynchronous close while reading
+            if (channel.isWriteShutdown() && channel.isReadShutdown()) {
+                pooled.close();
             }
         }
     }
