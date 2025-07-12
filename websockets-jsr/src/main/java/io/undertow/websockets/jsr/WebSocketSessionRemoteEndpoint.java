@@ -17,6 +17,17 @@
  */
 package io.undertow.websockets.jsr;
 
+import io.undertow.websockets.core.BinaryOutputStream;
+import io.undertow.websockets.core.StreamSinkFrameChannel;
+import io.undertow.websockets.core.WebSocketCallback;
+import io.undertow.websockets.core.WebSocketFrameType;
+import io.undertow.websockets.core.WebSocketUtils;
+import io.undertow.websockets.core.WebSockets;
+import org.xnio.channels.Channels;
+
+import jakarta.websocket.EncodeException;
+import jakarta.websocket.RemoteEndpoint;
+import jakarta.websocket.SendHandler;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -24,17 +35,6 @@ import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Future;
-
-import io.undertow.websockets.core.BinaryOutputStream;
-import io.undertow.websockets.core.StreamSinkFrameChannel;
-import io.undertow.websockets.core.WebSocketCallback;
-import io.undertow.websockets.core.WebSocketFrameType;
-import io.undertow.websockets.core.WebSocketUtils;
-import io.undertow.websockets.core.WebSockets;
-import jakarta.websocket.EncodeException;
-import jakarta.websocket.RemoteEndpoint;
-import jakarta.websocket.SendHandler;
-import org.xnio.channels.Channels;
 
 /**
  * {@link RemoteEndpoint} implementation which uses a WebSocketSession for all its operation.
@@ -243,9 +243,11 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
         private StreamSinkFrameChannel binaryFrameSender;
         private StreamSinkFrameChannel textFrameSender;
 
-        public synchronized void assertNotInFragment() {
-            if (textFrameSender != null || binaryFrameSender != null) {
-                throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
+        public void assertNotInFragment() {
+            synchronized (this) {
+                if (textFrameSender != null || binaryFrameSender != null) {
+                    throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
+                }
             }
         }
 
@@ -268,23 +270,29 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             data.clear(); //for some reason the TCK expects this, might as well just match the RI behaviour
         }
 
-       @Override
+        @Override
         public void sendText(final String partialMessage, final boolean isLast) throws IOException {
-            if (partialMessage == null) {
+            if(partialMessage == null) {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
 
-            StreamSinkFrameChannel sender = getTextFrameSender();
-
-            try {
-                Channels.writeBlocking(sender, WebSocketUtils.fromUtf8String(partialMessage));
-                if (isLast) {
-                    sender.shutdownWrites();
+            synchronized (this) {
+                if (binaryFrameSender != null) {
+                    throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
                 }
-                Channels.flushBlocking(sender);
-            } finally {
-                if (isLast) {
-                    clearTextFrameSender();
+                if(textFrameSender == null) {
+                    textFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.TEXT);
+                }
+                try {
+                    Channels.writeBlocking(textFrameSender, WebSocketUtils.fromUtf8String(partialMessage));
+                    if(isLast) {
+                        textFrameSender.shutdownWrites();
+                    }
+                    Channels.flushBlocking(textFrameSender);
+                } finally {
+                    if(isLast) {
+                        textFrameSender = null;
+                    }
                 }
             }
         }
@@ -295,49 +303,27 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 throw JsrWebSocketMessages.MESSAGES.messageInNull();
             }
 
-            StreamSinkFrameChannel sender = getBinaryFrameSender();
-
-            try {
-                Channels.writeBlocking(sender, partialByte);
-                if (isLast) {
-                    sender.shutdownWrites();
+            synchronized (this) {
+                if (textFrameSender != null) {
+                    throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
                 }
-                Channels.flushBlocking(sender);
-            }
-            finally {
-                if (isLast) {
-                    clearBinaryFrameSender();
+                if (binaryFrameSender == null) {
+                    binaryFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.BINARY);
                 }
+                try {
+                    Channels.writeBlocking(binaryFrameSender, partialByte);
+                    if (isLast) {
+                        binaryFrameSender.shutdownWrites();
+                    }
+                    Channels.flushBlocking(binaryFrameSender);
+                }
+                finally {
+                    if (isLast) {
+                        binaryFrameSender = null;
+                    }
+                }
+                partialByte.clear();
             }
-            partialByte.clear();
-        }
-
-        private synchronized StreamSinkFrameChannel getTextFrameSender() throws IOException {
-            if (binaryFrameSender != null) {
-                throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
-            }
-            if (textFrameSender == null) {
-                textFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.TEXT);
-            }
-            return textFrameSender;
-        }
-
-        private synchronized void clearTextFrameSender() {
-            textFrameSender = null;
-        }
-
-        private synchronized StreamSinkFrameChannel getBinaryFrameSender() throws IOException {
-            if (textFrameSender != null) {
-                throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
-            }
-            if (binaryFrameSender == null) {
-                binaryFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.BINARY);
-            }
-            return binaryFrameSender;
-        }
-
-        private synchronized void clearBinaryFrameSender() {
-            binaryFrameSender = null;
         }
 
         @Override
