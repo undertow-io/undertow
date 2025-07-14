@@ -187,7 +187,7 @@
                     <configuration>
                         <!-- fork is needed so compiler args can be used -->
                         <fork>true</fork>
-                        <failOnError>false</failOnError>
+                        <failOnError>true</failOnError>
                         <!-- need to specify directly, for some reason properties are ignored -->
                         <showDeprecation>${maven.compiler.showDeprecation}</showDeprecation>
                         <showWarnings>${maven.compiler.showWarnings}</showWarnings>
