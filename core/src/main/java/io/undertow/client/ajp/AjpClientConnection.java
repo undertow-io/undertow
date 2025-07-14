@@ -94,7 +94,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     private AjpClientExchange currentRequest;
 
     private final OptionMap options;
-    private final AjpClientChannel connection;
+    private final AjpClientChannel ajpClientChannel;
 
     private final ByteBufferPool bufferPool;
 
@@ -109,13 +109,13 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
     private final ClientStatistics clientStatistics;
     private final List<ChannelListener<ClientConnection>> closeListeners = new CopyOnWriteArrayList<>();
 
-    AjpClientConnection(final AjpClientChannel connection, final OptionMap options, final ByteBufferPool bufferPool, ClientStatistics clientStatistics) {
+    AjpClientConnection(final AjpClientChannel ajpClientChannel, final OptionMap options, final ByteBufferPool bufferPool, ClientStatistics clientStatistics) {
         this.clientStatistics = clientStatistics;
         this.options = options;
-        this.connection = connection;
+        this.ajpClientChannel = ajpClientChannel;
         this.bufferPool = bufferPool;
 
-        connection.addCloseTask(new ChannelListener<AjpClientChannel>() {
+        ajpClientChannel.addCloseTask(new ChannelListener<AjpClientChannel>() {
             @Override
             public void handleEvent(AjpClientChannel channel) {
                 log.debugf("connection to %s closed", getPeerAddress());
@@ -135,8 +135,8 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
                 }
             }
         });
-        connection.getReceiveSetter().set(new ClientReceiveListener());
-        connection.resumeReceives();
+        ajpClientChannel.getReceiveSetter().set(new ClientReceiveListener());
+        ajpClientChannel.resumeReceives();
     }
 
     @Override
@@ -147,12 +147,12 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
     @Override
     public SocketAddress getPeerAddress() {
-        return connection.getPeerAddress();
+        return ajpClientChannel.getPeerAddress();
     }
 
     @Override
     public <A extends SocketAddress> A getPeerAddress(Class<A> type) {
-        return connection.getPeerAddress(type);
+        return ajpClientChannel.getPeerAddress(type);
     }
 
     @Override
@@ -162,43 +162,43 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
     @Override
     public SocketAddress getLocalAddress() {
-        return connection.getLocalAddress();
+        return ajpClientChannel.getLocalAddress();
     }
 
     @Override
     public <A extends SocketAddress> A getLocalAddress(Class<A> type) {
-        return connection.getLocalAddress(type);
+        return ajpClientChannel.getLocalAddress(type);
     }
 
     @Override
     public XnioWorker getWorker() {
-        return connection.getWorker();
+        return ajpClientChannel.getWorker();
     }
 
     @Override
     public XnioIoThread getIoThread() {
-        return connection.getIoThread();
+        return ajpClientChannel.getIoThread();
     }
 
     @Override
     public boolean isOpen() {
-        return connection.isOpen();
+        return ajpClientChannel.isOpen();
     }
 
     @Override
     public boolean supportsOption(Option<?> option) {
-        return connection.supportsOption(option);
+        return ajpClientChannel.supportsOption(option);
     }
 
 
     @Override
     public <T> T getOption(Option<T> option) throws IOException {
-        return connection.getOption(option);
+        return ajpClientChannel.getOption(option);
     }
 
     @Override
     public <T> T setOption(Option<T> option, T value) throws IllegalArgumentException, IOException {
-        return connection.setOption(option, value);
+        return ajpClientChannel.setOption(option, value);
     }
 
     @Override
@@ -259,7 +259,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
     @Override
     public void sendPing(PingListener listener, long timeout, TimeUnit timeUnit) {
-        connection.sendPing(listener, timeout, timeUnit);
+        ajpClientChannel.sendPing(listener, timeout, timeUnit);
 
     }
 
@@ -289,7 +289,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
             length = -1;
         }
 
-        AjpClientRequestClientStreamSinkChannel sinkChannel = connection.sendRequest(request.getMethod(), request.getPath(), request.getProtocol(), request.getRequestHeaders(), request, requestFinishListener);
+        AjpClientRequestClientStreamSinkChannel sinkChannel = ajpClientChannel.sendRequest(request.getMethod(), request.getPath(), request.getProtocol(), request.getRequestHeaders(), request, requestFinishListener);
         currentRequest.setRequestChannel(sinkChannel);
 
         AjpClientExchange.invokeReadReadyCallback(AjpClientExchange);
@@ -319,7 +319,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
     private void handleError(IOException exception) {
         currentRequest.setFailed(exception);
-        safeClose(connection);
+        safeClose(ajpClientChannel);
     }
 
     public StreamConnection performUpgrade() throws IOException {
@@ -332,7 +332,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
             return;
         }
         state |= CLOSED | CLOSE_REQ;
-        connection.close();
+        ajpClientChannel.close();
     }
 
     /**
@@ -342,9 +342,9 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
         currentRequest = null;
 
         if (anyAreSet(state, CLOSE_REQ)) {
-            safeClose(connection);
+            safeClose(ajpClientChannel);
         } else if (anyAreSet(state, UPGRADE_REQUESTED)) {
-            safeClose(connection); //we don't support upgrade, just close the connection to be safe
+            safeClose(ajpClientChannel); //we don't support upgrade, just close the connection to be safe
             return;
         }
 
@@ -398,7 +398,7 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
 
             } catch (Throwable e) {
                 UndertowLogger.CLIENT_LOGGER.exceptionProcessingRequest(e);
-                safeClose(connection);
+                safeClose(ajpClientChannel);
                 if(currentRequest != null) {
                     currentRequest.setFailed(e instanceof IOException ? (IOException) e : new IOException(e));
                 }
