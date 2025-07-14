@@ -479,9 +479,13 @@ public final class ProxyHandler implements HttpHandler {
             final String remoteHost;
             final SocketAddress address = exchange.getSourceAddress();
             if (address != null) {
-                remoteHost = ((InetSocketAddress) address).getAddress().getHostAddress();
-                if(!((InetSocketAddress) address).isUnresolved()) {
-                    request.putAttachment(ProxiedRequestAttachments.REMOTE_ADDRESS, ((InetSocketAddress) address).getAddress().getHostAddress());
+                if (((InetSocketAddress) address).getAddress() != null){
+                    remoteHost = ((InetSocketAddress) address).getAddress().getHostAddress();
+                    if(!((InetSocketAddress) address).isUnresolved()) {
+                        request.putAttachment(ProxiedRequestAttachments.REMOTE_ADDRESS, remoteHost);
+                    }
+                } else {
+                    remoteHost = ((InetSocketAddress) address).getHostString();
                 }
             } else {
                 //should never happen, unless this is some form of mock request
