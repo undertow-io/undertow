@@ -20,6 +20,7 @@ package io.undertow.server.handlers;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Map;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
@@ -41,8 +42,8 @@ public class CookieImpl implements Cookie {
     private boolean httpOnly;
     private int version = 0;
     private String comment;
-    private boolean sameSite;
     private String sameSiteMode;
+    private Map<String, String> attributes;
 
     public CookieImpl(final String name, final String value) {
         this.name = name;
@@ -142,21 +143,22 @@ public class CookieImpl implements Cookie {
         return comment;
     }
 
-    public Cookie setComment(final String comment) {
+    public CookieImpl setComment(final String comment) {
         this.comment = comment;
         return this;
     }
 
     @Override
     public boolean isSameSite() {
-        return sameSite;
+        return this.sameSiteMode != null; //"None" should be false?
     }
 
-    @Override
-    public Cookie setSameSite(final boolean sameSite) {
-        this.sameSite = sameSite;
-        return this;
-    }
+//    default to interface not-implemented for the time being.
+//    @Override
+//    public Cookie setSameSite(final boolean sameSite) {
+//        this.sameSite = sameSite;
+//        return this;
+//    }
 
     @Override
     public String getSameSiteMode() {
@@ -169,11 +171,19 @@ public class CookieImpl implements Cookie {
         if (m != null) {
             UndertowLogger.REQUEST_LOGGER.tracef("Setting SameSite mode to [%s] for cookie [%s]", m, this.name);
             this.sameSiteMode = m;
-            this.setSameSite(true);
+            //this.setSameSite(true);
         } else {
             UndertowLogger.REQUEST_LOGGER.warnf(UndertowMessages.MESSAGES.invalidSameSiteMode(mode, Arrays.toString(CookieSameSiteMode.values())), "Ignoring specified SameSite mode [%s] for cookie [%s]", mode, this.name);
         }
         return this;
+    }
+
+    public void setAttributes(Map<String, String> nonStanradAttributes) {
+        this.attributes = nonStanradAttributes;
+    }
+
+    public Map<String, String> getAttributes(){
+        return this.attributes;
     }
 
     @Override
