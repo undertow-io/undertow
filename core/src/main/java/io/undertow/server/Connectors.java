@@ -41,6 +41,8 @@ import org.xnio.conduits.ConduitStreamSinkChannel;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
@@ -270,6 +272,14 @@ public class Connectors {
                 header.append(cookie.getSameSiteMode());
             }
         }
+
+        final Iterator<Entry<String, String>> attributes = cookie.getAttributes().entrySet().iterator();
+        while(attributes.hasNext()) {
+            Entry<String, String> attr = attributes.next();
+            header.append("; ").append(attr.getKey()).append("=");
+            header.append(attr.getValue());
+        }
+
         return header.toString();
     }
 
@@ -320,6 +330,14 @@ public class Connectors {
                 header.append(cookie.getSameSiteMode());
             }
         }
+
+        final Iterator<Entry<String, String>> attributes = cookie.getAttributes().entrySet().iterator();
+        while(attributes.hasNext()) {
+            Entry<String, String> attr = attributes.next();
+            header.append("; ").append(attr.getKey()).append("=");
+            header.append(attr.getValue());
+        }
+
         return header.toString();
 
     }
@@ -386,6 +404,14 @@ public class Connectors {
                 header.append(cookie.getSameSiteMode());
             }
         }
+
+        final Iterator<Entry<String, String>> attributes = cookie.getAttributes().entrySet().iterator();
+        while(attributes.hasNext()) {
+            Entry<String, String> attr = attributes.next();
+            header.append("; ").append(attr.getKey()).append("=");
+            header.append(attr.getValue());
+        }
+
         return header.toString();
     }
 

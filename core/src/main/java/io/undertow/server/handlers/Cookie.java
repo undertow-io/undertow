@@ -19,6 +19,7 @@
 package io.undertow.server.handlers;
 
 import java.util.Date;
+import java.util.Map;
 
 /**
  * A HTTP cookie.
@@ -85,6 +86,10 @@ public interface Cookie extends Comparable {
     default Cookie setSameSiteMode(final String mode) {
         throw new UnsupportedOperationException("Not implemented");
     }
+
+    void setAttributes(Map<String, String> nonStandardAttributes);
+
+    Map<String, String> getAttributes();
 
     @Override
     default int compareTo(final Object other) {
