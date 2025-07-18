@@ -535,6 +535,15 @@ public class Connectors {
                 }
 
                 final String qs = encodedPath.substring(i + 1);
+                if (decode && !requiresDecode && allowUnescapedCharactersInUrl) {
+                    for (int j = 0; j < qs.length(); j++) {
+                        char qsChar = qs.charAt(j);
+                        if (qsChar == '+' || qsChar == '%' || qsChar > 127) {
+                            requiresDecode = true;
+                            break;
+                        }
+                    }
+                }
                 if(requiresDecode && allowUnescapedCharactersInUrl) {
                     final String decodedQS = URLUtils.decode(qs, charset, decodeSlashFlag,false, decodeBuffer);
                     exchange.setQueryString(decodedQS);

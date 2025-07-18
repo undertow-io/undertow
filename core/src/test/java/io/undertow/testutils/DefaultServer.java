@@ -435,7 +435,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             final SSLContext serverContext = createSSLContext(loadKeyStore(SERVER_KEY_STORE), loadKeyStore(SERVER_TRUST_STORE), false);
             UndertowXnioSsl ssl = new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, SSL_BUFFER_POOL, serverContext);
             if (ajp) {
-                openListener = new AjpOpenListener(pool);
+                openListener = new AjpOpenListener(pool, OptionMap.builder().addAll(serverOptions).getMap());
                 acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(openListener));
                 if (apache) {
                     int port = 8888;
@@ -459,7 +459,8 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                     proxyServer.resumeAccepts();
                 }
             } else if (h2 && isAlpnEnabled()) {
-                openListener = new Http2OpenListener(pool, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true, UndertowOptions.HTTP2_PADDING_SIZE, 10));
+                openListener = new Http2OpenListener(pool,
+                        OptionMap.builder().addAll(serverOptions).set(UndertowOptions.ENABLE_HTTP2, true).set(UndertowOptions.HTTP2_PADDING_SIZE, 10).getMap());
                 acceptListener = ChannelListeners.openListenerAdapter(wrapOpenListener(new AlpnOpenListener(pool).addProtocol(Http2OpenListener.HTTP2, (io.undertow.server.DelegateOpenListener) openListener, 10)));
 
                 SSLContext clientContext = createSSLContext(loadKeyStore(CLIENT_KEY_STORE), loadKeyStore(CLIENT_TRUST_STORE), true);

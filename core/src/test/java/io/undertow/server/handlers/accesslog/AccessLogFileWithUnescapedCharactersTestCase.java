@@ -18,9 +18,7 @@
 
 package io.undertow.server.handlers.accesslog;
 
-import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
@@ -30,8 +28,10 @@ import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
@@ -41,6 +41,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
+import static io.undertow.UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL;
 
 /**
  * Tests writing the access log to a file
@@ -52,8 +54,27 @@ public class AccessLogFileWithUnescapedCharactersTestCase {
 
     private static final Path logDirectory = Paths.get(System.getProperty("java.io.tmpdir"), "logs");
 
-    private static final int NUM_THREADS = 10;
-    private static final int NUM_REQUESTS = 12;
+    @DefaultServer.BeforeServerStarts
+    public static void setServerOptions() {
+        DefaultServer.setServerOptions(OptionMap.create(ALLOW_UNESCAPED_CHARACTERS_IN_URL, true));
+    }
+
+    @DefaultServer.AfterServerStops
+    public static void clearServerOptions() {
+        DefaultServer.setServerOptions(OptionMap.EMPTY);
+    }
+
+    @BeforeClass // this is run after the server starts
+    public static void disableProxyUnescapedCharactersInURL() {
+        // disable it in proxy or else decoded URL is sent to the Undertow server
+        DefaultServer.setProxyOptions(OptionMap.create(ALLOW_UNESCAPED_CHARACTERS_IN_URL, false));
+    }
+
+    @AfterClass
+    public static void clearProxyOptions() {
+        // disable it in proxy or else decoded URL is sent to the Undertow server
+        DefaultServer.setProxyOptions(OptionMap.EMPTY);
+    }
 
     @Before
     public void before() throws IOException {
@@ -65,12 +86,7 @@ public class AccessLogFileWithUnescapedCharactersTestCase {
         FileUtils.deleteRecursive(logDirectory);
     }
 
-    private static final HttpHandler HELLO_HANDLER = new HttpHandler() {
-        @Override
-        public void handleRequest(final HttpServerExchange exchange) throws Exception {
-            exchange.getResponseSender().send("Hello");
-        }
-    };
+    private static final HttpHandler HELLO_HANDLER = exchange -> exchange.getResponseSender().send("Hello");
 
     @Test
     public void testSingleLogMessageToFile() throws IOException, InterruptedException {
@@ -92,11 +108,7 @@ public class AccessLogFileWithUnescapedCharactersTestCase {
         CompletionLatchHandler latchHandler;
         DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(new AccessLogHandler(HELLO_HANDLER, logReceiver,
                 "%h \"%r\" %s %b", AccessLogFileWithUnescapedCharactersTestCase.class.getClassLoader())));
-        DefaultServer.setUndertowOptions(
-                OptionMap.create(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true));
-        DefaultServer.setServerOptions(OptionMap.create(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true));
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (TestHttpClient client = new TestHttpClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/helloworld/한글이름_test.html?param=한글이름_ahoy");
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
@@ -106,8 +118,6 @@ public class AccessLogFileWithUnescapedCharactersTestCase {
             String written = new String(Files.readAllBytes(logFileName), StandardCharsets.UTF_8);
             final String protocolVersion = DefaultServer.isH2()? "HTTP/2.0" : result.getProtocolVersion().toString();
             Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress() + " \"GET " + "/helloworld/한글이름_test.html?param=한글이름_ahoy " + protocolVersion + "\" 200 5" + System.lineSeparator(), written);
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 }
