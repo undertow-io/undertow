@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>46</version>
+        <version>49</version>
     </parent>
 
     <groupId>io.undertow</groupId>
@@ -148,7 +148,7 @@
                             <head>Implementation Note:</head>
                         </tag>
                     </tags>
-                    <source>1.8</source> 
+                    <source>${maven.compiler.release}</source>
                 </configuration>
                 <executions>
                     <execution>

@@ -20,7 +20,6 @@ package io.undertow.servlet.spec;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Deque;
@@ -75,15 +74,13 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
 
     @Override
+    @SuppressWarnings("removal")
     public void forward(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
         if(System.getSecurityManager() != null) {
             try {
-                AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
-                    @Override
-                    public Object run() throws Exception {
-                        forwardImplSetup(request, response);
-                        return null;
-                    }
+                java.security.AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
+                    forwardImplSetup(request, response);
+                    return null;
                 });
             } catch (PrivilegedActionException e) {
                 if(e.getCause() instanceof ServletException) {
@@ -225,15 +222,13 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
 
     @Override
+    @SuppressWarnings("removal")
     public void include(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
         if(System.getSecurityManager() != null) {
             try {
-                AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
-                    @Override
-                    public Object run() throws Exception {
-                        setupIncludeImpl(request, response);
-                        return null;
-                    }
+                java.security.AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
+                    setupIncludeImpl(request, response);
+                    return null;
                 });
             } catch (PrivilegedActionException e) {
                 if(e.getCause() instanceof ServletException) {

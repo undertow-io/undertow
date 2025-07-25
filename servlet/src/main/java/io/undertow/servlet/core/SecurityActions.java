@@ -18,12 +18,6 @@
 
 package io.undertow.servlet.core;
 
-
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
-import jakarta.servlet.ServletContext;
-
 import io.undertow.server.HttpHandler;
 import io.undertow.server.session.Session;
 import io.undertow.servlet.api.Deployment;
@@ -32,7 +26,11 @@ import io.undertow.servlet.handlers.ServletPathMatches;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
+import jakarta.servlet.ServletContext;
 
+import java.security.PrivilegedAction;
+
+@SuppressWarnings("removal")
 final class SecurityActions {
 
     private SecurityActions() {
@@ -48,11 +46,8 @@ final class SecurityActions {
         if (System.getSecurityManager() == null) {
             return Thread.currentThread().getContextClassLoader();
         } else {
-            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
-                public ClassLoader run() {
-                    return Thread.currentThread().getContextClassLoader();
-                }
-            });
+            return java.security.AccessController.doPrivileged(
+                    (PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader());
         }
     }
 
@@ -66,11 +61,9 @@ final class SecurityActions {
         if (System.getSecurityManager() == null) {
             Thread.currentThread().setContextClassLoader(classLoader);
         } else {
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                public Object run() {
-                    Thread.currentThread().setContextClassLoader(classLoader);
-                    return null;
-                }
+            java.security.AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                Thread.currentThread().setContextClassLoader(classLoader);
+                return null;
             });
         }
     }
@@ -79,11 +72,7 @@ final class SecurityActions {
         if (System.getSecurityManager() == null) {
            return System.getProperty(prop);
         } else {
-            return (String) AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                public Object run() {
-                    return System.getProperty(prop);
-                }
-            });
+            return (String) java.security.AccessController.doPrivileged((PrivilegedAction<Object>) () -> System.getProperty(prop));
         }
     }
 
@@ -91,12 +80,8 @@ final class SecurityActions {
         if (System.getSecurityManager() == null) {
             return HttpSessionImpl.forSession(session, servletContext, newSession);
         } else {
-            return AccessController.doPrivileged(new PrivilegedAction<HttpSessionImpl>() {
-                @Override
-                public HttpSessionImpl run() {
-                    return HttpSessionImpl.forSession(session, servletContext, newSession);
-                }
-            });
+            return java.security.AccessController.doPrivileged(
+                    (PrivilegedAction<HttpSessionImpl>) () -> HttpSessionImpl.forSession(session, servletContext, newSession));
         }
     }
 
@@ -104,12 +89,8 @@ final class SecurityActions {
         if (System.getSecurityManager() == null) {
             return ServletRequestContext.current();
         } else {
-            return AccessController.doPrivileged(new PrivilegedAction<ServletRequestContext>() {
-                @Override
-                public ServletRequestContext run() {
-                    return ServletRequestContext.current();
-                }
-            });
+            return java.security.AccessController.doPrivileged(
+                    (PrivilegedAction<ServletRequestContext>) ServletRequestContext::current);
         }
     }
 
@@ -117,51 +98,19 @@ final class SecurityActions {
         if (System.getSecurityManager() == null) {
             ServletRequestContext.setCurrentRequestContext(servletRequestContext);
         } else {
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    ServletRequestContext.setCurrentRequestContext(servletRequestContext);
-                    return null;
-                }
+            java.security.AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                ServletRequestContext.setCurrentRequestContext(servletRequestContext);
+                return null;
             });
         }
     }
 
-    static void clearCurrentServletAttachments() {
-        if (System.getSecurityManager() == null) {
-            ServletRequestContext.clearCurrentServletAttachments();
-        } else {
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    ServletRequestContext.clearCurrentServletAttachments();
-                    return null;
-                }
-            });
-        }
-    }
-    static ServletRequestContext requireCurrentServletRequestContext() {
-        if (System.getSecurityManager() == null) {
-            return ServletRequestContext.requireCurrent();
-        } else {
-            return AccessController.doPrivileged(new PrivilegedAction<ServletRequestContext>() {
-                @Override
-                public ServletRequestContext run() {
-                    return ServletRequestContext.requireCurrent();
-                }
-            });
-        }
-    }
     static ServletInitialHandler createServletInitialHandler(final ServletPathMatches paths, final HttpHandler next, final Deployment deployment, final ServletContextImpl servletContext) {
         if (System.getSecurityManager() == null) {
             return new ServletInitialHandler(paths, next, deployment, servletContext);
         } else {
-            return AccessController.doPrivileged(new PrivilegedAction<ServletInitialHandler>() {
-                @Override
-                public ServletInitialHandler run() {
-                    return new ServletInitialHandler(paths, next, deployment, servletContext);
-                }
-            });
+            return java.security.AccessController.doPrivileged(
+                    (PrivilegedAction<ServletInitialHandler>) () -> new ServletInitialHandler(paths, next, deployment, servletContext));
         }
     }
 }

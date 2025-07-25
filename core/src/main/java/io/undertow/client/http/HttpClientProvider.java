@@ -38,7 +38,6 @@ import org.xnio.ssl.XnioSsl;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,14 +56,11 @@ public class HttpClientProvider implements ClientProvider {
     public static final boolean DISABLE_HTTPS_ENDPOINT_IDENTIFICATION;
 
     static {
+        @SuppressWarnings("removal")
         String disable = System.getSecurityManager() == null
                 ? System.getProperty(DISABLE_HTTPS_ENDPOINT_IDENTIFICATION_PROPERTY)
-                : AccessController.doPrivileged(new PrivilegedAction<String>() {
-                    @Override
-                    public String run() {
-                        return System.getProperty(DISABLE_HTTPS_ENDPOINT_IDENTIFICATION_PROPERTY);
-                    }
-                });
+                : java.security.AccessController.doPrivileged(
+                (PrivilegedAction<String>) () -> System.getProperty(DISABLE_HTTPS_ENDPOINT_IDENTIFICATION_PROPERTY));
         DISABLE_HTTPS_ENDPOINT_IDENTIFICATION = disable != null && (disable.isEmpty() || Boolean.parseBoolean(disable));
     }
 

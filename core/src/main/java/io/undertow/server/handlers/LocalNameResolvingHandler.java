@@ -27,7 +27,6 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
@@ -56,6 +55,7 @@ public class LocalNameResolvingHandler implements HttpHandler {
     }
 
     @Override
+    @SuppressWarnings("removal")
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final InetSocketAddress address = exchange.getDestinationAddress();
         if (address != null) {
@@ -66,13 +66,10 @@ public class LocalNameResolvingHandler implements HttpHandler {
                         final InetSocketAddress resolvedAddress = new InetSocketAddress(InetAddress.getByName(address.getHostName()), address.getPort());
                         exchange.setDestinationAddress(resolvedAddress);
                     } else {
-                        AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
-                            @Override
-                            public Object run() throws UnknownHostException {
-                                final InetSocketAddress resolvedAddress = new InetSocketAddress(InetAddress.getByName(address.getHostName()), address.getPort());
-                                exchange.setDestinationAddress(resolvedAddress);
-                                return null;
-                            }
+                        java.security.AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
+                            final InetSocketAddress resolvedAddress = new InetSocketAddress(InetAddress.getByName(address.getHostName()), address.getPort());
+                            exchange.setDestinationAddress(resolvedAddress);
+                            return null;
                         });
                     }
                 } catch (UnknownHostException e) {
@@ -83,12 +80,9 @@ public class LocalNameResolvingHandler implements HttpHandler {
                 if (System.getSecurityManager() == null) {
                     address.getHostName();
                 } else {
-                    AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                        @Override
-                        public Object run() {
-                            address.getHostName();
-                            return null;
-                        }
+                    java.security.AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                        address.getHostName();
+                        return null;
                     });
                 }
                 //we call set source address because otherwise the underlying channel could just return a new address

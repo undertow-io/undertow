@@ -17,11 +17,9 @@
  */
 package io.undertow.util;
 
-import static java.lang.System.getProperty;
-import static java.lang.System.getSecurityManager;
-import static java.security.AccessController.doPrivileged;
-
 import java.security.PrivilegedAction;
+
+import static java.lang.System.getProperty;
 
 /**
  * Security actions to access system environment information.  No methods in
@@ -33,12 +31,9 @@ final class SecurityActions {
         // forbidden inheritance
     }
 
+    @SuppressWarnings("removal")
     static String getSystemProperty(final String key, final String def) {
-        return getSecurityManager() == null ? getProperty(key) : doPrivileged(new PrivilegedAction<String>() {
-            @Override
-            public String run() {
-                return getProperty(key,def);
-            }
-        });
+        return System.getSecurityManager() == null ? getProperty(key,def) : java.security.AccessController.doPrivileged(
+                (PrivilegedAction<String>) () -> getProperty(key,def));
     }
 }

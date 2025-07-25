@@ -17,24 +17,20 @@
  */
 package io.undertow.security.impl;
 
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 import io.undertow.security.api.AuthenticationMode;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.server.HttpServerExchange;
 
+@SuppressWarnings("removal")
 class SecurityActions {
     static SecurityContextImpl createSecurityContextImpl(final HttpServerExchange exchange, final AuthenticationMode authenticationMode, final IdentityManager identityManager) {
         if (System.getSecurityManager() == null) {
             return new SecurityContextImpl(exchange, authenticationMode, identityManager);
         } else {
-            return AccessController.doPrivileged(new PrivilegedAction<SecurityContextImpl>() {
-                @Override
-                public SecurityContextImpl run() {
-                    return new SecurityContextImpl(exchange, authenticationMode, identityManager);
-                }
-            });
+            return java.security.AccessController.doPrivileged(
+                    (PrivilegedAction<SecurityContextImpl>) () -> new SecurityContextImpl(exchange, authenticationMode, identityManager));
         }
     }
 }

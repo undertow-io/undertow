@@ -508,9 +508,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     public void flushInternal() throws IOException {
         if (listener == null) {
             if (anyAreSet(state, FLAG_CLOSED)) {
