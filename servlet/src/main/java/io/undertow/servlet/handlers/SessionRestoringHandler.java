@@ -30,7 +30,6 @@ import io.undertow.servlet.spec.ServletContextImpl;
 
 import javax.servlet.http.HttpSessionActivationListener;
 import javax.servlet.http.HttpSessionEvent;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Date;
 import java.util.HashMap;
@@ -148,29 +147,24 @@ public class SessionRestoringHandler implements HttpHandler, Lifecycle {
         return started;
     }
 
+    @SuppressWarnings("removal")
     private ClassLoader getTccl() {
         if (System.getSecurityManager() == null) {
             return Thread.currentThread().getContextClassLoader();
         } else {
-            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
-                @Override
-                public ClassLoader run() {
-                    return Thread.currentThread().getContextClassLoader();
-                }
-            });
+            return java.security.AccessController.doPrivileged(
+                    (PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader());
         }
     }
 
+    @SuppressWarnings("removal")
     private void setTccl(final ClassLoader classLoader) {
         if (System.getSecurityManager() == null) {
             Thread.currentThread().setContextClassLoader(classLoader);
         } else {
-            AccessController.doPrivileged(new PrivilegedAction<Void>() {
-                @Override
-                public Void run() {
-                    Thread.currentThread().setContextClassLoader(classLoader);
-                    return null;
-                }
+            java.security.AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                Thread.currentThread().setContextClassLoader(classLoader);
+                return null;
             });
         }
     }

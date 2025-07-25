@@ -21,7 +21,6 @@ package io.undertow.websockets.jsr;
 import static io.undertow.websockets.jsr.ServerWebSocketContainer.WebSocketHandshakeHolder;
 
 import java.io.IOException;
-import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -133,6 +132,7 @@ public class JsrWebSocketFilter implements Filter {
                     final HttpSessionImpl session = src.getCurrentServletContext().getSession(src.getExchange(), false);
                     facade.upgradeChannel(new HttpUpgradeListener() {
                         @Override
+                        @SuppressWarnings("removal")
                         public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
 
                             WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
@@ -142,7 +142,7 @@ public class JsrWebSocketFilter implements Filter {
                                 if (System.getSecurityManager() == null) {
                                     underlying = session.getSession();
                                 } else {
-                                    underlying = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
+                                    underlying = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
                                 }
                                 List<WebSocketChannel> connections;
                                 synchronized (underlying) {
@@ -187,13 +187,14 @@ public class JsrWebSocketFilter implements Filter {
         }
 
         @Override
+        @SuppressWarnings("removal")
         public void sessionDestroyed(HttpSessionEvent se) {
             HttpSessionImpl session = (HttpSessionImpl) se.getSession();
             final Session underlying;
             if (System.getSecurityManager() == null) {
                 underlying = session.getSession();
             } else {
-                underlying = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
+                underlying = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
             }
             List<WebSocketChannel> connections = (List<WebSocketChannel>) underlying.getAttribute(SESSION_ATTRIBUTE);
             if(connections != null) {

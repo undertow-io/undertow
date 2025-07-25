@@ -19,7 +19,6 @@
 package io.undertow.websockets.jsr;
 
 import java.io.IOException;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.Map;
@@ -57,17 +56,14 @@ public class UndertowContainerProvider extends ContainerProvider {
     private static final SwitchableClassIntrospector defaultIntrospector = new SwitchableClassIntrospector();
 
     @Override
+    @SuppressWarnings("removal")
     protected WebSocketContainer getContainer() {
         ClassLoader tccl;
         if (System.getSecurityManager() == null) {
             tccl = Thread.currentThread().getContextClassLoader();
         } else {
-            tccl = AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
-                @Override
-                public ClassLoader run() {
-                    return Thread.currentThread().getContextClassLoader();
-                }
-            });
+            tccl = java.security.AccessController.doPrivileged(
+                    (PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader());
         }
         WebSocketContainer webSocketContainer = webSocketContainers.get(tccl);
         if (webSocketContainer == null) {
@@ -113,6 +109,7 @@ public class UndertowContainerProvider extends ContainerProvider {
         }
     }
 
+    @SuppressWarnings("removal")
     public static void addContainer(final ClassLoader classLoader, final WebSocketContainer webSocketContainer) {
         SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
@@ -121,6 +118,7 @@ public class UndertowContainerProvider extends ContainerProvider {
         webSocketContainers.put(classLoader, webSocketContainer);
     }
 
+    @SuppressWarnings("removal")
     public static void removeContainer(final ClassLoader classLoader) {
         SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
@@ -136,6 +134,7 @@ public class UndertowContainerProvider extends ContainerProvider {
         defaultIntrospector.setIntrospecter(classIntrospector);
     }
 
+    @SuppressWarnings("removal")
     public static void disableDefaultContainer() {
         SecurityManager sm = System.getSecurityManager();
         if (sm != null) {

@@ -58,6 +58,7 @@ public class ServletRequestContext {
 
     private static final ThreadLocal<ServletRequestContext> CURRENT = new ThreadLocal<>();
 
+    @SuppressWarnings("removal")
     public static void setCurrentRequestContext(ServletRequestContext servletRequestContext) {
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
@@ -66,6 +67,7 @@ public class ServletRequestContext {
         CURRENT.set(servletRequestContext);
     }
 
+    @SuppressWarnings("removal")
     public static void clearCurrentServletAttachments() {
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
@@ -94,6 +96,7 @@ public class ServletRequestContext {
      *
      * @return The current {@link ServletRequestContext} based on the calling thread, or null if unavailable
      */
+    @SuppressWarnings("removal")
     public static ServletRequestContext current() {
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {

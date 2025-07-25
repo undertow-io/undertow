@@ -18,12 +18,10 @@
 
 package io.undertow.client;
 
-import static java.security.AccessController.doPrivileged;
-
+import io.undertow.connector.ByteBufferPool;
 import org.xnio.FutureResult;
 import org.xnio.IoFuture;
 import org.xnio.OptionMap;
-import io.undertow.connector.ByteBufferPool;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
@@ -53,8 +51,9 @@ public final class UndertowClient {
         this(UndertowClient.class.getClassLoader());
     }
 
+    @SuppressWarnings("removal")
     private UndertowClient(final ClassLoader classLoader) {
-        ServiceLoader<ClientProvider> providers = doPrivileged((PrivilegedAction<ServiceLoader<ClientProvider>>)
+        ServiceLoader<ClientProvider> providers = java.security.AccessController.doPrivileged((PrivilegedAction<ServiceLoader<ClientProvider>>)
                 () -> ServiceLoader.load(ClientProvider.class, classLoader));
         final Map<String, ClientProvider> map = new HashMap<>();
         for (ClientProvider provider : providers) {

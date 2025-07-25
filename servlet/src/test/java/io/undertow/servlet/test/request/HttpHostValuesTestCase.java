@@ -73,6 +73,7 @@ public class HttpHostValuesTestCase {
     }
 
     @Test
+    @SuppressWarnings("removal")
     public void testRequestSpec() throws Exception {
         //test request values
         TestHttpClient client = new TestHttpClient();
@@ -83,7 +84,7 @@ public class HttpHostValuesTestCase {
             final String response = HttpClientUtils.readResponse(result);
 
             if(System.getProperty("os.name").toLowerCase().contains("windows") || System.getSecurityManager() != null) {
-                Assert.assertTrue(String.format("hostName: %s , response: %s", DefaultServer.getDefaultServerAddress().toString(), response), DefaultServer.getDefaultServerAddress().toString().contains(response));
+                Assert.assertTrue(String.format("hostName: %s , response: %s", DefaultServer.getDefaultServerAddress(), response), DefaultServer.getDefaultServerAddress().toString().contains(response));
             } else {
                 Assert.assertTrue(String.format("hostName: %s , response: %s", DefaultServer.getHostAddress(), response), DefaultServer.getHostAddress().equals(response));
             }
