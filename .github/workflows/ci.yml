@@ -104,6 +104,13 @@ jobs:
     - name: Print Version
       run: mvn -v
     - name: Run Tests
+      if: matrix.os == 'windows-latest'
+      run: |
+        mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }} > output.txt
+        timeout /t 180
+        "jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') > thread-dump.txt" & taskkill /F /PID $(jps | awk '$2 ~ /surefirebooter/ {print $1}')
+    - name: Run Tests
+      if: matrix.os != 'windows-latest'
       run: |
         timeout 5400s mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }} || (jstack -l $(pgrep -f 'java') > thread-dump.txt && exit 1)
     - uses: actions/upload-artifact@v4
@@ -157,6 +164,13 @@ jobs:
     - name: Print Version
       run: mvn -v
     - name: Run Tests
+      if: matrix.os == 'windows-latest'
+      run: |
+        mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }} > output.txt
+        timeout /t 180
+        "jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') > thread-dump.txt" & taskkill /F /PID $(jps | awk '$2 ~ /surefirebooter/ {print $1}')
+    - name: Run Tests
+      if: matrix.os != 'windows-latest'
       run: |
         timeout 5400s mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true || (jstack -l $(pgrep -f 'java') > thread-dump.txt && exit 1)
     - uses: actions/upload-artifact@v4
