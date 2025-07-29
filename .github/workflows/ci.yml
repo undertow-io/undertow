@@ -107,8 +107,8 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }} &
-        timeout /t 180 /NoBreak 1>NUL
-        "jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') > thread-dump.txt" & taskkill /F /PID $(jps | awk '$2 ~ /surefirebooter/ {print $1}')
+        Start-Sleep 180
+        "jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') > thread-dump.txt" & taskkill /F /PID $(jps | awk '$2 ~ /surefirebooter/ {print $1}') & exit 1
     - name: Run Tests
       if: matrix.os != 'windows-latest'
       run: |
@@ -167,8 +167,8 @@ jobs:
       if: matrix.os == 'windows-latest'
       run: |
         mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }} &
-        timeout /t 180 /NoBreak 1>NUL
-        "jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') > thread-dump.txt" & taskkill /F /PID $(jps | awk '$2 ~ /surefirebooter/ {print $1}')
+        Start-Sleep 180
+        "jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') > thread-dump.txt" & taskkill /F /PID $(jps | awk '$2 ~ /surefirebooter/ {print $1}') || exit 1
     - name: Run Tests
       if: matrix.os != 'windows-latest'
       run: |
