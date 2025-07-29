@@ -188,7 +188,7 @@
                     <configuration>
                         <!-- fork is needed so compiler args can be used -->
                         <fork>true</fork>
-                        <failOnError>false</failOnError>
+                        <failOnError>true</failOnError>
                         <compilerArgs>
                             <arg>-J--add-opens=java.base/java.lang=ALL-UNNAMED</arg>
                         </compilerArgs>
