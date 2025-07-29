@@ -88,6 +88,10 @@ public class SavedRequest implements Serializable {
                     UndertowLogger.REQUEST_LOGGER.debugf("Request to %s was to large to save", exchange.getRequestURI());
                     return;//failed to save the request, we just return
                 }
+                // we don't need to size the buffer larger than a known request length
+                if (requestContentLength > 0) {
+                    maxSize = (int) requestContentLength;
+                }
                 //TODO: we should really be used pooled buffers
                 //TODO: we should probably limit the number of saved requests at any given time
                 byte[] buffer = new byte[maxSize];
