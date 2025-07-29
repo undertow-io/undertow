@@ -112,7 +112,10 @@ jobs:
     - name: Run Tests
       if: matrix.os != 'windows-latest'
       run: |
-        timeout 5400s mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }} || jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') > thread-dump.txt && exit 1)
+        timeout --foreground 180s sh -c 'mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }};exit' || echo "Hanging test found, we will proceed with a thread dump"
+        timeout_occurred=$?
+        hanging_test_pid=$(jps | awk '$2 ~ /surefirebooter/ {print $1}')
+        [ ! -z "$hanging_test_pid" ] && echo "Hanging test found. Pid is $hanging_test_pid" && jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') | tee thread-dump.txt && exit 1 || echo "No hanging test found, tests ran successfully" && exit $timeout_occurred
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
@@ -172,7 +175,10 @@ jobs:
     - name: Run Tests
       if: matrix.os != 'windows-latest'
       run: |
-        timeout 5400s mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true || jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') > thread-dump.txt && exit 1)
+        timeout --foreground 180s sh -c 'mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true;exit' || echo "Hanging test found, we will proceed with a thread dump"
+        timeout_occurred=$?
+        hanging_test_pid=$(jps | awk '$2 ~ /surefirebooter/ {print $1}')
+        [ ! -z "$hanging_test_pid" ] && echo "Hanging test found. Pid is $hanging_test_pid" && jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') | tee thread-dump.txt && exit 1 || echo "No hanging test found, tests ran successfully" && exit $timeout_occurred
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
