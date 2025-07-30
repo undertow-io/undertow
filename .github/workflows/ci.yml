@@ -103,6 +103,11 @@ jobs:
         repositories: '[{ "id": "jboss", "name": "JBoss", "url": "https://repository.jboss.org/nexus/content/groups/public" }]'
     - name: Print Version
       run: mvn -v
+    - name: Install coreutils
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install coreutils
+        alias timeout=gtimeout
     - name: Run Tests
       if: matrix.os == 'windows-latest'
       run: |
