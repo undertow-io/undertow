@@ -111,9 +111,7 @@ jobs:
     - name: Run Tests
       if: matrix.os == 'windows-latest'
       run: |
-        mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }} &
-        Start-Sleep 180
-        "jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') > thread-dump.txt" & taskkill /F /PID $(jps | awk '$2 ~ /surefirebooter/ {print $1}') & exit 1
+        .\scripts\run_command_with_timeout.bat 2 "mvn -U -B -fae test -Pproxy -DfailIfNoTests=false -pl ${{ matrix.module }}"
     - name: Run Tests
       if: matrix.os != 'windows-latest'
       run: |
