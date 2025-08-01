@@ -16,7 +16,7 @@ set /a count=0
 :wait
 REM waited too long, kill the test if it is there
 if %count%==%1 (goto :killHangingTest)
-timeout /t 60 /nobreak >nul
+powershell -Command "Start-Sleep -Seconds 60"
 set /a count=%count% + 1
 2>nul (9>"%lock%" (call ) && del "%lock%" || goto :wait)
 echo No hanging test found, tests ran successfully
