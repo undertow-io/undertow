@@ -126,6 +126,7 @@ jobs:
         path: |
               **/surefire*-reports/*.txt
               **/*.dump*
+              thread-dump.txt
   test-matrix-ipv6:
     name: JDK ${{ matrix.jdk }} - ipv6 - ${{ matrix.module }} ${{ matrix.proxy }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -170,13 +171,6 @@ jobs:
     - name: Print Version
       run: mvn -v
     - name: Run Tests
-      if: matrix.os == 'windows-latest'
-      run: |
-        mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }} &
-        Start-Sleep 180
-        "jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') > thread-dump.txt" & taskkill /F /PID $(jps | awk '$2 ~ /surefirebooter/ {print $1}') || exit 1
-    - name: Run Tests
-      if: matrix.os != 'windows-latest'
       run: |
         timeout --foreground 180s sh -c 'mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true;exit' || echo "Hanging test found, we will proceed with a thread dump"
         timeout_occurred=$?
@@ -189,3 +183,4 @@ jobs:
         path: |
           **/surefire*-reports/*.txt
           **/*.dump*
+          thread-dump.txt
