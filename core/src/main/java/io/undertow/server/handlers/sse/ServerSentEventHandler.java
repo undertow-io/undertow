@@ -58,7 +58,7 @@ public class ServerSentEventHandler implements HttpHandler {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/event-stream; charset=UTF-8");
-        exchange.setPersistent(false);
+        exchange.setPersistent(true);
         final StreamSinkChannel sink = exchange.getResponseChannel();
         if(!sink.flush()) {
             sink.getWriteSetter().set(ChannelListeners.flushingChannelListener(new ChannelListener<StreamSinkChannel>() {
