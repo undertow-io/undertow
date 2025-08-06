@@ -233,6 +233,12 @@ public class ByteRangeTestCase {
     }
 
     @Test
+    public void testRunForever() throws InterruptedException {
+        // sleep for 90 minutes, just to trigger the thread dump and see if it is working okay
+        Thread.sleep(5400000);
+    }
+
+    @Test
     public void testGetResponseResultNull() {
         ByteRange byteRange = new ByteRange(new ArrayList<>());
         Assert.assertNull(byteRange.getResponseResult(0, "1",
