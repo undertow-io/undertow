@@ -29,7 +29,7 @@ import io.undertow.util.HttpString;
  */
 public class ResponseHeaderAttribute implements ExchangeAttribute {
 
-
+    private static final Pattern MultilineRegex = Pattern.compile("[\n\r]+([^ \t])");
     private final HttpString responseHeader;
 
     public ResponseHeaderAttribute(final HttpString responseHeader) {
@@ -58,7 +58,11 @@ public class ResponseHeaderAttribute implements ExchangeAttribute {
 
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
-        exchange.getResponseHeaders().put(responseHeader, newValue);
+        // Escape multiline header values
+        String escapedValue = newValue;
+        if (newValue != null)
+            escapedValue = MultilineRegex.matcher(newValue).replaceAll("\n\t$1");
+        exchange.getResponseHeaders().put(responseHeader, escapedValue);
     }
 
     @Override
