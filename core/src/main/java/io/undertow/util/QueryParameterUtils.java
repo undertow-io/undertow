@@ -20,6 +20,7 @@ package io.undertow.util;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -27,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.xnio.OptionMap;
 
+import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerExchange;
 
@@ -42,33 +44,42 @@ public class QueryParameterUtils {
     }
 
     public static String buildQueryString(final Map<String, Deque<String>> params) {
-        StringBuilder sb = new StringBuilder();
-        boolean first = true;
-        for (Map.Entry<String, Deque<String>> entry : params.entrySet()) {
-            if (entry.getValue().isEmpty()) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append('&');
-                }
-                sb.append(entry.getKey());
-                sb.append('=');
-            } else {
-                for (String val : entry.getValue()) {
+        return QueryParameterUtils.buildQueryString(params, null);
+    }
+
+    public static String buildQueryString(final Map<String, Deque<String>> params, final String encoding) {
+        try {
+            StringBuilder sb = new StringBuilder();
+            boolean first = true;
+            for (Map.Entry<String, Deque<String>> entry : params.entrySet()) {
+                final String key = encoding != null ? URLEncoder.encode(entry.getKey(), encoding) : entry.getKey();
+                if (entry.getValue().isEmpty()) {
                     if (first) {
                         first = false;
                     } else {
                         sb.append('&');
                     }
-                    sb.append(entry.getKey());
+                    sb.append(key);
                     sb.append('=');
-                    sb.append(val);
+                } else {
+                    for (String val : entry.getValue()) {
+                        if (first) {
+                            first = false;
+                        } else {
+                            sb.append('&');
+                        }
+                        final String _val = encoding != null ? URLEncoder.encode(val, encoding) : val;
+                        sb.append(key);
+                        sb.append('=');
+                        sb.append(_val);
+                    }
                 }
             }
+            return sb.toString();
+        } catch (UnsupportedEncodingException e) {
+            throw UndertowMessages.MESSAGES.failedToEncodeQueryString(buildQueryString(params), encoding);
         }
-        return sb.toString();
     }
-
     /**
      * Parses a query string into a map
      * @param newQueryString The query string
@@ -146,8 +157,9 @@ public class QueryParameterUtils {
         return mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, StandardCharsets.UTF_8.name());
     }
 
+    @Deprecated
     public static Map<String, Deque<String>> mergeQueryParametersWithNewQueryString(final Map<String, Deque<String>> queryParameters, final String newQueryString, final String encoding) {
-
+        //DEPRACETED this will create duplicates
         Map<String, Deque<String>> newQueryParameters = parseQueryString(newQueryString, encoding);
         //according to the spec the new query parameters have to 'take precedence'
         for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
@@ -159,6 +171,20 @@ public class QueryParameterUtils {
         }
         return newQueryParameters;
     }
+
+    public static Map<String, Deque<String>> mergeQueryParameters(final Map<String, Deque<String>> newParams, final Map<String, Deque<String>> oldParams) {
+        //according to the spec the new query parameters have to 'take precedence'
+          for (Map.Entry<String, Deque<String>> entry : oldParams.entrySet()) {
+              if (!newParams.containsKey(entry.getKey())) {
+                  newParams.put(entry.getKey(), new ArrayDeque<>(entry.getValue()));
+              } else {
+                  final Deque<String> newValues = newParams.get(entry.getKey());
+                  final Deque<String> oldValues = entry.getValue();
+                  oldValues.stream().filter(v -> !newValues.contains(v)).forEach(v-> newValues.add(v));
+              }
+          }
+          return newParams;
+      }
 
     public static String getQueryParamEncoding(HttpServerExchange exchange) {
         String encoding = null;
