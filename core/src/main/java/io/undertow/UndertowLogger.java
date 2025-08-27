@@ -492,4 +492,13 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = WARN)
     @Message(id = 5108, value = "Configuration option is no longer supported: %s.")
     void configurationNotSupported(String string);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5109, value = "Request to '%s' from '%s' exceed rate limit of '%s' in time window of '%s'. Window will reset in '%s'. Rate limit is enforced '%s'.")
+    void exchangeExceedsRequestRateLimit(String requestTargetURI, String clientIPAddress, int rateLimit, int windowDuration, int timeToWindowSlide, boolean enforced);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5110, value = "Failed to resolve proper address for request to '%s', falling back to '%s'.")
+    void rateLimitFailedToGetProperAddress(String requestTargetURI, String clientIPAddress);
+
 }
