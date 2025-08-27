@@ -53,6 +53,8 @@ import io.undertow.server.handlers.URLDecodingHandler;
 import io.undertow.server.handlers.builder.PredicatedHandler;
 import io.undertow.server.handlers.proxy.ProxyClient;
 import io.undertow.server.handlers.proxy.ProxyHandler;
+import io.undertow.server.handlers.ratelimit.RateLimiter;
+import io.undertow.server.handlers.ratelimit.RateLimitingHandler;
 import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.server.handlers.resource.ResourceManager;
 import io.undertow.server.handlers.sse.ServerSentEventConnectionCallback;
@@ -610,6 +612,30 @@ public class Handlers {
      */
     public static LearningPushHandler learningPushHandler(int maxEntries, HttpHandler next) {
         return new LearningPushHandler(maxEntries, -1, next);
+    }
+
+    /**
+     * Create Rate limiting handler with default  status and error message
+     * @param limiter - implementation of RateLimiter which will factor information to keep count of incoming requests.
+     * @param next - next handler in chain, which will be invoked if request number does not hit limit
+     * @return
+     */
+    public static RateLimitingHandler rateLimitingHandler(final RateLimiter limiter, final  HttpHandler next) {
+        return new RateLimitingHandler(next, limiter);
+    }
+
+    /**
+     * Create Rate limiting handler with custom  status and error message
+     * @param limiter - implementation of RateLimiter which will factor information to keep count of incoming requests.
+     * @param next - next handler in chain, which will be invoked if request number does not hit limit
+     * @param statusMessage - message that will be set as response status line
+     * @param statusCode - specific status code that will be sent
+     * @param enforced - if rejection is enforced or not.
+     * @param signalLimit - if handler should send header back in response
+     * @return
+     */
+    public static RateLimitingHandler rateLimitingHandler(final RateLimiter limiter, final String statusMessage, final int statusCode, final boolean enforced, final boolean signalLimit, final HttpHandler next) {
+        return new RateLimitingHandler(next, limiter, statusMessage, statusCode, enforced, signalLimit);
     }
 
     private Handlers() {
