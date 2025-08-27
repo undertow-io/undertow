@@ -488,4 +488,24 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = WARN)
     @Message(id = 5107, value = "Failed to set web socket timeout.")
     void failedToSetWSTimeout(@Cause Exception e);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5108, value = "Suspended request was skipped.")
+    void suspendedRequestSkip(@Cause Throwable e);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5109, value = "Ignoring specified SameSite mode [%s] for cookie [%s].")
+    void ignoreSameSiteCookieMode(@Cause Throwable e, String mode, String name);
+
+    @LogMessage(level = INFO)
+    @Message(id = 5110, value = "Starting server: %s.")
+    void startingServer(String version);
+
+    @LogMessage(level = INFO)
+    @Message(id = 5111, value = "Stopping server: %s.")
+    void stoppingServer(String version);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5112, value = "Missing JSM permissions for path %s")
+    void missingJSMPermissions(@Cause SecurityException e, String path);
 }

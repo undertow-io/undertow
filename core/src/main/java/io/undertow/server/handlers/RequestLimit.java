@@ -72,7 +72,7 @@ public class RequestLimit {
                     found = true;
                     break;
                 } catch (Throwable e) {
-                    UndertowLogger.ROOT_LOGGER.error("Suspended request was skipped", e);
+                    UndertowLogger.ROOT_LOGGER.suspendedRequestSkip(e);
                 }
             }
 
