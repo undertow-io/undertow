@@ -18,31 +18,31 @@
 
 package io.undertow.servlet.test.streams;
 
+import io.undertow.UndertowOptions;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.TestHttpClient;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
 
 import javax.servlet.ServletException;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Tests the behaviour of the input stream when the connection is closed on the client side
  * <p>
- * https://issues.jboss.org/browse/WFLY-4827
+ * (see WFLY-4827)
  *
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@HttpOneOnly
 public class ServletInputStreamEarlyCloseClientSideTestCase {
 
     public static final String SERVLET = "servlet";
@@ -54,9 +54,18 @@ public class ServletInputStreamEarlyCloseClientSideTestCase {
                         .addMapping("/" + SERVLET));
     }
 
+    @DefaultServer.BeforeServerStarts
+    public static void setupServer() {
+        DefaultServer.setServerOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, -1L));
+    }
+
+    @DefaultServer.AfterServerStops
+    public static void cleanup() {
+        DefaultServer.setServerOptions(OptionMap.EMPTY);
+    }
+
     @Test
     public void testServletInputStreamEarlyClose() throws Exception {
-        Assume.assumeFalse(DefaultServer.isH2());
         TestHttpClient client = new TestHttpClient();
         EarlyCloseClientServlet.reset();
         try (Socket socket = new Socket()) {
@@ -70,7 +79,7 @@ public class ServletInputStreamEarlyCloseClientSideTestCase {
                 String request = "POST /servletContext/" + SERVLET + " HTTP/1.1\r\nHost:localhost\r\nContent-Length:" + sb.length() + 100 + "\r\n\r\n" + sb.toString();
                 OutputStream outputStream = socket.getOutputStream();
 
-                outputStream.write(request.getBytes("US-ASCII"));
+                outputStream.write(request.getBytes(StandardCharsets.US_ASCII));
                 outputStream.flush();
                 socket.close();
 
