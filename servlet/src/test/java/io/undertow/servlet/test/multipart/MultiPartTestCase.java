@@ -32,7 +32,6 @@ import io.undertow.servlet.api.LoggingExceptionHandler;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
@@ -44,10 +43,13 @@ import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.jboss.logging.Logger;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
 
+import static io.undertow.UndertowOptions.MULTIPART_MAX_ENTITY_SIZE;
 import static io.undertow.servlet.Servlets.multipartConfig;
 import static io.undertow.servlet.Servlets.servlet;
 
@@ -55,7 +57,6 @@ import static io.undertow.servlet.Servlets.servlet;
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
-@ProxyIgnore
 public class MultiPartTestCase {
 
 
@@ -80,6 +81,16 @@ public class MultiPartTestCase {
                 servlet("mp3", MultiPartServlet.class)
                         .addMapping("/3")
                         .setMultipartConfig(multipartConfig(null, 3, 0, 0)));
+    }
+
+    @DefaultServer.BeforeServerStarts
+    public static void setupServer() {
+        DefaultServer.setServerOptions(OptionMap.create(MULTIPART_MAX_ENTITY_SIZE, -1L));
+    }
+
+    @DefaultServer.AfterServerStops
+    public static void cleanup() {
+        DefaultServer.setServerOptions(OptionMap.EMPTY);
     }
 
     @Test
@@ -180,7 +191,9 @@ public class MultiPartTestCase {
     }
 
     @Test
-    public void testMultiPartRequestToLarge() throws IOException {
+    public void testMultiPartRequestTooLarge() throws IOException {
+        // FIXME UNDERTOW-2572
+        Assume.assumeFalse(DefaultServer.isH2());
         TestHttpClient client = new TestHttpClient();
         try {
             String uri = DefaultServer.getDefaultServerURL() + "/servletContext/2";
