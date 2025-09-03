@@ -117,7 +117,7 @@ public class SimpleBlockingServerTestCase {
 
     @DefaultServer.BeforeServerStarts
     public static void setupServer() {
-        DefaultServer.setServerOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, -1L, UndertowOptions.MULTIPART_MAX_ENTITY_SIZE, -1L));
+        DefaultServer.setServerOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, -1L));
     }
 
     @DefaultServer.AfterServerStops
