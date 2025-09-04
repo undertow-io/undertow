@@ -112,6 +112,13 @@
         <Method name="isClient"/>
     </Match>
 
+    <!--NPE can occur because an asynchronous close could happen concurrently with write on exceptional cases -->
+    <Match>
+        <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
+        <Class name="io.undertow.server.protocol.framed.AbstractFramedStreamSinkChannel"/>
+        <Method name="write"/>
+    </Match>
+
     <!-- Even per javadoc of Object.wait(), this should be always used in loop. It is on purpose -->
     <Match>
         <Bug pattern="WA_NOT_IN_LOOP"/>
