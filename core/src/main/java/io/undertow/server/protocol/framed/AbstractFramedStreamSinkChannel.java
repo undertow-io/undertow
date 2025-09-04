@@ -429,7 +429,21 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if(writeBuffer == null) {
             writeBuffer = getChannel().getBufferPool().allocate();
         }
-        ByteBuffer buffer = writeBuffer.getBuffer();
+        PooledByteBuffer localWriteBuffer = writeBuffer;
+        // writeBuffer can be null in case of a concurrent close of this channel while writing
+        if (localWriteBuffer == null) {
+            safeToSend();
+            return 0;
+        }
+        final ByteBuffer buffer;
+        try {
+            buffer = localWriteBuffer.getBuffer();
+        } catch (IllegalStateException e) {
+            if (!safeToSend()) {
+                return 0;
+            }
+            throw e;
+        }
         int copied = Buffers.copy(buffer, src);
         if(!buffer.hasRemaining()) {
             handleBufferFull();
