@@ -35,6 +35,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -43,6 +44,8 @@ import java.nio.ByteBuffer;
 import java.util.Deque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
+
+import static io.undertow.UndertowOptions.MAX_ENTITY_SIZE;
 
 /**
  * @author Stuart Douglas
@@ -60,6 +63,17 @@ public class ReceiverTestCase {
             exchange.endExchange();
         }
     };
+
+    @DefaultServer.BeforeServerStarts
+    public static void setupServer() {
+        DefaultServer.setServerOptions(OptionMap.create(MAX_ENTITY_SIZE, -1L));
+    }
+
+    @DefaultServer.AfterServerStops
+    public static void cleanup() {
+        DefaultServer.setServerOptions(OptionMap.EMPTY);
+    }
+
 
     @BeforeClass
     public static void setup() {
