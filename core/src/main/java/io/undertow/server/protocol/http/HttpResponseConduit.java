@@ -129,6 +129,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
         if (done || exchange == null) {
             throw new ClosedChannelException();
         }
+        boolean buffDone = true;
         ByteBuffer buffer = null;
         try {
             assert state != STATE_BODY;
@@ -157,6 +158,7 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                         res = next.write(data, 0, length + 1);
                     }
                     if (res == 0) {
+                        buffDone = false;
                         return STATE_BUF_FLUSH;
                     }
                 } while (buffer.hasRemaining());
@@ -291,12 +293,13 @@ final class HttpResponseConduit extends AbstractStreamSinkConduit<StreamSinkCond
                     res = next.write(data, 0, index + length);
                 }
                 if (res == 0) {
+                    buffDone = false;
                     return STATE_BUF_FLUSH;
                 }
             } while (buffer != null && buffer.hasRemaining());
             return STATE_BODY;
         } finally {
-            if (buffer != null) {
+            if (buffer != null && buffDone) {
                 bufferDone();
                 this.state &= ~POOLED_BUFFER_IN_USE;
             }
