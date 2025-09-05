@@ -112,7 +112,7 @@
 
     <properties>
         <!-- Nexus Settings -->
-        <nexus.repository.staging>wildfly-staging</nexus.repository.staging>
+        <nexus.repository.staging>jboss-io</nexus.repository.staging>
         <nexus.repository.release>releases</nexus.repository.release>
         <nexus.staging.tag>undertow-${project.version}</nexus.staging.tag>
 
