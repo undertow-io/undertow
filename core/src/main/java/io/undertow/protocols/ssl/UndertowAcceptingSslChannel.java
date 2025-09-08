@@ -95,7 +95,7 @@ class UndertowAcceptingSslChannel implements AcceptingChannel<SslConnection> {
         closeSetter = ChannelListeners.<AcceptingChannel<SslConnection>>getDelegatingSetter(tcpServer.getCloseSetter(), this);
         //noinspection ThisEscapedInObjectConstruction
         acceptSetter = ChannelListeners.<AcceptingChannel<SslConnection>>getDelegatingSetter(tcpServer.getAcceptSetter(), this);
-        useCipherSuitesOrder = optionMap.get(UndertowOptions.SSL_USER_CIPHER_SUITES_ORDER, false);
+        useCipherSuitesOrder = optionMap.get(UndertowOptions.SSL_USER_CIPHER_SUITES_ORDER, UndertowOptions.DEFAULT_SSL_USER_CIPHER_SUITES_ORDER);
     }
 
     private static final Set<Option<?>> SUPPORTED_OPTIONS = Option.setBuilder()
