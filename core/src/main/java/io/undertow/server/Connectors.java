@@ -39,7 +39,6 @@ import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.Map;
 import java.util.Set;
@@ -490,7 +489,7 @@ public class Connectors {
         final OptionMap options = exchange.getConnection().getUndertowOptions();
         boolean slashDecodingFlag = URLUtils.getSlashDecodingFlag(options);
         setExchangeRequestPath(exchange, encodedPath,
-                options.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name()),
+                options.get(UndertowOptions.URL_CHARSET, UndertowOptions.DEFAULT_URL_CHARSET),
                 options.get(UndertowOptions.DECODE_URL, true),
                 slashDecodingFlag,
                 decodeBuffer,

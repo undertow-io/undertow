@@ -54,7 +54,6 @@ import org.xnio.conduits.StreamSinkConduit;
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Deque;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -99,7 +98,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         this.maxParameters = undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS);
         this.recordRequestStartTime = undertowOptions.get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
         if (undertowOptions.get(UndertowOptions.DECODE_URL, true)) {
-            this.encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
+            this.encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, UndertowOptions.DEFAULT_URL_CHARSET);
         } else {
             this.encoding = null;
         }

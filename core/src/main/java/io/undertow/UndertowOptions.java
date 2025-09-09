@@ -18,6 +18,8 @@
 
 package io.undertow;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import org.xnio.Option;
 import org.xnio.Options;
 import org.xnio.channels.ReadTimeoutException;
@@ -154,14 +156,17 @@ public class UndertowOptions {
      */
     public static final Option<Boolean> DECODE_URL = Option.simple(UndertowOptions.class, "DECODE_URL", Boolean.class);
 
-
     /**
-     * If this is true then the parser will decode the URL and query parameters using the selected character encoding (UTF-8 by default). If this is false they will
-     * not be decoded. This will allow a later handler to decode them into whatever charset is desired.
+     * The character encoding to be used for the URL decoding of requests.
      * <p>
-     * Defaults to true.
+     * Defaults to {@link #DEFAULT_URL_CHARSET}.
      */
     public static final Option<String> URL_CHARSET = Option.simple(UndertowOptions.class, "URL_CHARSET", String.class);
+
+    /**
+     * Default value of {@link #URL_CHARSET} option.
+     */
+    public static final String DEFAULT_URL_CHARSET = UTF_8.name();
 
     /**
      * If this is true then a Connection: keep-alive header will be added to responses, even when it is not strictly required by
