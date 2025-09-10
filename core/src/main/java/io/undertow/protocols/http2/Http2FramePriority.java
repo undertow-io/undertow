@@ -112,8 +112,17 @@ class Http2FramePriority implements FramePriority<Http2Channel, AbstractHttp2Str
                 }
             }
 
-            if (pending instanceof Http2StreamSinkChannel) {
-                SendFrameHeader header = ((Http2StreamSinkChannel) pending).generateSendFrameHeader();
+            if (pending.isOpen() && pending instanceof Http2StreamSinkChannel) {
+                final SendFrameHeader header;
+                try {
+                    header = ((Http2StreamSinkChannel) pending).generateSendFrameHeader();
+                } catch (IllegalStateException e) {
+                    if (pending.isOpen()) {
+                        throw e;
+                    } else {
+                        continue;
+                    }
+                }
                 if (header.getByteBuffer() != null) {
                     pendingFrames.add(pending);
                     it.remove();
