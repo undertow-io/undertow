@@ -21,7 +21,6 @@ package io.undertow.server.protocol.http2;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import javax.net.ssl.SSLSession;
@@ -442,7 +441,7 @@ public class Http2ServerConnection extends ServerConnection {
             exchange.setProtocol(Protocols.HTTP_1_1);
             exchange.setRequestScheme(this.exchange.getRequestScheme());
             try {
-                Connectors.setExchangeRequestPath(exchange, path, getUndertowOptions().get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name()), getUndertowOptions().get(UndertowOptions.DECODE_URL, true), URLUtils.getSlashDecodingFlag(getUndertowOptions()), new StringBuilder(), getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_HEADERS));
+                Connectors.setExchangeRequestPath(exchange, path, getUndertowOptions().get(UndertowOptions.URL_CHARSET, UndertowOptions.DEFAULT_URL_CHARSET), getUndertowOptions().get(UndertowOptions.DECODE_URL, true), URLUtils.getSlashDecodingFlag(getUndertowOptions()), new StringBuilder(), getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_HEADERS));
             } catch (ParameterLimitException | BadRequestException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.debug("Too many parameters in HTTP/2 request", e);
                 exchange.setStatusCode(StatusCodes.BAD_REQUEST);
