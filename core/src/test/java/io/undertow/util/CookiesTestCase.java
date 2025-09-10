@@ -222,8 +222,7 @@ public class CookiesTestCase {
         cookie = cookies.get("SHIPPING");
         Assert.assertNotNull(cookie);
         Assert.assertEquals("FEDEX", cookie.getValue());
-/*
-        cookies = Cookies.parseRequestCookies(5, false, Arrays.asList("CUSTOMER=\"WILE_E_COYOTE\", BAD=\"APPLE\"  IGNORED=PART, SHIPPING=FEDEX" ), true);
+        cookies = Cookies.parseRequestCookies(5, false, Arrays.asList("CUSTOMER=\"WILE_E_COYOTE\", BAD_CUSTOMER=\"APPLE\"  IGNORED=PART, SHIPPING=FEDEX" ), true);
         Assert.assertEquals(2, cookies.size());
         cookie = cookies.get("CUSTOMER");
         Assert.assertNotNull(cookie);
@@ -262,7 +261,7 @@ public class CookiesTestCase {
         Assert.assertEquals("\"WILE_E_COYOTE\"", cookie.getValue());
         cookie = cookies.get("SHIPPING");
         Assert.assertNotNull(cookie);
-        Assert.assertEquals("FEDEX", cookie.getValue());*/
+        Assert.assertEquals("FEDEX", cookie.getValue());
     }
 
     @Test
