@@ -249,7 +249,12 @@ public final class ServletPrintWriterDelegate extends PrintWriter {
     @SuppressWarnings("removal")
     private static Unsafe getUnsafe() {
         if (System.getSecurityManager() != null) {
-            return java.security.AccessController.doPrivileged((PrivilegedAction<Unsafe>) ServletPrintWriterDelegate::getUnsafe0);
+            //noinspection Convert2Lambda
+            return java.security.AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
+                public Unsafe run() {
+                    return getUnsafe0();
+                }
+            });
         }
         return getUnsafe0();
     }
