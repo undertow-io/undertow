@@ -115,6 +115,13 @@
         <nexus.repository.staging>jboss-io</nexus.repository.staging>
         <nexus.repository.release>releases</nexus.repository.release>
         <nexus.staging.tag>undertow-${project.version}</nexus.staging.tag>
+        <nexus.serverId>jboss</nexus.serverId>
+        <nexus.repository.url>https://repository.jboss.org/nexus/</nexus.repository.url>
+        <!-- maven-gpg-plugin -->
+        <gpg.pinEntryMode>loopback</gpg.pinEntryMode>
+        <version.gpg.plugin>3.2.8</version.gpg.plugin>
+        <version.nxrm3.plugin>1.0.7</version.nxrm3.plugin>
+
 
         <!--
             Dependency versions. Please keep alphabetical.
@@ -359,6 +366,44 @@
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
                     <version>${version.bundle.plugin}</version>
+                </plugin>
+                <!-- GPG amd NXRM3 plugins, used for artifacts deployment -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>${version.gpg.plugin}</version>
+                    <configuration>
+                        <useAgent>true</useAgent>
+                        <gpgArguments>
+                            <arg>--pinentry-mode</arg>
+                            <arg>${gpg.pinEntryMode}</arg>
+                        </gpgArguments>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.sonatype.plugins</groupId>
+                    <artifactId>nxrm3-maven-plugin</artifactId>
+                    <version>${version.nxrm3.plugin}</version>
+                    <configuration>
+                        <serverId>${nexus.serverId}</serverId>
+                        <nexusUrl>${nexus.repository.url}</nexusUrl>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>nexus-move</id>
+                            <configuration>
+                                <repository>${nexus.repository.staging}</repository>
+                                <destinationRepository>${nexus.repository.release}</destinationRepository>
+                                <tag>${nexus.staging.tag}</tag>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>nexus-delete</id>
+                            <configuration>
+                                <tag>${nexus.staging.tag}</tag>
+                            </configuration>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -782,6 +827,53 @@
 				<maven.compiler.showWarnings>false</maven.compiler.showWarnings>
 			</properties>
 		</profile>
+        <profile>
+            <id>jboss-release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-deploy-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>default-deploy</id>
+                                <phase>none</phase>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nxrm3-maven-plugin</artifactId>
+                        <extensions>true</extensions>
+                        <executions>
+                            <execution>
+                                <id>nexus-deploy</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>staging-deploy</goal>
+                                </goals>
+                                <configuration>
+                                    <repository>${nexus.repository.staging}</repository>
+                                    <tag>${nexus.staging.tag}</tag>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>gpg-sign</id>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 
 </project>
