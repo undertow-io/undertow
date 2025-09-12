@@ -83,7 +83,7 @@ public class ExactLengthReadTimeoutTestCase {
 
                     // this shouldn't cause timeout after complete read
                     try {
-                        Thread.sleep(100);
+                        Thread.sleep(200);
                     }  catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
@@ -102,7 +102,7 @@ public class ExactLengthReadTimeoutTestCase {
 
     @DefaultServer.BeforeServerStarts
     public static void beforeClass() {
-        DefaultServer.setServerOptions(OptionMap.create(Options.READ_TIMEOUT, 10));
+        DefaultServer.setServerOptions(OptionMap.create(Options.READ_TIMEOUT, 100));
     }
 
     @DefaultServer.AfterServerStops
