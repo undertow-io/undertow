@@ -371,6 +371,11 @@ public final class FixedLengthStreamSourceConduit extends AbstractStreamSourceCo
         }
         long newVal = oldVal - consumed;
         state = newVal;
+        if (allAreClear(state, MASK_COUNT)) {
+            if (allAreClear(state, FLAG_FINISHED)) {
+                next.suspendReads();
+            }
+        }
     }
 
     private void invokeFinishListener() {
