@@ -32,6 +32,7 @@
 
     <name>Undertow</name>
     <description>Undertow</description>
+    <url>https://undertow.io/</url>
 
     <packaging>pom</packaging>
 
@@ -43,6 +44,66 @@
         </license>
     </licenses>
 
+    <developers>
+        <developer>
+            <name>Stuart Douglas</name>
+            <email>stuart.w.douglas@gmail.com</email>
+            <organization>Block,Inc</organization>
+            <organizationUrl>https://block.xyz</organizationUrl>
+            <roles>
+                <role>architect</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>David Lloyd</name>
+            <email>dmlloyd@redhat.com</email>
+            <organization>WildFly</organization>
+            <organizationUrl>https://www.wildfly.org/</organizationUrl>
+            <roles>
+                <role>architect</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Flavia Rainone</name>
+            <email>frainone@redhat.com</email>
+            <organization>WildFly</organization>
+            <organizationUrl>https://www.wildfly.org/</organizationUrl>
+            <roles>
+                <role>lead</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Richard Opalka</name>
+            <email>ropalka@redhat.com</email>
+            <organization>WildFly</organization>
+            <organizationUrl>https://www.wildfly.org/</organizationUrl>
+            <roles>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Bartosz Baranowski</name>
+            <email>bbaranowski@redhat.com</email>
+            <organization>WildFly</organization>
+            <organizationUrl>https://www.wildfly.org/</organizationUrl>
+            <roles>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Jason Lee</name>
+            <email>jlee@redhat.com</email>
+            <organization>WildFly</organization>
+            <organizationUrl>https://www.wildfly.org/</organizationUrl>
+            <roles>
+                <role>developer</role>
+            </roles>
+        </developer>
+    </developers>
+
     <scm>
         <connection>scm:git://github.com/undertow-io/undertow.git</connection>
         <developerConnection>scm:git://github.com/undertow-io/undertow.git</developerConnection>
@@ -50,6 +111,11 @@
     </scm>
 
     <properties>
+        <!-- Nexus Settings -->
+        <nexus.repository.staging>jboss-io</nexus.repository.staging>
+        <nexus.repository.release>releases</nexus.repository.release>
+        <nexus.staging.tag>undertow-${project.version}</nexus.staging.tag>
+
         <!--
             Dependency versions. Please keep alphabetical.
 
@@ -187,7 +253,7 @@
                     <configuration>
                         <!-- fork is needed so compiler args can be used -->
                         <fork>true</fork>
-                        <failOnError>false</failOnError>
+                        <failOnError>true</failOnError>
                         <!-- need to specify directly, for some reason properties are ignored -->
                         <showDeprecation>${maven.compiler.showDeprecation}</showDeprecation>
                         <showWarnings>${maven.compiler.showWarnings}</showWarnings>
