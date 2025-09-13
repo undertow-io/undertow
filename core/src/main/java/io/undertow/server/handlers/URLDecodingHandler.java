@@ -83,7 +83,7 @@ public class URLDecodingHandler implements HttpHandler {
     }
 
     private static void decodeQueryString(HttpServerExchange exchange, String charset, StringBuilder sb) {
-        if (!exchange.getQueryString().isEmpty()) {
+        if (!exchange.getDecodedQueryString().isEmpty()) {
             final TreeMap<String, Deque<String>> newParams = new TreeMap<>();
             for (Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
                 final Deque<String> newValues = new ArrayDeque<>(param.getValue().size());

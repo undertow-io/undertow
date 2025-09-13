@@ -328,7 +328,7 @@ public class ExtendedAccessLogParser {
                     return new ExchangeAttribute() {
                         @Override
                         public String readAttribute(HttpServerExchange exchange) {
-                            String query = exchange.getQueryString();
+                            String query = exchange.getDecodedQueryString();
 
                             if (query.isEmpty()) {
                                 return exchange.getRequestURI();
@@ -336,7 +336,7 @@ public class ExtendedAccessLogParser {
                                 StringBuilder buf = new StringBuilder();
                                 buf.append(exchange.getRequestURI());
                                 buf.append('?');
-                                buf.append(exchange.getQueryString());
+                                buf.append(exchange.getDecodedQueryString());
                                 return buf.toString();
                             }
                         }
