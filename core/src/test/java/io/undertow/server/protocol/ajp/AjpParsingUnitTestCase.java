@@ -126,7 +126,8 @@ public class AjpParsingUnitTestCase {
         Assert.assertFalse(state.badRequest);
         Assert.assertEquals("/한글이름", result.getRequestPath());
         Assert.assertEquals("/한글이름", result.getRequestURI());
-        Assert.assertEquals("param=한글이름", result.getQueryString());
+        Assert.assertEquals("param=한글이름", result.getDecodedQueryString());
+        Assert.assertTrue(result.getQueryString().startsWith("param="));
     }
 
     @Test

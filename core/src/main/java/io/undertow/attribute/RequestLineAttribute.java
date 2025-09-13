@@ -42,9 +42,9 @@ public class RequestLineAttribute implements ExchangeAttribute {
                 .append(exchange.getRequestMethod().toString())
                 .append(' ')
                 .append(exchange.getRequestURI());
-        if (!exchange.getQueryString().isEmpty()) {
+        if (!exchange.getDecodedQueryString().isEmpty()) {
             sb.append('?');
-            sb.append(exchange.getQueryString());
+            sb.append(exchange.getDecodedQueryString());
         }
         sb.append(' ')
                 .append(exchange.getProtocol().toString()).toString();

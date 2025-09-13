@@ -235,8 +235,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
         if(parsedHeader.containsKey(DigestAuthorizationToken.DIGEST_URI)) {
             String uri = parsedHeader.get(DigestAuthorizationToken.DIGEST_URI);
             String requestURI = exchange.getRequestURI();
-            if(!exchange.getQueryString().isEmpty()) {
-                requestURI = requestURI + "?" + exchange.getQueryString();
+            if(!exchange.getDecodedQueryString().isEmpty()) {
+                requestURI = requestURI + "?" + exchange.getDecodedQueryString();
             }
             if(!uri.equals(requestURI)) {
                 //it is possible we were given an absolute URI
@@ -244,8 +244,8 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
                 //I am not sure if this is overly strict, however I think it is better
                 //to be safe than sorry
                 requestURI = exchange.getRequestURL();
-                if(!exchange.getQueryString().isEmpty()) {
-                    requestURI = requestURI + "?" + exchange.getQueryString();
+                if(!exchange.getDecodedQueryString().isEmpty()) {
+                    requestURI = requestURI + "?" + exchange.getDecodedQueryString();
                 }
                 if(!uri.equals(requestURI)) {
                     //just end the auth process

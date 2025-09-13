@@ -42,7 +42,7 @@ public class QueryStringAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        String qs = exchange.getQueryString();
+        String qs = exchange.getDecodedQueryString();
         if(qs.isEmpty() || !includeQuestionMark) {
             return qs;
         }

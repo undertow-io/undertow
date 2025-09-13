@@ -65,7 +65,7 @@ public class SinglePortConfidentialityHandler extends AbstractConfidentialityHan
             }
         }
         uriBuilder.append(uri);
-        final String queryString = exchange.getQueryString();
+        final String queryString = exchange.getDecodedQueryString();
         if (queryString != null && !queryString.isEmpty()) {
             uriBuilder.append("?").append(queryString);
         }
