@@ -236,18 +236,18 @@ public final class DispatchUtils {
         if (include) {
             // include does not modify exchange paths, just add the query string and request uri
             // the rest of attributes are added via the match later
-            requestImpl.setAttribute(INCLUDE_QUERY_STRING, fake.getQueryString());
+            requestImpl.setAttribute(INCLUDE_QUERY_STRING, fake.getDecodedQueryString());
             requestImpl.setAttribute(INCLUDE_REQUEST_URI, fake.getRequestURI());
         } else {
             exchange.setRelativePath(newRequestPath);
             exchange.setRequestPath(fake.getRequestPath());
             exchange.setRequestURI(fake.getRequestURI());
-            if (!fake.getQueryString().isEmpty()) {
-                exchange.setQueryString(fake.getQueryString());
+            if (!fake.getDecodedQueryString().isEmpty()) {
+                exchange.setQueryString(fake.getDecodedQueryString());
             }
         }
         // both forward and include merge parameters by spec
-        if (!fake.getQueryString().isEmpty()) {
+        if (!fake.getDecodedQueryString().isEmpty()) {
             final Map<String, Deque<String>> merged = QueryParameterUtils.mergeQueryParameters(fake.getQueryParameters(), exchange.getQueryParameters());
             requestImpl.setQueryParameters(null);
             exchange.getQueryParameters().clear();

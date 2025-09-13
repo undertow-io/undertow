@@ -585,7 +585,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return The query string, without the leading ?
      */
     public String getQueryString() {
-        return queryString;
+        return getNonDecodedQueryString();
     }
 
     /**
@@ -601,6 +601,17 @@ public final class HttpServerExchange extends AbstractAttachable {
             this.queryString = queryString;
         }
         return this;
+    }
+
+    /**
+     * Returns the query string in its decoded form if available, which will depend on configs such as
+     * {@link UndertowOptions#ALLOW_UNESCAPED_CHARACTERS_IN_URL}.
+     * If unavailable, the decoded query string is just the same as {@link #getNonDecodedQueryString}
+     *
+     * @return The request query string, without the leading {@code '?'}, post parsing, decoded.
+     */
+    public String getDecodedQueryString() {
+        return this.queryString;
     }
 
     /**
