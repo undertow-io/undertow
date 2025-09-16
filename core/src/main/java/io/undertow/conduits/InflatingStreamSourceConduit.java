@@ -211,10 +211,14 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
     }
 
     protected void initializeInflater(ByteBuffer buf) throws IOException {
-        if(isZlibHeaderPresent(buf)) {
-            this.activePooledObject = this.objectPoolWrapping.allocate();
-        } else {
-            this.activePooledObject = this.objectPoolNonWrapping.allocate();
+        // ensure the activePooledObject is set only once until done() is called
+        // we don't want to reset the inflater state mid-stream
+        if (activePooledObject == null) {
+            if (isZlibHeaderPresent(buf)) {
+                this.activePooledObject = this.objectPoolWrapping.allocate();
+            } else {
+                this.activePooledObject = this.objectPoolNonWrapping.allocate();
+            }
         }
         this.inflater = this.activePooledObject.getObject();
     }
