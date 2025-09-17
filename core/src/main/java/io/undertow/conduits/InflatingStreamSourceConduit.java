@@ -73,10 +73,7 @@ public class InflatingStreamSourceConduit extends AbstractStreamSourceConduit<St
             HttpServerExchange exchange,
             StreamSourceConduit next,
             ObjectPool<Inflater> inflaterPool) {
-        super(next);
-        this.exchange = exchange;
-        this.objectPoolNonWrapping = inflaterPool;
-        this.objectPoolWrapping = null;
+        this(exchange, next, inflaterPool, newInstanceWrappingInflaterPool());
     }
 
     public InflatingStreamSourceConduit(
