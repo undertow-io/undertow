@@ -1018,6 +1018,9 @@ public class WebSockets {
         if (size == 0) {
             return Buffers.EMPTY_BYTE_BUFFER;
         }
+        if (payload.length == 1) {
+            return payload[0].duplicate();
+        }
         ByteBuffer buffer = ByteBuffer.allocate(size);
         for (ByteBuffer buf : payload) {
             buffer.put(buf);
