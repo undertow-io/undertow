@@ -242,7 +242,8 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         connection.setExchange(exchange);
         exchange.setRequestScheme(initial.getRequestScheme());
         exchange.setRequestMethod(initial.getRequestMethod());
-        exchange.setQueryString(initial.getDecodedQueryString());
+        exchange.setQueryString(initial.getQueryString());
+        exchange.setDecodedQueryString(initial.getDecodedQueryString());
         for (Map.Entry<String, Deque<String>> pathParamEntry: initial.getPathParameters().entrySet()) {
             for (String pathParamValue : pathParamEntry.getValue()) {
                 exchange.addPathParam(pathParamEntry.getKey(), pathParamValue);

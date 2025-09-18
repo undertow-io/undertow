@@ -243,7 +243,7 @@ public final class DispatchUtils {
             exchange.setRequestPath(fake.getRequestPath());
             exchange.setRequestURI(fake.getRequestURI());
             if (!fake.getDecodedQueryString().isEmpty()) {
-                exchange.setQueryString(fake.getDecodedQueryString());
+                exchange.setDecodedQueryString(fake.getDecodedQueryString());
             }
         }
         // both forward and include merge parameters by spec
