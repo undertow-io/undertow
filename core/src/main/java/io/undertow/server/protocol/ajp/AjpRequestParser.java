@@ -434,7 +434,7 @@ public class AjpRequestParser {
                         state.currentAttribute = result.value;
                         state.currentIntegerPart = -1;
                     }
-                    String result;
+                    String result, decodedResult = null;
                     boolean decodingAlreadyDone = false;
                     boolean decodeUnescapedCharacters = false;
                     final StringHolder resultHolder;
@@ -453,57 +453,60 @@ public class AjpRequestParser {
                             return;
                         }
                         decodeUnescapedCharacters = resultHolder.containsUrlCharacters && allowUnescapedCharactersInUrl;
+                        result = resultHolder.value;
                         if(resultHolder.containsUnencodedCharacters || decodeUnescapedCharacters) {
                             try {
-                                result = decode(resultHolder.value, true);
+                                decodedResult = decode(resultHolder.value, true);
                             } catch (UrlDecodeException | UnsupportedEncodingException e) {
                                 UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
                                 state.badRequest = true;
                                 result = resultHolder.value;
                             }
                             decodingAlreadyDone = true;
-                        } else {
-                            result = resultHolder.value;
                         }
                     }
+                    final String finalResult = decodedResult != null ? decodedResult : result;
                     //query string.
                     if (state.currentAttribute.equals(QUERY_STRING)) {
                         String resultAsQueryString = result == null ? "" : result;
                         exchange.setQueryString(resultAsQueryString);
+                        exchange.setDecodedQueryString(decodedResult);
                         try {
                             if (decodeUnescapedCharacters) {
                                 // decoding needs to be done again here, to preserve the parameters and form decoding, even if it has been done at resultAsQueryString
                                 // for more info see UNDERTOW-2312 and UNDERTOW-2555
                                 URLUtils.parseQueryString(resultHolder == null || resultHolder.value == null ? "" : resultHolder.value, exchange, encoding, doDecode, maxParameters);
+                            } else if (decodingAlreadyDone) {
+                                URLUtils.parseQueryString(decodedResult, exchange, encoding,
+                                        false, maxParameters);
                             } else {
-                                URLUtils.parseQueryString(resultAsQueryString, exchange, encoding,
-                                        doDecode && !decodingAlreadyDone, maxParameters);
+                                URLUtils.parseQueryString(resultAsQueryString, exchange, encoding, doDecode, maxParameters);
                             }
                         } catch (ParameterLimitException | IllegalArgumentException e) {
                             UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
                             state.badRequest = true;
                         }
                     } else if (state.currentAttribute.equals(REMOTE_USER)) {
-                        exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_PRINCIPAL, result);
-                        exchange.putAttachment(HttpServerExchange.REMOTE_USER, result);
+                        exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_PRINCIPAL, finalResult);
+                        exchange.putAttachment(HttpServerExchange.REMOTE_USER, finalResult);
                     } else if (state.currentAttribute.equals(AUTH_TYPE)) {
-                        exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_AUTHENTICATION_TYPE, result);
+                        exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_AUTHENTICATION_TYPE, finalResult);
                     } else if (state.currentAttribute.equals(STORED_METHOD)) {
-                        HttpString requestMethod = new HttpString(result);
+                        HttpString requestMethod = new HttpString(finalResult);
                         Connectors.verifyToken(requestMethod);
                         exchange.setRequestMethod(requestMethod);
                     } else if (state.currentAttribute.equals(AJP_REMOTE_PORT)) {
-                        state.remotePort = Integer.parseInt(result);
+                        state.remotePort = Integer.parseInt(finalResult);
                     } else if (state.currentAttribute.equals(SSL_SESSION)) {
-                        state.sslSessionId = result;
+                        state.sslSessionId = finalResult;
                     } else if (state.currentAttribute.equals(SSL_CIPHER)) {
-                        state.sslCipher = result;
+                        state.sslCipher = finalResult;
                     } else if (state.currentAttribute.equals(SSL_CERT)) {
-                        state.sslCert = result;
+                        state.sslCert = finalResult;
                     } else if (state.currentAttribute.equals(SSL_KEY_SIZE)) {
-                        state.sslKeySize = result;
+                        state.sslKeySize = finalResult;
                     } else if (state.currentAttribute.equals(AJP_SSL_PROTOCOL)) {
-                        state.secureProtocol = result;
+                        state.secureProtocol = finalResult;
                     } else {
                         // other attributes
                         if (state.attributes == null) {
@@ -511,12 +514,12 @@ public class AjpRequestParser {
                         }
                         if (ATTR_SET.contains(state.currentAttribute)) {
                             // known attirubtes
-                            state.attributes.put(state.currentAttribute, result);
+                            state.attributes.put(state.currentAttribute, finalResult);
                         } else if (allowedRequestAttributesPattern != null) {
                             // custom allowed attributes
                             Matcher m = allowedRequestAttributesPattern.matcher(state.currentAttribute);
                             if (m.matches()) {
-                                state.attributes.put(state.currentAttribute, result);
+                                state.attributes.put(state.currentAttribute, finalResult);
                             }
                         }
                     }
