@@ -568,11 +568,11 @@ public abstract class HttpRequestParser {
             }
             if (next == ' ' || next == '\t') {
                 String queryString = stringBuilder.toString();
-                if(urlDecodeRequired && this.allowUnescapedCharactersInUrl) {
-                    exchange.setNonDecodedQueryString(queryString);
-                    queryString = decode(queryString, urlDecodeRequired, state, slashDecodingFlag, false);
-                }
                 exchange.setQueryString(queryString);
+                if(urlDecodeRequired && this.allowUnescapedCharactersInUrl) {
+                    queryString = decode(queryString, urlDecodeRequired, state, slashDecodingFlag, false);
+                    exchange.setDecodedQueryString(queryString);
+                }
                 if (nextQueryParam == null) {
                     if (queryParamPos != stringBuilder.length()) {
                         exchange.addQueryParam(decode(stringBuilder.substring(queryParamPos), nextQueryParamDecodeRequired, state, true, true), "");
