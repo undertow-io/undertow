@@ -18,6 +18,7 @@
 
 package io.undertow.servlet.test.multipart;
 
+import io.undertow.UndertowOptions;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -42,6 +43,7 @@ import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
 
 import java.io.File;
 import java.io.IOException;
@@ -77,7 +79,10 @@ public class MultiPartTestCase {
                         .setMultipartConfig(multipartConfig(null, 0, 3, 0)),
                 servlet("mp3", MultiPartServlet.class)
                         .addMapping("/3")
-                        .setMultipartConfig(multipartConfig(null, 3, 0, 0)));
+                        .setMultipartConfig(multipartConfig(null, 3, 0, 0)),
+                servlet("mp4", MultiPartServlet.class)
+                        .addMapping("/4")
+                        .setMultipartConfig(multipartConfig(null, 0, 1000000, 0)));
     }
 
     @Test
@@ -192,8 +197,7 @@ public class MultiPartTestCase {
 
             post.setEntity(entity);
             HttpResponse result = client.execute(post);
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("EXCEPTION: class java.lang.IllegalStateException", response);
+            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
         } catch (IOException expected) {
             //in some environments the forced close of the read side will cause a connection reset
         }finally {
@@ -291,6 +295,50 @@ public class MultiPartTestCase {
                     "param name: formValue\r\n" +
                     "param value: " + myValue + "\r\n", response);
         } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testMultiPartRequestSizeLimitOverridesServerEntitySize() throws IOException {
+        OptionMap existing = DefaultServer.getUndertowOptions();
+        TestHttpClient client = new TestHttpClient();
+        try {
+            String uri = DefaultServer.getDefaultServerURL() + "/servletContext/4";
+            HttpPost post = new HttpPost(uri);
+
+            MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE, null, StandardCharsets.UTF_8);
+
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
+            entity.addPart("file", new FileBody(new File(MultiPartTestCase.class.getResource("uploadfile.txt").getFile())));
+
+            // This limit should not apply with the set multipart max-request-size. We surely fail if it does.
+            OptionMap maxSize = OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) 1);
+            DefaultServer.setUndertowOptions(maxSize);
+
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("PARAMS:\r\n" +
+                    "parameter count: 1\r\n" +
+                    "parameter name count: 1\r\n" +
+                    "name: formValue\r\n" +
+                    "filename: null\r\n" +
+                    "content-type: null\r\n" +
+                    "Content-Disposition: form-data; name=\"formValue\"\r\n" +
+                    "value: myValue\r\n" +
+                    "size: 7\r\n" +
+                    "content: myValue\r\n" +
+                    "name: file\r\n" +
+                    "filename: uploadfile.txt\r\n" +
+                    "content-type: application/octet-stream\r\n" +
+                    "Content-Disposition: form-data; name=\"file\"; filename=\"uploadfile.txt\"\r\n" +
+                    "Content-Type: application/octet-stream\r\n" +
+                    "size: 13\r\n" +
+                    "content: file contents\r\n", response);
+        } finally {
+            DefaultServer.setUndertowOptions(existing);
             client.getConnectionManager().shutdown();
         }
     }
