@@ -123,7 +123,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     private volatile AsyncContextImpl asyncContext = null;
     private Map<String, Deque<String>> queryParameters;
     private FormData parsedFormData;
-    private RuntimeException formParsingException;
+    private Exception formParsingException;
     private Charset characterEncoding;
     private boolean readStarted;
     private SessionConfig.SessionCookieSource sessionCookieSource;
@@ -752,7 +752,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         }
         Deque<String> params = queryParameters.get(name);
         if (params == null) {
-            final FormData parsedFormData = parseFormData();
+            FormData parsedFormData;
+            try {
+                parsedFormData = parseFormData();
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
             if (parsedFormData != null) {
                 FormData.FormValue res = parsedFormData.getFirst(name);
                 if (res == null || res.isFileItem() && !res.isBigField()) {
@@ -772,7 +777,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             queryParameters = exchange.getQueryParameters();
         }
         final Set<String> parameterNames = new HashSet<>(queryParameters.keySet());
-        final FormData parsedFormData = parseFormData();
+        FormData parsedFormData;
+        try {
+            parsedFormData = parseFormData();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
         if (parsedFormData != null) {
             Iterator<String> it = parsedFormData.iterator();
             while (it.hasNext()) {
@@ -800,7 +810,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 ret.add(param);
             }
         }
-        final FormData parsedFormData = parseFormData();
+        FormData parsedFormData;
+        try {
+            parsedFormData = parseFormData();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
         if (parsedFormData != null) {
             Deque<FormData.FormValue> res = parsedFormData.get(name);
             if (res != null) {
@@ -827,7 +842,12 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             arrayMap.put(entry.getKey(), new ArrayList<>(entry.getValue()));
         }
 
-        final FormData parsedFormData = parseFormData();
+        FormData parsedFormData;
+        try {
+            parsedFormData = parseFormData();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
         if (parsedFormData != null) {
             Iterator<String> it = parsedFormData.iterator();
             while (it.hasNext()) {
@@ -860,9 +880,13 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         return ret;
     }
 
-    private FormData parseFormData() {
+    private FormData parseFormData() throws IOException{
         if(formParsingException != null) {
-            throw formParsingException;
+            if(this.formParsingException instanceof IOException) {
+                throw (IOException) this.formParsingException;
+            } else {
+                throw (RuntimeException) this.formParsingException;
+            }
         }
         if (parsedFormData == null) {
             if (readStarted) {
@@ -877,11 +901,14 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             try {
                 return parsedFormData = parser.parseBlocking();
             } catch (RequestTooBigException | MultiPartParserDefinition.FileTooLargeException e) {
-                throw formParsingException = new IllegalStateException(e);
+                formParsingException = new IllegalStateException(e);
+                throw (IllegalStateException)formParsingException;
             } catch (RuntimeException e) {
-                throw formParsingException = e;
+                formParsingException = e;
+                throw e;
             } catch (IOException e) {
-                throw formParsingException = new RuntimeException(e);
+                formParsingException = e;
+                throw e;
             }
         }
         return parsedFormData;
