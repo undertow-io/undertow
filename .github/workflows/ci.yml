@@ -103,8 +103,22 @@ jobs:
         repositories: '[{ "id": "jboss", "name": "JBoss", "url": "https://repository.jboss.org/nexus/content/groups/public" }]'
     - name: Print Version
       run: mvn -v
+    - name: Install coreutils
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install coreutils
+        alias timeout=gtimeout
     - name: Run Tests
-      run: mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }}
+      if: matrix.os == 'windows-latest'
+      run: |
+        .\scripts\run_command_with_timeout.bat 2 "mvn -U -B -fae test -Pproxy -DfailIfNoTests=false -pl ${{ matrix.module }}"
+    - name: Run Tests
+      if: matrix.os != 'windows-latest'
+      run: |
+        timeout --foreground 180s sh -c 'mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }};exit' || echo "Hanging test found, we will proceed with a thread dump"
+        timeout_occurred=$?
+        hanging_test_pid=$(jps | awk '$2 ~ /surefirebooter/ {print $1}')
+        [ ! -z "$hanging_test_pid" ] && echo "Hanging test found. Pid is $hanging_test_pid" && jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') | tee thread-dump.txt && exit 1 || echo "No hanging test found, tests ran successfully" && exit $timeout_occurred
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
@@ -112,6 +126,7 @@ jobs:
         path: |
               **/surefire*-reports/*.txt
               **/*.dump*
+              thread-dump.txt
   test-matrix-ipv6:
     name: JDK ${{ matrix.jdk }} - ipv6 - ${{ matrix.module }} ${{ matrix.proxy }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -156,7 +171,11 @@ jobs:
     - name: Print Version
       run: mvn -v
     - name: Run Tests
-      run: mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
+      run: |
+        timeout --foreground 180s sh -c 'mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true;exit' || echo "Hanging test found, we will proceed with a thread dump"
+        timeout_occurred=$?
+        hanging_test_pid=$(jps | awk '$2 ~ /surefirebooter/ {print $1}')
+        [ ! -z "$hanging_test_pid" ] && echo "Hanging test found. Pid is $hanging_test_pid" && jstack -l $(jps | awk '$2 ~ /surefirebooter/ {print $1}') | tee thread-dump.txt && exit 1 || echo "No hanging test found, tests ran successfully" && exit $timeout_occurred
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
@@ -164,3 +183,4 @@ jobs:
         path: |
           **/surefire*-reports/*.txt
           **/*.dump*
+          thread-dump.txt
