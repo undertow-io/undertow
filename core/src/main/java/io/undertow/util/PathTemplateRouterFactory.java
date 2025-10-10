@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2024 Red Hat, Inc., and individual contributors
+ * Copyright 2025 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
  */
 package io.undertow.util;
 
+import io.undertow.UndertowMessages;
 import io.undertow.util.PathTemplateParser.AbstractTemplateSegment;
 import io.undertow.util.PathTemplateParser.ParamTemplateSegment;
 import io.undertow.util.PathTemplateParser.StaticTemplateSegment;
@@ -111,7 +112,7 @@ public class PathTemplateRouterFactory {
             resulting routers. These builders also expose convenience methods to parse URL path templates provided as strings
             and to wrap targets inside of suppliers for compatibility with RouterFactory.
 
-        3.  MatcherLeafArterfacts (Setup phase). An intermediary class used by the RouterFactory to structure template segments
+        3.  MatcherLeafArtefacts (Setup phase). An intermediary class used by the RouterFactory to structure template segments
             as leaves of trees before finally creating the routers.
 
         4.  Routers (Multiple classes. Routing phase). Routes requested URL paths to the most specific URL path templates and
@@ -135,7 +136,7 @@ public class PathTemplateRouterFactory {
         *   The performance during the routing phase is optimised in the following ways:
 
             *   Optimising the performance of matching individual segments in URL path templates. This is mostly down to
-                writing basic code that avoids duplicating the same checks and that is efficent from a memory and thread-safety
+                writing basic code that avoids duplicating the same checks and that is efficient from a memory and thread-safety
                 point of view. This is fairly simple.
             *   Using tree structures to eliminate unnecessary/duplicate matching of segments.  For example if it has been
                 determined that the requested URL path '/books/14' does not match the template '/authors/books' because static segment
@@ -150,8 +151,8 @@ public class PathTemplateRouterFactory {
                 '/abc/def/ghi' is a match for the requested URL path '/abc/def' purely based on the mismatch of the number
                 of segments present in the template vs the request. For this reason trees are kept as arrays that underlie
                 the routers and the trees are indexed by the number of segments present inside of the trees. This provides
-                a very efficient way to immediately illiminate large number of templates that could never match requests.
-            *   Provding a specialised routing strategy for templates that contain wildcards. This allows routing for
+                a very efficient way to immediately eliminate large number of templates that could never match requests.
+            *   Providing a specialised routing strategy for templates that contain wildcards. This allows routing for
                 templates that do not contain wildcards to eliminate trees that have both too few and too many segments
                 from searches whilst still allowing templates that contain wildcards to search through templates that contain
                 fewer segments than the requested URL path.
@@ -244,7 +245,8 @@ public class PathTemplateRouterFactory {
             this.segmentIdx = segmentIdx;
             this.nextMatcher = Objects.requireNonNull(nextMatcher);
 
-            if (this.segmentIdx < 0) { //Index into an array of segments.
+            if (this.segmentIdx < 0) {
+                //Index into an array of segments.
                 throw new IllegalArgumentException();
             }
         }
@@ -362,7 +364,8 @@ public class PathTemplateRouterFactory {
             this.defaultResult = Objects.requireNonNull(defaultResult);
 
             if (this.len < 2) {
-                throw new IllegalArgumentException("Should not use a composite");
+                // Will only happen if there is a bug in RouterFactory.createRouterMatcher.
+                throw new IllegalArgumentException();
             }
         }
 
@@ -828,11 +831,6 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        public T getDefaultTarget() {
-            return defaultResult.getTarget();
-        }
-
-        @Override
         protected int getMinSegmentCount() {
             return minSegmentCount;
         }
@@ -902,11 +900,6 @@ public class PathTemplateRouterFactory {
         @Override
         public String toString() {
             return "WildCardRouter{" + '}';
-        }
-
-        @Override
-        public T getDefaultTarget() {
-            return defaultResult.getTarget();
         }
 
         @Override
@@ -989,11 +982,6 @@ public class PathTemplateRouterFactory {
         }
 
         @Override
-        public T getDefaultTarget() {
-            return defaultResult.getTarget();
-        }
-
-        @Override
         protected int getMinSegmentCount() {
             return minSegmentCount;
         }
@@ -1030,7 +1018,7 @@ public class PathTemplateRouterFactory {
 
     //</editor-fold>
     //
-    //<editor-fold defaultstate="collapsed" desc="MatcherLeafArterfacts inner class">
+    //<editor-fold defaultstate="collapsed" desc="MatcherLeafArtefacts inner class">
     /**
      * An intermediary class used by the RouterFactory to structure template segments as leaves of trees before finally creating
      * the routers.
@@ -1039,9 +1027,9 @@ public class PathTemplateRouterFactory {
      *
      * @param <T> Target type.
      */
-    private static class MatcherLeafArterfacts<T> {
+    private static class MatcherLeafArtefacts<T> {
 
-        private final Map<PathTemplateParser.PathTemplatePatternEqualsAdapter<AbstractTemplateSegment>, MatcherLeafArterfacts<T>> children
+        private final Map<PathTemplateParser.PathTemplatePatternEqualsAdapter<AbstractTemplateSegment>, MatcherLeafArtefacts<T>> children
                 = new HashMap<>();
         /**
          * Index of the segment represented by these artefacts.
@@ -1102,8 +1090,8 @@ public class PathTemplateRouterFactory {
         private PathTemplateRouteResult<T> defaultResult;
         private int maxSegmentCount;
         private int maxWildCardSegmentCount;
-        private MatcherLeafArterfacts[] rootLeaves;
-        private MatcherLeafArterfacts[] wildCardRootLeaves;
+        private MatcherLeafArtefacts[] rootLeaves;
+        private MatcherLeafArtefacts[] wildCardRootLeaves;
         // Temporary structures used per call to processTemplate(PathTemplate).
         private PathTemplateParser.PathTemplate<? extends Supplier<? extends T>> currentTemplate;
         private int currentSegmentCount;
@@ -1111,7 +1099,7 @@ public class PathTemplateRouterFactory {
         private List<AbstractTemplateSegment> segmentStack;
         private List<Integer> currentParamIndexes;
         private List<String> currentParamNames;
-        private MatcherLeafArterfacts<Supplier<? extends T>> currentLeave;
+        private MatcherLeafArtefacts<Supplier<? extends T>> currentLeave;
         // Resulting matchers.
         private Matcher[] matchers;
         private Matcher[] wildCardMatchers;
@@ -1181,8 +1169,8 @@ public class PathTemplateRouterFactory {
         }
 
         private void initRootLeaves() {
-            this.rootLeaves = new MatcherLeafArterfacts[maxSegmentCount + 1];
-            this.wildCardRootLeaves = new MatcherLeafArterfacts[maxWildCardSegmentCount + 1];
+            this.rootLeaves = new MatcherLeafArtefacts[maxSegmentCount + 1];
+            this.wildCardRootLeaves = new MatcherLeafArtefacts[maxWildCardSegmentCount + 1];
         }
 
         private void initSegmentStack() {
@@ -1198,16 +1186,16 @@ public class PathTemplateRouterFactory {
         }
 
         @SuppressWarnings("unchecked")//Always safe based on the internal handling of this array.
-        private MatcherLeafArterfacts<Supplier<? extends T>> getCurrentRootLeave() {
-            final MatcherLeafArterfacts[] artefacts = (currentTemplate.getWildCard())
+        private MatcherLeafArtefacts<Supplier<? extends T>> getCurrentRootLeave() {
+            final MatcherLeafArtefacts[] artefacts = (currentTemplate.getWildCard())
                     ? wildCardRootLeaves : rootLeaves;
 
-            MatcherLeafArterfacts result = artefacts[currentSegmentCount];
+            MatcherLeafArtefacts result = artefacts[currentSegmentCount];
             if (result != null) {
                 return result;
             }
 
-            result = new MatcherLeafArterfacts();
+            result = new MatcherLeafArtefacts();
             result.segmentIdx = -1;
             result.rootLeave = true;
             artefacts[currentSegmentCount] = result;
@@ -1219,9 +1207,9 @@ public class PathTemplateRouterFactory {
 
             final PathTemplateParser.PathTemplatePatternEqualsAdapter<AbstractTemplateSegment> adapter
                     = new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(segment);
-            MatcherLeafArterfacts<Supplier<? extends T>> nextLeave = currentLeave.children.get(adapter);
+            MatcherLeafArtefacts<Supplier<? extends T>> nextLeave = currentLeave.children.get(adapter);
             if (nextLeave == null) {
-                nextLeave = new MatcherLeafArterfacts<>();
+                nextLeave = new MatcherLeafArtefacts<>();
                 nextLeave.segmentIdx = segment.getSegmentIdx();
                 currentLeave.children.put(adapter, nextLeave);
             }
@@ -1238,14 +1226,17 @@ public class PathTemplateRouterFactory {
             } else if (segment instanceof WildCardTemplateSegment) {
                 final WildCardTemplateSegment wildCardSegment = (WildCardTemplateSegment) segment;
                 if (segmentStack.size() != currentSegmentCount) {
-                    throw new IllegalArgumentException("Wild cards are only supported at the end of a template path");
+                    throw UndertowMessages.MESSAGES.wildCardsOnlyAtEndOfTemplate();
                 }
                 currentLeave.paramIdx = currentParamNames.size();
                 currentParamIndexes.add(wildCardSegment.getSegmentIdx());
                 currentParamNames.add("*");
                 currentLeave.wildCardSegment = wildCardSegment;
             } else {
-                throw new IllegalArgumentException("Unsupported segment type");
+                /*  Will only happen if AbstractTemplateSegment is extended without being supported here -
+                    since AbstractTemplateSegment's private constructor makes it hermetic to PathTemplateRouterFactory,
+                    that will constitute a bug in this implementation. */
+                throw new IllegalArgumentException();
             }
         }
 
@@ -1270,7 +1261,7 @@ public class PathTemplateRouterFactory {
             finalizeTemplate();
         }
 
-        private static String ident(final int indent) {
+        private static String indent(final int indent) {
             final char[] result = new char[indent * 4];
             Arrays.fill(result, ' ');
             return new String(result);
@@ -1278,14 +1269,14 @@ public class PathTemplateRouterFactory {
 
         private static void printNode(
                 final int indent,
-                final MatcherLeafArterfacts<?> artefacts
+                final MatcherLeafArtefacts<?> artefacts
         ) {
             System.out.println(
-                    ident(indent) + "Node ("
+                    indent(indent) + "Node ("
                     + (artefacts.staticSegment != null ? artefacts.staticSegment.getValue() : artefacts.paramIdx)
                     + ")"
             );
-            for (final MatcherLeafArterfacts<?> child : artefacts.children.values()) {
+            for (final MatcherLeafArtefacts<?> child : artefacts.children.values()) {
                 printNode(indent + 1, child);
             }
         }
@@ -1311,17 +1302,17 @@ public class PathTemplateRouterFactory {
             this.wildCardMatchers = new Matcher[maxWildCardSegmentCount + 1];
         }
 
-        private MatcherLeafArterfacts<Supplier<? extends T>> getLeave(
-                final MatcherLeafArterfacts[] leaves,
+        private MatcherLeafArtefacts<Supplier<? extends T>> getLeave(
+                final MatcherLeafArtefacts[] leaves,
                 final int segmentCount
         ) {
             @SuppressWarnings("unchecked")
-            final MatcherLeafArterfacts<Supplier<? extends T>> result = leaves[segmentCount];
+            final MatcherLeafArtefacts<Supplier<? extends T>> result = leaves[segmentCount];
             return result;
         }
 
         private static <T> Matcher<T> createSimpleResultMatcher(
-                final MatcherLeafArterfacts<Supplier<? extends T>> artefacts) {
+                final MatcherLeafArtefacts<Supplier<? extends T>> artefacts) {
             final PathTemplateRouteResult<T> result = new PathTemplateRouteResult<>(
                     artefacts.template.getTarget().get(),
                     Optional.of(artefacts.template.getPathTemplate()),
@@ -1333,7 +1324,7 @@ public class PathTemplateRouterFactory {
         }
 
         private static <T> Matcher<T> createResultWithParamsMatcher(
-                final MatcherLeafArterfacts<Supplier<? extends T>> artefacts) {
+                final MatcherLeafArtefacts<Supplier<? extends T>> artefacts) {
             final int[] paramSegmentIndexes = new int[artefacts.paramIndexes.size()];
             final int len = paramSegmentIndexes.length;
             final String[] paramNames = new String[len];
@@ -1351,7 +1342,7 @@ public class PathTemplateRouterFactory {
         }
 
         private static <T> Matcher<T> createWildCardResultMatcher(
-                final MatcherLeafArterfacts<Supplier<? extends T>> artefacts
+                final MatcherLeafArtefacts<Supplier<? extends T>> artefacts
         ) {
             if (artefacts.paramIndexes.size() == 1) {
                 return new SimpleWildcardTerminalMatcher<>(
@@ -1379,7 +1370,7 @@ public class PathTemplateRouterFactory {
             }
         }
 
-        private Matcher<T> createFinalMatcher(final MatcherLeafArterfacts<Supplier<? extends T>> artefacts) {
+        private Matcher<T> createFinalMatcher(final MatcherLeafArtefacts<Supplier<? extends T>> artefacts) {
             if (!artefacts.children.isEmpty()) {
                 throw new IllegalStateException();
             }
@@ -1396,7 +1387,7 @@ public class PathTemplateRouterFactory {
         }
 
         private Matcher<T> createStaticSegmentMatcher(
-                final MatcherLeafArterfacts<Supplier<? extends T>> artefacts,
+                final MatcherLeafArtefacts<Supplier<? extends T>> artefacts,
                 final Matcher<T> nextMatcher
         ) {
             return new SegmentEqualsMatcher<>(
@@ -1408,7 +1399,7 @@ public class PathTemplateRouterFactory {
         }
 
         private Matcher<T> createWildCardSegmentMatcher(
-                final MatcherLeafArterfacts<Supplier<? extends T>> artefacts,
+                final MatcherLeafArtefacts<Supplier<? extends T>> artefacts,
                 final Matcher<T> nextMatcher
         ) {
             if (artefacts.wildCardSegment.getPrefix().isEmpty()) {
@@ -1424,7 +1415,7 @@ public class PathTemplateRouterFactory {
         }
 
         private Matcher<T> createSimpleMatcher(
-                final MatcherLeafArterfacts<Supplier<? extends T>> artefacts,
+                final MatcherLeafArtefacts<Supplier<? extends T>> artefacts,
                 final Matcher<T> nextMatcher
         ) {
             if (artefacts.staticSegment != null) {
@@ -1436,11 +1427,12 @@ public class PathTemplateRouterFactory {
             } else if (artefacts.rootLeave) {
                 return nextMatcher;
             }
-            throw new IllegalStateException("Should never happen");
+            // Should only happen if there is a bug elsehwere in PathTemplateRouterFactory.
+            throw new IllegalStateException();
         }
 
         private List<Matcher<T>> createSortedInnerMatchers(
-                final MatcherLeafArterfacts<Supplier<? extends T>> artefacts
+                final MatcherLeafArtefacts<Supplier<? extends T>> artefacts
         ) {
             final List<PathTemplateParser.PathTemplatePatternEqualsAdapter<AbstractTemplateSegment>> keys
                     = new ArrayList<>(artefacts.children.keySet());
@@ -1534,7 +1526,7 @@ public class PathTemplateRouterFactory {
             target.addAll(sortedInnerMatchers);
         }
 
-        private Matcher<T> createRouterMatcher(final MatcherLeafArterfacts<Supplier<? extends T>> artefacts) {
+        private Matcher<T> createRouterMatcher(final MatcherLeafArtefacts<Supplier<? extends T>> artefacts) {
             final List<Matcher<T>> innerMatchers = createSortedInnerMatchers(artefacts);
             final List<Matcher<T>> routerMatchers = new LinkedList<>();
             final int innerSegmentIdx = artefacts.segmentIdx + 1;
@@ -1544,7 +1536,8 @@ public class PathTemplateRouterFactory {
 
             switch (routerMatchers.size()) {
                 case 0:
-                    throw new IllegalStateException("Should never happen");
+                    // Should only happen if there is a bug elsewhere in PathTemplateRouterFactory.
+                    throw new IllegalStateException();
                 case 1:
                     return routerMatchers.get(0);
                 default:
@@ -1557,7 +1550,7 @@ public class PathTemplateRouterFactory {
 
         /*  TODO The recursion here can be removed, but it also never goes deeper than the number of segments per path,
             so it should not be completely unreasonable to use recursion. */
-        private Matcher<T> createMatcher(final MatcherLeafArterfacts<Supplier<? extends T>> artefacts) {
+        private Matcher<T> createMatcher(final MatcherLeafArtefacts<Supplier<? extends T>> artefacts) {
             //Exit if this is the end of the branch.
             if (artefacts.finalLeave) {
                 //This matcher is just the strategy to generate the result.
@@ -1568,7 +1561,8 @@ public class PathTemplateRouterFactory {
             //See how many children we have.
             final int childrenSize = artefacts.children.size();
             if (childrenSize == 0) {
-                throw new IllegalStateException("Should never happen");
+                // Should only happen if there is a bug elsewhere in PathTemplateRouterFactory.
+                throw new IllegalStateException();
             }
 
             //If we have just one child, then the result needs to be a simple matcher.
@@ -1584,13 +1578,13 @@ public class PathTemplateRouterFactory {
 
         private void createMatchers() {
             for (int i = 0; i <= maxSegmentCount; i++) {
-                final MatcherLeafArterfacts<Supplier<? extends T>> artefacts = getLeave(rootLeaves, i);
+                final MatcherLeafArtefacts<Supplier<? extends T>> artefacts = getLeave(rootLeaves, i);
                 if (artefacts != null) {
                     matchers[i] = createMatcher(artefacts);
                 }
             }
             for (int i = 0; i <= maxWildCardSegmentCount; i++) {
-                final MatcherLeafArterfacts<Supplier<? extends T>> artefacts = getLeave(wildCardRootLeaves, i);
+                final MatcherLeafArtefacts<Supplier<? extends T>> artefacts = getLeave(wildCardRootLeaves, i);
                 if (artefacts != null) {
                     wildCardMatchers[i] = createMatcher(artefacts);
                 }
@@ -1687,27 +1681,10 @@ public class PathTemplateRouterFactory {
         }
 
         /**
-         * @return The default target factory.
-         */
-        public S getDefaultTargetFactory() {
-            return defaultTargetFactory;
-        }
-
-        /**
          * @param defaultTargetFactory The default target factory.
          */
         public void setDefaultTargetFactory(final S defaultTargetFactory) {
             this.defaultTargetFactory = defaultTargetFactory;
-        }
-
-        /**
-         * @param defaultTargetFactory The default target factory.
-         *
-         * @return Reference to the builder.
-         */
-        public Builder<S, T> defaultTargetFactory(final S defaultTargetFactory) {
-            setDefaultTargetFactory(defaultTargetFactory);
-            return this;
         }
 
         /**
@@ -1722,8 +1699,7 @@ public class PathTemplateRouterFactory {
         @SuppressWarnings("unchecked") //Always safe based on the encapsulated features of this builder.
         public <A extends Supplier<B>, B> Builder<A, B> updateDefaultTargetFactory(final A defaultTargetFactory) {
             if (!templates.isEmpty()) {
-                throw new IllegalStateException("updateDefaultTargetFactory cannot be called after having added "
-                        + "templates. Use defaultTarget instead");
+                throw UndertowMessages.MESSAGES.defaultTargetUpdatedAfterTemplatesAdded();
             }
 
             Builder b = this;
@@ -1744,8 +1720,7 @@ public class PathTemplateRouterFactory {
             Objects.requireNonNull(defaultTarget);
 
             if (!templates.isEmpty()) {
-                throw new IllegalStateException("updateDefaultTarget cannot be called after having added "
-                        + "templates. Use defaultTarget instead");
+                throw UndertowMessages.MESSAGES.defaultTargetUpdatedAfterTemplatesAdded();
             }
 
             Builder b = this;
@@ -1767,20 +1742,11 @@ public class PathTemplateRouterFactory {
         }
 
         /**
-         * @return A mutable map of {@link PathTemplateParser.PathTemplatePatternEqualsAdapter}s for all templates added to this builder.
+         * @return A mutable map of {@link PathTemplateParser.PathTemplatePatternEqualsAdapter}s for all templates added to this
+         * builder.
          */
         public Map<PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<S>>, S> getTemplates() {
             return templates;
-        }
-
-        /**
-         * Clears all existing templates from this builder.
-         *
-         * @return Reference to the builder.
-         */
-        public Builder<S, T> clearTemplates() {
-            templates.clear();
-            return this;
         }
 
         /**
@@ -1795,8 +1761,7 @@ public class PathTemplateRouterFactory {
             final PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<S>> item
                     = new PathTemplateParser.PathTemplatePatternEqualsAdapter<>(template);
             if (templates.containsKey(item)) {
-                throw new IllegalArgumentException("The builder already contains a template with the same "
-                        + "pattern for '" + template.getPathTemplate() + "'");
+                throw UndertowMessages.MESSAGES.duplicateUrlPathTemplate(template.getPathTemplate());
             }
             templates.put(item, template.getTarget());
             return this;
@@ -1844,7 +1809,7 @@ public class PathTemplateRouterFactory {
          */
         public PathTemplateRouter<T> build() {
             if (defaultTargetFactory == null) {
-                throw new IllegalStateException("The 'defaultTargetFactory' must be set before calling 'build'");
+                throw UndertowMessages.MESSAGES.defaultTargetFactoryMustBeSetBeforeBuild();
             }
 
             return new RouterFactory<>(
@@ -1910,33 +1875,8 @@ public class PathTemplateRouterFactory {
         }
 
         /**
-         * @return The default target factory.
-         */
-        public T getDefaultTarget() {
-            final Supplier<T> tf = builder.getDefaultTargetFactory();
-            return tf != null ? tf.get() : null;
-        }
-
-        /**
-         * @param defaultTarget The default target.
-         */
-        public void setDefaultTarget(final T defaultTarget) {
-            Objects.requireNonNull(defaultTarget);
-            builder.setDefaultTargetFactory(() -> defaultTarget);
-        }
-
-        /**
-         * @param defaultTarget The default target factory.
-         *
-         * @return Reference to the builder.
-         */
-        public SimpleBuilder<T> defaultTarget(final T defaultTarget) {
-            setDefaultTarget(defaultTarget);
-            return this;
-        }
-
-        /**
-         * @return A mutable map of {@link PathTemplateParser.PathTemplatePatternEqualsAdapter}s for all templates added to this builder.
+         * @return A mutable map of {@link PathTemplateParser.PathTemplatePatternEqualsAdapter}s for all templates added to this
+         * builder.
          */
         public Map<PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<Supplier<T>>>, Supplier<T>> getTemplates() {
             return builder.getTemplates();
@@ -2017,7 +1957,8 @@ public class PathTemplateRouterFactory {
                 return i;
             }
         }
-        throw new IllegalArgumentException("At least one segment matcher must be supplied");
+        // Should only happen if there is a bug elsewhere in PathTemplateRouterFactory or in PathTemplateParser.
+        throw new IllegalArgumentException();
     }
 
     private static int compareMostSpecificToLeastSpecific(
@@ -2050,8 +1991,10 @@ public class PathTemplateRouterFactory {
                 return -1;
             }
 
-            throw new IllegalArgumentException("Should never happend due to the hermetic nature of template segment "
-                    + "implementations in PathTemplateParser");
+            /*  Will only happen if AbstractTemplateSegment is extended without being supported here -
+                since AbstractTemplateSegment's private constructor makes it hermetic to PathTemplateRouterFactory,
+                that will constitute a bug in this implementation. */
+            throw new IllegalArgumentException();
         }
 
         if (o1 instanceof WildCardTemplateSegment) {
@@ -2068,12 +2011,16 @@ public class PathTemplateRouterFactory {
                 final WildCardTemplateSegment o2WildCard = (WildCardTemplateSegment) o2;
                 return o2WildCard.getPrefix().length() - o1WildCard.getPrefix().length();
             }
-            throw new IllegalArgumentException("Should never happend due to the hermetic nature of template segment "
-                    + "implementations in PathTemplateParser");
+            /*  Will only happen if AbstractTemplateSegment is extended without being supported here -
+                since AbstractTemplateSegment's private constructor makes it hermetic to PathTemplateRouterFactory,
+                that will constitute a bug in this implementation. */
+            throw new IllegalArgumentException();
         }
 
-        throw new IllegalArgumentException("Should never happend due to the hermetic nature of template segment "
-                + "implementations in PathTemplateParser");
+        /*  Will only happen if AbstractTemplateSegment is extended without being supported here -
+            since AbstractTemplateSegment's private constructor makes it hermetic to PathTemplateRouterFactory,
+            that will constitute a bug in this implementation. */
+        throw new IllegalArgumentException();
     }
 
     @SuppressWarnings("unchecked")
@@ -2193,22 +2140,5 @@ public class PathTemplateRouterFactory {
         segmentStartIndexes[cnt] = pathLen + 1;
 
         return new RouteRequest(path, pathLen, segmentStartIndexes, cnt);
-    }
-
-    /**
-     * Creates a new router instance based on the specified templates and default target. This is a lower level method and the
-     * recommended, higher level approach towards creating router instances is to use {@link SimpleBuilder}.
-     *
-     * @param <T> Target type.
-     * @param templates The templates.
-     * @param defaultTarget The default target.
-     *
-     * @return The router.
-     */
-    public static <T> PathTemplateRouter<T> createRouter(
-            final Set<? extends PathTemplateParser.PathTemplate<? extends Supplier<? extends T>>> templates,
-            final T defaultTarget
-    ) {
-        return new RouterFactory<>(templates, defaultTarget).create();
     }
 }

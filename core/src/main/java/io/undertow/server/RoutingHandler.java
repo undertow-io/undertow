@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2024 Red Hat, Inc., and individual contributors
+ * Copyright 2025 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -230,7 +230,7 @@ public class RoutingHandler implements HttpHandler {
      * @param method The HTTP method.
      * @return The builder.
      */
-    private PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch> getOrAddMethodRouterBuiler(
+    private PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch> getOrAddMethodRouterBuilder(
             final HttpString method
     ) {
         Objects.requireNonNull(method);
@@ -259,7 +259,7 @@ public class RoutingHandler implements HttpHandler {
         Objects.requireNonNull(template);
 
         final PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch> routeBuilder
-                = getOrAddMethodRouterBuiler(method);
+                = getOrAddMethodRouterBuilder(method);
         final PathTemplateParser.PathTemplate<RoutingMatchBuilder> parsedTemplate = PathTemplateParser.parseTemplate(
                 template, new RoutingMatchBuilder()
         );
@@ -425,12 +425,12 @@ public class RoutingHandler implements HttpHandler {
         its configuration (templates etc) are mutated.  Mutating via the original RoutingHandler would - after
         having called this method - also result in the router being out of sync with the router builder.
         For these reasons, this has been changed to a deep copy.  Arguably, developers won't expect to end up with
-        two RoutingHandlers that are implicitely linked after having called this method anyway. */
+        two RoutingHandlers that are implicitly linked after having called this method anyway. */
         synchronized (routingHandler) {
             for (final Entry<HttpString, PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch>> outer
                     : routingHandler.methodRouterBuilders.entrySet()) {
                 final PathTemplateRouterFactory.Builder<RoutingMatchBuilder, RoutingMatch> builder
-                        = getOrAddMethodRouterBuiler(outer.getKey());
+                        = getOrAddMethodRouterBuilder(outer.getKey());
                 for (final Entry<PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<RoutingMatchBuilder>>, RoutingMatchBuilder> inner
                         : outer.getValue().getTemplates().entrySet()) {
                     builder.addTemplate(
@@ -490,7 +490,10 @@ public class RoutingHandler implements HttpHandler {
      * @param path the path template to remove
      *
      * @return this handler
+     *
+     * @deprecated Not used. Will be removed in future releases.
      */
+    @Deprecated(forRemoval = true)
     public synchronized RoutingHandler remove(final String path) {
         Objects.requireNonNull(path);
 
@@ -505,7 +508,10 @@ public class RoutingHandler implements HttpHandler {
 
     /**
      * @return Handler called when no match was found and invalid method handler can't be invoked.
+     *
+     * @deprecated Not used. Will be removed in future releases.
      */
+    @Deprecated(forRemoval = true)
     public HttpHandler getFallbackHandler() {
         return fallbackHandler;
     }
@@ -514,7 +520,10 @@ public class RoutingHandler implements HttpHandler {
      * @param fallbackHandler Handler that will be called when no match was found and invalid method handler can't be invoked.
      *
      * @return This instance.
+     *
+     * @deprecated Not used. Will be removed in future releases.
      */
+    @Deprecated(forRemoval = true)
     public RoutingHandler setFallbackHandler(HttpHandler fallbackHandler) {
         this.fallbackHandler = fallbackHandler;
         return this;
@@ -522,7 +531,10 @@ public class RoutingHandler implements HttpHandler {
 
     /**
      * @return Handler called when this instance can not match the http method but can match another http method.
+     *
+     * @deprecated Not used. Will be removed in future releases.
      */
+    @Deprecated(forRemoval = true)
     public HttpHandler getInvalidMethodHandler() {
         return invalidMethodHandler;
     }
@@ -536,7 +548,10 @@ public class RoutingHandler implements HttpHandler {
      * another http method.
      *
      * @return This instance.
+     *
+     * @deprecated Not used. Will be removed in future releases.
      */
+    @Deprecated(forRemoval = true)
     public RoutingHandler setInvalidMethodHandler(HttpHandler invalidMethodHandler) {
         this.invalidMethodHandler = invalidMethodHandler;
         return this;

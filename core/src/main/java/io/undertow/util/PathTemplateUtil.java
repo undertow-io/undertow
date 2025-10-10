@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2024 Red Hat, Inc., and individual contributors
+ * Copyright 2025 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@
 package io.undertow.util;
 
 /**
- * Shared utility methods for parsing formatted string, creating router instances and routing requests.
+ * Shared utility methods for parsing formatted strings, creating router instances and routing requests.
  *
  * @author Dirk Roets
  */

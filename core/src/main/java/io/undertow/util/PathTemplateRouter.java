@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2024 Red Hat, Inc., and individual contributors
+ * Copyright 2025 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,11 +98,6 @@ import io.undertow.server.HttpHandler;
  * @param <T> Target type.
  */
 public interface PathTemplateRouter<T> {
-
-    /**
-     * @return The default target for requests that do not match any specific routes.
-     */
-    T getDefaultTarget();
 
     /**
      * Routes the requested URL path to the best available target from the set of underlying URL path templates.

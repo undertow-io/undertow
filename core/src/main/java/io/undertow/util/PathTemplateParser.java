@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2024 Red Hat, Inc., and individual contributors
+ * Copyright 2025 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
  */
 package io.undertow.util;
 
+import io.undertow.UndertowMessages;
 import static io.undertow.util.PathTemplateUtil.pathWithForwardSlash;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -126,7 +127,7 @@ public class PathTemplateParser {
      * <p>
      * In the above mentioned example the {@link #hashCode() } method may return different values for the two templates and
      * {@link #equals(java.lang.Object) } will return 'false'. The {@link #patternHashCode() } will return the same values for
-     * the two templates and {@link #patternEquals(io.undertow.util.PathTemplatePattern) } will return 'true'.</p>
+     * the two templates and {@link #patternEquals(io.undertow.util.PathTemplateParser.PathTemplatePattern) } will return 'true'.</p>
      */
     public abstract static class PathTemplatePattern {
 
@@ -611,7 +612,7 @@ public class PathTemplateParser {
         }
 
         if (idx != (pathTemplate.length() - 1)) {
-            throw new IllegalArgumentException("Wild cards are only supported at the end of a template path");
+            throw UndertowMessages.MESSAGES.wildCardsOnlyAtEndOfTemplate();
         }
     }
 
@@ -659,8 +660,7 @@ public class PathTemplateParser {
             valid = valid || c == '_' || c == '-';
 
             if (!valid) {
-                throw new IllegalArgumentException("Illegal character '"
-                        + c + "' is contained in the segment '" + value + "' at position " + i);
+                throw UndertowMessages.MESSAGES.illegalCharacterInPathSegment(c, value, i);
             }
         }
 

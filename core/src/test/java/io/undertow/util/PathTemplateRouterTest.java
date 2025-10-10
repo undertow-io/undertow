@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2024 Red Hat, Inc., and individual contributors
+ * Copyright 2025 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -275,6 +275,7 @@ public class PathTemplateRouterTest {
     }
 
     @SuppressWarnings("ThrowableResultIgnored")
+    @Test
     public void testNullPath() {
         Assert.assertThrows(IllegalArgumentException.class, () -> {
             PathTemplateParser.parseTemplate(null, new Object());
@@ -441,10 +442,9 @@ public class PathTemplateRouterTest {
         }
         final PathTemplateRouter<String> router = routerBuilder.build();
 
-        PathTemplateRouteResult<String> pathRouteResult;
         final long startMillis = System.currentTimeMillis();
         for (int i = 0; i < requestCount; i++) {
-            pathRouteResult = router.route(requests[i % requestsLen]);
+            router.route(requests[i % requestsLen]);
         }
 
         final long endMillis = System.currentTimeMillis();
