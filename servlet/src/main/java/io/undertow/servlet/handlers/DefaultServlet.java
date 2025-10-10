@@ -22,6 +22,7 @@ import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.resource.DefaultResourceSupplier;
+import io.undertow.server.handlers.resource.DirectoryListingEnableHandler;
 import io.undertow.server.handlers.resource.DirectoryUtils;
 import io.undertow.server.handlers.resource.PreCompressedResourceSupplier;
 import io.undertow.server.handlers.resource.RangeAwareResource;
@@ -186,7 +187,11 @@ public class DefaultServlet extends HttpServlet {
             }
             return;
         } else if (resource.isDirectory()) {
-            if (directoryListingEnabled) {
+            boolean listDirectories = this.directoryListingEnabled;
+            if(DirectoryListingEnableHandler.hasEnablerAttached(exchange)) {
+                listDirectories = DirectoryListingEnableHandler.isDirectoryListingEnabled(exchange);
+            }
+            if (listDirectories) {
                 if ("css".equals(req.getQueryString())) {
                     resp.setContentType("text/css");
                     resp.getWriter().write(DirectoryUtils.Blobs.FILE_CSS);

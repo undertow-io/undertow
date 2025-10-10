@@ -165,7 +165,7 @@ public class ResourceHandler implements HttpHandler {
 
     private void serveResource(final HttpServerExchange exchange, final boolean sendContent) throws Exception {
 
-        if (directoryListingEnabled && DirectoryUtils.sendRequestedBlobs(exchange)) {
+        if (isDirectoryListingEnabledForExchange(exchange) && DirectoryUtils.sendRequestedBlobs(exchange)) {
             return;
         }
 
@@ -229,7 +229,7 @@ public class ResourceHandler implements HttpHandler {
                         return;
                     }
                     if (indexResource == null) {
-                        if (directoryListingEnabled) {
+                        if (isDirectoryListingEnabledForExchange(exchange)) {
                             DirectoryUtils.renderDirectoryListing(exchange, resource);
                             return;
                         } else {
@@ -380,6 +380,14 @@ public class ResourceHandler implements HttpHandler {
     public ResourceHandler setDirectoryListingEnabled(final boolean directoryListingEnabled) {
         this.directoryListingEnabled = directoryListingEnabled;
         return this;
+    }
+
+    private boolean isDirectoryListingEnabledForExchange(final HttpServerExchange exchange) {
+        boolean listDirectories = directoryListingEnabled;
+        if(DirectoryListingEnableHandler.hasEnablerAttached(exchange)) {
+            listDirectories = DirectoryListingEnableHandler.isDirectoryListingEnabled(exchange);
+        }
+        return listDirectories;
     }
 
     public ResourceHandler addWelcomeFiles(String... files) {
