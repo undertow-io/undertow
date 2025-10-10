@@ -9,23 +9,24 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * {@link DirectByteBufferDeallocator} Utility class used to free direct buffer memory.
  */
 public final class DirectByteBufferDeallocator {
+    private static final int DEALLOCATION_DELAY_MILLIS = 100;
     private static final boolean SUPPORTED;
     private static final Method cleaner;
     private static final Method cleanerClean;
-    private static final Queue<ByteBuffer> bufferQueue;
+    private static final ThreadLocal<Queue<QueuedByteBuffer>> bufferQueue;
 
     private static final Unsafe UNSAFE;
 
 
     static {
-        bufferQueue = new ConcurrentLinkedQueue<>();
+        bufferQueue = ThreadLocal.withInitial(()-> new LinkedList());
         String versionString = System.getProperty("java.specification.version");
         if(versionString.equals("0.9")) {
             //android hardcoded
@@ -78,25 +79,18 @@ public final class DirectByteBufferDeallocator {
     public static void free(ByteBuffer buffer) {
         if (SUPPORTED && buffer != null && buffer.isDirect()) {
             try {
-                // free the whole buffer queue if we reached a size bigger than
-                // or equal to 5
-                // this size is just a small enough arbitrarily chosen number
-                // to make sure that we are not too strict, such as choosing 2 as
-                // the limit, but not too permissive, we don't want to let the
-                // queue grow too big
-                if (bufferQueue.size() >= 5) {
-                    ByteBuffer queuedBuffer = bufferQueue.poll();
-                    while (queuedBuffer != null) {
-                        cleanBuffer(queuedBuffer);
-                        queuedBuffer = bufferQueue.poll();
+                // queue
+                final Queue<QueuedByteBuffer> queuedByteBuffers = bufferQueue.get();
+                // only clean buffers that have been returned DEALLOCATION_DELAY_MIILLIS ms ago
+                final long targetTimeMillis = System.currentTimeMillis() - DEALLOCATION_DELAY_MILLIS;
+                QueuedByteBuffer queuedByteBuffer = queuedByteBuffers.peek();
+                while (queuedByteBuffer != null) {
+                    if (queuedByteBuffer.timeStamp > targetTimeMillis) {
+                        break;
                     }
-                } else {
-                    // this is the standard operation here, pick one buffer from
-                    // the queue and clean it
-                    final ByteBuffer queuedBuffer = bufferQueue.poll();
-                    if (queuedBuffer != null) {
-                        cleanBuffer(queuedBuffer);
-                    }
+                    queuedByteBuffers.remove();
+                    cleanBuffer(queuedByteBuffer.byteBuffer);
+                    queuedByteBuffer = queuedByteBuffers.peek();
                 }
                 // put the buffer to be cleaned in the queue
                 // the goal here is to create a delay to make sure
@@ -105,7 +99,7 @@ public final class DirectByteBufferDeallocator {
                 // buffer is still accessible via local variables;
                 // if a direct buffer is cleaned and then written to
                 // or read from, the behavior of the sdk is unpredictable
-                bufferQueue.add(buffer);
+                queuedByteBuffers.add(new QueuedByteBuffer(buffer));
             } catch (Throwable t) {
                 UndertowLogger.ROOT_LOGGER.directBufferDeallocationFailed(t);
             }
@@ -186,6 +180,16 @@ public final class DirectByteBufferDeallocator {
             return method;
         } catch (Throwable t) {
             throw new RuntimeException("JDK did not allow accessing method", t);
+        }
+    }
+
+    private static class QueuedByteBuffer {
+        final long timeStamp;
+        final ByteBuffer byteBuffer;
+
+        QueuedByteBuffer(ByteBuffer byteBuffer) {
+            this.timeStamp = System.currentTimeMillis();
+            this.byteBuffer = byteBuffer;
         }
     }
 }
