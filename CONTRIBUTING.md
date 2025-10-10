@@ -219,5 +219,5 @@ git log -p
 Only then, you can push it to origin. If you edited a commit that was already in the PR, you will need to force the push with `-f`:
 
 ```bash
-git push origin --foce UNDERTOW-XXXX-my_cool_feature
+git push origin --force UNDERTOW-XXXX-my_cool_feature
 ```
