@@ -894,6 +894,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         final Runnable runnable = new Runnable() {
             @Override
             public void run() {
+                // avoid dispatching when the connection is no longer opened
+                if (!connection.isOpen()) {
+                    return;
+                }
                 Connectors.executeRootHandler(handler, HttpServerExchange.this);
             }
         };

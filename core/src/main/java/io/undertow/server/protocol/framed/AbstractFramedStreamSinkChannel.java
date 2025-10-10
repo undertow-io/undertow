@@ -401,13 +401,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        if(!safeToSend()) {
+        final PooledByteBuffer localWriteBuffer = getWriteBuffer();
+        if (localWriteBuffer == null) {
             return 0;
         }
-        if(writeBuffer == null) {
-            writeBuffer = getChannel().getBufferPool().allocate();
-        }
-        ByteBuffer buffer = writeBuffer.getBuffer();
+        final ByteBuffer buffer = localWriteBuffer.getBuffer();
         int copied = Buffers.copy(buffer, srcs, offset, length);
         if(!buffer.hasRemaining()) {
             handleBufferFull();
@@ -423,19 +421,40 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public int write(ByteBuffer src) throws IOException {
-        if(!safeToSend()) {
+        final PooledByteBuffer localWriteBuffer = getWriteBuffer();
+        if (localWriteBuffer == null) {
             return 0;
         }
-        if(writeBuffer == null) {
-            writeBuffer = getChannel().getBufferPool().allocate();
+        final ByteBuffer buffer;
+        try {
+            buffer = localWriteBuffer.getBuffer();
+        } catch (IllegalStateException e) {
+            if (!safeToSend()) {
+                return 0;
+            }
+            throw e;
         }
-        ByteBuffer buffer = writeBuffer.getBuffer();
         int copied = Buffers.copy(buffer, src);
         if(!buffer.hasRemaining()) {
             handleBufferFull();
         }
         writeSucceeded = writeSucceeded || copied > 0;
         return copied;
+    }
+
+    private PooledByteBuffer getWriteBuffer() throws IOException {
+        if(!safeToSend()) {
+            return null;
+        }
+        if(writeBuffer == null) {
+            writeBuffer = getChannel().getBufferPool().allocate();
+        }
+        PooledByteBuffer localWriteBuffer = writeBuffer;
+        // writeBuffer can be null in case of a concurrent close of this channel while writing
+        if (localWriteBuffer == null) {
+            safeToSend();
+        }
+        return localWriteBuffer;
     }
 
     /**
@@ -528,11 +547,12 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     private void sendWriteBuffer() throws IOException {
-        if(writeBuffer == null) {
-            writeBuffer = EMPTY_BYTE_BUFFER;
+        PooledByteBuffer localWriteBuffer = getWriteBuffer();
+        if(localWriteBuffer == null) {
+            localWriteBuffer = EMPTY_BYTE_BUFFER;
         }
-        writeBuffer.getBuffer().flip();
-        if(!sendInternal(writeBuffer)) {
+        localWriteBuffer.getBuffer().flip();
+        if(!sendInternal(localWriteBuffer)) {
             throw UndertowMessages.MESSAGES.failedToSendAfterBeingSafe();
         }
         writeBuffer = null;
