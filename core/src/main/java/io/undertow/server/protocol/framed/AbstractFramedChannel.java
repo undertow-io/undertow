@@ -497,6 +497,12 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 partialRead = true;
             }
             return null;
+        } catch (IllegalStateException e) {
+            if (!pooled.isFreed()) {
+                throw e;
+            }
+            channel.close();
+            return null;
         } catch (IOException|RuntimeException|Error e) {
             //something has code wrong with parsing, close the read side
             //we don't close the write side, as the underlying implementation will most likely want to send an error
@@ -524,12 +530,20 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 }
             }
             if(requiresReinvoke) {
+                ByteBuffer buffer = null;
                 if(pooled != null && !pooled.isFreed()) {
-                    if(pooled.getBuffer().remaining() == reinvokeDataRemaining) {
-                        pooled.close();
-                        readData = null;
-                        UndertowLogger.REQUEST_IO_LOGGER.debugf("Partial message read before connection close %s", this);
+                    try {
+                        buffer = pooled.getBuffer();
+                    } catch (IllegalStateException e) {
+                        if (!pooled.isFreed()) {
+                            throw e;
+                        }
                     }
+                }
+                if (buffer != null && buffer.remaining() == reinvokeDataRemaining) {
+                    pooled.close();
+                    readData = null;
+                    UndertowLogger.REQUEST_IO_LOGGER.debugf("Partial message read before connection close %s", this);
                 }
                 channel.getSourceChannel().wakeupReads();
             }
@@ -580,8 +594,13 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                 }
             } while (!outstandingBuffersUpdater.compareAndSet(this, expect, expect + 1));
         }
-        PooledByteBuffer buf = bufferPool.allocate();
-        return this.readData = new ReferenceCountedPooled(buf, 1, maxQueuedBuffers > 0 ? freeNotifier : null);
+        try {
+            PooledByteBuffer buf = bufferPool.allocate();
+            return this.readData = new ReferenceCountedPooled(buf, 1, maxQueuedBuffers > 0 ? freeNotifier : null);
+        } catch (IllegalStateException e) {
+            // pool is closed
+            return null;
+        }
     }
 
     /**
@@ -1040,7 +1059,17 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
                     @Override
                     public void run() {
                         while (localReadData != null  && !localReadData.isFreed()) {
-                            int rem = localReadData.getBuffer().remaining();
+                            final ByteBuffer buffer;
+                            try {
+                                buffer = localReadData.getBuffer();
+                            } catch (IllegalStateException e) {
+                                if (localReadData.isFreed()) {
+                                    return;
+                                } else {
+                                    throw e;
+                                }
+                            }
+                            int rem = buffer.remaining();
                             ChannelListener listener = receiveSetter.get();
                             if(listener == null) {
                                 listener = DRAIN_LISTENER;
