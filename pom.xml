@@ -151,6 +151,7 @@
         <version.org.jboss.threads>3.5.1.Final</version.org.jboss.threads>
         <version.org.wildfly.common>1.5.4.Final</version.org.wildfly.common>
         <version.org.wildfly.client-config>1.0.1.Final</version.org.wildfly.client-config>
+        <version.plexus.archiver>4.10.0</version.plexus.archiver>
 
         <!-- jacoco -->
         <version.org.jacoco>0.7.9</version.org.jacoco>
@@ -387,23 +388,11 @@
                     <configuration>
                         <serverId>${nexus.serverId}</serverId>
                         <nexusUrl>${nexus.repository.url}</nexusUrl>
+                        <repository>${nexus.repository.staging}</repository>
+                        <tag>${nexus.staging.tag}</tag>
+                        <!-- Used by staging-move goal -->
+                        <destinationRepository>${nexus.repository.release}</destinationRepository>
                     </configuration>
-                    <executions>
-                        <execution>
-                            <id>nexus-move</id>
-                            <configuration>
-                                <repository>${nexus.repository.staging}</repository>
-                                <destinationRepository>${nexus.repository.release}</destinationRepository>
-                                <tag>${nexus.staging.tag}</tag>
-                            </configuration>
-                        </execution>
-                        <execution>
-                            <id>nexus-delete</id>
-                            <configuration>
-                                <tag>${nexus.staging.tag}</tag>
-                            </configuration>
-                        </execution>
-                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
