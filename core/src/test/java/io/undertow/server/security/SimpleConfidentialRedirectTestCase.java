@@ -35,7 +35,6 @@ import org.apache.http.protocol.HttpContext;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -115,8 +114,8 @@ public class SimpleConfidentialRedirectTestCase {
         }
     }
 
-    @Ignore
-    @Test
+    /* @Ignore
+    @Test*/
     @ProxyIgnore
     public void testRedirectWithFullURLInPath() throws IOException {
         DefaultServer.isProxy();
