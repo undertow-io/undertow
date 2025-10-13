@@ -638,7 +638,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     if (buffer == null && (contentLength == null || !Methods.HEAD_STRING.equals(servletRequestContext.getOriginalRequest().getMethod()))) {
                         servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                     } else if (buffer != null && contentLength == null) {
-                        servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
+                        servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, buffer.position());
                     }
                 }
             }
