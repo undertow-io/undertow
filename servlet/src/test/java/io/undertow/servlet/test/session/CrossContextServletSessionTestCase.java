@@ -47,7 +47,7 @@ import org.junit.runner.RunWith;
 
 /**
  *
- * Test that separate servlet deployments use seperate session managers, even in the presence of forwards,
+ * Test that separate servlet deployments use separate session managers, even in the presence of forwards,
  * and that sessions created in a forwarded context are accessible to later direct requests
  *
  * @author Stuart Douglas

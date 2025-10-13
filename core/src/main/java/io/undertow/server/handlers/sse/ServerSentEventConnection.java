@@ -494,7 +494,7 @@ public class ServerSentEventConnection implements Channel, Attachable {
     public interface EventCallback {
 
         /**
-         * Notification that is called when a message is sucessfully sent
+         * Notification that is called when a message is successfully sent
          *
          * @param connection The connection
          * @param data The message data

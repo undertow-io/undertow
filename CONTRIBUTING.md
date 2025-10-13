@@ -46,7 +46,7 @@ PR reviewers will take into account the following aspects when reviewing your PR
 - code style: keep your code style consistent with the classes you are editing, such as variable names, ordering of methods, etc
 - scope of the fix: this is a very important factor. Sometimes, the fix should be applied to a broader range of classes, such as a bug that repeats itself in other parts of the code. Other times, the PR solves a bug only partially, because the bug has a broader impact than initially evaluated.
 - is the proposed fix the best approach for the Jira at hand?
-- backwards compatibility: we must prevent any PR that breaks compatibility with previous versions. If the PR| does so, it could still be okay, but this should be clearly documented it will probably be discussed by the project maintainers before being merged
+- backwards compatibility: we must prevent any PR that breaks compatibility with previous versions. If the PR does so, it could still be okay, but this should be clearly documented it will probably be discussed by the project maintainers before being merged
 - security impact: it is critical to evaluate if the PR has any sort of security impact, preventing the addition of exploitable flaws.
 
 Your PR will be classified by the reviewer with one or more of the following labels: **bug fix**, **enhancement**, **new feature/API change**, and **dependency upgrade**.
@@ -82,7 +82,7 @@ Fork https://github.com/undertow-io/undertow into your GitHub account.
 
 ```bash
 git clone git@github.com:[your username]/undertow.git
-cd console
+cd undertow
 ```
 
 ### Add a remote reference to upstream
@@ -209,7 +209,7 @@ It is a good practice to create a backup of your original branch in case you end
 reload your original fix (the GitHub remote origin account containing the PR can serve this purpose, as long as you don't
 overwrite it with a broken branch).
 
-Once you are satisfied if your commits, run the tests again with `mvn clean verify`. Finally, check the changes your are going
+Once you are satisfied with your commits, run the tests again with `mvn clean verify`. Finally, check the changes you are going
 to push to origin are really okay with:
 
 ```bash

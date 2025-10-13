@@ -361,7 +361,7 @@ public class PredicatedHandlersParser {
                 break;
             } else if(token.getToken().equals("\n") || token.getToken().equals(";")) {
                 if(token.getToken().equals(";") && tokens.peek()!=null && tokens.peek().getToken().equals(ELSE)) {
-                    // something() -> predicate; ELSE predicate; - dont end processing since its followed by ELSE and its singular block
+                    // something() -> predicate; ELSE predicate; - don't end processing since it's followed by ELSE and it's singular block
                     continue;
                 } else if (token.getToken().equals("\n") && tokens.peek() != null && isOperator(tokens.peek().getToken())) {
                     // predicate

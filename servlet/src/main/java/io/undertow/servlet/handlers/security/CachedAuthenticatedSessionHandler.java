@@ -37,7 +37,7 @@ import jakarta.servlet.http.HttpSession;
  * {@link HttpHandler} responsible for setting up the {@link AuthenticatedSessionManager} for cached authentications and
  * registering a {@link NotificationReceiver} to receive the security notifications.
  *
- * This handler also forces the session to change its session ID on sucessful authentication.
+ * This handler also forces the session to change its session ID on successful authentication.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */

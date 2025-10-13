@@ -590,7 +590,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
      * Runs a web socket invocation, setting up the threads and dispatching a thread pool
      * <p>
      * Unfortunately we need to dispatch to a thread pool, because there is a good chance that the endpoint
-     * will use blocking IO methods. We suspend recieves while this is in progress, to make sure that we do not have multiple
+     * will use blocking IO methods. We suspend receives while this is in progress, to make sure that we do not have multiple
      * methods invoked at once.
      * <p>
      *

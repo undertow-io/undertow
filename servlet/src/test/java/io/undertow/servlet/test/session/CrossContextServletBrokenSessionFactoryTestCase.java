@@ -47,7 +47,7 @@ import io.undertow.util.StatusCodes;
 
 /**
  *
- * Test that separate servlet deployments use seperate session managers, even if one is broken.
+ * Test that separate servlet deployments use separate session managers, even if one is broken.
  *
  * @author Stuart Douglas
  */
