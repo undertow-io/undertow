@@ -110,7 +110,6 @@
         <dependency>
             <groupId>org.wildfly.openssl</groupId>
             <artifactId>wildfly-openssl</artifactId>
-            <version>${version.org.wildfly.openssl}</version>
             <scope>test</scope>
         </dependency>
 

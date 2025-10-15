@@ -232,7 +232,6 @@
             <plugin>
                 <groupId>org.zanata</groupId>
                 <artifactId>zanata-maven-plugin</artifactId>
-                <version>${version.zanata.plugin}</version>
                 <configuration>
                     <!-- Process sub-modules separately, sharing parent config -->
                     <enableModules>true</enableModules>
