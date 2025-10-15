@@ -164,7 +164,7 @@ public class QueryParameterUtils {
         String encoding = null;
         OptionMap undertowOptions = exchange.getConnection().getUndertowOptions();
         if(undertowOptions.get(UndertowOptions.DECODE_URL, true)) {
-            encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
+            encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, UndertowOptions.DEFAULT_URL_CHARSET);
         }
         return encoding;
     }

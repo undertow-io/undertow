@@ -22,7 +22,6 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -214,7 +213,7 @@ public abstract class HttpRequestParser {
         maxHeaders = options.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS);
         slashDecodingFlag = URLUtils.getSlashDecodingFlag(options);
         decode = options.get(UndertowOptions.DECODE_URL, true);
-        charset = options.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
+        charset = options.get(UndertowOptions.URL_CHARSET, UndertowOptions.DEFAULT_URL_CHARSET);
         maxCachedHeaderSize = options.get(UndertowOptions.MAX_CACHED_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_CACHED_HEADER_SIZE);
         this.allowUnescapedCharactersInUrl = options.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
         this.allowIDLessMatrixParams = Boolean.parseBoolean(System.getProperty(ID_LESS_MATRIX_PARAMS_PROPERTY));

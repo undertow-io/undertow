@@ -44,13 +44,13 @@ import org.xnio.StreamConnection;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static io.undertow.UndertowOptions.DECODE_URL;
 import static io.undertow.UndertowOptions.URL_CHARSET;
+import static io.undertow.UndertowOptions.DEFAULT_URL_CHARSET;
 
 /**
  * @author Stuart Douglas
@@ -100,7 +100,7 @@ public class AjpOpenListener implements OpenListener {
         PooledByteBuffer buf = pool.allocate();
         this.bufferSize = buf.getBuffer().remaining();
         buf.close();
-        parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, StandardCharsets.UTF_8.name()), undertowOptions.get(DECODE_URL, true), undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS), undertowOptions.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS), URLUtils.getSlashDecodingFlag(undertowOptions), undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false), undertowOptions.get(UndertowOptions.AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN, DEFAULT_AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN));
+        parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, DEFAULT_URL_CHARSET), undertowOptions.get(DECODE_URL, true), undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS), undertowOptions.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS), URLUtils.getSlashDecodingFlag(undertowOptions), undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false), undertowOptions.get(UndertowOptions.AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN, DEFAULT_AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN));
         connectorStatistics = new ConnectorStatisticsImpl();
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
@@ -180,7 +180,7 @@ public class AjpOpenListener implements OpenListener {
         }
         this.undertowOptions = undertowOptions;
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
-        parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, StandardCharsets.UTF_8.name()), undertowOptions.get(DECODE_URL, true), undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS), undertowOptions.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS), URLUtils.getSlashDecodingFlag(undertowOptions), undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false));
+        parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, DEFAULT_URL_CHARSET), undertowOptions.get(DECODE_URL, true), undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS), undertowOptions.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS), URLUtils.getSlashDecodingFlag(undertowOptions), undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false));
     }
 
     @Override

@@ -27,8 +27,6 @@ import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.util.Headers;
 import io.undertow.util.QueryParameterUtils;
-
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import jakarta.servlet.http.Cookie;
@@ -236,7 +234,7 @@ public class RewriteHandler implements HttpHandler {
                 if (queryString != null) {
                     exchange.setQueryString(queryString);
                     exchange.getQueryParameters().clear();
-                    exchange.getQueryParameters().putAll(QueryParameterUtils.parseQueryString(queryString, exchange.getConnection().getUndertowOptions().get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name())));
+                    exchange.getQueryParameters().putAll(QueryParameterUtils.parseQueryString(queryString, exchange.getConnection().getUndertowOptions().get(UndertowOptions.URL_CHARSET, UndertowOptions.DEFAULT_URL_CHARSET)));
                 }
                 // Set the new host if it changed
                 if (!host.equals(request.getServerName())) {
