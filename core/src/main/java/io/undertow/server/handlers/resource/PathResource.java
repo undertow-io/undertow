@@ -78,7 +78,10 @@ public class PathResource implements RangeAwareResource {
 
     @Override
     public String getName() {
-        return file.getFileName().toString();
+        if( file.getFileName() != null ) {
+            return file.getFileName().toString();
+        }
+        return file.toString();
     }
 
     @Override
@@ -90,8 +93,12 @@ public class PathResource implements RangeAwareResource {
     public List<Resource> list() {
         final List<Resource> resources = new ArrayList<>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(file)) {
-            for (Path child : stream) {
-                resources.add(new PathResource(child, manager, path + file.getFileSystem().getSeparator() + child.getFileName().toString()));
+            if(stream != null) {
+                for (Path child : stream) {
+                    resources.add(new PathResource(child, manager, path + file.getFileSystem().getSeparator() + child.getFileName().toString()));
+                }
+            } else {
+                UndertowLogger.ROOT_LOGGER.failedToListPathsForFile(file);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);

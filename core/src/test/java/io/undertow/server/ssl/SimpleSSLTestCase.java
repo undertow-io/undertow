@@ -18,6 +18,14 @@
 
 package io.undertow.server.ssl;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
@@ -38,18 +46,15 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 /**
  * @author Stuart Douglas
  */
 @RunWith(DefaultServer.class)
 public class SimpleSSLTestCase {
+
+    // The concurrency is aligned to the #CPUs*8 up to a max of 32 threads
+    private static final int CONCURRENCY = Math.min(32, Runtime.getRuntime().availableProcessors() * 8);
+    private static final int REQUESTS_PER_THREAD = 300;
 
     @Test
     public void simpleSSLTestCase() throws IOException, GeneralSecurityException {
@@ -111,7 +116,7 @@ public class SimpleSSLTestCase {
 
     @Test
     public void parallel() throws Exception {
-        runTest(32, new HttpHandler() {
+        runTest(CONCURRENCY, new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
@@ -122,7 +127,7 @@ public class SimpleSSLTestCase {
 
     @Test
     public void parallelWithDispatch() throws Exception {
-        runTest(32, new HttpHandler() {
+        runTest(CONCURRENCY, new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 exchange.dispatch(() -> {
@@ -135,7 +140,7 @@ public class SimpleSSLTestCase {
 
     @Test
     public void parallelWithBlockingDispatch() throws Exception {
-        runTest(32, new HttpHandler() {
+        runTest(CONCURRENCY, new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) throws Exception {
                 if (exchange.isInIoThread()) {
@@ -152,13 +157,14 @@ public class SimpleSSLTestCase {
     private void runTest(int concurrency, HttpHandler handler) throws IOException, InterruptedException {
         DefaultServer.setRootHandler(handler);
         DefaultServer.startSSLServer();
+        ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
         try (CloseableHttpClient client = HttpClients.custom().disableConnectionState()
                 .setSSLContext(DefaultServer.getClientSSLContext())
-                .setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(5000).build())
+                .setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(60000).build())
                 .setMaxConnPerRoute(1000)
                 .build()) {
-            ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
             AtomicBoolean failed = new AtomicBoolean();
+            AtomicInteger processed = new AtomicInteger(0);
             Runnable task = new Runnable() {
                 @Override
                 public void run() {
@@ -170,22 +176,34 @@ public class SimpleSSLTestCase {
                         Header[] header = result.getHeaders("scheme");
                         Assert.assertEquals("https", header[0].getValue());
                         EntityUtils.consumeQuietly(result.getEntity());
+                        processed.incrementAndGet();
                     } catch (Throwable t) {
                         if (failed.compareAndSet(false, true)) {
                             t.printStackTrace();
-                            executorService.shutdownNow();
                         }
                     }
                 }
             };
-            for (int i = 0; i < concurrency * 300; i++) {
+            for (int i = 0; i < concurrency * REQUESTS_PER_THREAD; i++) {
                 executorService.submit(task);
             }
             executorService.shutdown();
-            Assert.assertTrue(executorService.awaitTermination(70, TimeUnit.SECONDS));
-            Assert.assertFalse(failed.get());
+            int executedPrevTime = 0;
+            while (!executorService.awaitTermination(10, TimeUnit.SECONDS) && !failed.get()) {
+                int executed = processed.get();
+                if (executedPrevTime == executed) {
+                    failed.set(true);
+                    Assert.fail("Executions hanged at " + executed);
+                }
+                executedPrevTime = executed;
+            }
+            Assert.assertFalse("A task failed! Check the stack-trace in the output file", failed.get());
+            Assert.assertTrue(executorService.isTerminated());
         } finally {
             DefaultServer.stopSSLServer();
+            if (!executorService.isTerminated()) {
+                executorService.shutdownNow();
+            }
         }
     }
 

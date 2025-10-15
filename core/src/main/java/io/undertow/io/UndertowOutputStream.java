@@ -26,6 +26,7 @@ import java.nio.channels.FileChannel;
 import io.undertow.UndertowMessages;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
+import io.undertow.util.Methods;
 import org.xnio.Buffers;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
@@ -271,11 +272,18 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
      * {@inheritDoc}
      */
     public void flush() throws IOException {
-        if (anyAreSet(state, FLAG_CLOSED)) {
-            throw UndertowMessages.MESSAGES.streamIsClosed();
-        }
+        boolean closed = anyAreSet(state, FLAG_CLOSED);
         if (buffer != null && buffer.position() != 0) {
+            if (closed) {
+                throw UndertowMessages.MESSAGES.streamIsClosed();
+            }
             writeBufferBlocking(false);
+        } else if (closed) {
+            // No-op if flush is called with no buffered data on a closed channel.
+            // This stream closes itself when a Content-Length is provided, once sufficient
+            // bytes have been written -- a flush following the last write is entirely
+            // reasonable.
+            return;
         }
         if (channel == null) {
             channel = exchange.getResponseChannel();
@@ -290,12 +298,8 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         buffer.flip();
 
         while (buffer.hasRemaining()) {
-            if(writeFinal) {
-                channel.writeFinal(buffer);
-            } else {
-                channel.write(buffer);
-            }
-            if(buffer.hasRemaining()) {
+            int result = writeFinal ? channel.writeFinal(buffer) : channel.write(buffer);
+            if (result == 0) {
                 channel.awaitWritable();
             }
         }
@@ -327,7 +331,9 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         if (anyAreSet(state, FLAG_CLOSED)) return;
         try {
             state |= FLAG_CLOSED;
-            if (anyAreClear(state, FLAG_WRITE_STARTED) && channel == null) {
+            if (anyAreClear(state, FLAG_WRITE_STARTED)
+                    && channel == null
+                    && !isHeadRequestWithContentLength(exchange)) {
                 if (buffer == null) {
                     exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                 } else {
@@ -354,6 +360,12 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
                 buffer = null;
             }
         }
+    }
+
+    // Head request handlers may set the content-length response header in lieu of writing bytes
+    private static boolean isHeadRequestWithContentLength(HttpServerExchange exchange) {
+        return Methods.HEAD.equals(exchange.getRequestMethod())
+                && exchange.getResponseHeaders().contains(Headers.CONTENT_LENGTH);
     }
 
     private ByteBuffer buffer() {

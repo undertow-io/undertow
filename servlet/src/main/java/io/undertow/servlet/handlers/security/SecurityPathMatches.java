@@ -75,17 +75,27 @@ public class SecurityPathMatches {
      * @return <code>true</code> If no security path information has been defined
      */
     public boolean isEmpty() {
-        return defaultPathSecurityInformation.excludedMethodRoles.isEmpty() &&
-                defaultPathSecurityInformation.perMethodRequiredRoles.isEmpty() &&
-                defaultPathSecurityInformation.defaultRequiredRoles.isEmpty() &&
+        return isDefaultPathSecurityEmpty() &&
                 exactPathRoleInformation.isEmpty() &&
                 prefixPathRoleInformation.isEmpty() &&
                 extensionRoleInformation.isEmpty();
     }
 
+    // the default security is applied to all http methods of the application
+    private boolean isDefaultPathSecurityEmpty() {
+        return defaultPathSecurityInformation.excludedMethodRoles.isEmpty() &&
+                defaultPathSecurityInformation.perMethodRequiredRoles.isEmpty() &&
+                defaultPathSecurityInformation.defaultRequiredRoles.isEmpty();
+    }
+
     public SecurityPathMatch getSecurityInfo(final String path, final String method) {
         RuntimeMatch currentMatch = new RuntimeMatch();
-        handleMatch(method, defaultPathSecurityInformation, currentMatch);
+        // skip the default path security if it is empty
+        // not only this saves cycles, it also prevents deny uncovered http methods algorithm
+        // from misinterpreting an empty default security as a forbids all
+        if (!isDefaultPathSecurityEmpty()) {
+            handleMatch(method, defaultPathSecurityInformation, currentMatch);
+        }
         PathSecurityInformation match = exactPathRoleInformation.get(path);
         PathSecurityInformation extensionMatch = null;
         if (match != null) {
@@ -139,6 +149,14 @@ public class SecurityPathMatches {
             handleMatch(method, extensionMatch, currentMatch);
             return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
         }
+
+        // if nothing else, check for security info defined for URL pattern '/'
+        match = exactPathRoleInformation.get("/");
+        if (match != null) {
+            handleMatch(method, match, currentMatch);
+            return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
+        }
+
         return new SecurityPathMatch(currentMatch.type, mergeConstraints(currentMatch));
     }
 
@@ -175,6 +193,27 @@ public class SecurityPathMatches {
             for (SecurityInformation role : methodInfo) {
                 transport(currentMatch, role.transportGuaranteeType);
                 currentMatch.constraints.add(new SingleConstraintMatch(role.emptyRoleSemantic, role.roles));
+            }
+        } else if (denyUncoveredHttpMethods) {
+            if (exact.perMethodRequiredRoles.size() == 0) {
+                if (exact.excludedMethodRoles.isEmpty()) {
+                    // 13.8.4. When HTTP methods are not enumerated within a security-constraint, the protections defined by the
+                    // constraint apply to the complete set of HTTP (extension) methods.
+                    currentMatch.uncovered = false;
+                } else {
+                    for (ExcludedMethodRoles excluded : exact.excludedMethodRoles) {
+                        if (!excluded.methods.contains(method)) {
+                            currentMatch.uncovered = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (currentMatch.uncovered) {
+                //at this point method info is null, but there is match, above if will be triggered for default path, we need to flip it?
+                // keep currentMatch.uncovered value as true (this is the value that is initially set)
+                currentMatch.constraints.clear();
+                currentMatch.constraints.add(new SingleConstraintMatch(SecurityInfo.EmptyRoleSemantic.DENY, new HashSet<>()));
             }
         }
         for (ExcludedMethodRoles excluded : exact.excludedMethodRoles) {

@@ -40,13 +40,13 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import io.undertow.util.StatusCodes;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -146,6 +146,16 @@ public class DefaultServlet extends HttpServlet {
     }
 
     @Override
+    protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+        if (req.getDispatcherType() == DispatcherType.ERROR) {
+            doGet(req, resp);
+        } else {
+            super.service(req, resp);
+        }
+    }
+
+    @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         String path = getPath(req);
         if (!isAllowed(path, req.getDispatcherType())) {
@@ -176,18 +186,18 @@ public class DefaultServlet extends HttpServlet {
             }
             return;
         } else if (resource.isDirectory()) {
-            if ("css".equals(req.getQueryString())) {
-                resp.setContentType("text/css");
-                resp.getWriter().write(DirectoryUtils.Blobs.FILE_CSS);
-                return;
-            } else if ("js".equals(req.getQueryString())) {
-                resp.setContentType("application/javascript");
-                resp.getWriter().write(DirectoryUtils.Blobs.FILE_JS);
-                return;
-            }
             if (directoryListingEnabled) {
+                if ("css".equals(req.getQueryString())) {
+                    resp.setContentType("text/css");
+                    resp.getWriter().write(DirectoryUtils.Blobs.FILE_CSS);
+                    return;
+                } else if ("js".equals(req.getQueryString())) {
+                    resp.setContentType("application/javascript");
+                    resp.getWriter().write(DirectoryUtils.Blobs.FILE_JS);
+                    return;
+                }
                 resp.setContentType("text/html");
-                StringBuilder output = DirectoryUtils.renderDirectoryListing(req.getRequestURI(), resource);
+                StringBuilder output = DirectoryUtils.renderDirectoryListing(exchange, req.getRequestURI(), resource);
                 resp.getWriter().write(output.toString());
             } else {
                 resp.sendError(StatusCodes.FORBIDDEN);
@@ -412,10 +422,7 @@ public class DefaultServlet extends HttpServlet {
         if (!path.isEmpty()) {
             if(dispatcherType == DispatcherType.REQUEST) {
                 //WFLY-3543 allow the dispatcher to access stuff in web-inf and meta inf
-                if (path.startsWith("/META-INF") ||
-                        path.startsWith("META-INF") ||
-                        path.startsWith("/WEB-INF") ||
-                        path.startsWith("WEB-INF")) {
+                if (Paths.isForbidden(path)) {
                     return false;
                 }
             }

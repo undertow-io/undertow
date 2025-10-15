@@ -20,11 +20,11 @@ package io.undertow.servlet.test.response.cookies;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Servlet that adds multiple cookies with same name and a few of which sharing
@@ -37,32 +37,32 @@ public class OverwriteCookiesServlet extends HttpServlet {
 
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
-        Cookie cookie1 = new javax.servlet.http.Cookie("test", "test1");
+        Cookie cookie1 = new jakarta.servlet.http.Cookie("test", "test1");
         cookie1.setPath("/test");
 
-        Cookie cookie2 = new javax.servlet.http.Cookie("test", "test2");
+        Cookie cookie2 = new jakarta.servlet.http.Cookie("test", "test2");
         cookie2.setPath("/test");
 
-        Cookie cookie3 = new javax.servlet.http.Cookie("test", "test3");
-        Cookie cookie4 = new javax.servlet.http.Cookie("test", "test4");
-        Cookie cookie5 = new javax.servlet.http.Cookie("test", "test5");
+        Cookie cookie3 = new jakarta.servlet.http.Cookie("test", "test3");
+        Cookie cookie4 = new jakarta.servlet.http.Cookie("test", "test4");
+        Cookie cookie5 = new jakarta.servlet.http.Cookie("test", "test5");
 
-        Cookie cookie6 = new javax.servlet.http.Cookie("test", "test6");
+        Cookie cookie6 = new jakarta.servlet.http.Cookie("test", "test6");
         cookie6.setPath("/test");
         cookie6.setDomain("www.domain.com");
 
-        Cookie cookie7 = new javax.servlet.http.Cookie("test", "test7");
+        Cookie cookie7 = new jakarta.servlet.http.Cookie("test", "test7");
         cookie7.setPath("/test");
         cookie7.setDomain("www.domain.com");
 
-        Cookie cookie8 = new javax.servlet.http.Cookie("test", "test8");
+        Cookie cookie8 = new jakarta.servlet.http.Cookie("test", "test8");
         cookie8.setPath("/test");
         cookie8.setDomain("www.domain.com");
 
-        Cookie cookie9 = new javax.servlet.http.Cookie("test", "test9");
+        Cookie cookie9 = new jakarta.servlet.http.Cookie("test", "test9");
         cookie9.setDomain("www.domain.com");
 
-        Cookie cookie10 = new javax.servlet.http.Cookie("test", "test10");
+        Cookie cookie10 = new jakarta.servlet.http.Cookie("test", "test10");
         cookie10.setDomain("www.domain.com");
 
         resp.addCookie(cookie1);

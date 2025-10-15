@@ -31,7 +31,6 @@ import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketFrameType;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
-import org.apache.log4j.BasicConfigurator;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
@@ -166,14 +165,6 @@ public class AutobahnExtensionCustomReceiverServer {
     }
 
     public static void main(String[] args) {
-        /*
-            Use BasicConfigurator.configure() for fully console debug
-         */
-        if (args.length == 1) {
-            if (args[0].equals("--debug")) {
-                BasicConfigurator.configure();
-            }
-        }
         new AutobahnExtensionCustomReceiverServer(7777).run();
     }
 

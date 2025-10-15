@@ -21,7 +21,10 @@ package io.undertow.util;
 import java.io.UnsupportedEncodingException;
 import java.util.regex.Pattern;
 
+import org.xnio.OptionMap;
+
 import io.undertow.UndertowMessages;
+import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerExchange;
 
 /**
@@ -263,7 +266,7 @@ public class URLUtils {
                             if(++count > max) {
                                 throw UndertowMessages.MESSAGES.tooManyParameters(max);
                             }
-                        } else {
+                        } else if (stringStart != i) { // Ignore if attrName == null and stringStart == i because it means both key and value are empty.
                             handle(exchange, decode(charset, string.substring(stringStart, i), doDecode), "");
                             if(++count > max) {
                                 throw UndertowMessages.MESSAGES.tooManyParameters(max);
@@ -299,7 +302,7 @@ public class URLUtils {
             return attrName;
         }
 
-        abstract void handle(final HttpServerExchange exchange, final String key, final String value);
+        abstract void handle(HttpServerExchange exchange, String key, String value);
     }
 
 
@@ -348,5 +351,21 @@ public class URLUtils {
             return SCHEME_PATTERN.matcher(location).matches();
         }
         return false;
+    }
+
+    public static boolean getSlashDecodingFlag(final OptionMap options) {
+        final boolean allowEncodedSlash = options.get(UndertowOptions.ALLOW_ENCODED_SLASH, UndertowOptions.DEFAULT_ALLOW_ENCODED_SLASH);
+        final Boolean decodeSlash = options.get(UndertowOptions.DECODE_SLASH);
+        return getSlashDecodingFlag(allowEncodedSlash, decodeSlash);
+    }
+
+    public static boolean getSlashDecodingFlag(final boolean allowEncodedSlash, final Boolean decodeSlash) {
+        final boolean slashDecodingFlag;
+        if (decodeSlash != null) {
+            slashDecodingFlag = decodeSlash;
+        } else {
+            slashDecodingFlag = allowEncodedSlash;
+        }
+        return slashDecodingFlag;
     }
 }

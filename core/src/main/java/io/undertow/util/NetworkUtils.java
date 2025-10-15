@@ -23,11 +23,39 @@ import io.undertow.UndertowMessages;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Stuart Douglas
+ * @author baranowb
  */
 public class NetworkUtils {
+
+    public static final String IP4_EXACT = "(?:\\d{1,3}\\.){3}\\d{1,3}";
+
+    /**
+     * IPV6 match. ?: - unnamed groups are used for performance reasons.
+     * Requirements:
+     * - match full or partial IPV6 ( sliding '::')
+     * - match end to start - ^$ to ensure it does not match part of some random (\d:){n,m}
+     * - IPv4-Embedded IPv6 Address
+     *
+     * NO:
+     * - IPv4 mapped/translated into IPv6
+     *
+     * ^(?:([0-9a-fA-F]{1,4}:){7,7}(?:[0-9a-fA-F]){1,4}                   - full address
+     * |(?:([0-9a-fA-F]{1,4}:)){1,7}(?:(:))                               - last compressed
+     * |(?:([0-9a-fA-F]{1,4}:)){1,6}(?:(:[0-9a-fA-F]){1,4})               - second to last
+     * |(?:([0-9a-fA-F]{1,4}:)){1,5}(?:(:[0-9a-fA-F]{1,4})){1,2}          - etc
+     * |(?:([0-9a-fA-F]{1,4}:)){1,4}(?:(:[0-9a-fA-F]{1,4})){1,3}
+     * |(?:([0-9a-fA-F]{1,4}:)){1,3}(?:(:[0-9a-fA-F]{1,4})){1,4}
+     * |(?:([0-9a-fA-F]{1,4}:)){1,2}(?:(:[0-9a-fA-F]{1,4})){1,5}
+     * |(?:([0-9a-fA-F]{1,4}:))(?:(:[0-9a-fA-F]{1,4})){1,6}
+     * |(?:(:))(?:((:[0-9a-fA-F]{1,4}){1,7}|(?:(:)))))$                  - all the way compressed
+     */
+    public static final String IP6_EXACT = "^(?:([0-9a-fA-F]{1,4}:){7,7}(?:[0-9a-fA-F]){1,4}|(?:([0-9a-fA-F]{1,4}:)){1,7}(?:(:))|(?:([0-9a-fA-F]{1,4}:)){1,6}(?:(:[0-9a-fA-F]){1,4})|(?:([0-9a-fA-F]{1,4}:)){1,5}(?:(:[0-9a-fA-F]{1,4})){1,2}|(?:([0-9a-fA-F]{1,4}:)){1,4}(?:(:[0-9a-fA-F]{1,4})){1,3}|(?:([0-9a-fA-F]{1,4}:)){1,3}(?:(:[0-9a-fA-F]{1,4})){1,4}|(?:([0-9a-fA-F]{1,4}:)){1,2}(?:(:[0-9a-fA-F]{1,4})){1,5}|(?:([0-9a-fA-F]{1,4}:))(?:(:[0-9a-fA-F]{1,4})){1,6}|(?:(:))(?:((:[0-9a-fA-F]{1,4}){1,7}|(?:(:)))))$";
 
     public static String formatPossibleIpv6Address(String address) {
         if (address == null) {
@@ -61,12 +89,16 @@ public class NetworkUtils {
 
     }
 
-    public static InetAddress parseIpv6Address(String addressString) throws IOException {
+    public static InetAddress parseIpv6Address(final String addressString) throws IllegalArgumentException, UnknownHostException {
+        return InetAddress.getByAddress(parseIpv6AddressToBytes(addressString));
+    }
+
+    public static byte[] parseIpv6AddressToBytes(final String addressString) throws IllegalArgumentException, UnknownHostException {
         boolean startsWithColon = addressString.startsWith(":");
         if (startsWithColon && !addressString.startsWith("::")) {
             throw UndertowMessages.MESSAGES.invalidIpAddress(addressString);
         }
-        String[] parts = (startsWithColon ? addressString.substring(1) : addressString).split(":"); //because of the way split works we want to change a leading double colon to a single one. We have already verified that the address does not actually start with a single colon
+        String[] parts = splitIPv6(addressString);
         byte[] data = new byte[16];
         int partOffset = 0;
         boolean seenEmpty = false;
@@ -87,22 +119,40 @@ public class NetworkUtils {
                     throw UndertowMessages.MESSAGES.invalidIpAddress(addressString);
                 }
                 partOffset = off * 2;
-            } else if (part.length() > 1 && part.charAt(0) == '0') {
-                //leading zeros are not allowed
-                throw UndertowMessages.MESSAGES.invalidIpAddress(addressString);
             } else {
                 int num = Integer.parseInt(part, 16);
                 data[i * 2 + partOffset] = (byte) (num >> 8);
                 data[i * 2 + partOffset + 1] = (byte) (num);
             }
         }
-        if (parts.length < 8 && !seenEmpty) {
+        if ((parts.length < 8 && !addressString.endsWith("::")) && !seenEmpty) {
             //address was too small
             throw UndertowMessages.MESSAGES.invalidIpAddress(addressString);
         }
-        return InetAddress.getByAddress(data);
+        return data;
     }
 
+    private static String[] splitIPv6(final String src) {
+        final List<String> list = new ArrayList<>();
+        final int size = src.length();
+        char previous = 0;
+        final StringBuilder bits = new StringBuilder(8);
+        for(int i = 0; i<size;i++) {
+            final char current = src.charAt(i);
+             if(current != ':'){
+                bits.append(String.valueOf(current));
+            }
+
+             if(previous == current && current == ':') {
+                 list.add("");
+             } else if (((current == ':') || (i == size - 1)) && bits.length() > 0) {
+                list.add(bits.toString());
+                bits.setLength(0);
+            }
+            previous = current;
+        }
+        return list.toArray(new String[list.size()]);
+    }
     public static String toObfuscatedString(InetAddress address) {
         if (address == null) {
             return null;

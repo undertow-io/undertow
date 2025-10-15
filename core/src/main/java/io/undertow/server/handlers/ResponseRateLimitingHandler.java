@@ -109,6 +109,11 @@ public class ResponseRateLimitingHandler implements HttpHandler {
             return new Wrapper((Integer)config.get("bytes"), (Long)config.get("time"), TimeUnit.MILLISECONDS);
         }
 
+        @Override
+        public int priority() {
+            return 0;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

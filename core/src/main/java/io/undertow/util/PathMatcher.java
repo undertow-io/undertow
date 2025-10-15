@@ -95,7 +95,6 @@ public class PathMatcher<T> {
                 char c = path.charAt(pathLength);
                 if (c == '/') {
 
-                    //String part = path.substring(0, pathLength);
                     SubstringMap.SubstringMatch<T> next = paths.get(path, pathLength);
                     if (next != null) {
                         UndertowLogger.REQUEST_LOGGER.debugf("Matched prefix path %s for path %s", next.getKey(), path);

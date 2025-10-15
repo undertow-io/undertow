@@ -28,15 +28,15 @@ import io.undertow.connector.ByteBufferPool;
 import io.undertow.websockets.extensions.ExtensionHandshake;
 import org.xnio.XnioWorker;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.FilterRegistration;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
-import javax.websocket.DeploymentException;
-import javax.websocket.Extension;
-import javax.websocket.server.ServerContainer;
-import javax.websocket.server.ServerEndpointConfig;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.FilterRegistration;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
+import jakarta.websocket.DeploymentException;
+import jakarta.websocket.Extension;
+import jakarta.websocket.server.ServerContainer;
+import jakarta.websocket.server.ServerEndpointConfig;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -130,7 +130,9 @@ public class Bootstrap implements ServletExtension {
         @Override
         public void contextDestroyed(ServletContextEvent sce) {
             SecurityActions.removeContainer(sce.getServletContext().getClassLoader());
-            container.close();
+            if (container != null) {
+                container.close();
+            }
         }
     }
 

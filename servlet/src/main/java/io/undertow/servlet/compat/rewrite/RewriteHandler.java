@@ -31,8 +31,8 @@ import io.undertow.util.QueryParameterUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * @author Remy Maucherat
@@ -112,7 +112,7 @@ public class RewriteHandler implements HttpHandler {
             if (rules[i].isRedirect() && newtest != null) {
                 // append the query string to the url if there is one and it hasn't been rewritten
                 String queryString = request.getQueryString();
-                StringBuffer urlString = new StringBuffer(url);
+                StringBuilder urlString = new StringBuilder(url);
                 if (queryString != null && queryString.length() > 0) {
                     int index = urlString.indexOf("?");
                     if (index != -1) {
@@ -257,7 +257,7 @@ public class RewriteHandler implements HttpHandler {
     /**
      * Determine if a URI string has a <code>scheme</code> component.
      */
-    protected static boolean hasScheme(StringBuffer uri) {
+    protected static boolean hasScheme(StringBuilder uri) {
         int len = uri.length();
         for (int i = 0; i < len; i++) {
             char c = uri.charAt(i);

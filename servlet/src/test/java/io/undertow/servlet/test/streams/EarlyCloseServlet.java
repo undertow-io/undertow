@@ -20,21 +20,19 @@ package io.undertow.servlet.test.streams;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import io.undertow.server.ServerConnection;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpServletRequestImpl;
 import io.undertow.testutils.DefaultServer;
-import org.junit.runner.RunWith;
 
 /**
  * @author Stuart Douglas
  */
-@RunWith(DefaultServer.class)
 public class EarlyCloseServlet extends HttpServlet {
 
     private volatile ServerConnection connection;

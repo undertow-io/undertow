@@ -28,6 +28,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
+import org.apache.http.params.SyncBasicHttpParams;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
@@ -65,22 +66,37 @@ public class TestHttpClient extends DefaultHttpClient {
     private static final List<TestHttpClient> instances = new CopyOnWriteArrayList<>();
 
     public TestHttpClient() {
+        super(preventSocketTimeoutException(null));
         instances.add(this);
     }
 
     public TestHttpClient(HttpParams params) {
-        super(params);
+        super(preventSocketTimeoutException(params));
         instances.add(this);
     }
 
     public TestHttpClient(ClientConnectionManager conman) {
-        super(conman);
+        super(conman, preventSocketTimeoutException(null));
         instances.add(this);
     }
 
     public TestHttpClient(ClientConnectionManager conman, HttpParams params) {
-        super(conman, params);
+        super(conman, preventSocketTimeoutException(params));
         instances.add(this);
+    }
+
+    private static HttpParams preventSocketTimeoutException(HttpParams params) {
+        // UNDERTOW-1929 prevent the SocketTimeoutException that we see recurring
+        // in CI when running tests on proxy mode
+        if (DefaultServer.isProxy()) {
+            if (params == null) {
+                params = new SyncBasicHttpParams();
+                setDefaultHttpParams(params);
+            }
+            HttpConnectionParams.setSoTimeout(params, 300000);
+            return params;
+        }
+        return params;
     }
 
     @Override
@@ -91,7 +107,7 @@ public class TestHttpClient extends DefaultHttpClient {
     @Override
     protected HttpParams createHttpParams() {
         HttpParams params = super.createHttpParams();
-        HttpConnectionParams.setSoTimeout(params, 30000);
+        HttpConnectionParams.setSoTimeout(params, 300000);
         return params;
     }
 

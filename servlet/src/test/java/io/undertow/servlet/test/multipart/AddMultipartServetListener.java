@@ -1,9 +1,9 @@
 package io.undertow.servlet.test.multipart;
 
-import javax.servlet.MultipartConfigElement;
-import javax.servlet.ServletContextEvent;
-import javax.servlet.ServletContextListener;
-import javax.servlet.ServletRegistration;
+import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.ServletContextEvent;
+import jakarta.servlet.ServletContextListener;
+import jakarta.servlet.ServletRegistration;
 
 /**
  * @author Stuart Douglas
@@ -13,6 +13,10 @@ public class AddMultipartServetListener implements ServletContextListener {
     public void contextInitialized(ServletContextEvent sce) {
         ServletRegistration.Dynamic reg = sce.getServletContext().addServlet("added", new MultiPartServlet());
         reg.addMapping("/added");
+        reg.setMultipartConfig(new MultipartConfigElement(System.getProperty("java.io.tmpdir")));
+
+        reg = sce.getServletContext().addServlet("getParam", new MultiPartServlet(true));
+        reg.addMapping("/getParam");
         reg.setMultipartConfig(new MultipartConfigElement(System.getProperty("java.io.tmpdir")));
     }
 

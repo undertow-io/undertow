@@ -21,25 +21,24 @@ package io.undertow.websockets.jsr;
 import static io.undertow.websockets.jsr.ServerWebSocketContainer.WebSocketHandshakeHolder;
 
 import java.io.IOException;
-import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSessionEvent;
-import javax.servlet.http.HttpSessionListener;
-import javax.websocket.CloseReason;
-import javax.websocket.server.ServerContainer;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSessionEvent;
+import jakarta.servlet.http.HttpSessionListener;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.server.ServerContainer;
 
 import org.xnio.ChannelListener;
 import org.xnio.StreamConnection;
@@ -101,7 +100,6 @@ public class JsrWebSocketFilter implements Filter {
         HttpServletResponse resp = (HttpServletResponse) response;
         if (req.getHeader(Headers.UPGRADE_STRING) != null) {
             final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(req, resp, peerConnections);
-
             String path;
             if (req.getPathInfo() == null) {
                 path = req.getServletPath();
@@ -133,8 +131,9 @@ public class JsrWebSocketFilter implements Filter {
                     final HttpSessionImpl session = src.getCurrentServletContext().getSession(src.getExchange(), false);
                     facade.upgradeChannel(new HttpUpgradeListener() {
                         @Override
+                        @SuppressWarnings("removal")
                         public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
-
+                            HandshakeUtil.propagate(exchange, facade);
                             WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
                             peerConnections.add(channel);
                             if(session != null) {
@@ -142,7 +141,7 @@ public class JsrWebSocketFilter implements Filter {
                                 if (System.getSecurityManager() == null) {
                                     underlying = session.getSession();
                                 } else {
-                                    underlying = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
+                                    underlying = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
                                 }
                                 List<WebSocketChannel> connections;
                                 synchronized (underlying) {
@@ -187,13 +186,14 @@ public class JsrWebSocketFilter implements Filter {
         }
 
         @Override
+        @SuppressWarnings("removal")
         public void sessionDestroyed(HttpSessionEvent se) {
             HttpSessionImpl session = (HttpSessionImpl) se.getSession();
             final Session underlying;
             if (System.getSecurityManager() == null) {
                 underlying = session.getSession();
             } else {
-                underlying = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
+                underlying = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
             }
             List<WebSocketChannel> connections = (List<WebSocketChannel>) underlying.getAttribute(SESSION_ATTRIBUTE);
             if(connections != null) {

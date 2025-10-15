@@ -18,6 +18,8 @@
 
 package io.undertow.util;
 
+import static org.wildfly.common.Assert.checkNotNullParamWithNullPointerException;
+
 /**
  * A utility class for mapping between byte arrays and their hex representation and back again.
  *
@@ -38,9 +40,7 @@ public class HexConverter {
      * @return the hex encoded String.
      */
     public static String convertToHexString(byte[] toBeConverted) {
-        if (toBeConverted == null) {
-            throw new NullPointerException("Parameter to be converted can not be null");
-        }
+        checkNotNullParamWithNullPointerException("toBeConverted", toBeConverted);
 
         char[] converted = new char[toBeConverted.length * 2];
         for (int i = 0; i < toBeConverted.length; i++) {
@@ -63,9 +63,7 @@ public class HexConverter {
      * @return the encoded byte array.
      */
     public static byte[] convertToHexBytes(byte[] toBeConverted) {
-        if (toBeConverted == null) {
-            throw new NullPointerException("Parameter to be converted can not be null");
-        }
+        checkNotNullParamWithNullPointerException("toBeConverted", toBeConverted);
 
         byte[] converted = new byte[toBeConverted.length * 2];
         for (int i = 0; i < toBeConverted.length; i++) {

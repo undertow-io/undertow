@@ -29,10 +29,10 @@ import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
-import javax.websocket.EncodeException;
-import javax.websocket.Encoder;
-import javax.websocket.EndpointConfig;
-import javax.websocket.MessageHandler;
+import jakarta.websocket.EncodeException;
+import jakarta.websocket.Encoder;
+import jakarta.websocket.EndpointConfig;
+import jakarta.websocket.MessageHandler;
 
 /**
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

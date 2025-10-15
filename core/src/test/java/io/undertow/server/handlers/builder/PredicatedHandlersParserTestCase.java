@@ -18,7 +18,6 @@
 
 package io.undertow.server.handlers.builder;
 
-import io.undertow.testutils.category.UnitTest;
 import io.undertow.predicate.ContainsPredicate;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -29,8 +28,11 @@ import io.undertow.server.handlers.SetHeaderHandler;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser.BlockNode;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser.Node;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser.PredicateOperatorNode;
+import io.undertow.testutils.category.UnitTest;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -198,4 +200,50 @@ public class PredicatedHandlersParserTestCase {
         Assert.assertNull(exchange.getRequestHeaders().get(Headers.USER_AGENT));
     }
 
+    @Test
+    public void testEmptyHeader() throws Exception {
+        String value = "set(attribute=%{i,User-Agent}, value='')";
+
+        List<PredicatedHandler> ret = PredicatedHandlersParser.parse(value, getClass().getClassLoader());
+        Assert.assertEquals(1, ret.size());
+        HttpServerExchange exchange = new HttpServerExchange(null);
+        exchange.getRequestHeaders().put(Headers.USER_AGENT, "firefox");
+        ret.get(0).getHandler().wrap(ResponseCodeHandler.HANDLE_200).handleRequest(exchange);
+
+        Assert.assertNotNull(exchange.getRequestHeaders().get(Headers.USER_AGENT));
+        Assert.assertEquals(1, exchange.getRequestHeaders().get(Headers.USER_AGENT).size());
+        Assert.assertEquals("", exchange.getRequestHeaders().get(Headers.USER_AGENT).getFirst());
+    }
+
+    @Test
+    public void testEscapedQuote() throws Exception {
+        String value = "set(attribute=%{i,User-Agent}, value='some\\'value')";
+
+        List<PredicatedHandler> ret = PredicatedHandlersParser.parse(value, getClass().getClassLoader());
+        Assert.assertEquals(1, ret.size());
+        HttpServerExchange exchange = new HttpServerExchange(null);
+        exchange.getRequestHeaders().put(Headers.USER_AGENT, "firefox");
+        ret.get(0).getHandler().wrap(ResponseCodeHandler.HANDLE_200).handleRequest(exchange);
+
+        Assert.assertNotNull(exchange.getRequestHeaders().get(Headers.USER_AGENT));
+        Assert.assertEquals(1, exchange.getRequestHeaders().get(Headers.USER_AGENT).size());
+        Assert.assertEquals("some'value", exchange.getRequestHeaders().get(Headers.USER_AGENT).getFirst());
+    }
+
+    @Test
+    public void testMissingRequiredHandlerParameter() throws Exception {
+        String value = "set(attribute=%{i,User-Agent})";
+
+        IllegalArgumentException thrown = Assert.assertThrows(IllegalArgumentException.class,
+                () -> PredicatedHandlersParser.parse(value, getClass().getClassLoader()));
+        MatcherAssert.assertThat(thrown.getMessage(), CoreMatchers.containsString("required parameters [value] not provided for handler set"));
+    }
+
+    @Test
+    public void testMissingRequiredPredicateParameter() throws Exception {
+        String value = "contains(value=a) -> dump-request";
+        IllegalArgumentException thrown = Assert.assertThrows(IllegalArgumentException.class,
+                () ->  PredicatedHandlersParser.parse(value, getClass().getClassLoader()));
+        MatcherAssert.assertThat(thrown.getMessage(), CoreMatchers.containsString("required parameters [search] not provided for predicate contains"));
+    }
 }

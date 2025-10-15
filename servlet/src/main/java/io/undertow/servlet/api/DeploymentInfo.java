@@ -33,10 +33,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.MultipartConfigElement;
-import javax.servlet.ServletContextListener;
-import javax.servlet.descriptor.JspConfigDescriptor;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.ServletContextListener;
+import jakarta.servlet.descriptor.JspConfigDescriptor;
 
 import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.api.AuthenticationMechanismFactory;
@@ -63,17 +63,7 @@ import io.undertow.util.ImmediateAuthenticationMechanismFactory;
  */
 public class DeploymentInfo implements Cloneable {
 
-    private static final int DEFAULT_MAJOR_VERSION;
-
-    static {
-        // UNDERTOW-1810. It is possible at runtime that the class executing this logic has been bytecode
-        // transformed to use a different variant of the Servlet API than it was compiled against,
-        // i.e. EE 9's Servlet 5 instead of EE 8's Servlet 4. Since 4 and 5 are functionally equivalent
-        // except for the package rename, support such a scenario by setting the default major spec
-        // version that is supported based on the package name of a Servlet API class.
-        Package servletPackage = ServletContextListener.class.getPackage();
-        DEFAULT_MAJOR_VERSION = servletPackage.getName().startsWith("jakarta.") ? 5 : 4;
-    }
+    private static final int DEFAULT_MAJOR_VERSION = 6;
 
     private String deploymentName;
     private String displayName;
@@ -84,7 +74,7 @@ public class DeploymentInfo implements Cloneable {
     private int majorVersion = DEFAULT_MAJOR_VERSION;
     private int minorVersion = 0;
     private int containerMajorVersion = DEFAULT_MAJOR_VERSION;
-    private int containerMinorVersion = 0;
+    private int containerMinorVersion = 1;
     private Executor executor;
     private Executor asyncExecutor;
     private Path tempDir;
@@ -96,6 +86,7 @@ public class DeploymentInfo implements Cloneable {
     private ConfidentialPortManager confidentialPortManager;
     private boolean allowNonStandardWrappers = false;
     private int defaultSessionTimeout = 60 * 30;
+    private long defaultAsyncContextTimeout = 30000;
     private ConcurrentMap<String, Object> servletContextAttributeBackingMap;
     private ServletSessionConfig servletSessionConfig;
     private String hostName = "localhost";
@@ -121,6 +112,7 @@ public class DeploymentInfo implements Cloneable {
     private boolean sendCustomReasonPhraseOnError = false;
     private boolean useCachedAuthenticationMechanism = true;
     private boolean preservePathOnForward = true;
+    private boolean allowOrphanSession = false;
     private AuthenticationMode authenticationMode = AuthenticationMode.PRO_ACTIVE;
     private ExceptionHandler exceptionHandler;
     private final Map<String, ServletInfo> servlets = new HashMap<>();
@@ -325,6 +317,18 @@ public class DeploymentInfo implements Cloneable {
      */
     public DeploymentInfo setDefaultSessionTimeout(final int defaultSessionTimeout) {
         this.defaultSessionTimeout = defaultSessionTimeout;
+        return this;
+    }
+
+    public long getDefaultAsyncContextTimeout() {
+        return defaultAsyncContextTimeout;
+    }
+
+    /**
+     * @param defaultAsyncContextTimeout The default async context timeout, in milliseconds
+     */
+    public DeploymentInfo setDefaultAsyncContextTimeout(final long defaultAsyncContextTimeout) {
+        this.defaultAsyncContextTimeout = defaultAsyncContextTimeout;
         return this;
     }
 
@@ -1195,7 +1199,7 @@ public class DeploymentInfo implements Cloneable {
     }
 
     /**
-     * Set if if the message passed to {@link javax.servlet.http.HttpServletResponse#sendError(int, String)} should be escaped.
+     * Set if if the message passed to {@link jakarta.servlet.http.HttpServletResponse#sendError(int, String)} should be escaped.
      *
      * If this is false applications must be careful not to use user provided data (such as the URI) in the message
      *
@@ -1278,8 +1282,8 @@ public class DeploymentInfo implements Cloneable {
     }
 
     /**
-     * If this is true then the message parameter of {@link javax.servlet.http.HttpServletResponse#sendError(int, String)} and
-     * {@link javax.servlet.http.HttpServletResponse#setStatus(int, String)} will be used as the HTTP reason phrase in
+     * If this is true then the message parameter of {@link jakarta.servlet.http.HttpServletResponse#sendError(int, String)} and
+     * {@code jakarta.servlet.http.HttpServletResponse.setStatus(int, String)} will be used as the HTTP reason phrase in
      * the response.
      *
      * @param sendCustomReasonPhraseOnError If the parameter to sendError should be used as a HTTP reason phrase
@@ -1416,6 +1420,14 @@ public class DeploymentInfo implements Cloneable {
         return deploymentCompleteListeners;
     }
 
+    public boolean isOrphanSessionAllowed() {
+        return this.allowOrphanSession;
+    }
+
+    public void setOrphanSessionAllowed(boolean allowOrphanSession) {
+        this.allowOrphanSession = allowOrphanSession;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1469,6 +1481,7 @@ public class DeploymentInfo implements Cloneable {
         info.notificationReceivers.addAll(notificationReceivers);
         info.allowNonStandardWrappers = allowNonStandardWrappers;
         info.defaultSessionTimeout = defaultSessionTimeout;
+        info.defaultAsyncContextTimeout = defaultAsyncContextTimeout;
         info.servletContextAttributeBackingMap = servletContextAttributeBackingMap;
         info.servletSessionConfig = servletSessionConfig;
         info.hostName = hostName;
@@ -1512,6 +1525,7 @@ public class DeploymentInfo implements Cloneable {
         info.containerMinorVersion = containerMinorVersion;
         info.deploymentCompleteListeners.addAll(deploymentCompleteListeners);
         info.preservePathOnForward = preservePathOnForward;
+        info.allowOrphanSession = allowOrphanSession;
         return info;
     }
 

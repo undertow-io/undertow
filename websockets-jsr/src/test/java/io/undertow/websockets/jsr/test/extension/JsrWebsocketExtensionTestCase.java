@@ -27,7 +27,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -127,29 +127,7 @@ public class JsrWebsocketExtensionTestCase {
 
         final LinkedBlockingDeque<String> resultQueue  = new LinkedBlockingDeque<>();
 
-        clientChannel.getReceiveSetter().set(new AbstractReceiveListener() {
-            @Override
-            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message)  {
-                String data = message.getData();
-                // WebSocketLogger.ROOT_LOGGER.info("onFullTextMessage() - Client - Received: " + data.getBytes().length + " bytes.");
-                resultQueue.addLast(data);
-            }
-
-            @Override
-            protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
-                message.getData().close();
-                WebSocketLogger.ROOT_LOGGER.info("onFullCloseMessage");
-            }
-
-            @Override
-            protected void onError(WebSocketChannel channel, Throwable error) {
-                WebSocketLogger.ROOT_LOGGER.info("onError");
-                super.onError(channel, error);
-                error.printStackTrace();
-                resultQueue.add("FAILED " + error);
-            }
-
-        });
+        clientChannel.getReceiveSetter().set(new ClientTextReceiveListener(resultQueue));
         clientChannel.resumeReceives();
 
         int LONG_MSG = 125 * 1024;
@@ -189,30 +167,7 @@ public class JsrWebsocketExtensionTestCase {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<String> result = new AtomicReference<>();
 
-        clientChannel.getReceiveSetter().set(new AbstractReceiveListener() {
-            @Override
-            protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) {
-                String data = message.getData();
-                WebSocketLogger.ROOT_LOGGER.info("onFullTextMessage - Client - Received: " + data.getBytes().length + " bytes . Data: " + data);
-                result.set(data);
-                latch.countDown();
-            }
-
-            @Override
-            protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
-                message.getData().close();
-                WebSocketLogger.ROOT_LOGGER.info("onFullCloseMessage");
-            }
-
-            @Override
-            protected void onError(WebSocketChannel channel, Throwable error) {
-                WebSocketLogger.ROOT_LOGGER.info("onError");
-                super.onError(channel, error);
-                error.printStackTrace();
-                latch.countDown();
-            }
-
-        });
+        clientChannel.getReceiveSetter().set(new ClientBinaryReceiveListener(result, latch));
         clientChannel.resumeReceives();
 
         StreamSinkFrameChannel sendChannel = clientChannel.send(WebSocketFrameType.TEXT);
@@ -223,5 +178,68 @@ public class JsrWebsocketExtensionTestCase {
         clientChannel.sendClose();
 
         assertEquals(SEC_WEBSOCKET_EXTENSIONS_EXPECTED, debug.getResponseExtensions().toString());
+    }
+
+    private static class ClientTextReceiveListener extends AbstractReceiveListener {
+        private final LinkedBlockingDeque<String> resultQueue;
+
+        ClientTextReceiveListener(LinkedBlockingDeque<String> resultQueue) {
+            this.resultQueue = resultQueue;
+        }
+
+        @Override
+        protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message)  {
+            String data = message.getData();
+            // WebSocketLogger.ROOT_LOGGER.info("onFullTextMessage() - Client - Received: " + data.getBytes().length + " bytes.");
+            resultQueue.addLast(data);
+        }
+
+        @Override
+        protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
+            message.getData().close();
+            WebSocketLogger.ROOT_LOGGER.info("onFullCloseMessage");
+        }
+
+        @Override
+        protected void onError(WebSocketChannel channel, Throwable error) {
+            WebSocketLogger.ROOT_LOGGER.info("onError");
+            super.onError(channel, error);
+            error.printStackTrace();
+            resultQueue.add("FAILED " + error);
+        }
+
+    }
+
+    private static class ClientBinaryReceiveListener extends AbstractReceiveListener {
+        private final AtomicReference<String> result;
+        private final CountDownLatch latch;
+
+        ClientBinaryReceiveListener(AtomicReference<String> result, CountDownLatch latch) {
+            this.result = result;
+            this.latch = latch;
+        }
+
+        @Override
+        protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) {
+            String data = message.getData();
+            WebSocketLogger.ROOT_LOGGER.info("onFullTextMessage - Client - Received: " + data.getBytes().length + " bytes . Data: " + data);
+            result.set(data);
+            latch.countDown();
+        }
+
+        @Override
+        protected void onFullCloseMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
+            message.getData().close();
+            WebSocketLogger.ROOT_LOGGER.info("onFullCloseMessage");
+        }
+
+        @Override
+        protected void onError(WebSocketChannel channel, Throwable error) {
+            WebSocketLogger.ROOT_LOGGER.info("onError");
+            super.onError(channel, error);
+            error.printStackTrace();
+            latch.countDown();
+        }
+
     }
 }

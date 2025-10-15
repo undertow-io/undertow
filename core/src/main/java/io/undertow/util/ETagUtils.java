@@ -174,7 +174,6 @@ public class ETagUtils {
         List<ETag> response = new ArrayList<>();
 
         SearchingFor searchingFor = SearchingFor.START_OF_VALUE;
-        String currentToken = null;
         int valueStart = 0;
         boolean weak = false;
         boolean malformed = false;

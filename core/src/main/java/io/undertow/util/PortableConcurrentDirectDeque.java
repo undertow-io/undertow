@@ -24,6 +24,8 @@
 
 package io.undertow.util;
 
+import static org.wildfly.common.Assert.checkNotNullParamWithNullPointerException;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Deque;
@@ -330,7 +332,7 @@ public class PortableConcurrentDirectDeque<E>
      * Links e as first element.
      */
     private Node linkFirst(E e) {
-        checkNotNull(e);
+        checkNotNullParamWithNullPointerException("e", e);
         final Node<E> newNode = new Node<>(e);
 
         restartFromHead:
@@ -363,7 +365,7 @@ public class PortableConcurrentDirectDeque<E>
      * Links e as last element.
      */
     private Node linkLast(E e) {
-        checkNotNull(e);
+        checkNotNullParamWithNullPointerException("e", e);
         final Node<E> newNode = new Node<>(e);
 
         restartFromTail:
@@ -398,11 +400,6 @@ public class PortableConcurrentDirectDeque<E>
      * Unlinks non-null node x.
      */
     void unlink(Node<E> x) {
-        // assert x != null;
-        // assert x.item == null;
-        // assert x != PREV_TERMINATOR;
-        // assert x != NEXT_TERMINATOR;
-
         final Node<E> prev = x.prev;
         final Node<E> next = x.next;
         if (prev == null) {
@@ -478,7 +475,7 @@ public class PortableConcurrentDirectDeque<E>
             // TODO: better HOP heuristics
             if (hops < HOPS
                 // always squeeze out interior deleted nodes
-                && (isFirst | isLast))
+                && (isFirst || isLast))
                 return;
 
             // Squeeze out deleted nodes between activePred and
@@ -487,7 +484,7 @@ public class PortableConcurrentDirectDeque<E>
             skipDeletedPredecessors(activeSucc);
 
             // Try to gc-unlink, if possible
-            if ((isFirst | isLast) &&
+            if ((isFirst || isLast) &&
 
                 // Recheck expected state of predecessor and successor
                 (activePred.next == activeSucc) &&
@@ -509,9 +506,6 @@ public class PortableConcurrentDirectDeque<E>
      * Unlinks non-null first node.
      */
     private void unlinkFirst(Node<E> first, Node<E> next) {
-        // assert first != null;
-        // assert next != null;
-        // assert first.item == null;
         for (Node<E> o = null, p = next, q;;) {
             if (p.item != null || (q = p.next) == null) {
                 if (o != null && p.prev != p && first.casNext(next, p)) {
@@ -543,9 +537,6 @@ public class PortableConcurrentDirectDeque<E>
      * Unlinks non-null last node.
      */
     private void unlinkLast(Node<E> last, Node<E> prev) {
-        // assert last != null;
-        // assert prev != null;
-        // assert last.item == null;
         for (Node<E> o = null, p = prev, q;;) {
             if (p.item != null || (q = p.prev) == null) {
                 if (o != null && p.next != p && last.casPrev(prev, p)) {
@@ -637,9 +628,6 @@ public class PortableConcurrentDirectDeque<E>
         whileActive:
         do {
             Node<E> prev = x.prev;
-            // assert prev != null;
-            // assert x != NEXT_TERMINATOR;
-            // assert x != PREV_TERMINATOR;
             Node<E> p = prev;
             findActive:
             for (;;) {
@@ -668,9 +656,6 @@ public class PortableConcurrentDirectDeque<E>
         whileActive:
         do {
             Node<E> next = x.next;
-            // assert next != null;
-            // assert x != NEXT_TERMINATOR;
-            // assert x != PREV_TERMINATOR;
             Node<E> p = next;
             findActive:
             for (;;) {
@@ -769,16 +754,6 @@ public class PortableConcurrentDirectDeque<E>
     // Minor convenience utilities
 
     /**
-     * Throws NullPointerException if argument is null.
-     *
-     * @param v the element
-     */
-    private static void checkNotNull(Object v) {
-        if (v == null)
-            throw new NullPointerException();
-    }
-
-    /**
      * Returns element unless it is null, in which case throws
      * NoSuchElementException.
      *
@@ -827,7 +802,7 @@ public class PortableConcurrentDirectDeque<E>
         // Copy c into a private chain of Nodes
         Node<E> h = null, t = null;
         for (E e : c) {
-            checkNotNull(e);
+            checkNotNullParamWithNullPointerException("e", e);
             Node<E> newNode = new Node<>(e);
             if (h == null)
                 h = t = newNode;
@@ -1054,7 +1029,7 @@ public class PortableConcurrentDirectDeque<E>
      * @throws NullPointerException if the specified element is null
      */
     public boolean removeFirstOccurrence(Object o) {
-        checkNotNull(o);
+        checkNotNullParamWithNullPointerException("o", o);
         for (Node<E> p = first(); p != null; p = succ(p)) {
             E item = p.item;
             if (item != null && o.equals(item) && p.casItem(item, null)) {
@@ -1075,7 +1050,7 @@ public class PortableConcurrentDirectDeque<E>
      * @throws NullPointerException if the specified element is null
      */
     public boolean removeLastOccurrence(Object o) {
-        checkNotNull(o);
+        checkNotNullParamWithNullPointerException("o", o);
         for (Node<E> p = last(); p != null; p = pred(p)) {
             E item = p.item;
             if (item != null && o.equals(item) && p.casItem(item, null)) {
@@ -1171,7 +1146,7 @@ public class PortableConcurrentDirectDeque<E>
         // Copy c into a private chain of Nodes
         Node<E> beginningOfTheEnd = null, last = null;
         for (E e : c) {
-            checkNotNull(e);
+            checkNotNullParamWithNullPointerException("e", e);
             Node<E> newNode = new Node<>(e);
             if (beginningOfTheEnd == null)
                 beginningOfTheEnd = last = newNode;

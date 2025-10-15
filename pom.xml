@@ -23,15 +23,16 @@
     <parent>
         <groupId>org.jboss</groupId>
         <artifactId>jboss-parent</artifactId>
-        <version>35</version>
+        <version>50</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-parent</artifactId>
-    <version>2.2.9.Final-SNAPSHOT</version>
+    <version>2.4.0.Beta1-SNAPSHOT</version>
 
     <name>Undertow</name>
     <description>Undertow</description>
+    <url>https://undertow.io/</url>
 
     <packaging>pom</packaging>
 
@@ -43,6 +44,66 @@
         </license>
     </licenses>
 
+    <developers>
+        <developer>
+            <name>Stuart Douglas</name>
+            <email>stuart.w.douglas@gmail.com</email>
+            <organization>Block,Inc</organization>
+            <organizationUrl>https://block.xyz</organizationUrl>
+            <roles>
+                <role>architect</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>David Lloyd</name>
+            <email>dmlloyd@redhat.com</email>
+            <organization>WildFly</organization>
+            <organizationUrl>https://www.wildfly.org/</organizationUrl>
+            <roles>
+                <role>architect</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Flavia Rainone</name>
+            <email>frainone@redhat.com</email>
+            <organization>WildFly</organization>
+            <organizationUrl>https://www.wildfly.org/</organizationUrl>
+            <roles>
+                <role>lead</role>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Richard Opalka</name>
+            <email>ropalka@redhat.com</email>
+            <organization>WildFly</organization>
+            <organizationUrl>https://www.wildfly.org/</organizationUrl>
+            <roles>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Bartosz Baranowski</name>
+            <email>bbaranowski@redhat.com</email>
+            <organization>WildFly</organization>
+            <organizationUrl>https://www.wildfly.org/</organizationUrl>
+            <roles>
+                <role>developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Jason Lee</name>
+            <email>jlee@redhat.com</email>
+            <organization>WildFly</organization>
+            <organizationUrl>https://www.wildfly.org/</organizationUrl>
+            <roles>
+                <role>developer</role>
+            </roles>
+        </developer>
+    </developers>
+
     <scm>
         <connection>scm:git://github.com/undertow-io/undertow.git</connection>
         <developerConnection>scm:git://github.com/undertow-io/undertow.git</developerConnection>
@@ -50,6 +111,11 @@
     </scm>
 
     <properties>
+        <!-- Nexus Settings -->
+        <nexus.repository.staging>jboss-io</nexus.repository.staging>
+        <nexus.repository.release>releases</nexus.repository.release>
+        <nexus.staging.tag>undertow-${project.version}</nexus.staging.tag>
+
         <!--
             Dependency versions. Please keep alphabetical.
 
@@ -60,51 +126,58 @@
             versions, add the artifactId or other qualifier to the property name.
             For example: <version.org.jboss.as.console>
          -->
-        <version.com.h2database>1.4.200</version.com.h2database>
-        <version.easymock>4.2</version.easymock>
-        <version.junit>4.13</version.junit>
-        <version.netty>4.1.50.Final</version.netty>
-        <version.org.apache.directory.server>2.0.0-M15</version.org.apache.directory.server>
+        <version.com.h2database>2.1.214</version.com.h2database>
+        <version.easymock>4.3</version.easymock>
+        <version.jakarta.annotation.jakarta-annotation-api>2.1.1</version.jakarta.annotation.jakarta-annotation-api>
+        <version.jakarta.servlet.jakarta-servlet-api>6.1.0</version.jakarta.servlet.jakarta-servlet-api>
+        <version.jakarta.websocket.jakarta-websocket-api>2.1.0</version.jakarta.websocket.jakarta-websocket-api>
+        <version.junit>4.13.2</version.junit>
+        <version.netty>4.1.82.Final</version.netty>
+        <version.org.apache.directory.server>2.0.0.AM26</version.org.apache.directory.server>
         <version.org.apache.httpcomponents>4.5.12</version.org.apache.httpcomponents>
-        <version.org.jboss.classfilewriter>1.2.4.Final</version.org.jboss.classfilewriter>
-        <version.org.jboss.logging>3.4.1.Final</version.org.jboss.logging>
+        <version.org.jboss.classfilewriter>1.2.5.Final</version.org.jboss.classfilewriter>
+        <version.org.jboss.logging>3.4.3.Final</version.org.jboss.logging>
         <version.org.jboss.logging.processor>2.2.1.Final</version.org.jboss.logging.processor>
-        <version.org.jboss.logmanager>2.1.14.Final</version.org.jboss.logmanager>
-        <version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.3_spec>2.0.1.Final</version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.3_spec>
-        <version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec>2.0.0.Final</version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec>
-        <version.org.jboss.spec.javax.websockets>2.0.0.Final</version.org.jboss.spec.javax.websockets>
-        <version.xnio>3.8.0.Final</version.xnio>
+        <version.org.jboss.logmanager>2.1.19.Final</version.org.jboss.logmanager>
+        <version.xnio>3.8.16.Final</version.xnio>
         <!-- TODO remove this dependency once xnio upgrades to latest jboss threads -->
-        <version.org.jboss.threads>3.1.0.Final</version.org.jboss.threads>
-        <version.org.wildfly.common>1.5.4.Final</version.org.wildfly.common>
+        <version.org.jboss.threads>3.9.1</version.org.jboss.threads>
+        <version.org.wildfly.common>1.6.0.Final</version.org.wildfly.common>
         <version.org.wildfly.client-config>1.0.1.Final</version.org.wildfly.client-config>
 
         <!-- jacoco -->
         <version.org.jacoco>0.7.9</version.org.jacoco>
         <jacoco.agent.argLine></jacoco.agent.argLine>
 
+        <!-- Spotbugs properties -->
+        <spotbugs.exclude.filter.file>../spotbugs-exclude.xml</spotbugs.exclude.filter.file>
+
         <!-- Surefire args -->
+        <modular.jdk.props></modular.jdk.props>
         <surefire.jpda.args/>
-        <surefire.system.args>-ea ${surefire.jpda.args} -Xmx1024m</surefire.system.args>
+        <surefire.system.args>-ea ${surefire.jpda.args} -Xmx1024m ${modular.jdk.props}</surefire.system.args>
         <!--by default run all tests-->
         <test.categories>io.undertow.testutils.category.UnitTest OR NOT io.undertow.testutils.category.UnitTest</test.categories>
 
         <!-- Checkstyle configuration -->
         <linkXRef>false</linkXRef>
-        <version.io.undertow.build.checkstyle-config>1.0.1.Final</version.io.undertow.build.checkstyle-config>
-        <version.com.github.spotbugs-maven-plugin>3.1.7</version.com.github.spotbugs-maven-plugin>
-        <version.org.eclipse.jetty.alpn>1.1.3.v20160715</version.org.eclipse.jetty.alpn>
+        <version.io.undertow.build.checkstyle-config>2.0.0.Final</version.io.undertow.build.checkstyle-config>
+        <version.com.github.spotbugs-maven-plugin>4.7.3.4</version.com.github.spotbugs-maven-plugin>
 
         <version.com.twitter.hpack>1.0.2</version.com.twitter.hpack>
 
         <!-- Non-default maven plugin versions and configuration -->
-        <version.org.wildfly.openssl>1.0.4.Final</version.org.wildfly.openssl>
-        <version.checkstyle>7.1</version.checkstyle>
+        <version.org.wildfly.openssl>2.2.1.Final</version.org.wildfly.openssl>
         <version.bundle.plugin>5.1.1</version.bundle.plugin>
 
         <version.jmh>1.21</version.jmh>
-
-        <version.org.wildfly.extras.batavia>1.0.4.Final</version.org.wildfly.extras.batavia>
+        <maven.compiler.release>17</maven.compiler.release>
+        <maven.compiler.source>${maven.compiler.release}</maven.compiler.source>
+        <maven.compiler.target>${maven.compiler.release}</maven.compiler.target>
+        <maven.javadoc.plugin.quiet>true</maven.javadoc.plugin.quiet>
+        <maven.compiler.showDeprecation>false</maven.compiler.showDeprecation>
+        <maven.compiler.showWarnings>false</maven.compiler.showWarnings>
+        <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
     </properties>
 
     <modules>
@@ -114,7 +187,6 @@
         <module>examples</module>
         <module>websockets-jsr</module>
         <module>benchmarks</module>
-        <module>jakartaee9</module>
     </modules>
 
     <build>
@@ -135,6 +207,7 @@
                         following setting.
                     -->
                     <doclint>none</doclint>
+                    <quiet>${maven.javadoc.plugin.quiet}</quiet>
                     <!-- @implNote is a non-standard tag and must be declared or the build will fail -->
                     <tags>
                         <tag>
@@ -143,7 +216,7 @@
                             <head>Implementation Note:</head>
                         </tag>
                     </tags>
-                    <source>1.8</source> 
+                    <source>${maven.compiler.release}</source>
                 </configuration>
                 <executions>
                     <execution>
@@ -172,6 +245,23 @@
         </plugins>
         <pluginManagement>
             <plugins>
+                <!-- Compiler -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${version.compiler.plugin}</version>
+                    <configuration>
+                        <!-- fork is needed so compiler args can be used -->
+                        <fork>true</fork>
+                        <failOnError>true</failOnError>
+                        <compilerArgs>
+                            <arg>-J--add-opens=java.base/java.lang=ALL-UNNAMED</arg>
+                        </compilerArgs>
+                        <!-- need to specify directly, for some reason properties are ignored -->
+                        <showDeprecation>${maven.compiler.showDeprecation}</showDeprecation>
+                        <showWarnings>${maven.compiler.showWarnings}</showWarnings>
+                    </configuration>
+                </plugin>
 
                 <!-- Checkstyle -->
                 <plugin>
@@ -212,7 +302,7 @@
                     <artifactId>spotbugs-maven-plugin</artifactId>
                     <version>${version.com.github.spotbugs-maven-plugin}</version>
                     <configuration>
-                        <excludeFilterFile>../spotbugs-exclude.xml</excludeFilterFile>
+                        <excludeFilterFile>${spotbugs.exclude.filter.file}</excludeFilterFile>
                     </configuration>
                     <executions>
                         <execution>
@@ -231,7 +321,6 @@
                     <version>${version.surefire.plugin}</version>
                     <configuration>
                         <groups>${test.categories}</groups>
-                        <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     </configuration>
                 </plugin>
                 <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
@@ -343,6 +432,30 @@
             </dependency>
 
             <dependency>
+                <groupId>jakarta.servlet</groupId>
+                <artifactId>jakarta.servlet-api</artifactId>
+                <version>${version.jakarta.servlet.jakarta-servlet-api}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>jakarta.annotation</groupId>
+                <artifactId>jakarta.annotation-api</artifactId>
+                <version>${version.jakarta.annotation.jakarta-annotation-api}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>jakarta.websocket</groupId>
+                <artifactId>jakarta.websocket-api</artifactId>
+                <version>${version.jakarta.websocket.jakarta-websocket-api}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>jakarta.websocket</groupId>
+                <artifactId>jakarta.websocket-client-api</artifactId>
+                <version>${version.jakarta.websocket.jakarta-websocket-api}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.jboss.classfilewriter</groupId>
                 <artifactId>jboss-classfilewriter</artifactId>
                 <version>${version.org.jboss.classfilewriter}</version>
@@ -353,13 +466,6 @@
                 <artifactId>junit</artifactId>
                 <version>${version.junit}</version>
                 <scope>test</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>org.eclipse.jetty.alpn</groupId>
-                <artifactId>alpn-api</artifactId>
-                <version>${version.org.eclipse.jetty.alpn}</version>
-                <scope>provided</scope>
             </dependency>
 
             <dependency>
@@ -385,7 +491,14 @@
 
             <dependency>
                 <groupId>org.apache.directory.server</groupId>
-                <artifactId>apacheds-all</artifactId>
+                <artifactId>apacheds-test-framework</artifactId>
+                <version>${version.org.apache.directory.server}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.directory.server</groupId>
+                <artifactId>apacheds-interceptor-kerberos</artifactId>
                 <version>${version.org.apache.directory.server}</version>
                 <scope>test</scope>
             </dependency>
@@ -420,25 +533,6 @@
                 <groupId>org.jboss.logmanager</groupId>
                 <artifactId>jboss-logmanager</artifactId>
                 <version>${version.org.jboss.logmanager}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.jboss.spec.javax.annotation</groupId>
-                <artifactId>jboss-annotations-api_1.3_spec</artifactId>
-                <version>${version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.3_spec}</version>
-            </dependency>
-
-            <!-- TODO: replace with JBoss Spec Artifact-->
-            <dependency>
-                <groupId>org.jboss.spec.javax.servlet</groupId>
-                <artifactId>jboss-servlet-api_4.0_spec</artifactId>
-                <version>${version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.jboss.spec.javax.websocket</groupId>
-                <artifactId>jboss-websocket-api_1.1_spec</artifactId>
-                <version>${version.org.jboss.spec.javax.websockets}</version>
             </dependency>
 
             <dependency>
@@ -510,18 +604,6 @@
                 <scope>provided</scope>
             </dependency>
 
-            <dependency>
-                <groupId>org.wildfly.extras.batavia</groupId>
-                <artifactId>transformer-api</artifactId>
-                <version>${version.org.wildfly.extras.batavia}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.wildfly.extras.batavia</groupId>
-                <artifactId>transformer-impl-eclipse</artifactId>
-                <version>${version.org.wildfly.extras.batavia}</version>
-            </dependency>
-
         </dependencies>
     </dependencyManagement>
 
@@ -540,52 +622,6 @@
                         <artifactId>spotbugs-maven-plugin</artifactId>
                     </plugin>
                 </plugins>
-            </build>
-        </profile>
-        <profile>
-            <!-- Temporary profile to workaround issue described here https://github.com/spotbugs/spotbugs/issues/756. -->
-            <id>spotbugs-jdk11</id>
-            <activation>
-                <jdk>11</jdk>
-                <property>
-                    <name>findbugs</name> <!-- not modified just for compatibility reason -->
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>com.github.spotbugs</groupId>
-                        <artifactId>spotbugs-maven-plugin</artifactId>
-                        <configuration>
-                            <failOnError>false</failOnError>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>jdk9</id>
-            <activation>
-                <jdk>9</jdk>
-            </activation>
-            <build>
-                <pluginManagement>
-                    <plugins>
-                        <plugin>
-                            <groupId>org.apache.maven.plugins</groupId>
-                            <artifactId>maven-compiler-plugin</artifactId>
-                            <version>${version.compiler.plugin}</version>
-                            <configuration>
-                                <!-- fork is needed so compiler args can be used -->
-                                <fork>true</fork>
-                                <failOnError>false</failOnError>
-                                <compilerArgs>
-                                    <arg>-J--add-opens=java.base/java.lang=ALL-UNNAMED</arg>
-                                </compilerArgs>
-                            </configuration>
-                        </plugin>
-                    </plugins>
-                </pluginManagement>
             </build>
         </profile>
 
@@ -669,6 +705,28 @@
                 <module>karaf</module>
             </modules>
         </profile>
-    </profiles>
 
+        <profile>
+            <id>jdk18</id>
+            <activation>
+                <jdk>[18,)</jdk>
+            </activation>
+            <properties>
+                <modular.jdk.props>-Djava.security.manager=allow</modular.jdk.props>
+            </properties>
+        </profile>
+		<profile>
+			<id>verbose</id>
+			<activation>
+				<property>
+					<name>findbugs</name>
+				</property>
+			</activation>
+			<properties>
+				<maven.javadoc.plugin.quiet>false</maven.javadoc.plugin.quiet>
+				<maven.compiler.showDeprecation>true</maven.compiler.showDeprecation>
+				<maven.compiler.showWarnings>false</maven.compiler.showWarnings>
+			</properties>
+		</profile>
+    </profiles>
 </project>

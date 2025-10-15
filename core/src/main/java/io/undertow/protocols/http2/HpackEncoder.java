@@ -163,6 +163,7 @@ public class HpackEncoder {
             if (headers != currentHeaders) {
                 throw new IllegalStateException();
             }
+            it = headers.fiNext(it);
         }
         while (it != -1) {
             HeaderValues values = headers.fiCurrent(it);
@@ -239,7 +240,6 @@ public class HpackEncoder {
                         }
                     }
                     if(overflowing) {
-                        it = headers.fiNext(it);
                         this.headersIterator = it;
                         this.overflowLength = current.position();
                         return State.OVERFLOW;

@@ -18,7 +18,7 @@
 
 package io.undertow.examples.servlet;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.Handlers;
 import io.undertow.Undertow;

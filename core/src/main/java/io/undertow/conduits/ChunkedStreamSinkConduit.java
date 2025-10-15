@@ -200,6 +200,9 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
 
     @Override
     public void truncateWrites() throws IOException {
+        if (anyAreSet(state, FLAG_FINISHED)) {
+            return;
+        }
         try {
             if (lastChunkBuffer != null) {
                 lastChunkBuffer.close();
@@ -214,9 +217,10 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
 
     @Override
     public long write(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
-        for (int i = offset; i < length; ++i) {
-            if (srcs[i].hasRemaining()) {
-                return write(srcs[i]);
+        for (int i = 0; i < length; i++) {
+            ByteBuffer srcBuffer = srcs[offset + i];
+            if (srcBuffer.hasRemaining()) {
+                return write(srcBuffer);
             }
         }
         return 0;
@@ -258,6 +262,9 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
 
     @Override
     public boolean flush() throws IOException {
+        if (anyAreSet(state, FLAG_FINISHED)) {
+            return true;
+        }
         this.state |= FLAG_FIRST_DATA_WRITTEN;
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             if (anyAreSet(state, FLAG_NEXT_SHUTDOWN)) {
@@ -300,10 +307,6 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         if(anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             return;
         }
-        if (this.chunkleft != 0) {
-            UndertowLogger.REQUEST_IO_LOGGER.debugf("Channel closed mid-chunk");
-            next.truncateWrites();
-        }
         if (!anyAreSet(state, FLAG_FIRST_DATA_WRITTEN)) {
             //if no data was actually sent we just remove the transfer encoding header, and set content length 0
             //TODO: is this the best way to do it?
@@ -311,12 +314,28 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             responseHeaders.put(Headers.CONTENT_LENGTH, "0"); //according to the spec we don't actually need this, but better to be safe
             responseHeaders.remove(Headers.TRANSFER_ENCODING);
             state |= FLAG_NEXT_SHUTDOWN | FLAG_WRITES_SHUTDOWN;
+            try {
+                flush();
+            } catch (IOException ignore) {
+                // just log it at debug level, this is nothing but an attempt to flush the last bytes
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(ignore);
+            }
             if(anyAreSet(state, CONF_FLAG_PASS_CLOSE)) {
                 next.terminateWrites();
             }
         } else {
             createLastChunk(false);
             state |= FLAG_WRITES_SHUTDOWN;
+            try {
+                flush();
+            } catch (IOException ignore) {
+                // just log it at debug level, this is nothing but an attempt to flush the last bytes
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(ignore);
+            }
+        }
+        if (this.chunkleft != 0) {
+            UndertowLogger.REQUEST_IO_LOGGER.debugf("Channel closed mid-chunk");
+            next.truncateWrites();
         }
     }
 

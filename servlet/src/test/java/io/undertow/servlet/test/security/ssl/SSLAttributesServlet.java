@@ -21,12 +21,12 @@ package io.undertow.servlet.test.security.ssl;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.security.cert.X509Certificate;
-import javax.servlet.ServletException;
-import javax.servlet.annotation.HttpConstraint;
-import javax.servlet.annotation.ServletSecurity;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.HttpConstraint;
+import jakarta.servlet.annotation.ServletSecurity;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * @author <a href="mailto:tomaz.cerar@redhat.com">Tomaz Cerar</a> (c) 2013 Red Hat Inc.
@@ -39,18 +39,20 @@ public class SSLAttributesServlet extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         PrintWriter pw = resp.getWriter();
         if (req.getServletPath().equals("/id")) {
-            pw.write(req.getAttribute("javax.servlet.request.ssl_session_id").toString());
+            pw.write(req.getAttribute("jakarta.servlet.request.ssl_session_id").toString());
         } else if (req.getServletPath().equals("/key-size")) {
-            pw.write(req.getAttribute("javax.servlet.request.key_size").toString());
+            pw.write(req.getAttribute("jakarta.servlet.request.key_size").toString());
         } else if (req.getServletPath().equals("/cipher-suite")) {
-            pw.write(req.getAttribute("javax.servlet.request.cipher_suite").toString());
+            pw.write(req.getAttribute("jakarta.servlet.request.cipher_suite").toString());
+        } else if (req.getServletPath().equals("/secure-protocol")) {
+            pw.write(req.getAttribute("jakarta.servlet.request.secure_protocol").toString());
         } else if (req.getServletPath().equals("/cert")) {
-            final X509Certificate[] attribute = (X509Certificate[]) req.getAttribute("javax.servlet.request.X509Certificate");
+            final X509Certificate[] attribute = (X509Certificate[]) req.getAttribute("jakarta.servlet.request.X509Certificate");
             if (attribute!=null){
                 pw.write(attribute[0].getSerialNumber().toString());
             }
         } else if (req.getServletPath().equals("/cert-dn")) {
-            final X509Certificate[] attribute = (X509Certificate[]) req.getAttribute("javax.servlet.request.X509Certificate");
+            final X509Certificate[] attribute = (X509Certificate[]) req.getAttribute("jakarta.servlet.request.X509Certificate");
             pw.write(attribute != null && attribute.length > 0? attribute[0].getSubjectDN().toString() : "null");
         }
         pw.close();

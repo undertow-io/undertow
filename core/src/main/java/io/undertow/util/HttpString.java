@@ -18,16 +18,16 @@
 
 package io.undertow.util;
 
+import static java.lang.Integer.signum;
+import static java.lang.System.arraycopy;
+import static java.util.Arrays.copyOfRange;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
-
-import static java.lang.Integer.signum;
-import static java.lang.System.arraycopy;
-import static java.util.Arrays.copyOfRange;
 
 import io.undertow.UndertowMessages;
 
@@ -105,6 +105,13 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
 
     HttpString(final String string, int orderInt) {
         this.orderInt = orderInt;
+        this.bytes = toByteArray(string);
+        this.hashCode = calcHashCode(bytes);
+        this.string = string;
+        checkForNewlines();
+    }
+
+    private static byte[] toByteArray(final String string) {
         final int len = string.length();
         final byte[] bytes = new byte[len];
         for (int i = 0; i < len; i++) {
@@ -114,10 +121,7 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
             }
             bytes[i] = (byte) c;
         }
-        this.bytes = bytes;
-        this.hashCode = calcHashCode(bytes);
-        this.string = string;
-        checkForNewlines();
+        return bytes;
     }
 
     private void checkForNewlines() {
@@ -340,7 +344,6 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
      * @return the string
      */
     @Override
-    @SuppressWarnings("deprecation")
     public String toString() {
         if (string == null) {
             string = new String(bytes, java.nio.charset.StandardCharsets.US_ASCII);
@@ -357,13 +360,9 @@ public final class HttpString implements Comparable<HttpString>, Serializable {
         }
     }
 
-    static int hashCodeOf(String headerName) {
-        int hc = 17;
-
-        for (int i = 0; i < headerName.length(); ++i) {
-            hc = (hc << 4) + hc + higher((byte) headerName.charAt(i));
-        }
-        return hc;
+    static int hashCodeOf(final String headerName) {
+        final byte[] bytes = toByteArray(headerName);
+        return calcHashCode(bytes);
     }
 
     public boolean equalToString(String headerName) {

@@ -18,15 +18,6 @@
 
 package io.undertow.server.protocol.http2;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.function.Supplier;
-
-import static java.nio.charset.StandardCharsets.ISO_8859_1;
-
-import javax.net.ssl.SSLSession;
-
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.HeadStreamSinkConduit;
@@ -43,6 +34,7 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.server.protocol.http.HttpRequestParser;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
@@ -52,16 +44,26 @@ import io.undertow.util.Methods;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
+import io.undertow.util.URLUtils;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.channels.Channels;
 import org.xnio.conduits.StreamSinkConduit;
 
+import javax.net.ssl.SSLSession;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.Deque;
+import java.util.Map;
+import java.util.function.Supplier;
+
 import static io.undertow.protocols.http2.Http2Channel.AUTHORITY;
 import static io.undertow.protocols.http2.Http2Channel.METHOD;
 import static io.undertow.protocols.http2.Http2Channel.PATH;
 import static io.undertow.protocols.http2.Http2Channel.SCHEME;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 /**
  * The recieve listener for a Http2 connection.
@@ -78,10 +80,11 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
     private final String encoding;
     private final boolean decode;
     private final StringBuilder decodeBuffer = new StringBuilder();
-    private final boolean allowEncodingSlash;
+    private final boolean slashDecodingFlag;
     private final int bufferSize;
     private final int maxParameters;
     private final boolean recordRequestStartTime;
+    private final boolean allowUnescapedCharactersInUrl;
 
     private final ConnectorStatisticsImpl connectorStatistics;
 
@@ -91,7 +94,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         this.bufferSize = bufferSize;
         this.connectorStatistics = connectorStatistics;
         this.maxEntitySize = undertowOptions.get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
-        this.allowEncodingSlash = undertowOptions.get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
+        this.slashDecodingFlag = URLUtils.getSlashDecodingFlag(undertowOptions);
         this.decode = undertowOptions.get(UndertowOptions.DECODE_URL, true);
         this.maxParameters = undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS);
         this.recordRequestStartTime = undertowOptions.get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
@@ -100,6 +103,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         } else {
             this.encoding = null;
         }
+        this.allowUnescapedCharactersInUrl = undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
     }
 
     @Override
@@ -188,8 +192,8 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         }
 
         try {
-            Connectors.setExchangeRequestPath(exchange, path, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
-        } catch (ParameterLimitException e) {
+            Connectors.setExchangeRequestPath(exchange, path, encoding, decode, slashDecodingFlag, decodeBuffer, maxParameters);
+        } catch (ParameterLimitException | BadRequestException e) {
             //this can happen if max parameters is exceeded
             UndertowLogger.REQUEST_IO_LOGGER.debug("Failed to set request path", e);
             exchange.setStatusCode(StatusCodes.BAD_REQUEST);
@@ -211,6 +215,8 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
      * Handles the initial request when the exchange was started by a HTTP upgrade.
      *
      * @param initial The initial upgrade request that started the HTTP2 connection
+     * @param channel               the channel that received the request
+     * @param data                  any extra data read by the channel that has not been parsed yet
      */
     void handleInitialRequest(HttpServerExchange initial, Http2Channel channel, byte[] data) {
         //we have a request
@@ -229,23 +235,27 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
             exchange.putAttachment(HttpAttachments.REQUEST_TRAILERS, initial.getAttachment(HttpAttachments.REQUEST_TRAILERS));
         }
         Connectors.setRequestStartTime(initial, exchange);
-        connection.setExchange(exchange);
-        exchange.setRequestScheme(initial.getRequestScheme());
-        exchange.setRequestMethod(initial.getRequestMethod());
-        exchange.setQueryString(initial.getQueryString());
         if (data != null) {
             Connectors.ungetRequestBytes(exchange, new ImmediatePooledByteBuffer(ByteBuffer.wrap(data)));
         }
         Connectors.terminateRequest(exchange);
-        String uri = exchange.getQueryString().isEmpty() ? initial.getRequestURI() : initial.getRequestURI() + '?' + exchange.getQueryString();
-        try {
-            Connectors.setExchangeRequestPath(exchange, uri, encoding, decode, allowEncodingSlash, decodeBuffer, maxParameters);
-        } catch (ParameterLimitException e) {
-            exchange.setStatusCode(StatusCodes.BAD_REQUEST);
-            exchange.endExchange();
-            return;
+        connection.setExchange(exchange);
+        exchange.setRequestScheme(initial.getRequestScheme());
+        exchange.setRequestMethod(initial.getRequestMethod());
+        exchange.setQueryString(initial.getQueryString());
+        for (Map.Entry<String, Deque<String>> pathParamEntry: initial.getPathParameters().entrySet()) {
+            for (String pathParamValue : pathParamEntry.getValue()) {
+                exchange.addPathParam(pathParamEntry.getKey(), pathParamValue);
+            }
         }
-
+        for (Map.Entry<String, Deque<String>> queryParamEntry: initial.getQueryParameters().entrySet()) {
+            for (String queryParamValue : queryParamEntry.getValue()) {
+                exchange.addQueryParam(queryParamEntry.getKey(), queryParamValue);
+            }
+        }
+        exchange.setRequestURI(initial.getRequestURI(), initial.isHostIncludedInRequestURI());
+        exchange.setRelativePath(initial.getRelativePath());
+        exchange.setRequestPath(initial.getRequestPath());
         handleCommonSetup(sink, exchange, connection);
         Connectors.executeRootHandler(rootHandler, exchange);
     }
@@ -318,7 +328,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         }
 
         // verify content of request pseudo-headers. Each header should only have a single value.
-        if (headers.contains(PATH)) {
+        if (headers.contains(PATH) && !allowUnescapedCharactersInUrl) {
             for (byte b: headers.get(PATH).getFirst().getBytes(ISO_8859_1)) {
                 if (!HttpRequestParser.isTargetCharacterAllowed((char)b)){
                     return false;

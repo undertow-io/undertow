@@ -58,6 +58,9 @@ public class ClassPathResourceManager implements ResourceManager {
 
     @Override
     public Resource getResource(final String path) throws IOException {
+        if( path == null ) {
+            return null;
+        }
         String modPath = path;
         if(modPath.startsWith("/")) {
             modPath = path.substring(1);

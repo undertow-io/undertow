@@ -21,6 +21,7 @@ import io.undertow.servlet.api.InstanceFactory;
 import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
+import io.undertow.util.Headers;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.jsr.annotated.AnnotatedEndpoint;
@@ -28,10 +29,10 @@ import io.undertow.websockets.jsr.handshake.HandshakeUtil;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import org.xnio.IoUtils;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.websocket.Endpoint;
-import javax.websocket.Extension;
-import javax.websocket.server.ServerEndpointConfig;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.websocket.Endpoint;
+import jakarta.websocket.Extension;
+import jakarta.websocket.server.ServerEndpointConfig;
 import java.net.URI;
 import java.security.Principal;
 import java.util.Collections;
@@ -117,8 +118,10 @@ public final class EndpointSessionHandler implements WebSocketConnectionCallback
             } else {
                 endpointInstance = (InstanceHandle<Endpoint>) instance;
             }
-
-            UndertowSession session = new UndertowSession(channel, URI.create(exchange.getRequestURI()), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(), this, principal, endpointInstance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config, channel.getSubProtocol(), Collections.<Extension>emptyList(), null);
+            final String scheme = channel.getRequestScheme() + "://";
+            final String host = exchange.getRequestHeader(Headers.HOST_STRING);
+            final String path = exchange.getRequestURI();
+            UndertowSession session = new UndertowSession(channel, URI.create(scheme + host + path), exchange.getAttachment(HandshakeUtil.PATH_PARAMS), exchange.getRequestParameters(), this, principal, endpointInstance, config.getEndpointConfiguration(), exchange.getQueryString(), config.getEncodingFactory().createEncoding(config.getEndpointConfiguration()), config, channel.getSubProtocol(), Collections.<Extension>emptyList(), null);
             config.addOpenSession(session);
 
             session.setMaxBinaryMessageBufferSize(getContainer().getDefaultMaxBinaryMessageBufferSize());

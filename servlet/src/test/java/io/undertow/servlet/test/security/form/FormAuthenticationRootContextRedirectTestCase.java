@@ -18,7 +18,7 @@
 
 package io.undertow.servlet.test.security.form;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import java.io.IOException;
 import java.net.URI;

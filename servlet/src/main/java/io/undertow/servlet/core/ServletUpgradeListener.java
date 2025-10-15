@@ -21,7 +21,7 @@ package io.undertow.servlet.core;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
-import javax.servlet.http.HttpUpgradeHandler;
+import jakarta.servlet.http.HttpUpgradeHandler;
 
 import org.xnio.ChannelListener;
 import org.xnio.StreamConnection;

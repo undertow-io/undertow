@@ -18,10 +18,10 @@
 
 package io.undertow.protocols.http2;
 
+import io.undertow.UndertowMessages;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
-import io.undertow.UndertowMessages;
 
 /**
  * Parser that supports push back when not all data can be read.
@@ -46,6 +46,7 @@ public abstract class Http2PushBackParser {
         int used = 0;
         ByteBuffer dataToParse = data;
         int oldLimit = data.limit();
+        Throwable original = null;
         try {
             if (pushedBackData != null) {
                 int toCopy = Math.min(remainingData - pushedBackData.length, data.remaining());
@@ -63,28 +64,48 @@ public abstract class Http2PushBackParser {
             used = rem - dataToParse.remaining();
             if(!isFinished() && remainingData > 0 && used == 0 && dataToParse.remaining() >= remainingData) {
                 if(cnt++ == 100) {
-                    throw UndertowMessages.MESSAGES.parserDidNotMakeProgress();
+                    original = UndertowMessages.MESSAGES.parserDidNotMakeProgress();
                 }
             }
-
+        } catch (Throwable t) {
+            original = t;
         } finally {
             //it is possible that we finished the parsing without using up all the data
             //and the rest is to be consumed by the stream itself
-            if (finished) {
-                data.limit(oldLimit);
-                return;
+            try {
+                if (finished) {
+                    data.limit(oldLimit);
+                } else {
+                    int leftOver = dataToParse.remaining();
+                    if (leftOver > 0) {
+                        pushedBackData = new byte[leftOver];
+                        dataToParse.get(pushedBackData);
+                    } else {
+                        pushedBackData = null;
+                    }
+                    data.limit(oldLimit);
+                    remainingData -= used;
+                    if (remainingData == 0) {
+                        finished = true;
+                    }
+                }
+            } catch (Throwable t) {
+                if(original != null) {
+                    original.addSuppressed(t);
+                } else {
+                    original = t;
+                }
             }
-            int leftOver = dataToParse.remaining();
-            if (leftOver > 0) {
-                pushedBackData = new byte[leftOver];
-                dataToParse.get(pushedBackData);
-            } else {
-                pushedBackData = null;
-            }
-            data.limit(oldLimit);
-            remainingData -= used;
-            if (remainingData == 0) {
-                finished = true;
+            if (original != null) {
+                if (original instanceof RuntimeException) {
+                    throw (RuntimeException) original;
+                }
+                if (original instanceof Error) {
+                    throw (Error) original;
+                }
+                if (original instanceof IOException) {
+                    throw (IOException) original;
+                }
             }
         }
     }
@@ -102,9 +123,10 @@ public abstract class Http2PushBackParser {
         finished = true;
     }
 
-    protected void moreData(int data) {
+    protected boolean moreData(int data) {
         finished = false;
         this.remainingData += data;
+        return true;
     }
 
     public int getFrameLength() {

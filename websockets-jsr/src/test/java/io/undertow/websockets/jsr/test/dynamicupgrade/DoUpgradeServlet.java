@@ -20,15 +20,15 @@ package io.undertow.websockets.jsr.test.dynamicupgrade;
 
 import io.undertow.websockets.jsr.ServerWebSocketContainer;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.websocket.ContainerProvider;
-import javax.websocket.Decoder;
-import javax.websocket.Encoder;
-import javax.websocket.Extension;
-import javax.websocket.server.ServerEndpointConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.websocket.ContainerProvider;
+import jakarta.websocket.Decoder;
+import jakarta.websocket.Encoder;
+import jakarta.websocket.Extension;
+import jakarta.websocket.server.ServerEndpointConfig;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -41,50 +41,61 @@ public class DoUpgradeServlet extends HttpServlet {
 
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
-        ((ServerWebSocketContainer)ContainerProvider.getWebSocketContainer()).doUpgrade(req, resp, new ServerEndpointConfig() {
-            @Override
-            public Class<?> getEndpointClass() {
-                if(req.getParameter("annotated") != null) {
-                    return EchoEndpoint.class;
-                } else {
-                    return EchoProgramaticEndpoint.class;
-                }
-            }
+        ((ServerWebSocketContainer)ContainerProvider.getWebSocketContainer()).doUpgrade(req,
+                resp,
+                new UpgradeServerEndpointConfig(req),
+                Collections.singletonMap("foo", req.getPathInfo()));
+    }
 
-            @Override
-            public String getPath() {
-                return req.getPathInfo();
-            }
+    private static class UpgradeServerEndpointConfig implements ServerEndpointConfig {
+        private final HttpServletRequest req;
 
-            @Override
-            public List<String> getSubprotocols() {
-                return Collections.emptyList();
-            }
+        UpgradeServerEndpointConfig(HttpServletRequest req) {
+            this.req = req;
+        }
 
-            @Override
-            public List<Extension> getExtensions() {
-                return Collections.emptyList();
+        @Override
+        public Class<?> getEndpointClass() {
+            if(req.getParameter("annotated") != null) {
+                return EchoEndpoint.class;
+            } else {
+                return EchoProgramaticEndpoint.class;
             }
+        }
 
-            @Override
-            public Configurator getConfigurator() {
-                return null;
-            }
+        @Override
+        public String getPath() {
+            return req.getPathInfo();
+        }
 
-            @Override
-            public List<Class<? extends Encoder>> getEncoders() {
-                return Collections.emptyList();
-            }
+        @Override
+        public List<String> getSubprotocols() {
+            return Collections.emptyList();
+        }
 
-            @Override
-            public List<Class<? extends Decoder>> getDecoders() {
-                return Collections.emptyList();
-            }
+        @Override
+        public List<Extension> getExtensions() {
+            return Collections.emptyList();
+        }
 
-            @Override
-            public Map<String, Object> getUserProperties() {
-                return Collections.emptyMap();
-            }
-        }, Collections.singletonMap("foo", req.getPathInfo()));
+        @Override
+        public Configurator getConfigurator() {
+            return null;
+        }
+
+        @Override
+        public List<Class<? extends Encoder>> getEncoders() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public List<Class<? extends Decoder>> getDecoders() {
+            return Collections.emptyList();
+        }
+
+        @Override
+        public Map<String, Object> getUserProperties() {
+            return Collections.emptyMap();
+        }
     }
 }

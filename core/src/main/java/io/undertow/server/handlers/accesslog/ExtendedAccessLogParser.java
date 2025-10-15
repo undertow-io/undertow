@@ -192,7 +192,7 @@ public class ExtendedAccessLogParser {
     }
 
     public ExchangeAttribute parse(String pattern) {
-        List<ExchangeAttribute> list = new ArrayList<ExchangeAttribute>();
+        List<ExchangeAttribute> list = new ArrayList<>();
 
         PatternTokenizer tokenizer = new PatternTokenizer(pattern);
         try {

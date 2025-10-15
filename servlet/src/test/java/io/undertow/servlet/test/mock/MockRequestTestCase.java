@@ -32,23 +32,24 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.servlet.AsyncContext;
-import javax.servlet.DispatcherType;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.ServletInputStream;
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.WriteListener;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpUpgradeHandler;
-import javax.servlet.http.Part;
+import jakarta.servlet.AsyncContext;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletConnection;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.WriteListener;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpUpgradeHandler;
+import jakarta.servlet.http.Part;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -251,11 +252,6 @@ public class MockRequestTestCase {
         }
 
         @Override
-        public boolean isRequestedSessionIdFromUrl() {
-            return false;
-        }
-
-        @Override
         public boolean authenticate(HttpServletResponse response) throws IOException, ServletException {
             return false;
         }
@@ -406,11 +402,6 @@ public class MockRequestTestCase {
         }
 
         @Override
-        public String getRealPath(String path) {
-            return null;
-        }
-
-        @Override
         public int getRemotePort() {
             return 0;
         }
@@ -464,6 +455,21 @@ public class MockRequestTestCase {
         public DispatcherType getDispatcherType() {
             return null;
         }
+
+        @Override
+        public String getRequestId() {
+            return null;
+        }
+
+        @Override
+        public String getProtocolRequestId() {
+            return null;
+        }
+
+        @Override
+        public ServletConnection getServletConnection() {
+            return null;
+        }
     }
 
     private static final class MockHttpResponse implements HttpServletResponse {
@@ -506,16 +512,6 @@ public class MockRequestTestCase {
         }
 
         @Override
-        public String encodeUrl(String url) {
-            return null;
-        }
-
-        @Override
-        public String encodeRedirectUrl(String url) {
-            return null;
-        }
-
-        @Override
         public void sendError(int sc, String msg) throws IOException {
         }
 
@@ -536,6 +532,10 @@ public class MockRequestTestCase {
         }
 
         @Override
+        public void sendRedirect(final String location, final int sc, final boolean clearBuffer) throws IOException {
+        }
+
+        @Override
         public void setHeader(String name, String value) {
         }
 
@@ -553,10 +553,6 @@ public class MockRequestTestCase {
 
         @Override
         public void setStatus(int sc) {
-        }
-
-        @Override
-        public void setStatus(int sc, String sm) {
         }
 
         @Override

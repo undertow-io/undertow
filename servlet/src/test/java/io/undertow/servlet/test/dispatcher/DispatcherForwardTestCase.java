@@ -28,8 +28,10 @@ import io.undertow.servlet.api.FilterInfo;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
+import io.undertow.servlet.test.dispatcher.util.DispatcherUtil;
 import io.undertow.servlet.test.util.MessageFilter;
 import io.undertow.servlet.test.util.MessageServlet;
+import io.undertow.servlet.test.util.ParameterEchoServlet;
 import io.undertow.servlet.test.util.PathTestServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.TestResourceLoader;
@@ -38,22 +40,24 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletException;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assert.assertEquals;
+import static org.wildfly.common.Assert.assertTrue;
 
 /**
  * @author Stuart Douglas
@@ -95,10 +99,22 @@ public class DispatcherForwardTestCase {
                                 .addMapping("/forward"))
                 .addServlet(
                         new ServletInfo("dispatcher", ForwardServlet.class)
-                                .addMapping("/dispatch"))
+                                .addMapping("/dispatch").addMapping("/dispatch/*").addMapping("*.dispatch"))
                 .addServlet(
                         new ServletInfo("pathTest", PathTestServlet.class)
                                 .addMapping("/path"))
+                .addServlet(
+                        new ServletInfo("pathForwardTest", ForwardPathTestServlet.class)
+                                .addMapping("/path-forward").addMapping("/path-forward/*").addMapping("*.forwardinfo"))
+                .addServlet(
+                        new ServletInfo("parameterEcho", ParameterEchoServlet.class)
+                                .addMapping("/echo-parameters"))
+                .addServlet(
+                        new ServletInfo("/dispatchServlet", DispatcherForwardServlet.class)
+                                .addMapping("/dispatchServlet"))
+                .addServlet(
+                        new ServletInfo("/next", NextServlet.class)
+                                .addMapping("/next"))
                 .addFilter(
                         new FilterInfo("notforwarded", MessageFilter.class)
                                 .addInitParam(MessageFilter.MESSAGE, "Not forwarded"))
@@ -128,13 +144,13 @@ public class DispatcherForwardTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
             get.setHeader("forward", "/forward");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Path!Name!forwarded", response);
+            assertEquals("Path!Name!forwarded", response);
             latch.await(30, TimeUnit.SECONDS);
             //UNDERTOW-327 make sure that the access log includes the original path
             String protocol = DefaultServer.isH2() ? Protocols.HTTP_2_0_STRING : Protocols.HTTP_1_1_STRING;
-            Assert.assertEquals("GET /servletContext/dispatch " + protocol + " /servletContext/dispatch /dispatch", message);
+            assertEquals("GET /servletContext/dispatch " + protocol + " /servletContext/dispatch /dispatch", message);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -153,9 +169,9 @@ public class DispatcherForwardTestCase {
             get.setHeader("forward", "forward");
             get.setHeader("name", "true");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Name!forwarded", response);
+            assertEquals("Name!forwarded", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -168,7 +184,7 @@ public class DispatcherForwardTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
             get.setHeader("forward", "../forward");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
             MatcherAssert.assertThat(response, CoreMatchers.containsString("dispatcher was null!"));
         } finally {
@@ -183,9 +199,9 @@ public class DispatcherForwardTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
             get.setHeader("forward", "/snippet.html");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("SnippetText", response);
+            assertEquals("SnippetText", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -198,9 +214,9 @@ public class DispatcherForwardTestCase {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
             post.setHeader("forward", "/snippet.html");
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("SnippetText", response);
+            assertEquals("SnippetText", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -216,23 +232,23 @@ public class DispatcherForwardTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?a=b");
             get.setHeader("forward", "/path");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:null queryString:a=b servletPath:/path requestUri:/servletContext/path", response);
+            assertEquals("pathInfo:null queryString:a=b servletPath:/path requestUri:/servletContext/path", response);
             latch.await(30, TimeUnit.SECONDS);
             //UNDERTOW-327 and UNDERTOW-1599 - make sure that the access log includes the original path and query string
-            Assert.assertEquals("GET /servletContext/dispatch?a=b " + protocol + " /servletContext/dispatch /dispatch", message);
+            assertEquals("GET /servletContext/dispatch?a=b " + protocol + " /servletContext/dispatch /dispatch", message);
 
             resetLatch();
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?a=b");
             get.setHeader("forward", "/path?foo=bar");
             result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:null queryString:foo=bar servletPath:/path requestUri:/servletContext/path", response);
+            assertEquals("pathInfo:null queryString:foo=bar servletPath:/path requestUri:/servletContext/path", response);
             latch.await(30, TimeUnit.SECONDS);
             //UNDERTOW-327 and UNDERTOW-1599 - make sure that the access log includes the original path and query string
-            Assert.assertEquals("GET /servletContext/dispatch?a=b " + protocol + " /servletContext/dispatch /dispatch", message);
+            assertEquals("GET /servletContext/dispatch?a=b " + protocol + " /servletContext/dispatch /dispatch", message);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -247,9 +263,138 @@ public class DispatcherForwardTestCase {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?a=b");
             get.setHeader("forward", "/path;pathparam=foo");
             HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:null queryString:a=b servletPath:/path requestUri:/servletContext/path;pathparam=foo", response);
+            assertEquals("pathInfo:null queryString:a=b servletPath:/path requestUri:/servletContext/path;pathparam=foo", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testIncludesUrlInPathParameters() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch");
+            get.setHeader("forward", "/path?url=http://test.com");
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            // Path parameters should not be canonicalized
+            assertEquals("pathInfo:null queryString:url=http://test.com servletPath:/path requestUri:/servletContext/path", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testAttributes() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?n1=v1&n2=v2");
+            get.setHeader("forward", "/path-forward");
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("pathInfo:null queryString:n1=v1&n2=v2 servletPath:/path-forward requestUri:/servletContext/path-forward\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.request_uri:/servletContext/dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.context_path:/servletContext\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.servlet_path:/dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.path_info:null\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.query_string:n1=v1&n2=v2\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.mapping:"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testAttributesEncoded() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch/dispatch%25info?n1=v%251&n2=v%252");
+            get.setHeader("forward", "/path-forward/path%25info?n3=V%253");
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("pathInfo:/path%info queryString:n3=V%253 servletPath:/path-forward requestUri:/servletContext/path-forward/path%25info\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.request_uri:/servletContext/dispatch/dispatch%25info\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.context_path:/servletContext\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.servlet_path:/dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.path_info:/dispatch%info\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.query_string:n1=v%251&n2=v%252\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.mapping:"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testAttributesEncodedExtension() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dis%25patch/dispatch%25info.dispatch?n1=v%251&n2=v%252");
+            get.setHeader("forward", "/to%25forward/path%25info.forwardinfo?n3=V%253");
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("pathInfo:null queryString:n3=V%253 servletPath:/to%forward/path%info.forwardinfo requestUri:/servletContext/to%25forward/path%25info.forwardinfo\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.request_uri:/servletContext/dis%25patch/dispatch%25info.dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.context_path:/servletContext\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.servlet_path:/dis%patch/dispatch%info.dispatch\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.path_info:null\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.forward.query_string:n1=v%251&n2=v%252\r\n"));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testParametersAreMerged() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?param1=v11&param1=v12");
+            get.setHeader("forward", "/echo-parameters?param1=v13&param1=v14");
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            assertEquals("param1='v13,v14,v11,v12'", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testParametersAreMergedButNotDuplicated() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatch?param1=v11&param1=v12");
+            get.setHeader("forward", "/echo-parameters?param1=v11&param1=v13&param1=v14");
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            assertEquals("param1='v11,v13,v14,v12'", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+    @Test
+    public void testDisptacherServletForward() throws IOException, InterruptedException {
+        resetLatch();
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/dispatchServlet");
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            //UNDERTOW-2245 javax.servlet.forward.mapping request attribute is not available in servlets forwarded with RequestDispatcher
+
+            assertTrue(DispatcherUtil.containsWord(response,"jakarta.servlet.forward.context_path"));
+            assertTrue(DispatcherUtil.containsWord(response,"jakarta.servlet.forward.servlet_path"));
+            assertTrue(DispatcherUtil.containsWord(response,"jakarta.servlet.forward.request_uri"));
+            assertTrue(DispatcherUtil.containsWord(response,"jakarta.servlet.forward.mapping"));
 
         } finally {
             client.getConnectionManager().shutdown();

@@ -19,14 +19,14 @@
 package io.undertow.websockets.jsr.test;
 
 import java.io.IOException;
-import javax.servlet.Servlet;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.websocket.DeploymentException;
-import javax.websocket.server.ServerContainer;
-import javax.websocket.server.ServerEndpointConfig;
+import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletConfig;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.websocket.DeploymentException;
+import jakarta.websocket.server.ServerContainer;
+import jakarta.websocket.server.ServerEndpointConfig;
 
 /**
  * @author Andrej Golovnin
@@ -37,7 +37,7 @@ public class BinaryEndpointServlet implements Servlet {
     public void init(ServletConfig c) throws ServletException {
         String websocketPath = "/partial";
         ServerEndpointConfig config = ServerEndpointConfig.Builder.create(BinaryPartialEndpoint.class, websocketPath).build();
-        ServerContainer serverContainer = (ServerContainer) c.getServletContext().getAttribute("javax.websocket.server.ServerContainer");
+        ServerContainer serverContainer = (ServerContainer) c.getServletContext().getAttribute("jakarta.websocket.server.ServerContainer");
         try {
             serverContainer.addEndpoint(config);
         } catch (DeploymentException ex) {

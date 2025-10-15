@@ -28,10 +28,10 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 
-import javax.websocket.DecodeException;
-import javax.websocket.Decoder;
-import javax.websocket.EncodeException;
-import javax.websocket.Encoder;
+import jakarta.websocket.DecodeException;
+import jakarta.websocket.Decoder;
+import jakarta.websocket.EncodeException;
+import jakarta.websocket.Encoder;
 
 import io.undertow.servlet.api.InstanceHandle;
 

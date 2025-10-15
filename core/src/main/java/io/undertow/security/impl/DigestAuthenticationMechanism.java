@@ -168,7 +168,7 @@ public class DigestAuthenticationMechanism implements AuthenticationMechanism {
 
                         return handleDigestHeader(exchange, securityContext);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        UndertowLogger.SECURITY_LOGGER.authenticationFailedFor(current, exchange, e);
                     }
                 }
 

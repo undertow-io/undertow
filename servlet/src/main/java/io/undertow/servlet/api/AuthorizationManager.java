@@ -20,7 +20,7 @@ package io.undertow.servlet.api;
 
 import io.undertow.security.idm.Account;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 
 /**
@@ -39,7 +39,7 @@ public interface AuthorizationManager {
      * @param deployment The deployment
      * @return true if the user is in the role
      */
-    boolean isUserInRole(String roleName, final Account account, final ServletInfo servletInfo, final HttpServletRequest request, Deployment deployment);
+    boolean isUserInRole(String roleName, Account account, ServletInfo servletInfo, HttpServletRequest request, Deployment deployment);
 
     /**
      * Tests if a user can access a given resource
@@ -51,7 +51,7 @@ public interface AuthorizationManager {
      * @param deployment The deployment
      * @return true if the user can access the resource
      */
-    boolean canAccessResource(List<SingleConstraintMatch> mappedConstraints, final Account account, final ServletInfo servletInfo, final HttpServletRequest request, Deployment deployment);
+    boolean canAccessResource(List<SingleConstraintMatch> mappedConstraints, Account account, ServletInfo servletInfo, HttpServletRequest request, Deployment deployment);
 
     /**
      * Determines the transport guarantee type
@@ -61,6 +61,6 @@ public interface AuthorizationManager {
      * @param request The request
      * @return The transport guarantee type
      */
-    TransportGuaranteeType transportGuarantee(TransportGuaranteeType currentConnectionGuarantee, TransportGuaranteeType configuredRequiredGuarantee, final HttpServletRequest request);
+    TransportGuaranteeType transportGuarantee(TransportGuaranteeType currentConnectionGuarantee, TransportGuaranteeType configuredRequiredGuarantee, HttpServletRequest request);
 
 }

@@ -20,9 +20,10 @@
 <features name="io.undertow-${project.version}" xmlns="http://karaf.apache.org/xmlns/features/v1.0.0">
 
     <feature name="undertow" version="${project.version}">
-        <bundle dependency="true">mvn:org.jboss.spec.javax.annotation/jboss-annotations-api_1.3_spec/${version.org.jboss.spec.javax.annotation.jboss-annotations-api_1.3_spec}</bundle>
-        <bundle dependency="true">mvn:org.jboss.spec.javax.servlet/jboss-servlet-api_4.0_spec/${version.org.jboss.spec.javax.servlet.jboss-servlet-api_4.0_spec}</bundle>
-        <bundle dependency="true">mvn:org.jboss.spec.javax.websocket/jboss-websocket-api_1.1_spec/${version.org.jboss.spec.javax.websockets}</bundle>
+        <bundle dependency="true">mvn:jakarta.annotation/jakarta.annotation-api/${version.jakarta.annotation.jakarta-annotation-api}</bundle>
+        <bundle dependency="true">mvn:jakarta.servlet/jakarta.servlet-api/${version.jakarta.servlet.jakarta-servlet-api}</bundle>
+        <bundle dependency="true">mvn:jakarta.websocket/jakarta.websocket-api/${version.jakarta.websocket.jakarta-websocket-api}</bundle>
+        <bundle dependency="true">mvn:jakarta.websocket/jakarta.websocket-client-api/${version.jakarta.websocket.jakarta-websocket-api}</bundle>
 
         <bundle>mvn:org.jboss.xnio/xnio-api/${version.xnio}</bundle>
         <bundle>mvn:org.jboss.xnio/xnio-nio/${version.xnio}</bundle>

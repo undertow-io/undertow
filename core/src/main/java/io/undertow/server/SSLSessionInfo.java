@@ -18,10 +18,10 @@
 
 package io.undertow.server;
 
-import org.xnio.SslClientAuthMode;
-
-import javax.net.ssl.SSLSession;
 import java.io.IOException;
+import javax.net.ssl.SSLSession;
+
+import org.xnio.SslClientAuthMode;
 
 /**
  * SSL session information.
@@ -35,7 +35,10 @@ public interface SSLSessionInfo {
      * cipher key strength. i.e. How much entropy material is in the key material being fed into the
      * encryption routines.
      * <p>
-     * http://www.thesprawl.org/research/tls-and-ssl-cipher-suites/
+     * TLS 1.3 https://wiki.openssl.org/index.php/TLS1.3
+     * </p>
+     * <p>
+     * https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4
      * </p>
      *
      * @param cipherSuite String name of the TLS cipher suite.
@@ -45,24 +48,32 @@ public interface SSLSessionInfo {
         // Roughly ordered from most common to least common.
         if (cipherSuite == null) {
             return 0;
-        } else if (cipherSuite.contains("WITH_AES_256_")) {
+        //  TLS 1.3: https://wiki.openssl.org/index.php/TLS1.3
+        } else if(cipherSuite.equals("TLS_AES_256_GCM_SHA384")) {
+                return 256;
+        } else if(cipherSuite.equals("TLS_CHACHA20_POLY1305_SHA256")) {
             return 256;
-        } else if (cipherSuite.contains("WITH_RC4_128_")) {
+        } else if(cipherSuite.startsWith("TLS_AES_128_")) {
             return 128;
+        //  TLS <1.3
         } else if (cipherSuite.contains("WITH_AES_128_")) {
             return 128;
-        } else if (cipherSuite.contains("WITH_RC4_40_")) {
-            return 40;
+        } else if (cipherSuite.contains("WITH_AES_256_")) {
+            return 256;
         } else if (cipherSuite.contains("WITH_3DES_EDE_CBC_")) {
             return 168;
+        } else if (cipherSuite.contains("WITH_RC4_128_")) {
+            return 128;
+        } else if (cipherSuite.contains("WITH_DES_CBC_")) {
+            return 56;
+        } else if (cipherSuite.contains("WITH_DES40_CBC_")) {
+            return 40;
+        } else if (cipherSuite.contains("WITH_RC4_40_")) {
+            return 40;
         } else if (cipherSuite.contains("WITH_IDEA_CBC_")) {
             return 128;
         } else if (cipherSuite.contains("WITH_RC2_CBC_40_")) {
             return 40;
-        } else if (cipherSuite.contains("WITH_DES40_CBC_")) {
-            return 40;
-        } else if (cipherSuite.contains("WITH_DES_CBC_")) {
-            return 56;
         } else {
             return 0;
         }
@@ -95,7 +106,7 @@ public interface SSLSessionInfo {
      *             throws java 15.
      * @see SSLSession#getPeerCertificateChain()
      */
-    @Deprecated
+    @Deprecated(since="2.2.3", forRemoval=false)
     javax.security.cert.X509Certificate[] getPeerCertificateChain() throws javax.net.ssl.SSLPeerUnverifiedException, RenegotiationRequiredException;
 
     /**
@@ -114,5 +125,14 @@ public interface SSLSessionInfo {
      * @return The SSL session, or null if it is not applicable
      */
     SSLSession getSSLSession();
+
+    /**
+     * Returns the {@linkplain SSLSession#getProtocol() secure protocol}, if applicable, for the curren session.
+     *
+     * @return the secure protocol or {@code null} if one could not be found
+     */
+    default String getSecureProtocol() {
+        return getSSLSession() == null ? null : getSSLSession().getProtocol();
+    }
 
 }

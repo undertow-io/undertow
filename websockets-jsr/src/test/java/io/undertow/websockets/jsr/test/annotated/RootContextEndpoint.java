@@ -18,9 +18,9 @@
 
 package io.undertow.websockets.jsr.test.annotated;
 
-import javax.websocket.OnMessage;
-import javax.websocket.server.ServerEndpoint;
-import javax.websocket.server.ServerEndpointConfig;
+import jakarta.websocket.OnMessage;
+import jakarta.websocket.server.ServerEndpoint;
+import jakarta.websocket.server.ServerEndpointConfig;
 
 /**
  * @author Stuart Douglas

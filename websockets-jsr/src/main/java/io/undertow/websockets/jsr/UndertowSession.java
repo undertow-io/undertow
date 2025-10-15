@@ -28,13 +28,13 @@ import org.xnio.ChannelListener;
 import org.xnio.IoFuture;
 import org.xnio.IoUtils;
 
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
-import javax.websocket.EndpointConfig;
-import javax.websocket.Extension;
-import javax.websocket.MessageHandler;
-import javax.websocket.RemoteEndpoint;
-import javax.websocket.Session;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.Endpoint;
+import jakarta.websocket.EndpointConfig;
+import jakarta.websocket.Extension;
+import jakarta.websocket.MessageHandler;
+import jakarta.websocket.RemoteEndpoint;
+import jakarta.websocket.Session;
 import java.io.IOException;
 import java.net.URI;
 import java.security.Principal;
@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -393,7 +394,7 @@ public final class UndertowSession implements Session {
                 //a close frame, which will be delivered shortly
                 //to get around this we schedule the code in the IO thread, so if there is a close
                 //frame awaiting delivery it will be delivered before the close
-                channel.getIoThread().execute(new Runnable() {
+                final Runnable task = new Runnable() {
                     @Override
                     public void run() {
                         //we delegate this execution to the IO thread
@@ -403,7 +404,12 @@ public final class UndertowSession implements Session {
                             //ignore
                         }
                     }
-                });
+                };
+                try {
+                    channel.getIoThread().execute(task);
+                } catch (RejectedExecutionException e) {
+                    task.run(); //thread is shutting down
+                }
             }
         });
     }

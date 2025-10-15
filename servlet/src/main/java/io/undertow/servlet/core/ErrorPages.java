@@ -22,7 +22,7 @@ import io.undertow.util.StatusCodes;
 
 import java.util.Map;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 /**
  * Class that maintains information about error page mappings.

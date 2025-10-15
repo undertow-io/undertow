@@ -28,7 +28,7 @@ import java.util.Set;
 public class SecurityInfo<T extends SecurityInfo> implements Cloneable {
 
     /**
-     * Equivalent to {@link javax.servlet.annotation.ServletSecurity.EmptyRoleSemantic} but with an additional mode to require authentication but no role
+     * Equivalent to {@link jakarta.servlet.annotation.ServletSecurity.EmptyRoleSemantic} but with an additional mode to require authentication but no role
      * check.
      */
     public enum EmptyRoleSemantic {

@@ -77,12 +77,20 @@ class UndertowSslConnection extends SslConnection {
 
     @Override
     protected void notifyWriteClosed() {
-        sslConduit.notifyWriteClosed();
+        try {
+            sslConduit.notifyWriteClosed();
+        } finally {
+            super.notifyWriteClosed();
+        }
     }
 
     @Override
     protected void notifyReadClosed() {
-        sslConduit.notifyReadClosed();
+        try {
+            sslConduit.notifyReadClosed();
+        } finally {
+            super.notifyReadClosed();
+        }
     }
 
     @Override

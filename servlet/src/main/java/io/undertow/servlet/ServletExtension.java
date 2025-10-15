@@ -20,7 +20,7 @@ package io.undertow.servlet;
 
 import io.undertow.servlet.api.DeploymentInfo;
 
-import javax.servlet.ServletContext;
+import jakarta.servlet.ServletContext;
 
 /**
  *
@@ -40,6 +40,6 @@ import javax.servlet.ServletContext;
  */
 public interface ServletExtension {
 
-    void handleDeployment(final DeploymentInfo deploymentInfo, final ServletContext servletContext);
+    void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext);
 
 }

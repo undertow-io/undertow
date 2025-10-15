@@ -18,8 +18,6 @@
 
 package io.undertow.servlet.test.util;
 
-import javax.servlet.ServletException;
-
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.api.Deployment;
@@ -29,6 +27,7 @@ import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.testutils.DefaultServer;
+import jakarta.servlet.ServletException;
 
 /**
  * @author Stuart Douglas
@@ -77,7 +76,4 @@ public class DeploymentUtils {
         return manager.getDeployment();
 
     }
-
-
-
 }

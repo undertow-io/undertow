@@ -20,8 +20,8 @@ package io.undertow.websockets.jsr;
 import io.undertow.websockets.core.WebSocketCallback;
 import io.undertow.websockets.core.WebSocketChannel;
 
-import javax.websocket.SendHandler;
-import javax.websocket.SendResult;
+import jakarta.websocket.SendHandler;
+import jakarta.websocket.SendResult;
 
 /**
  * {@link WebSocketCallback} implementation which will notify a wrapped {@link SendHandler} once a send operation
@@ -31,7 +31,6 @@ import javax.websocket.SendResult;
  */
 final class SendHandlerAdapter implements WebSocketCallback<Void> {
     private final SendHandler handler;
-    private static final SendResult OK = new SendResult();
     private volatile boolean done;
 
     SendHandlerAdapter(SendHandler handler) {

@@ -49,20 +49,28 @@ import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.Xnio;
 import org.xnio.XnioWorker;
+import org.xnio.channels.ReadTimeoutException;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.ssl.XnioSsl;
 
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
+
 /**
  * @author Emanuel Muckenhuber
+ * @author Flavia Rainone
  */
 @RunWith(DefaultServer.class)
 @HttpOneOnly
@@ -70,6 +78,8 @@ public class HttpClientTestCase {
 
     private static final String message = "Hello World!";
     public static final String MESSAGE = "/message";
+    public static final String READTIMEOUT = "/readtimeout";
+    public static final String READTIMEOUT_AT_INIT = "/readtimeout-init";
     public static final String POST = "/post";
     private static XnioWorker worker;
 
@@ -77,6 +87,8 @@ public class HttpClientTestCase {
     private static final URI ADDRESS;
 
     private static final AttachmentKey<String> RESPONSE_BODY = AttachmentKey.create(String.class);
+
+    private IOException exception;
 
     static {
         final OptionMap.Builder builder = OptionMap.builder()
@@ -113,6 +125,42 @@ public class HttpClientTestCase {
                 sendMessage(exchange);
             }
         })
+        .addExactPath(READTIMEOUT, new HttpHandler() {
+            @Override
+            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                exchange.setStatusCode(StatusCodes.OK);
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, 5 + "");
+                try (StreamSinkChannel responseChannel = exchange.getResponseChannel()) {
+                    responseChannel.write(ByteBuffer.wrap(new byte[]{'a', 'b', 'c'}));
+                    responseChannel.flush();
+                    try {
+                        //READ_TIMEOUT set as 600ms on the client side
+                        //On the server side intentionally sleep 2000ms
+                        //to make READ_TIMEOUT happening at client side
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    responseChannel.write(ByteBuffer.wrap(new byte[]{'d', 'e'}));
+                }
+            }
+        })
+        .addExactPath(READTIMEOUT_AT_INIT, new HttpHandler() {
+            @Override
+            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                try {
+                    // Do the sleep before sending any data to the client
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                exchange.setStatusCode(StatusCodes.OK);
+                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, "5");
+                try (StreamSinkChannel responseChannel = exchange.getResponseChannel()) {
+                    responseChannel.write(ByteBuffer.wrap(new byte[]{'a', 'b', 'c', 'd', 'e'}));
+                }
+            }
+        })
         .addExactPath(POST, new HttpHandler() {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -128,7 +176,7 @@ public class HttpClientTestCase {
 
     @AfterClass
     public static void afterClass() {
-        worker.shutdown();
+        stopWorker(worker);
     }
 
     static UndertowClient createClient() {
@@ -284,6 +332,41 @@ public class HttpClientTestCase {
         }
     }
 
+    @Test
+    public void testSslServerIdentity() throws Exception {
+        final UndertowClient client = createClient();
+        exception = null;
+
+        final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch = new CountDownLatch(1);
+        DefaultServer.startSSLServer();
+        SSLContext context = DefaultServer.getClientSSLContext();
+        XnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, context);
+
+        // change the URI to use the IP instead the "localhost" name set in the certificate
+        URI uri = new URI(DefaultServer.getDefaultServerSSLAddress());
+        InetAddress address = InetAddress.getByName(uri.getHost());
+        String hostname = address instanceof Inet6Address? "[" + address.getHostAddress() + "]" : address.getHostAddress();
+        uri = new URI(uri.getScheme(), uri.getUserInfo(), hostname, uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
+
+        // this should fail as IP alternative name is not set in the certificate
+        final ClientConnection connection = client.connect(uri, worker, ssl, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        try {
+            connection.getIoThread().execute(() -> {
+                final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(MESSAGE);
+                request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+                connection.sendRequest(request, createClientCallback(responses, latch));
+            });
+
+            latch.await(10, TimeUnit.SECONDS);
+
+            Assert.assertEquals(0, responses.size());
+            Assert.assertTrue(exception instanceof ClosedChannelException);
+        } finally {
+            connection.getIoThread().execute(() -> IoUtils.safeClose(connection));
+            DefaultServer.stopSSLServer();
+        }
+    }
 
     @Test
     public void testConnectionClose() throws Exception {
@@ -308,6 +391,54 @@ public class HttpClientTestCase {
 
     }
 
+    @Test
+    public void testReadTimeout() throws Exception {
+        //
+        final UndertowClient client = createClient();
+        exception = null;
+
+        final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch = new CountDownLatch(1);
+        OptionMap.Builder builder = OptionMap.builder();
+        builder.set(Options.READ_TIMEOUT, 600);
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), builder.getMap()).get();
+        try {
+            connection.getIoThread().execute(() -> {
+                final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(READTIMEOUT);
+                request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+                connection.sendRequest(request, createClientCallback(responses, latch));
+            });
+            Assert.assertTrue(latch.await(10, TimeUnit.SECONDS));
+            //exception expected because of read timeout
+            Assert.assertTrue(exception instanceof ReadTimeoutException);
+        } finally {
+            connection.getIoThread().execute(() -> IoUtils.safeClose(connection));
+        }
+    }
+
+    @Test
+    public void testReadTimeoutAtInit() throws Exception {
+        final UndertowClient client = createClient();
+        exception = null;
+
+        final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch = new CountDownLatch(1);
+        OptionMap.Builder builder = OptionMap.builder().set(Options.READ_TIMEOUT, 600);
+        final ClientConnection connection = client.connect(ADDRESS, worker, DefaultServer.getBufferPool(), builder.getMap()).get();
+        try {
+            connection.getIoThread().execute(() -> {
+                final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(READTIMEOUT_AT_INIT);
+                request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+                connection.sendRequest(request, createClientCallback(responses, latch));
+            });
+            Assert.assertTrue(latch.await(10, TimeUnit.SECONDS));
+            //exception expected because of read timeout
+            Assert.assertTrue(exception instanceof ReadTimeoutException);
+        } finally {
+            connection.getIoThread().execute(() -> IoUtils.safeClose(connection));
+        }
+    }
+
     private ClientCallback<ClientExchange> createClientCallback(final List<ClientResponse> responses, final CountDownLatch latch) {
         return new ClientCallback<ClientExchange>() {
             @Override
@@ -315,19 +446,24 @@ public class HttpClientTestCase {
                 result.setResponseListener(new ClientCallback<ClientExchange>() {
                     @Override
                     public void completed(final ClientExchange result) {
-                        responses.add(result.getResponse());
                         new StringReadChannelListener(result.getConnection().getBufferPool()) {
 
                             @Override
                             protected void stringDone(String string) {
                                 result.getResponse().putAttachment(RESPONSE_BODY, string);
+                                // add response only if there is a string or error, or else
+                                // we risk adding keep alive messages in timeout tests
+                                responses.add(result.getResponse());
                                 latch.countDown();
                             }
 
                             @Override
                             protected void error(IOException e) {
                                 e.printStackTrace();
-
+                                exception = e;
+                                // add response only if there is a string or error, or else
+                                // we risk adding keep alive messages in timeout tests
+                                responses.add(result.getResponse());
                                 latch.countDown();
                             }
                         }.setup(result.getResponseChannel());
@@ -336,6 +472,7 @@ public class HttpClientTestCase {
                     @Override
                     public void failed(IOException e) {
                         e.printStackTrace();
+                        exception = e;
 
                         latch.countDown();
                     }
@@ -347,6 +484,7 @@ public class HttpClientTestCase {
                         result.getRequestChannel().resumeWrites();
                     }
                 } catch (IOException e) {
+                    exception = e;
                     e.printStackTrace();
                     latch.countDown();
                 }
@@ -354,6 +492,7 @@ public class HttpClientTestCase {
 
             @Override
             public void failed(IOException e) {
+                exception = e;
                 e.printStackTrace();
                 latch.countDown();
             }

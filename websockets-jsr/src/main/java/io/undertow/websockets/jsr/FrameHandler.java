@@ -29,10 +29,10 @@ import io.undertow.websockets.jsr.util.ClassUtils;
 import org.xnio.Buffers;
 import org.xnio.Pooled;
 
-import javax.websocket.CloseReason;
-import javax.websocket.Endpoint;
-import javax.websocket.MessageHandler;
-import javax.websocket.PongMessage;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.Endpoint;
+import jakarta.websocket.MessageHandler;
+import jakarta.websocket.PongMessage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -152,6 +152,8 @@ class FrameHandler extends AbstractReceiveListener {
                     }
                 }
             });
+        } else {
+            bufferedBinaryMessage.getData().free();
         }
     }
 

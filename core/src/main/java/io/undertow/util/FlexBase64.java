@@ -23,7 +23,6 @@ import java.io.OutputStream;
 import java.lang.reflect.Constructor;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 
 /**
@@ -33,6 +32,7 @@ import java.security.PrivilegedExceptionAction;
  *
  * @author Jason T. Greene
  */
+@SuppressWarnings("removal")
 public class FlexBase64 {
     /*
      * Note that this code heavily favors performance over reuse and clean style.
@@ -61,17 +61,14 @@ public class FlexBase64 {
 
         Constructor<String> c = null;
         try {
-            PrivilegedExceptionAction<Constructor<String>> runnable = new PrivilegedExceptionAction<Constructor<String>>() {
-                @Override
-                public Constructor<String> run() throws Exception {
-                    Constructor<String> c;
-                    c = String.class.getDeclaredConstructor(char[].class, boolean.class);
-                    c.setAccessible(true);
-                    return c;
-                }
+            PrivilegedExceptionAction<Constructor<String>> runnable = () -> {
+                Constructor<String> c1;
+                c1 = String.class.getDeclaredConstructor(char[].class, boolean.class);
+                c1.setAccessible(true);
+                return c1;
             };
             if (System.getSecurityManager() != null) {
-                c = AccessController.doPrivileged(runnable);
+                c = java.security.AccessController.doPrivileged(runnable);
             } else {
                 c = runnable.run();
             }
@@ -654,59 +651,53 @@ public class FlexBase64 {
             if (target == null)
                 throw new IllegalStateException();
 
-            int last = this.last;
-            int state = this.state;
-            int count = this.count;
             boolean wrap = this.wrap;
             final byte[] ENCODING_TABLE = encodingTable;
 
 
             while (limit > pos) {
                 // Unrolled state machine for performance (resumes and executes all states in one iteration)
-                int require = 4 - state;
-                require = wrap && count >= 72 ? require + 2 : require;
+                int require = 4 - this.state;
+                require = wrap && this.count >= 72 ? require + 2 : require;
                 if ((require + opos) > olimit) {
                     break;
                 }
                 //  ( 6 | 2) (4 | 4) (2 | 6)
                 int b = source[pos++] & 0xFF;
-                if (state == 0) {
+                if (this.state == 0) {
                     target[opos++] = ENCODING_TABLE[b >>> 2];
-                    last = (b & 0x3) << 4;
-                    state++;
+                    this.last = (b & 0x3) << 4;
+                    this.state++;
                     if (pos >= limit) {
                         break;
                     }
                     b = source[pos++] & 0xFF;
                 }
-                if (state == 1) {
-                    target[opos++] = ENCODING_TABLE[last | (b >>> 4)];
-                    last = (b & 0x0F) << 2;
-                    state++;
+                if (this.state == 1) {
+                    target[opos++] = ENCODING_TABLE[this.last | (b >>> 4)];
+                    this.last = (b & 0x0F) << 2;
+                    this.state++;
                     if (pos >= limit) {
                         break;
                     }
                     b = source[pos++] & 0xFF;
                 }
-                if (state == 2) {
-                    target[opos++] = ENCODING_TABLE[last | (b >>> 6)];
+                if (this.state == 2) {
+                    target[opos++] = ENCODING_TABLE[this.last | (b >>> 6)];
                     target[opos++] = ENCODING_TABLE[b & 0x3F];
 
-                    last = state = 0;
+                    this.last = this.state = 0;
                 }
 
                 if (wrap) {
-                    count += 4;
-                    if (count >= 76) {
-                        count = 0;
+                    this.count += 4;
+                    if (this.count >= 76) {
+                        this.count = 0;
                         target[opos++] = 0x0D;
                         target[opos++] = 0x0A;
                     }
                 }
             }
-            this.count = count;
-            this.last = last;
-            this.state = state;
             this.lastPos = pos;
 
             return opos;

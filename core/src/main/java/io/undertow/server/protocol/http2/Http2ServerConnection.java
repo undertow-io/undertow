@@ -69,9 +69,11 @@ import io.undertow.server.SSLSessionInfo;
 import io.undertow.server.ServerConnection;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
+import io.undertow.util.URLUtils;
 
 import static io.undertow.protocols.http2.Http2Channel.AUTHORITY;
 import static io.undertow.protocols.http2.Http2Channel.METHOD;
@@ -103,6 +105,7 @@ public class Http2ServerConnection extends ServerConnection {
     private HttpServerExchange exchange;
     private boolean continueSent = false;
     private XnioBufferPoolAdaptor poolAdaptor;
+    private final String protocolRequestId;
 
     public Http2ServerConnection(Http2Channel channel, Http2StreamSourceChannel requestChannel, OptionMap undertowOptions, int bufferSize, HttpHandler rootHandler) {
         this.channel = channel;
@@ -115,6 +118,7 @@ public class Http2ServerConnection extends ServerConnection {
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
         this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(channel, originalSourceConduit);
+        this.protocolRequestId = channel.getProtocolRequestId();
     }
 
     void setExchange(HttpServerExchange exchange) {
@@ -139,13 +143,19 @@ public class Http2ServerConnection extends ServerConnection {
         originalSourceConduit = new StreamSourceChannelWrappingConduit(requestChannel);
         this.conduitStreamSinkChannel = new ConduitStreamSinkChannel(responseChannel, originalSinkConduit);
         this.conduitStreamSourceChannel = new ConduitStreamSourceChannel(Configurable.EMPTY, new EmptyStreamSourceConduit(getIoThread()));
+        this.protocolRequestId = channel.getProtocolRequestId();
     }
+
     @Override
     public Pool<ByteBuffer> getBufferPool() {
         if(poolAdaptor == null) {
             poolAdaptor = new XnioBufferPoolAdaptor(getByteBufferPool());
         }
         return poolAdaptor;
+    }
+
+    public String getProtocolRequestId() {
+        return protocolRequestId;
     }
 
     public SSLSession getSslSession() {
@@ -432,8 +442,8 @@ public class Http2ServerConnection extends ServerConnection {
             exchange.setProtocol(Protocols.HTTP_1_1);
             exchange.setRequestScheme(this.exchange.getRequestScheme());
             try {
-                Connectors.setExchangeRequestPath(exchange, path, getUndertowOptions().get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name()), getUndertowOptions().get(UndertowOptions.DECODE_URL, true), getUndertowOptions().get(UndertowOptions.ALLOW_ENCODED_SLASH, false), new StringBuilder(), getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_HEADERS));
-            } catch (ParameterLimitException e) {
+                Connectors.setExchangeRequestPath(exchange, path, getUndertowOptions().get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name()), getUndertowOptions().get(UndertowOptions.DECODE_URL, true), URLUtils.getSlashDecodingFlag(getUndertowOptions()), new StringBuilder(), getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_HEADERS));
+            } catch (ParameterLimitException | BadRequestException e) {
                 UndertowLogger.REQUEST_IO_LOGGER.debug("Too many parameters in HTTP/2 request", e);
                 exchange.setStatusCode(StatusCodes.BAD_REQUEST);
                 exchange.endExchange();

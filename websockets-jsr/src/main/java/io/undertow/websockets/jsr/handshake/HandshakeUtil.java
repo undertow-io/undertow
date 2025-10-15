@@ -23,8 +23,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import javax.websocket.Extension;
-import javax.websocket.server.ServerEndpointConfig;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.servlet.websockets.ServletWebSocketHttpExchange;
+import jakarta.websocket.Extension;
+import jakarta.websocket.server.ServerEndpointConfig;
 
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Headers;
@@ -39,6 +41,7 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
  */
 public final class HandshakeUtil {
     private static final String CONFIG_KEY = "ServerEndpointConfiguration";
+    private static final AttachmentKey<ServerEndpointConfig> PER_SESSION_CONFIG = AttachmentKey.create(ServerEndpointConfig.class);
 
 
     public static final AttachmentKey<Map<String, String>> PATH_PARAMS = AttachmentKey.create(Map.class);
@@ -59,16 +62,28 @@ public final class HandshakeUtil {
      * Prepare for upgrade
      */
     public static void prepareUpgrade(final ServerEndpointConfig config, final WebSocketHttpExchange exchange) {
+        final ServerEndpointConfig perSessionConfig = new PerConnectionServerEndpointConfig(config);
+        exchange.putAttachment(PER_SESSION_CONFIG, perSessionConfig);
         ExchangeHandshakeRequest request = new ExchangeHandshakeRequest(exchange);
         ExchangeHandshakeResponse response = new ExchangeHandshakeResponse(exchange);
-        ServerEndpointConfig.Configurator c = config.getConfigurator();
-        c.modifyHandshake(config, request, response);
+        ServerEndpointConfig.Configurator c = perSessionConfig.getConfigurator();
+        c.modifyHandshake(perSessionConfig, request, response);
         response.update();
     }
 
     /**
      * Set the {@link ConfiguredServerEndpoint} which is used to create the {@link WebSocketChannel}.
      */
+    public static void setConfig(final WebSocketChannel channel, final ConfiguredServerEndpoint config, final WebSocketHttpExchange exchange) {
+        final ServerEndpointConfig perSessionConfig = exchange.getAttachment(PER_SESSION_CONFIG);
+        channel.setAttribute(CONFIG_KEY, new PerConnectionConfiguredServerEndpoint(config, perSessionConfig));
+    }
+
+    /**
+     * Set the {@link ConfiguredServerEndpoint} which is used to create the {@link WebSocketChannel}.
+     * @Deprecated Use {@link HandshakeUtil#setConfig(WebSocketChannel, ConfiguredServerEndpoint, WebSocketHttpExchange)} instead
+     */
+    @Deprecated
     public static void setConfig(WebSocketChannel channel, ConfiguredServerEndpoint config) {
         channel.setAttribute(CONFIG_KEY, config);
     }
@@ -80,6 +95,10 @@ public final class HandshakeUtil {
         return (ConfiguredServerEndpoint) channel.getAttribute(CONFIG_KEY);
     }
 
+    public static void propagate(final HttpServerExchange source, final ServletWebSocketHttpExchange target) {
+        final ServerEndpointConfig perSession = source.getAttachment(PER_SESSION_CONFIG);
+        target.putAttachment(PER_SESSION_CONFIG, perSession);
+    }
 
     static String selectSubProtocol(final ConfiguredServerEndpoint config, final String[] requestedSubprotocolArray) {
         if (config.getEndpointConfiguration().getConfigurator() != null) {

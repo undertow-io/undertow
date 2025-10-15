@@ -31,6 +31,7 @@ import io.undertow.UndertowMessages;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.RequestTooBigException;
 import io.undertow.util.ImmediatePooledByteBuffer;
 import org.xnio.IoUtils;
 import org.xnio.channels.StreamSinkChannel;
@@ -202,6 +203,8 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
             }
             assert STATE_FINISHED == state;
             return -1;
+        } catch (RequestTooBigException e) {
+            throw e;
         } catch (IOException | RuntimeException e) {
             IoUtils.safeClose(exchange.getConnection());
             throw e;
@@ -302,6 +305,8 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
         }
 
         int limit = dst.limit();
+        Throwable originalException = null;
+        int returnValue = 0;
         try {
             if (dst.remaining() > chunkRemaining) {
                 dst.limit((int) (dst.position() + chunkRemaining));
@@ -320,20 +325,47 @@ public class AjpServerRequestConduit extends AbstractStreamSourceConduit<StreamS
                     this.state = (state & ~STATE_MASK) | chunkRemaining;
                 }
             }
-            return read;
+            returnValue = read;
+        } catch (Throwable t) {
+            originalException = t;
         } finally {
-            this.remaining = remaining;
-            dst.limit(limit);
-            final long maxEntitySize = exchange.getMaxEntitySize();
-            if (maxEntitySize > 0) {
-                if (totalRead > maxEntitySize) {
-                    //kill the connection, nothing else can be sent on it
-                    terminateReads();
-                    exchange.setPersistent(false);
-                    throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(maxEntitySize);
+            Throwable suppressed = originalException; //OK to be null
+            try {
+                this.remaining = remaining;
+                dst.limit(limit);
+                final long maxEntitySize = exchange.getMaxEntitySize();
+                if (maxEntitySize > 0) {
+                    if (totalRead > maxEntitySize) {
+                        //kill the connection, nothing else can be sent on it
+                        terminateReads();
+                        exchange.setPersistent(false);
+                        suppressed = UndertowMessages.MESSAGES.requestEntityWasTooLarge(maxEntitySize);
+                        if(originalException != null) {
+                            originalException.addSuppressed(suppressed);
+                            suppressed = originalException;
+                        }
+                    }
+                }
+            } catch (Throwable t) {
+                if (suppressed != null) {
+                    suppressed.addSuppressed(t);
+                } else {
+                    suppressed = t;
+                }
+            }
+            if (suppressed != null) {
+                if (suppressed instanceof RuntimeException) {
+                    throw (RuntimeException) suppressed;
+                }
+                if (suppressed instanceof Error) {
+                    throw (Error) suppressed;
+                }
+                if (suppressed instanceof IOException) {
+                    throw (IOException) suppressed;
                 }
             }
         }
+        return returnValue;
     }
 
     @Override

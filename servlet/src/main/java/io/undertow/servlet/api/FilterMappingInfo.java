@@ -18,7 +18,7 @@
 
 package io.undertow.servlet.api;
 
-import javax.servlet.DispatcherType;
+import jakarta.servlet.DispatcherType;
 
 /**
  * @author Stuart Douglas

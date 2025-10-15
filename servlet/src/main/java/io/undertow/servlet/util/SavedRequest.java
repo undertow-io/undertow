@@ -31,12 +31,11 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.ImmediatePooledByteBuffer;
 
-import javax.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -112,6 +111,7 @@ public class SavedRequest implements Serializable {
         }
     }
 
+    @SuppressWarnings("removal")
     public static void trySaveRequest(final HttpServerExchange exchange, final byte[] buffer, int length) {
         int maxSize = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_BUFFERED_REQUEST_SIZE, UndertowOptions.DEFAULT_MAX_BUFFERED_REQUEST_SIZE);
         if (maxSize > 0) {
@@ -137,12 +137,13 @@ public class SavedRequest implements Serializable {
             if (System.getSecurityManager() == null) {
                 underlyingSession = session.getSession();
             } else {
-                underlyingSession = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
+                underlyingSession = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
             }
             underlyingSession.setAttribute(SESSION_KEY, request);
         }
     }
 
+    @SuppressWarnings("removal")
     public static void tryRestoreRequest(final HttpServerExchange exchange, HttpSession session) {
         if(session instanceof HttpSessionImpl) {
 
@@ -150,7 +151,7 @@ public class SavedRequest implements Serializable {
             if(System.getSecurityManager() == null) {
                 underlyingSession = ((HttpSessionImpl) session).getSession();
             } else {
-                underlyingSession = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
+                underlyingSession = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
             }
             SavedRequest request = (SavedRequest) underlyingSession.getAttribute(SESSION_KEY);
             if(request != null) {

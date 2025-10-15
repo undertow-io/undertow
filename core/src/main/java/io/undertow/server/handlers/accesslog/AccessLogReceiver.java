@@ -27,6 +27,6 @@ package io.undertow.server.handlers.accesslog;
  */
 public interface AccessLogReceiver {
 
-    void logMessage(final String message);
+    void logMessage(String message);
 
 }

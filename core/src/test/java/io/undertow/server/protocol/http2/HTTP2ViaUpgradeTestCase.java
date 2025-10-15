@@ -126,6 +126,10 @@ public class HTTP2ViaUpgradeTestCase {
     @AfterClass
     public static void stop() {
         server.stop();
+        // sleep 1 s to prevent BindException (Address already in use) when running the CI
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ignore) {}
     }
 
     @Test
@@ -232,6 +236,10 @@ public class HTTP2ViaUpgradeTestCase {
                     new UserEventLogger());
         }
 
+        protected String fetchUpgradeHandlerURL() {
+            return "/sdf";
+        }
+
         /**
          * A handler that triggers the cleartext upgrade to HTTP/2 by sending an initial HTTP request.
          */
@@ -239,7 +247,7 @@ public class HTTP2ViaUpgradeTestCase {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 DefaultFullHttpRequest upgradeRequest =
-                        new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/sdf");
+                        new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, fetchUpgradeHandlerURL());
                 upgradeRequest.headers().add(Headers.HOST_STRING, "default");
                 ctx.writeAndFlush(upgradeRequest);
 

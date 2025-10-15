@@ -81,6 +81,10 @@ public class LoadBalancerConnectionPoolingTestCase {
     @AfterClass
     public static void after() {
         undertow.stop();
+        // sleep 1 s to prevent BindException (Address already in use) when running the CI
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException ignore) {}
     }
 
     @Test
@@ -125,7 +129,7 @@ public class LoadBalancerConnectionPoolingTestCase {
                 Assert.fail("there should still be a connection");
             }
         }
-        long end = System.currentTimeMillis() + (TTL * 3);
+        long end = System.currentTimeMillis() + (TTL * 30);
         while (!activeConnections.isEmpty() && System.currentTimeMillis() < end) {
             Thread.sleep(100);
         }

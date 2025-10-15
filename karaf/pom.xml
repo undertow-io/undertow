@@ -23,19 +23,19 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>2.2.9.Final-SNAPSHOT</version>
+        <version>2.4.0.Beta1-SNAPSHOT</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>karaf</artifactId>
-    <version>2.2.9.Final-SNAPSHOT</version>
+    <version>2.4.0.Beta1-SNAPSHOT</version>
 
     <name>Undertow Karaf feature</name>
 
     <packaging>pom</packaging>
 
     <properties>
-        <version.karaf.plugin>4.2.10</version.karaf.plugin>
+        <version.karaf.plugin>4.4.1</version.karaf.plugin>
     </properties>
 
     <dependencies>
@@ -105,7 +105,7 @@
                                 <descriptor>file:${project.build.directory}/classes/features.xml</descriptor>
                             </descriptors>
                             <distribution>org.apache.karaf.features:framework</distribution>
-                            <javase>1.8</javase>
+                            <javase>11</javase>
                             <framework>
                                 <feature>framework</feature>
                             </framework>

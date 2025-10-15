@@ -26,7 +26,7 @@ import static org.xnio.SslClientAuthMode.NOT_REQUESTED;
 
 import java.nio.charset.StandardCharsets;
 import javax.net.ssl.SSLContext;
-import javax.servlet.MultipartConfigElement;
+import jakarta.servlet.MultipartConfigElement;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.AuthMethodConfig;

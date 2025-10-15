@@ -17,6 +17,10 @@
  */
 package io.undertow.websockets.core.protocol.version07;
 
+import static org.wildfly.common.Assert.checkNotNullParamWithNullPointerException;
+import static org.wildfly.common.Assert.checkMinimumParameter;
+import static org.xnio.IoUtils.safeClose;
+
 import io.undertow.UndertowLogger;
 
 import java.nio.charset.StandardCharsets;
@@ -582,9 +586,7 @@ class Base64 {
      */
     public static String encodeObject(java.io.Serializable serializableObject, int options) throws java.io.IOException {
 
-        if (serializableObject == null) {
-            throw new NullPointerException("Cannot serialize a null object.");
-        } // end if: null
+        checkNotNullParamWithNullPointerException("serializableObject", serializableObject);
 
         // Streams
         java.io.ByteArrayOutputStream baos = null;
@@ -612,22 +614,10 @@ class Base64 {
             throw e;
         } // end catch
         finally {
-            try {
-                oos.close();
-            } catch (Exception e) {
-            }
-            try {
-                gzos.close();
-            } catch (Exception e) {
-            }
-            try {
-                b64os.close();
-            } catch (Exception e) {
-            }
-            try {
-                baos.close();
-            } catch (Exception e) {
-            }
+            safeClose(oos);
+            safeClose(gzos);
+            safeClose(b64os);
+            safeClose(baos);
         } // end finally
 
         // Return value according to relevant encoding.
@@ -804,17 +794,10 @@ class Base64 {
      */
     public static byte[] encodeBytesToBytes(byte[] source, int off, int len, int options) throws java.io.IOException {
 
-        if (source == null) {
-            throw new NullPointerException("Cannot serialize a null array.");
-        } // end if: null
+        checkNotNullParamWithNullPointerException("source", source);
 
-        if (off < 0) {
-            throw new IllegalArgumentException("Cannot have negative offset: " + off);
-        } // end if: off < 0
-
-        if (len < 0) {
-            throw new IllegalArgumentException("Cannot have length offset: " + len);
-        } // end if: len < 0
+        checkMinimumParameter("off", 0, off);
+        checkMinimumParameter("len", 0, len);
 
         if (off + len > source.length) {
             throw new IllegalArgumentException(String.format(
@@ -842,18 +825,9 @@ class Base64 {
                 throw e;
             } // end catch
             finally {
-                try {
-                    gzos.close();
-                } catch (Exception e) {
-                }
-                try {
-                    b64os.close();
-                } catch (Exception e) {
-                }
-                try {
-                    baos.close();
-                } catch (Exception e) {
-                }
+                safeClose(gzos);
+                safeClose(b64os);
+                safeClose(baos);
             } // end finally
 
             return baos.toByteArray();
@@ -942,12 +916,9 @@ class Base64 {
     private static int decode4to3(byte[] source, int srcOffset, byte[] destination, int destOffset, int options) {
 
         // Lots of error checking and exception throwing
-        if (source == null) {
-            throw new NullPointerException("Source array was null.");
-        } // end if
-        if (destination == null) {
-            throw new NullPointerException("Destination array was null.");
-        } // end if
+        checkNotNullParamWithNullPointerException("source", source);
+        checkNotNullParamWithNullPointerException("destination", destination);
+
         if (srcOffset < 0 || srcOffset + 3 >= source.length) {
             throw new IllegalArgumentException(String.format(
                     "Source array with length %d cannot have offset of %d and still process four bytes.", source.length,
@@ -1041,9 +1012,8 @@ class Base64 {
     public static byte[] decode(byte[] source, int off, int len, int options) throws java.io.IOException {
 
         // Lots of error checking and exception throwing
-        if (source == null) {
-            throw new NullPointerException("Cannot decode null source array.");
-        } // end if
+        checkNotNullParamWithNullPointerException("source", source);
+
         if (off < 0 || off + len > source.length) {
             throw new IllegalArgumentException(String.format(
                     "Source array with length %d cannot have offset of %d and process %d bytes.", source.length, off, len));
@@ -1124,9 +1094,7 @@ class Base64 {
      */
     public static byte[] decode(String s, int options) throws java.io.IOException {
 
-        if (s == null) {
-            throw new NullPointerException("Input string was null.");
-        } // end if
+        checkNotNullParamWithNullPointerException("s", s);
 
         byte[] bytes = s.getBytes(StandardCharsets.US_ASCII);
 
@@ -1166,18 +1134,9 @@ class Base64 {
                     // Just return originally-decoded bytes
                 } // end catch
                 finally {
-                    try {
-                        baos.close();
-                    } catch (Exception e) {
-                    }
-                    try {
-                        gzis.close();
-                    } catch (Exception e) {
-                    }
-                    try {
-                        bais.close();
-                    } catch (Exception e) {
-                    }
+                    safeClose(baos);
+                    safeClose(gzis);
+                    safeClose(bais);
                 } // end finally
 
             } // end if: gzipped
@@ -1257,14 +1216,8 @@ class Base64 {
             throw e; // Catch and throw in order to execute finally{}
         } // end catch
         finally {
-            try {
-                bais.close();
-            } catch (Exception e) {
-            }
-            try {
-                ois.close();
-            } catch (Exception e) {
-            }
+            safeClose(bais);
+            safeClose(ois);
         } // end finally
 
         return obj;
@@ -1286,9 +1239,7 @@ class Base64 {
      */
     public static void encodeToFile(byte[] dataToEncode, String filename) throws java.io.IOException {
 
-        if (dataToEncode == null) {
-            throw new NullPointerException("Data to encode was null.");
-        } // end iff
+        checkNotNullParamWithNullPointerException("dataToEncode", dataToEncode);
 
         Base64.OutputStream bos = null;
         try {
@@ -1299,10 +1250,7 @@ class Base64 {
             throw e; // Catch and throw to execute finally{} block
         } // end catch: java.io.IOException
         finally {
-            try {
-                bos.close();
-            } catch (Exception e) {
-            }
+            safeClose(bos);
         } // end finally
 
     } // end encodeToFile
@@ -1331,10 +1279,7 @@ class Base64 {
             throw e; // Catch and throw to execute finally{} block
         } // end catch: java.io.IOException
         finally {
-            try {
-                bos.close();
-            } catch (Exception e) {
-            }
+            safeClose(bos);
         } // end finally
 
     } // end decodeToFile
@@ -1386,10 +1331,7 @@ class Base64 {
             throw e; // Catch and release to execute finally{}
         } // end catch: java.io.IOException
         finally {
-            try {
-                bis.close();
-            } catch (Exception e) {
-            }
+            safeClose(bis);
         } // end finally
 
         return decodedData;
@@ -1437,10 +1379,7 @@ class Base64 {
             throw e; // Catch and release to execute finally{}
         } // end catch: java.io.IOException
         finally {
-            try {
-                bis.close();
-            } catch (Exception e) {
-            }
+            safeClose(bis);
         } // end finally
 
         return encodedData;
@@ -1466,10 +1405,7 @@ class Base64 {
             throw e; // Catch and release to execute finally{}
         } // end catch
         finally {
-            try {
-                out.close();
-            } catch (Exception ex) {
-            }
+            safeClose(out);
         } // end finally
     } // end encodeFileToFile
 
@@ -1493,10 +1429,7 @@ class Base64 {
             throw e; // Catch and release to execute finally{}
         } // end catch
         finally {
-            try {
-                out.close();
-            } catch (Exception ex) {
-            }
+            safeClose(out);
         } // end finally
     } // end decodeFileToFile
 

@@ -19,6 +19,7 @@
 package io.undertow.server.protocol.ajp;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.EmptyStreamSourceConduit;
@@ -58,7 +59,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
     private static final byte[] CPONG = {'A', 'B', 0, 1, 9};
     private static final byte[] SEND_HEADERS_INTERNAL_SERVER_ERROR_MSG = {'A', 'B', 0, 8, 4, (byte)((500 >> 8) & 0xFF) , (byte)(500 & 0xFF), 0, 0, '\0', 0, 0};
     private static final byte[] SEND_HEADERS_BAD_REQUEST_MSG = {'A', 'B', 0, 8, 4, (byte)((400 >> 8) & 0xFF) , (byte)(400 & 0xFF), 0, 0, '\0', 0, 0};
-    private static final byte[] END_RESPONSE = {'A', 'B', 0, 2, 5, 1};
+    private static final byte[] END_RESPONSE = {'A', 'B', 0, 2, 5, 0};
 
     private final AjpServerConnection connection;
     private final String scheme;
@@ -165,8 +166,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 }
                 if (read > maxRequestSize) {
                     UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
-                    safeClose(connection);
-                    return;
+                    throw UndertowMessages.MESSAGES.badRequest();
                 }
             } while (!state.isComplete());
 
@@ -235,7 +235,6 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             if(oldState.badRequest) {
                 httpServerExchange.setStatusCode(StatusCodes.BAD_REQUEST);
                 httpServerExchange.endExchange();
-                handleBadRequest();
                 safeClose(connection);
             } else {
                 Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
@@ -266,10 +265,12 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
     }
 
     private void handleCPing() {
-        sendMessages(CPONG);
+        if (sendMessages(CPONG)) {
+            AjpReadListener.this.handleEvent(connection.getChannel().getSourceChannel());
+        }
     }
 
-    private void sendMessages(final byte[]... rawMessages) {
+    private boolean sendMessages(final byte[]... rawMessages) {
         state = new AjpRequestParseState();
         final StreamConnection underlyingChannel = connection.getChannel();
         underlyingChannel.getSourceChannel().suspendReads();
@@ -310,13 +311,14 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                         }
                     });
                     underlyingChannel.getSinkChannel().resumeWrites();
-                    return;
+                    return false;
                 }
             } while (buffer.hasRemaining());
-            AjpReadListener.this.handleEvent(underlyingChannel.getSourceChannel());
+            return true;
         } catch (IOException e) {
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             safeClose(connection);
+            return false;
         }
     }
 

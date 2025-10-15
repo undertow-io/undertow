@@ -18,13 +18,14 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import static org.wildfly.common.Assert.checkNotNullParam;
+
 import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.client.UndertowClient;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.proxy.ProxyHandler;
 import io.undertow.server.handlers.proxy.RouteParsingStrategy;
 import org.xnio.OptionMap;
@@ -35,8 +36,6 @@ import org.xnio.ssl.XnioSsl;
  * @author Emanuel Muckenhuber
  */
 public class ModCluster {
-
-    private static final HttpHandler NEXT_HANDLER = ResponseCodeHandler.HANDLE_404;
 
     // Health check intervals
     private final long healthCheckInterval;
@@ -194,10 +193,9 @@ public class ModCluster {
      * @throws IOException
      */
     public synchronized void advertise(MCMPConfig config) throws IOException {
-        final MCMPConfig.AdvertiseConfig advertiseConfig = config.getAdvertiseConfig();
-        if (advertiseConfig == null) {
-            throw new IllegalArgumentException("advertise not enabled");
-        }
+        checkNotNullParam("config", config);
+        final MCMPConfig.AdvertiseConfig advertiseConfig = checkNotNullParam("config.getAdvertiseConfig", config.getAdvertiseConfig());
+
         MCMPAdvertiseTask.advertise(container, advertiseConfig, xnioWorker);
     }
 

@@ -53,21 +53,21 @@ import org.xnio.http.UpgradeFailedException;
 import org.xnio.ssl.XnioSsl;
 
 import javax.net.ssl.SSLContext;
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.websocket.ClientEndpoint;
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.CloseReason;
-import javax.websocket.DeploymentException;
-import javax.websocket.Endpoint;
-import javax.websocket.Extension;
-import javax.websocket.HandshakeResponse;
-import javax.websocket.Session;
-import javax.websocket.server.ServerContainer;
-import javax.websocket.server.ServerEndpoint;
-import javax.websocket.server.ServerEndpointConfig;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.websocket.ClientEndpoint;
+import jakarta.websocket.ClientEndpointConfig;
+import jakarta.websocket.CloseReason;
+import jakarta.websocket.DeploymentException;
+import jakarta.websocket.Endpoint;
+import jakarta.websocket.Extension;
+import jakarta.websocket.HandshakeResponse;
+import jakarta.websocket.Session;
+import jakarta.websocket.server.ServerContainer;
+import jakarta.websocket.server.ServerEndpoint;
+import jakarta.websocket.server.ServerEndpointConfig;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -389,6 +389,14 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
         }
     }
 
+    @Override
+    public void upgradeHttpToWebSocket(Object req, Object res, ServerEndpointConfig sec, Map<String, String> pathParameters) throws IOException, DeploymentException {
+        try {
+            doUpgrade((HttpServletRequest) req, (HttpServletResponse) res, sec, pathParameters);
+        } catch (final ServletException e) {
+            throw new DeploymentException(e.getRootCause().getMessage(), e.getRootCause());
+        }
+    }
 
     public void doUpgrade(HttpServletRequest request,
                           HttpServletResponse response, final ServerEndpointConfig sec,
@@ -449,7 +457,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
                 hand = ServerWebSocketContainer.handshakes(confguredServerEndpoint, info.getExtensions());
             }
 
-            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(request, response, new HashSet<WebSocketChannel>());
+            final ServletWebSocketHttpExchange facade = new ServletWebSocketHttpExchange(request, response, new HashSet<>());
             Handshake handshaker = null;
             for (Handshake method : hand.handshakes) {
                 if (method.matches(facade)) {

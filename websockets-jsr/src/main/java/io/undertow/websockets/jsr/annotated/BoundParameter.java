@@ -21,7 +21,7 @@ package io.undertow.websockets.jsr.annotated;
 import java.util.Map;
 import java.util.Set;
 
-import javax.websocket.DecodeException;
+import jakarta.websocket.DecodeException;
 
 /**
  * @author Stuart Douglas
@@ -29,7 +29,7 @@ import javax.websocket.DecodeException;
 public interface BoundParameter {
     Set<Integer> positions();
 
-    void populate(final Object[] params, final Map<Class<?>, Object> value) throws DecodeException;
+    void populate(Object[] params, Map<Class<?>, Object> value) throws DecodeException;
 
     Class<?> getType();
 }

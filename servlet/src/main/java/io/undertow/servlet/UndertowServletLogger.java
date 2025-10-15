@@ -21,7 +21,7 @@ package io.undertow.servlet;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Set;
-import javax.servlet.UnavailableException;
+import jakarta.servlet.UnavailableException;
 
 import org.jboss.logging.BasicLogger;
 import org.jboss.logging.Logger;
@@ -55,7 +55,7 @@ public interface UndertowServletLogger extends BasicLogger {
 
     @LogMessage(level = ERROR)
     @Message(id = 15002, value = "Stopping servlet %s due to permanent unavailability")
-    void stoppingServletDueToPermanentUnavailability(final String servlet, @Cause UnavailableException e);
+    void stoppingServletDueToPermanentUnavailability(String servlet, @Cause UnavailableException e);
 
     @LogMessage(level = ERROR)
     @Message(id = 15003, value = "Stopping servlet %s till %s due to temporary unavailability")
@@ -67,7 +67,7 @@ public interface UndertowServletLogger extends BasicLogger {
 
     @LogMessage(level = ERROR)
     @Message(id = 15005, value = "Error invoking method %s on listener %s")
-    void errorInvokingListener(final String method, Class<?> listenerClass, @Cause Throwable t);
+    void errorInvokingListener(String method, Class<?> listenerClass, @Cause Throwable t);
 
     @LogMessage(level = ERROR)
     @Message(id = 15006, value = "IOException dispatching async event")
@@ -135,4 +135,9 @@ public interface UndertowServletLogger extends BasicLogger {
 
     @Message(id = 15023, value = "This Context has been already destroyed")
     IllegalStateException contextDestroyed();
+
+    @LogMessage(level = ERROR)
+    @Message(id = 15024, value = "Servlet %s init() method in web application %s threw exception")
+    void failedToLoad(String servletName, String appName, @Cause Throwable t);
+
 }

@@ -159,4 +159,16 @@ public class BasicMCMPUnitTestCase extends AbstractModClusterTestBase {
 
     }
 
+    @Test
+    public void testAddStoppedApp() throws IOException {
+        registerNodes(false, server1);
+
+        modClusterClient.stopApp("s1", "/name", "localhost", "localhost:7777");
+
+        final String info = modClusterClient.info();
+        Assert.assertTrue(info.contains("Context: /name, Status: STOPPED"));
+
+        modClusterClient.removeApp("s1", "/name", "localhost", "localhost:7777");
+    }
+
 }

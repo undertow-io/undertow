@@ -139,12 +139,21 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     public void handleEventWithNoRunningRequest(final ConduitStreamSourceChannel channel) {
         PooledByteBuffer existing = connection.getExtraBytes();
         if ((existing == null && connection.getOriginalSourceConduit().isReadShutdown()) || connection.getOriginalSinkConduit().isWriteShutdown()) {
+            UndertowLogger.REQUEST_IO_LOGGER.debug("Connection is closing, cancelling handling of request");
             IoUtils.safeClose(connection);
             channel.suspendReads();
             return;
         }
-
-        final PooledByteBuffer pooled = existing == null ? connection.getByteBufferPool().allocate() : existing;
+        final PooledByteBuffer pooled;
+        try {
+            pooled = existing == null ? connection.getByteBufferPool().allocate() : existing;
+        } catch (IllegalStateException e) {
+            UndertowLogger.REQUEST_IO_LOGGER.debug("Connection is closing, cancelling handling of request", e);
+            // shutdown started after previous if statement, so treat it like previous statement
+            IoUtils.safeClose(connection);
+            channel.suspendReads();
+            return;
+        }
         final ByteBuffer buffer = pooled.getBuffer();
         boolean free = true;
 
@@ -200,6 +209,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             if(parseTimeoutUpdater != null) {
                 parseTimeoutUpdater.requestStarted();
             }
+            connection.getOriginalSourceConduit().suspendReads();
 
             final HttpServerExchange httpServerExchange = this.httpServerExchange;
             httpServerExchange.setRequestScheme(connection.getSslSession() != null ? "https" : "http");

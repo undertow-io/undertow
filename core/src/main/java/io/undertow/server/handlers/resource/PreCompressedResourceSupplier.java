@@ -54,20 +54,19 @@ public class PreCompressedResourceSupplier implements ResourceSupplier {
 
     @Override
     public Resource getResource(HttpServerExchange exchange, String path) throws IOException {
-        Resource originalResource = resourceManager.getResource(path);
         if(exchange.getRequestHeaders().contains(Headers.RANGE)) {
             //we don't use serve pre compressed resources for range requests
-            return originalResource;
+            return resourceManager.getResource(path);
         }
-        Resource resource = getEncodedResource(exchange, path, originalResource);
+        Resource resource = getEncodedResource(exchange, path);
         if(resource == null) {
-            return originalResource;
+            return resourceManager.getResource(path);
         }
         return resource;
     }
 
 
-    private Resource getEncodedResource(final HttpServerExchange exchange, String path, Resource originalResource) throws IOException {
+    private Resource getEncodedResource(final HttpServerExchange exchange, String path) throws IOException {
         final List<String> res = exchange.getRequestHeaders().get(Headers.ACCEPT_ENCODING);
         if (res == null || res.isEmpty()) {
             return null;
@@ -118,7 +117,13 @@ public class PreCompressedResourceSupplier implements ResourceSupplier {
 
                             @Override
                             public String getContentType(MimeMappings mimeMappings) {
-                                return originalResource.getContentType(mimeMappings);
+                                String fileName = resource.getName();
+                                String originalFileName = fileName.substring(0, fileName.length() - extension.length());
+                                int index = originalFileName.lastIndexOf('.');
+                                if (index != -1 && index != originalFileName.length() - 1) {
+                                    return mimeMappings.getMimeType(originalFileName.substring(index + 1));
+                                }
+                                return null;
                             }
 
                             @Override

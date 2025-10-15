@@ -123,5 +123,10 @@ public class EagerFormParsingHandler implements HttpHandler {
         public HandlerWrapper build(Map<String, Object> config) {
             return WRAPPER;
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

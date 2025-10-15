@@ -43,9 +43,9 @@ import java.util.regex.Pattern;
  */
 public class ProxyPeerAddressHandler implements HttpHandler {
 
-    private static final Pattern IP4_EXACT = Pattern.compile("(?:\\d{1,3}\\.){3}\\d{1,3}");
+    private static final Pattern IP4_EXACT = Pattern.compile(NetworkUtils.IP4_EXACT);
 
-    private static final Pattern IP6_EXACT = Pattern.compile("(?:[a-zA-Z0-9]{1,4}:){7}[a-zA-Z0-9]{1,4}");
+    private static final Pattern IP6_EXACT = Pattern.compile(NetworkUtils.IP6_EXACT);
 
     private final HttpHandler next;
 
@@ -70,9 +70,9 @@ public class ProxyPeerAddressHandler implements HttpHandler {
         if (forwardedFor != null) {
             String remoteClient = mostRecent(forwardedFor);
             //we have no way of knowing the port
-            if(IP4_EXACT.matcher(forwardedFor).matches()) {
+            if (IP4_EXACT.matcher(remoteClient).matches()) {
                 exchange.setSourceAddress(new InetSocketAddress(NetworkUtils.parseIpv4Address(remoteClient), 0));
-            } else if(IP6_EXACT.matcher(forwardedFor).matches()) {
+            } else if (IP6_EXACT.matcher(remoteClient).matches()) {
                 exchange.setSourceAddress(new InetSocketAddress(NetworkUtils.parseIpv6Address(remoteClient), 0));
             } else {
                 exchange.setSourceAddress(InetSocketAddress.createUnresolved(remoteClient, 0));
@@ -175,6 +175,11 @@ public class ProxyPeerAddressHandler implements HttpHandler {
         public HandlerWrapper build(Map<String, Object> config) {
             Boolean isChangeLocalAddrPort = (Boolean) config.get(CHANGE_LOCAL_ADDR_PORT);
             return new Wrapper(isChangeLocalAddrPort == null ? DEFAULT_CHANGE_LOCAL_ADDR_PORT : isChangeLocalAddrPort);
+        }
+
+        @Override
+        public int priority() {
+            return 0;
         }
 
     }

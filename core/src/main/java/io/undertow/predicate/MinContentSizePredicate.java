@@ -83,5 +83,10 @@ public class MinContentSizePredicate implements Predicate {
             Long max = (Long) config.get("value");
             return new MinContentSizePredicate(max);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

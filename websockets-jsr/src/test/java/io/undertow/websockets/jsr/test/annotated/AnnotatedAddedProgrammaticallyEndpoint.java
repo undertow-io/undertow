@@ -1,9 +1,9 @@
 package io.undertow.websockets.jsr.test.annotated;
 
 
-import javax.websocket.OnMessage;
-import javax.websocket.Session;
-import javax.websocket.server.ServerEndpoint;
+import jakarta.websocket.OnMessage;
+import jakarta.websocket.Session;
+import jakarta.websocket.server.ServerEndpoint;
 
 @ServerEndpoint(AnnotatedAddedProgrammaticallyEndpoint.PATH)
 public class AnnotatedAddedProgrammaticallyEndpoint {

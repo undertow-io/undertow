@@ -21,12 +21,15 @@ package io.undertow.protocols.http2;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.xnio.IoUtils;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.protocol.framed.SendFrameHeader;
+import org.xnio.IoUtils;
 
 /**
+ * Stream sink channel used for HTTP2 communication.
+ *
  * @author Stuart Douglas
+ * @author Flavia Rainone
  */
 public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChannel {
 
@@ -39,7 +42,7 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
 
     private SendFrameHeader header;
 
-    private static final Object flowControlLock = new Object();
+    private final Object flowControlLock = new Object();
 
     Http2StreamSinkChannel(Http2Channel channel, int streamId) {
         super(channel);
@@ -117,8 +120,11 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
             int newWindowSize = this.getChannel().getInitialSendWindowSize();
             int settingsDelta = newWindowSize - this.initialWindowSize;
             //first adjust for any settings frame updates
-            this.initialWindowSize = newWindowSize;
-            this.flowControlWindow += settingsDelta;
+            if (settingsDelta != 0) {
+                this.initialWindowSize = newWindowSize;
+                this.flowControlWindow += settingsDelta;
+                flowControlLock.notifyAll();
+            }
 
             int min = Math.min(toSend, this.flowControlWindow);
             int actualBytes = this.getChannel().grabFlowControlBytes(min);
@@ -139,6 +145,7 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
                 return;
             }
             flowControlWindow += delta;
+            flowControlLock.notifyAll();
         }
         if (exhausted) {
             getChannel().notifyFlowControlAllowed();

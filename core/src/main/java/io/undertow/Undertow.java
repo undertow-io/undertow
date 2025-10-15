@@ -181,7 +181,7 @@ public final class Undertow {
                     if (listener.type == ListenerType.HTTP) {
                         HttpOpenListener openListener = new HttpOpenListener(buffers, undertowOptions);
                         HttpHandler handler = rootHandler;
-                        if (http2) {
+                        if (http2 || listener.http2Enabled) {
                             handler = new Http2UpgradeHandler(handler);
                         }
                         openListener.setRootHandler(handler);
@@ -203,7 +203,7 @@ public final class Undertow {
                         HttpOpenListener httpOpenListener = new HttpOpenListener(buffers, undertowOptions);
                         httpOpenListener.setRootHandler(rootHandler);
 
-                        if (http2) {
+                        if (http2 || listener.http2Enabled) {
                             AlpnOpenListener alpn = new AlpnOpenListener(buffers, undertowOptions, httpOpenListener);
                             Http2OpenListener http2Listener = new Http2OpenListener(buffers, undertowOptions);
                             http2Listener.setRootHandler(rootHandler);
@@ -322,6 +322,7 @@ public final class Undertow {
         final HttpHandler rootHandler;
         final OptionMap overrideSocketOptions;
         final boolean useProxyProtocol;
+        final boolean http2Enabled;
 
         private ListenerConfig(final ListenerType type, final int port, final String host, KeyManager[] keyManagers, TrustManager[] trustManagers, HttpHandler rootHandler) {
             this.type = type;
@@ -333,6 +334,7 @@ public final class Undertow {
             this.sslContext = null;
             this.overrideSocketOptions = OptionMap.EMPTY;
             this.useProxyProtocol = false;
+            this.http2Enabled = false;
         }
 
         private ListenerConfig(final ListenerType type, final int port, final String host, SSLContext sslContext, HttpHandler rootHandler) {
@@ -345,6 +347,7 @@ public final class Undertow {
             this.sslContext = sslContext;
             this.overrideSocketOptions = OptionMap.EMPTY;
             this.useProxyProtocol = false;
+            this.http2Enabled = false;
         }
 
         private ListenerConfig(final ListenerBuilder listenerBuilder) {
@@ -357,6 +360,7 @@ public final class Undertow {
             this.sslContext = listenerBuilder.sslContext;
             this.overrideSocketOptions = listenerBuilder.overrideSocketOptions;
             this.useProxyProtocol = listenerBuilder.useProxyProtocol;
+            this.http2Enabled = listenerBuilder.http2Enabled;
         }
     }
 
@@ -371,6 +375,7 @@ public final class Undertow {
         HttpHandler rootHandler;
         OptionMap overrideSocketOptions = OptionMap.EMPTY;
         boolean useProxyProtocol;
+        boolean http2Enabled;
 
         public ListenerBuilder setType(ListenerType type) {
             this.type = type;
@@ -414,6 +419,11 @@ public final class Undertow {
 
         public ListenerBuilder setUseProxyProtocol(boolean useProxyProtocol) {
             this.useProxyProtocol = useProxyProtocol;
+            return this;
+        }
+
+        public ListenerBuilder setHttp2Enabled(boolean http2Enabled) {
+            this.http2Enabled = http2Enabled;
             return this;
         }
     }
@@ -574,7 +584,7 @@ public final class Undertow {
          * Additionally, the provided {@link XnioWorker} will NOT be shutdown when {@link Undertow#stop()} is called.
          * Essentially, the lifecycle of the provided worker must be maintained outside of the {@link Undertow} instance.
          */
-        public <T> Builder setWorker(XnioWorker worker) {
+        public Builder setWorker(XnioWorker worker) {
             this.worker = worker;
             return this;
         }
@@ -584,7 +594,7 @@ public final class Undertow {
             return this;
         }
 
-        public <T> Builder setByteBufferPool(ByteBufferPool byteBufferPool) {
+        public Builder setByteBufferPool(ByteBufferPool byteBufferPool) {
             this.byteBufferPool = byteBufferPool;
             return this;
         }

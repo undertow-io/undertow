@@ -170,7 +170,7 @@ public class Http2ClearClientProvider implements ClientProvider {
             if (options.contains(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE)) {
                 pushOption(currentBuffer, Http2Setting.SETTINGS_MAX_HEADER_LIST_SIZE, options.get(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE));
             } else if(options.contains(UndertowOptions.MAX_HEADER_SIZE)) {
-                pushOption(currentBuffer, Http2Setting.SETTINGS_MAX_HEADER_LIST_SIZE, options.get(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE));
+                pushOption(currentBuffer, Http2Setting.SETTINGS_MAX_HEADER_LIST_SIZE, options.get(UndertowOptions.MAX_HEADER_SIZE));
             }
             currentBuffer.flip();
             return FlexBase64.encodeStringURL(currentBuffer, false);

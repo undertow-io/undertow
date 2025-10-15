@@ -49,32 +49,31 @@ import io.undertow.servlet.core.ManagedServlet;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
-import io.undertow.servlet.util.EmptyEnumeration;
 import io.undertow.servlet.util.ImmediateInstanceFactory;
 import io.undertow.servlet.util.IteratorEnumeration;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.CanonicalPathUtils;
 
-import javax.annotation.security.DeclareRoles;
-import javax.annotation.security.RunAs;
-import javax.servlet.DispatcherType;
-import javax.servlet.Filter;
-import javax.servlet.FilterRegistration;
-import javax.servlet.MultipartConfigElement;
-import javax.servlet.ReadListener;
-import javax.servlet.RequestDispatcher;
-import javax.servlet.Servlet;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletContextListener;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRegistration;
-import javax.servlet.ServletRequest;
-import javax.servlet.SessionTrackingMode;
-import javax.servlet.WriteListener;
-import javax.servlet.annotation.HttpMethodConstraint;
-import javax.servlet.annotation.MultipartConfig;
-import javax.servlet.annotation.ServletSecurity;
-import javax.servlet.descriptor.JspConfigDescriptor;
+import jakarta.annotation.security.DeclareRoles;
+import jakarta.annotation.security.RunAs;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterRegistration;
+import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.ReadListener;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletContextListener;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRegistration;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.SessionTrackingMode;
+import jakarta.servlet.WriteListener;
+import jakarta.servlet.annotation.HttpMethodConstraint;
+import jakarta.servlet.annotation.MultipartConfig;
+import jakarta.servlet.annotation.ServletSecurity;
+import jakarta.servlet.descriptor.JspConfigDescriptor;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -85,7 +84,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collections;
@@ -144,7 +142,7 @@ public class ServletContextImpl implements ServletContext {
             this.attributes = deploymentInfo.getServletContextAttributeBackingMap();
         }
         attributes.putAll(deployment.getDeploymentInfo().getServletContextAttributes());
-        this.contentTypeCache = new LRUCache<>(deployment.getDeploymentInfo().getContentTypeCacheSize(), -1, true);
+        this.contentTypeCache = new LRUCache<>(deployment.getDeploymentInfo().getContentTypeCacheSize(), LRUCache.MAX_AGE_NO_EXPIRY, true);
         this.defaultSessionTimeout = deploymentInfo.getDefaultSessionTimeout() / 60;
     }
 
@@ -175,13 +173,13 @@ public class ServletContextImpl implements ServletContext {
                 return null;
             }
         });
-        this.runnableTask = new ThreadSetupHandler.Action<Void, Runnable>() {
+        this.runnableTask = deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, Runnable>() {
             @Override
-            public Void call(HttpServerExchange exchange, Runnable context) throws Exception {
-                context.run();
+            public Void call(HttpServerExchange exchange, Runnable runnable) throws Exception {
+                runnable.run();
                 return null;
             }
-        };
+        });
         this.onDataAvailableTask = deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, ReadListener>() {
             @Override
             public Void call(HttpServerExchange exchange, ReadListener context) throws Exception {
@@ -296,7 +294,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public URL getResource(final String path) throws MalformedURLException {
-        if (!path.startsWith("/")) {
+        if (path == null || !path.startsWith("/")) {
             throw UndertowServletMessages.MESSAGES.pathMustStartWithSlash(path);
         }
         Resource resource = null;
@@ -344,12 +342,18 @@ public class ServletContextImpl implements ServletContext {
         if (!path.startsWith("/")) {
             throw UndertowServletMessages.MESSAGES.pathMustStartWithSlashForRequestDispatcher(path);
         }
-        final String realPath = CanonicalPathUtils.canonicalize(path, true);
-        if (realPath == null) {
+        int qsPos = path.indexOf("?");
+        final String newServletPath = qsPos != -1 ?  path.substring(0, qsPos) : path;
+        final String queryString = qsPos != -1 ? path.substring(qsPos) : "";
+
+        // Only canonicalize the servlet path
+        final String realServletPath = CanonicalPathUtils.canonicalize(newServletPath, true);
+        if (realServletPath == null) {
             // path is outside the servlet context, return null per spec
             return null;
         }
-        return new RequestDispatcherImpl(realPath, this);
+
+        return new RequestDispatcherImpl(realServletPath + queryString, this);
     }
 
     @Override
@@ -363,28 +367,8 @@ public class ServletContextImpl implements ServletContext {
     }
 
     @Override
-    public Servlet getServlet(final String name) throws ServletException {
-        return deployment.getServletPaths().getServletHandlerByName(name).getManagedServlet().getServlet().getInstance();
-    }
-
-    @Override
-    public Enumeration<Servlet> getServlets() {
-        return EmptyEnumeration.instance();
-    }
-
-    @Override
-    public Enumeration<String> getServletNames() {
-        return EmptyEnumeration.instance();
-    }
-
-    @Override
     public void log(final String msg) {
         UndertowServletLogger.ROOT_LOGGER.info(msg);
-    }
-
-    @Override
-    public void log(final Exception exception, final String msg) {
-        UndertowServletLogger.ROOT_LOGGER.error(msg, exception);
     }
 
     @Override
@@ -451,6 +435,7 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public boolean setInitParameter(final String name, final String value) {
+        ensureNotProgramaticListener();
         if(name == null) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNullNPE("name");
         }
@@ -714,18 +699,18 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public Set<SessionTrackingMode> getDefaultSessionTrackingModes() {
-        ensureNotProgramaticListener();
         return defaultSessionTrackingModes;
     }
 
     @Override
     public Set<SessionTrackingMode> getEffectiveSessionTrackingModes() {
-        ensureNotProgramaticListener();
         return Collections.unmodifiableSet(sessionTrackingModes);
     }
 
     @Override
     public void addListener(final String className) {
+        ensureNotInitialized();
+        ensureNotProgramaticListener();
         try {
             Class<? extends EventListener> clazz = (Class<? extends EventListener>) getDeploymentInfo().getClassLoader().loadClass(className);
             addListener(clazz);
@@ -742,7 +727,7 @@ public class ServletContextImpl implements ServletContext {
                 && ServletContextListener.class.isAssignableFrom(t.getClass())) {
             throw UndertowServletMessages.MESSAGES.cannotAddServletContextListener();
         }
-        ListenerInfo listener = new ListenerInfo(t.getClass(), new ImmediateInstanceFactory<EventListener>(t));
+        ListenerInfo listener = new ListenerInfo(t.getClass(), new ImmediateInstanceFactory<>(t));
         getDeploymentInfo().addListener(listener);
         deployment.getApplicationListeners().addListener(new ManagedListener(listener, true));
     }
@@ -792,10 +777,23 @@ public class ServletContextImpl implements ServletContext {
 
     @Override
     public void declareRoles(final String... roleNames) {
+        ensureNotProgramaticListener();
+        final DeploymentInfo di = this.getDeploymentInfo();
+        if (isInitialized()) {
+            throw UndertowServletMessages.MESSAGES.servletAlreadyInitialize(di.getDeploymentName(), di.getContextPath());
+        }
+        for (String role : roleNames) {
+            if (role == null || role.isEmpty()) {
+                throw UndertowServletMessages.MESSAGES.roleMustNotBeEmpty(di.getDeploymentName(), di.getContextPath());
+            }
+        }
+        deploymentInfo.addSecurityRoles(roleNames);
+
     }
 
     @Override
     public ServletRegistration.Dynamic addJspFile(String servletName, String jspFile) {
+        ensureNotProgramaticListener();
         if(servletName == null || servletName.isEmpty()) {
             throw UndertowServletMessages.MESSAGES.paramCannotBeNull("servletName");
         }
@@ -888,6 +886,13 @@ public class ServletContextImpl implements ServletContext {
                 exchange.putAttachment(sessionAttachmentKey, httpSession);
             } else if (create) {
 
+                if (exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletResponse().isCommitted()) {
+                    if (!this.deployment.getDeploymentInfo().isOrphanSessionAllowed()) {
+                        throw UndertowServletMessages.MESSAGES.sessionCreationAfterResponseCommittedNotAllowed();
+                    }
+                    UndertowServletLogger.REQUEST_LOGGER.debug("Servlet container configured to permit session creation after response was committed. This can result in a memory leak if session has no timeout.");
+                }
+
                 String existing = c.findSessionId(exchange);
                 Boolean isRequestedSessionIdSaved = exchange.getAttachment(HttpServletRequestImpl.REQUESTED_SESSION_ID_SET);
                 if (isRequestedSessionIdSaved == null || !isRequestedSessionIdSaved) {
@@ -940,8 +945,9 @@ public class ServletContextImpl implements ServletContext {
                         boolean found = false;
                         for (String deploymentName : deployment.getServletContainer().listDeployments()) {
                             DeploymentManager deployment = this.deployment.getServletContainer().getDeployment(deploymentName);
-                            if (deployment != null) {
-                                if (deployment.getDeployment().getSessionManager().getSession(existing) != null) {
+                            if (deployment != null && deployment.getDeployment() != null) {
+                                SessionManager sm = deployment.getDeployment().getSessionManager();
+                                if (sm != null && sm.getSession(existing) != null) {
                                     found = true;
                                     break;
                                 }
@@ -955,10 +961,18 @@ public class ServletContextImpl implements ServletContext {
                     }
                 }
 
-                if (httpSession == null) {
-                    final Session newSession = sessionManager.createSession(exchange, c);
-                    httpSession = SecurityActions.forSession(newSession, this, true);
-                    exchange.putAttachment(sessionAttachmentKey, httpSession);
+                try {
+                    if (httpSession == null) {
+                        final Session newSession = sessionManager.createSession(exchange, c);
+                        httpSession = SecurityActions.forSession(newSession, this, true);
+                        exchange.putAttachment(sessionAttachmentKey, httpSession);
+                    }
+                } catch (IllegalStateException e) {
+                    session = sessionManager.getSession(exchange, c);
+                    if (session != null) {
+                        httpSession = SecurityActions.forSession(session, this, false);
+                        exchange.putAttachment(sessionAttachmentKey, httpSession);
+                    }
                 }
             }
         }
@@ -975,6 +989,7 @@ public class ServletContextImpl implements ServletContext {
         return getSession(this, exchange, create);
     }
 
+    @SuppressWarnings("removal")
     public void updateSessionAccessTime(final HttpServerExchange exchange) {
         HttpSessionImpl httpSession = getSession(exchange, false);
         if (httpSession != null) {
@@ -982,7 +997,7 @@ public class ServletContextImpl implements ServletContext {
             if (System.getSecurityManager() == null) {
                 underlyingSession = httpSession.getSession();
             } else {
-                underlyingSession = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+                underlyingSession = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
             }
             underlyingSession.requestDone(exchange);
         }
@@ -1017,11 +1032,12 @@ public class ServletContextImpl implements ServletContext {
         deploymentInfo = null;
     }
 
+    @SuppressWarnings("removal")
     private void readServletAnnotations(ServletInfo servlet, DeploymentInfo deploymentInfo) {
         if (System.getSecurityManager() == null) {
             new ReadServletAnnotationsTask(servlet, deploymentInfo).run();
         } else {
-            AccessController.doPrivileged(new ReadServletAnnotationsTask(servlet, deploymentInfo));
+            java.security.AccessController.doPrivileged(new ReadServletAnnotationsTask(servlet, deploymentInfo));
         }
     }
 

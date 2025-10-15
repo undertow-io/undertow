@@ -25,9 +25,9 @@ import io.undertow.websockets.core.WebSocketUtils;
 import io.undertow.websockets.core.WebSockets;
 import org.xnio.channels.Channels;
 
-import javax.websocket.EncodeException;
-import javax.websocket.RemoteEndpoint;
-import javax.websocket.SendHandler;
+import jakarta.websocket.EncodeException;
+import jakarta.websocket.RemoteEndpoint;
+import jakarta.websocket.SendHandler;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -276,8 +276,9 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if (binaryFrameSender != null) {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
+            StreamSinkFrameChannel textFrameSender = this.textFrameSender;
             if (textFrameSender == null) {
-                textFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.TEXT);
+                textFrameSender = this.textFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.TEXT);
             }
             try {
                 Channels.writeBlocking(textFrameSender, WebSocketUtils.fromUtf8String(partialMessage));
@@ -287,7 +288,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 Channels.flushBlocking(textFrameSender);
             } finally {
                 if (isLast) {
-                    textFrameSender = null;
+                    this.textFrameSender = null;
                 }
             }
 
@@ -302,8 +303,9 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
             if (textFrameSender != null) {
                 throw JsrWebSocketMessages.MESSAGES.cannotSendInMiddleOfFragmentedMessage();
             }
+            StreamSinkFrameChannel binaryFrameSender = this.binaryFrameSender;
             if (binaryFrameSender == null) {
-                binaryFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.BINARY);
+                binaryFrameSender = this.binaryFrameSender = undertowSession.getWebSocketChannel().send(WebSocketFrameType.BINARY);
             }
             try {
                 Channels.writeBlocking(binaryFrameSender, partialByte);
@@ -313,7 +315,7 @@ final class WebSocketSessionRemoteEndpoint implements RemoteEndpoint {
                 Channels.flushBlocking(binaryFrameSender);
             } finally {
                 if (isLast) {
-                    binaryFrameSender = null;
+                    this.binaryFrameSender = null;
                 }
             }
             partialByte.clear();

@@ -17,7 +17,7 @@
  */
 package io.undertow.servlet.test.listener.request.async.onError;
 
-import javax.servlet.AsyncContext;
+import jakarta.servlet.AsyncContext;
 
 public class AsyncTask implements Runnable {
 

@@ -21,9 +21,9 @@ import io.undertow.servlet.test.util.MessageServlet;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * An extension to the MessageServlet that can also perform additional checks related to the authenticated principal.
@@ -45,6 +45,26 @@ public class AuthenticationMessageServlet extends MessageServlet {
         doGet(req, resp);
     }
 
+    @Override
+    protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        doGet(req, resp);
+    }
+
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        doGet(req, resp);
+    }
+
+    @Override
+    protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        doGet(req, resp);
+    }
+
+    @Override
+    protected void doTrace(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        doGet(req, resp);
+    }
+
     private void checkExpectedMechanism(HttpServletRequest req) {
         String expectedMechanism = req.getHeader("ExpectedMechanism");
         if (expectedMechanism == null) {
@@ -56,7 +76,7 @@ public class AuthenticationMessageServlet extends MessageServlet {
             }
         } else if (expectedMechanism.equals("BASIC")) {
             if (req.getAuthType() != HttpServletRequest.BASIC_AUTH) {
-                throw new IllegalStateException("Expected mechanism type not matched.");
+                throw new IllegalStateException("Expected mechanism type not matched: " + req.getAuthType());
             }
         } else {
             throw new IllegalStateException("ExpectedMechanism not recognised.");

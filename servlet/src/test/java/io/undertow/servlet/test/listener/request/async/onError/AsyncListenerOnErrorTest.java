@@ -20,8 +20,9 @@ package io.undertow.servlet.test.listener.request.async.onError;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
+import io.undertow.testutils.ProxyIgnore;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.jboss.logging.Logger;
@@ -78,12 +79,16 @@ public class AsyncListenerOnErrorTest {
                 .setAsyncSupported(true)
                 .addMapping("/async4");
 
+        ServletInfo a5 = new ServletInfo("asyncServlet5", AsyncServlet5.class)
+                .setAsyncSupported(true)
+                .addMapping("/async5");
+
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(AsyncListenerOnErrorTest.class.getClassLoader())
                 .setContextPath("/servletContext")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName("servletContext.war")
-                .addServlets(f, a1, a2, a3, a4);
+                .addServlets(f, a1, a2, a3, a4, a5);
 
         builder.setExceptionHandler(LoggingExceptionHandler.builder()
                 .add(IllegalStateException.class, "io.undertow", Logger.Level.DEBUG)
@@ -158,6 +163,22 @@ public class AsyncListenerOnErrorTest {
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
             Assert.assertArrayEquals(new String[]{"ERROR", "COMPLETE"}, AsyncEventListener.results(2));
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test @ProxyIgnore
+    // FIXME UNDERTOW-1523
+    public void testAsyncErrorOnClientBreakdown() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async5");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            org.apache.http.client.utils.HttpClientUtils.closeQuietly(client);
+
+            Assert.assertArrayEquals(new String[]{"ERROR", "COMPLETE"}, AsyncEventListener.results(3));
         } finally {
             client.getConnectionManager().shutdown();
         }

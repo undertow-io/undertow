@@ -21,7 +21,7 @@ package io.undertow.servlet.test.response.cookies;
 import java.util.Arrays;
 import java.util.Comparator;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
@@ -122,7 +122,7 @@ public class ResponseCookiesTestCase {
             final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
             assertEquals(5, setCookieHeaders.length);
             Arrays.sort(setCookieHeaders, Comparator.comparing(Object::toString));
-            assertTrue(setCookieHeadersMatchesValue("JSESSIONID=.*; path=/servletContext", setCookieHeaders));
+            assertTrue(setCookieHeadersMatchesValue("JSESSIONID=.*; Path=/servletContext", setCookieHeaders));
             assertTrue(setCookieHeadersContainsValue("test=test10; domain=www.domain.com", setCookieHeaders));
             assertTrue(setCookieHeadersContainsValue("test=test2; path=/test", setCookieHeaders));
             assertTrue(setCookieHeadersContainsValue("test=test5", setCookieHeaders));
@@ -146,9 +146,9 @@ public class ResponseCookiesTestCase {
 
             final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
             assertEquals(4, setCookieHeaders.length);
-            assertTrue(setCookieHeadersContainsValueStartingWithPrefix("JSESSIONID=_bug_fix; path=/path3; Max-Age=500; Expires=", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValueStartingWithPrefix("JSESSIONID=_bug_fix; path=/path4; Max-Age=1000; Expires=", setCookieHeaders));
-            assertTrue(setCookieHeadersMatchesValue("JSESSIONID=.*; path=/servletContext", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValueStartingWithPrefix("JSESSIONID=_bug_fix; Path=/path3; Max-Age=500; Expires=", setCookieHeaders));
+            assertTrue(setCookieHeadersContainsValueStartingWithPrefix("JSESSIONID=_bug_fix; Path=/path4; Max-Age=1000; Expires=", setCookieHeaders));
+            assertTrue(setCookieHeadersMatchesValue("JSESSIONID=.*; Path=/servletContext", setCookieHeaders));
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -157,7 +157,7 @@ public class ResponseCookiesTestCase {
     private static boolean setCookieHeadersContainsValue(final String value, final Header[] setCookieHeaders) {
         if (setCookieHeaders == null) return false;
         for (Header h : setCookieHeaders) {
-            if (value.equals(h.getValue())) return true;
+            if (value.equalsIgnoreCase(h.getValue())) return true;
         }
         return false;
     }

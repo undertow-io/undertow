@@ -18,13 +18,40 @@
 
 package io.undertow.client.http2;
 
-import static io.undertow.protocols.http2.Http2Channel.AUTHORITY;
-import static io.undertow.protocols.http2.Http2Channel.METHOD;
-import static io.undertow.protocols.http2.Http2Channel.PATH;
-import static io.undertow.protocols.http2.Http2Channel.SCHEME;
-import static io.undertow.protocols.http2.Http2Channel.STATUS;
-import static io.undertow.util.Headers.CONTENT_LENGTH;
-import static io.undertow.util.Headers.TRANSFER_ENCODING;
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.client.ClientCallback;
+import io.undertow.client.ClientConnection;
+import io.undertow.client.ClientExchange;
+import io.undertow.client.ClientRequest;
+import io.undertow.client.ClientStatistics;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.protocols.http2.AbstractHttp2StreamSourceChannel;
+import io.undertow.protocols.http2.Http2Channel;
+import io.undertow.protocols.http2.Http2DataStreamSinkChannel;
+import io.undertow.protocols.http2.Http2GoAwayStreamSourceChannel;
+import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
+import io.undertow.protocols.http2.Http2PingStreamSourceChannel;
+import io.undertow.protocols.http2.Http2PushPromiseStreamSourceChannel;
+import io.undertow.protocols.http2.Http2RstStreamStreamSourceChannel;
+import io.undertow.protocols.http2.Http2StreamSourceChannel;
+import io.undertow.server.protocol.http.HttpAttachments;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
+import org.xnio.ChannelExceptionHandler;
+import org.xnio.ChannelListener;
+import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
+import org.xnio.Option;
+import org.xnio.StreamConnection;
+import org.xnio.XnioIoThread;
+import org.xnio.XnioWorker;
+import org.xnio.channels.Channels;
+import org.xnio.channels.StreamSinkChannel;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -39,44 +66,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
-import io.undertow.client.ClientStatistics;
-import io.undertow.protocols.http2.Http2DataStreamSinkChannel;
-import io.undertow.protocols.http2.Http2GoAwayStreamSourceChannel;
-import io.undertow.protocols.http2.Http2PushPromiseStreamSourceChannel;
-import io.undertow.server.protocol.http.HttpAttachments;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Methods;
-import io.undertow.util.Protocols;
-import org.xnio.ChannelExceptionHandler;
-import org.xnio.ChannelListener;
-import org.xnio.ChannelListeners;
-import org.xnio.IoUtils;
-import org.xnio.Option;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.StreamConnection;
-import org.xnio.XnioIoThread;
-import org.xnio.XnioWorker;
-import org.xnio.channels.Channels;
-import org.xnio.channels.StreamSinkChannel;
-
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientExchange;
-import io.undertow.client.ClientRequest;
-import io.undertow.protocols.http2.AbstractHttp2StreamSourceChannel;
-import io.undertow.protocols.http2.Http2Channel;
-import io.undertow.protocols.http2.Http2HeadersStreamSinkChannel;
-import io.undertow.protocols.http2.Http2PingStreamSourceChannel;
-import io.undertow.protocols.http2.Http2RstStreamStreamSourceChannel;
-import io.undertow.protocols.http2.Http2StreamSourceChannel;
-import io.undertow.util.Headers;
-import io.undertow.util.HttpString;
+import static io.undertow.protocols.http2.Http2Channel.AUTHORITY;
+import static io.undertow.protocols.http2.Http2Channel.METHOD;
+import static io.undertow.protocols.http2.Http2Channel.PATH;
+import static io.undertow.protocols.http2.Http2Channel.SCHEME;
+import static io.undertow.protocols.http2.Http2Channel.STATUS;
+import static io.undertow.util.Headers.CONTENT_LENGTH;
+import static io.undertow.util.Headers.TRANSFER_ENCODING;
 
 /**
+ * ClientConnection implementation for HTTP2 protocol.
+ *
  * @author Stuart Douglas
+ * @author Flavia Rainone
  */
 public class Http2ClientConnection implements ClientConnection {
 
@@ -386,6 +388,49 @@ public class Http2ClientConnection implements ClientConnection {
 
     private class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
+        // listener that handles events for channels after receiving a continue response
+        private class ContinueReceiveListener implements ChannelListener<AbstractHttp2StreamSourceChannel> {
+            private final Http2Channel http2Channel;
+
+            ContinueReceiveListener(Http2Channel http2Channel) {
+                this.http2Channel = http2Channel;
+            }
+
+            @Override
+            public void handleEvent(AbstractHttp2StreamSourceChannel sourceChannel) {
+                // listener is added only to instances of Http2StreamSourceChannel
+                assert sourceChannel instanceof Http2StreamSourceChannel;
+                try {
+                    // channel is already created, no need to invoke receive
+                    final Http2StreamSourceChannel channel = (Http2StreamSourceChannel) sourceChannel;
+                    if (channel.getHeaders().getFirst(STATUS) == null) {
+                        // instead, process pending frames, so we can see if we have a final status
+                        Channels.drain(channel, Long.MAX_VALUE);
+                        if (channel.getHeaders().getFirst(STATUS) == null) {
+                            // no status yet, return and wait for next event
+                            return;
+                        }
+                    }
+                    // finally, a new status
+                    int statusCode = Integer.parseInt(channel.getHeaders().getFirst(STATUS));
+                    Http2ClientExchange request = currentExchanges.get(channel.getStreamId());
+                    if (statusCode < 200) {
+                        //this is an informational response 1xx response
+                        if (statusCode == 100) {
+                            //we got a continue response again, just set the continue response and wait for next event
+                            request.setContinueResponse(request.createResponse(channel));
+                        }
+                        Channels.drain(channel, Long.MAX_VALUE);
+                        return;
+                    }
+                    // we got the final response, handle it
+                    handleFinalResponse(http2Channel, request, channel);
+                } catch (Throwable t) {
+                    handleThrowable(t);
+                }
+            }
+        }
+
         @Override
         public void handleEvent(Http2Channel channel) {
             try {
@@ -400,39 +445,15 @@ public class Http2ClientConnection implements ClientConnection {
                         if(statusCode == 100) {
                             //a continue response
                             request.setContinueResponse(request.createResponse(streamSourceChannel));
+                            // switch to continue receive listener, because next frame we will already have the Http2StreamSourceChannel
+                            // previously created, we just need to read the new pending frames as they arrive
+                            streamSourceChannel.getReadSetter().set(new ContinueReceiveListener(http2Channel));
+                            streamSourceChannel.resumeReads();
                         }
                         Channels.drain(result, Long.MAX_VALUE);
                         return;
                     }
-                    ((Http2StreamSourceChannel) result).setTrailersHandler(new Http2StreamSourceChannel.TrailersHandler() {
-                        @Override
-                        public void handleTrailers(HeaderMap headerMap) {
-                            request.putAttachment(HttpAttachments.REQUEST_TRAILERS, headerMap);
-                        }
-                    });
-
-                    result.addCloseTask(new ChannelListener<AbstractHttp2StreamSourceChannel>() {
-                        @Override
-                        public void handleEvent(AbstractHttp2StreamSourceChannel channel) {
-                            currentExchanges.remove(streamSourceChannel.getStreamId());
-                        }
-                    });
-                    streamSourceChannel.setCompletionListener(new ChannelListener<Http2StreamSourceChannel>() {
-                        @Override
-                        public void handleEvent(Http2StreamSourceChannel channel) {
-                            currentExchanges.remove(streamSourceChannel.getStreamId());
-                        }
-                    });
-                    if (request == null && initialUpgradeRequest) {
-                        Channels.drain(result, Long.MAX_VALUE);
-                        initialUpgradeRequest = false;
-                        return;
-                    } else if(request == null) {
-                        channel.sendGoAway(Http2Channel.ERROR_PROTOCOL_ERROR);
-                        IoUtils.safeClose(Http2ClientConnection.this);
-                        return;
-                    }
-                    request.responseReady(streamSourceChannel);
+                    handleFinalResponse(channel, request, streamSourceChannel);
                 } else if (result instanceof Http2PingStreamSourceChannel) {
                     handlePing((Http2PingStreamSourceChannel) result);
                 } else if (result instanceof Http2RstStreamStreamSourceChannel) {
@@ -485,18 +506,24 @@ public class Http2ClientConnection implements ClientConnection {
                 }
 
             } catch (Throwable t) {
-                IOException e = t instanceof IOException ? (IOException) t : new IOException(t);
-                UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
-                IoUtils.safeClose(Http2ClientConnection.this);
-                for (Map.Entry<Integer, Http2ClientExchange> entry : currentExchanges.entrySet()) {
-                    try {
-                        entry.getValue().failed(e);
-                    } catch (Throwable ex) {
-                        UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(ex));
-                    }
-                }
+                handleThrowable(t);
             }
+        }
 
+        private void handleFinalResponse(Http2Channel channel, Http2ClientExchange request, Http2StreamSourceChannel response) throws IOException {
+            response.setTrailersHandler(headerMap -> request.putAttachment(io.undertow.server.protocol.http.HttpAttachments.REQUEST_TRAILERS, headerMap));
+            response.addCloseTask(channel1 -> currentExchanges.remove(response.getStreamId()));
+            response.setCompletionListener(channel12 -> currentExchanges.remove(response.getStreamId()));
+            if (request == null && initialUpgradeRequest) {
+                Channels.drain(response, Long.MAX_VALUE);
+                initialUpgradeRequest = false;
+                return;
+            } else if(request == null) {
+                channel.sendGoAway(io.undertow.protocols.http2.Http2Channel.ERROR_PROTOCOL_ERROR);
+                IoUtils.safeClose(Http2ClientConnection.this);
+                return;
+            }
+            request.responseReady(response);
         }
 
         private void handlePing(Http2PingStreamSourceChannel frame) {
@@ -512,6 +539,18 @@ public class Http2ClientConnection implements ClientConnection {
             }
         }
 
+        private void handleThrowable(Throwable t) {
+            final IOException e = t instanceof IOException ? (IOException) t : new IOException(t);
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+            IoUtils.safeClose(Http2ClientConnection.this);
+            for (Map.Entry<Integer, Http2ClientExchange> entry : currentExchanges.entrySet()) {
+                try {
+                    entry.getValue().failed(e);
+                } catch (Throwable ex) {
+                    UndertowLogger.REQUEST_IO_LOGGER.ioException(new IOException(ex));
+                }
+            }
+        }
     }
 
     private static final class PingKey{

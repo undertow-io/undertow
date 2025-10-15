@@ -40,7 +40,7 @@ public class RemoteHostAttribute implements ExchangeAttribute {
 
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
-        final InetSocketAddress sourceAddress = (InetSocketAddress) exchange.getSourceAddress();
+        final InetSocketAddress sourceAddress = exchange.getSourceAddress();
         return sourceAddress.getHostString();
     }
 

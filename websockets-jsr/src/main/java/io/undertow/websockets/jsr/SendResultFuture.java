@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * Default implementation of a {@link Future} that is used in the {@link javax.websocket.RemoteEndpoint.Async}
+ * Default implementation of a {@link Future} that is used in the {@link jakarta.websocket.RemoteEndpoint.Async}
  * implementation
  *
  * @author <a href="mailto:nmaurer@redhat.com">Norman Maurer</a>

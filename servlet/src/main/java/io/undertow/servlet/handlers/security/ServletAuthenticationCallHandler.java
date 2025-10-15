@@ -27,7 +27,7 @@ import io.undertow.util.StatusCodes;
  * This is the final {@link io.undertow.server.HttpHandler} in the security chain, it's purpose is to act as a barrier at the end of the chain to
  * ensure authenticate is called after the mechanisms have been associated with the context and the constraint checked.
  *
- * This handler uses the Servlet {@link javax.servlet.http.HttpServletResponse#sendError(int)} method to make
+ * This handler uses the Servlet {@link jakarta.servlet.http.HttpServletResponse#sendError(int)} method to make
  * sure the correct error page is displayed.
  *
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>

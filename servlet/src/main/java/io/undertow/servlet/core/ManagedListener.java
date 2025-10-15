@@ -20,7 +20,7 @@ package io.undertow.servlet.core;
 
 import java.util.EventListener;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.InstanceHandle;

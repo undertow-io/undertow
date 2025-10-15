@@ -111,9 +111,10 @@ public class CookiesTestCase {
         Map<String, Cookie> cookies = Cookies.parseRequestCookies(1, false, Arrays.asList(
                 "CUSTOMER=WILE_E_COYOTE; $Domain=LOONEY_TUNES; $Version=1; $Path=/"));
 
-        Assert.assertFalse(cookies.containsKey("$Domain"));
-        Assert.assertFalse(cookies.containsKey("$Version"));
-        Assert.assertFalse(cookies.containsKey("$Path"));
+        // RFC 6265 treats the domain, path and version attributes of an RFC 2109 cookie as a separate cookies
+        Assert.assertTrue(cookies.containsKey("$Domain"));
+        Assert.assertTrue(cookies.containsKey("$Version"));
+        Assert.assertTrue(cookies.containsKey("$Path"));
 
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertEquals("CUSTOMER", cookie.getName());
@@ -447,6 +448,21 @@ public class CookiesTestCase {
         Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
         Assert.assertEquals("/", cookie.getPath());
         Assert.assertNull(cookie.getSameSiteMode());
+    }
+
+    @Test
+    public void testNoDoubleQuoteTermination() {
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(4, false, Arrays.asList("CUSTOMER=\"WILE_E_COYOTE\"; BAD=\"X; SHIPPING=FEDEX"), true);
+        Assert.assertEquals(2, cookies.size());
+        Cookie cookie = cookies.get("CUSTOMER");
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+        cookie = cookies.get("BAD");
+        Assert.assertNull(cookie);
+        cookie = cookies.get("SHIPPING");
+        Assert.assertEquals("SHIPPING", cookie.getName());
+        Assert.assertEquals("FEDEX", cookie.getValue());
+        Assert.assertNotNull(cookie);
     }
 
     // RFC6265 allows US-ASCII characters excluding CTLs, whitespace,

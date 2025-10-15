@@ -27,8 +27,8 @@ import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.PushBuilder;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.PushBuilder;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;

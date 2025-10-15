@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.StringTokenizer;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * @author Stuart Douglas
@@ -52,8 +52,8 @@ public class RewriteConfigFactory {
 
 
     private static RewriteConfig parse(BufferedReader reader) {
-        ArrayList<RewriteRule> rules = new ArrayList<RewriteRule>();
-        ArrayList<RewriteCond> conditions = new ArrayList<RewriteCond>();
+        ArrayList<RewriteRule> rules = new ArrayList<>();
+        ArrayList<RewriteCond> conditions = new ArrayList<>();
         Map<String, RewriteMap> maps = new HashMap<>();
         while (true) {
             try {

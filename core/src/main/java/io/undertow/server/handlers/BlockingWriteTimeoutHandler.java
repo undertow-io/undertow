@@ -18,6 +18,9 @@
 
 package io.undertow.server.handlers;
 
+import static org.wildfly.common.Assert.checkNotNullParam;
+import static org.wildfly.common.Assert.checkNotNullParamWithNullPointerException;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.server.ConduitWrapper;
@@ -37,7 +40,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.time.Duration;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -247,20 +249,18 @@ public final class BlockingWriteTimeoutHandler implements HttpHandler {
         private Builder() {}
 
         public Builder writeTimeout(Duration writeTimeout) {
-            this.writeTimeout =  Objects.requireNonNull(writeTimeout, "A write timeout is required");
+            this.writeTimeout =  checkNotNullParamWithNullPointerException("writeTimeout", writeTimeout);
             return this;
         }
 
         public Builder nextHandler(HttpHandler nextHandler) {
-            this.nextHandler = Objects.requireNonNull(nextHandler, "HttpHandler is required");
+            this.nextHandler = checkNotNullParamWithNullPointerException("nextHandler", nextHandler);
             return this;
         }
 
         public HttpHandler build() {
-            HttpHandler next = Objects.requireNonNull(nextHandler, "HttpHandler is required");
-            if (writeTimeout == null) {
-                throw new IllegalArgumentException("A write timeout is required");
-            }
+            HttpHandler next = checkNotNullParamWithNullPointerException("nextHandler", nextHandler);
+            checkNotNullParam("writeTimeout", writeTimeout);
             if (writeTimeout.isZero() || writeTimeout.isNegative()) {
                 throw new IllegalArgumentException("Write timeout must be positive: " + writeTimeout);
             }

@@ -21,6 +21,7 @@ package io.undertow.server.handlers;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 
+import io.undertow.util.Headers;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -60,7 +61,7 @@ public class SecureCookieHandlerTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("foo=bar; secure", header.getValue());
+            Assert.assertEquals("foo=bar; Secure", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL());
@@ -68,6 +69,33 @@ public class SecureCookieHandlerTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             header = result.getFirstHeader("set-cookie");
             Assert.assertEquals("foo=bar", header.getValue());
+        } finally {
+            client.getConnectionManager().shutdown();
+            DefaultServer.stopSSLServer();
+        }
+    }
+
+    @Test
+    public void testSecureCookieHandlerWithManuallySetCookie() throws IOException, GeneralSecurityException {
+
+        DefaultServer.setRootHandler(new SecureCookieHandler(new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                exchange.getResponseHeaders().put(Headers.SET_COOKIE, "cookie=value");
+            }
+        }));
+
+        DefaultServer.startSSLServer();
+        TestHttpClient client = new TestHttpClient();
+        client.setSSLContext(DefaultServer.getClientSSLContext());
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+
+            Header header = result.getFirstHeader("set-cookie");
+            Assert.assertEquals("cookie=value; Secure", header.getValue());
+            FileUtils.readFile(result.getEntity().getContent());
         } finally {
             client.getConnectionManager().shutdown();
             DefaultServer.stopSSLServer();

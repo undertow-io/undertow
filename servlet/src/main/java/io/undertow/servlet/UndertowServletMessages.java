@@ -22,11 +22,11 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Path;
 
-import javax.servlet.Filter;
-import javax.servlet.Servlet;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
+import jakarta.servlet.Filter;
+import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
 
 import io.undertow.servlet.api.DeploymentManager;
 import org.jboss.logging.annotations.Cause;
@@ -71,13 +71,13 @@ public interface UndertowServletMessages {
     @Message(id = 10008, value = "Header %s cannot be converted to a date")
     IllegalArgumentException headerCannotBeConvertedToDate(String header);
 
-    @Message(id = 10009, value = "Servlet %s of type %s does not implement javax.servlet.Servlet")
+    @Message(id = 10009, value = "Servlet %s of type %s does not implement jakarta.servlet.Servlet")
     IllegalArgumentException servletMustImplementServlet(String name, Class<? extends Servlet> servletClass);
 
     @Message(id = 10010, value = "%s of type %s must have a default constructor")
     IllegalArgumentException componentMustHaveDefaultConstructor(String componentType, Class<?> componentClass);
 
-    @Message(id = 10011, value = "Filter %s of type %s does not implement javax.servlet.Filter")
+    @Message(id = 10011, value = "Filter %s of type %s does not implement jakarta.servlet.Filter")
     IllegalArgumentException filterMustImplementFilter(String name, Class<? extends Filter> filterClass);
 
     @Message(id = 10012, value = "Listener class %s must implement at least one listener interface")
@@ -101,8 +101,8 @@ public interface UndertowServletMessages {
     @Message(id = 10018, value = "Async not started")
     IllegalStateException asyncNotStarted();
 
-    @Message(id = 10019, value = "Response already commited")
-    IllegalStateException responseAlreadyCommited();
+    @Message(id = 10019, value = "Response already committed")
+    IllegalStateException responseAlreadyCommitted();
 
     @Message(id = 10020, value = "Content has been written")
     IllegalStateException contentHasBeenWritten();
@@ -235,4 +235,19 @@ public interface UndertowServletMessages {
 
     @Message(id = 10063, value = "Path %s must start with a / to get the request dispatcher")
     IllegalArgumentException pathMustStartWithSlashForRequestDispatcher(String path);
+
+    @Message(id = 10064, value = "Servlet context for context path '%s' in deployment '%s' has already been initialized, can not declare roles.")
+    IllegalStateException servletAlreadyInitialize(String deploymentName, String contextPath);
+
+    @Message(id = 10065, value = "Can not set empty/null role in servlet context for context path '%s' in deployment '%s' ")
+    IllegalArgumentException roleMustNotBeEmpty(String deploymentName, String contextPath);
+
+    //@Message(id = 10066, value = "Can not set invoke 'declareRoles' from dynamic listener in servlet context for context path '%s' in deployment '%s' ")
+    //UnsupportedOperationException cantCallFromDynamicListener(String deploymentName, String contextPath);
+
+    @Message(id = 10067, value = "Servlet container does not permit session creation after response was committed.")
+    IllegalStateException sessionCreationAfterResponseCommittedNotAllowed();
+
+    @Message(id = 10068, value = "Servlet container does not permit session identifier change after response was committed.")
+    IllegalStateException sessionIdChangeAfterResponseCommittedNotAllowed();
 }

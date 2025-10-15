@@ -167,8 +167,11 @@ public interface WebSocketMessages {
 //    IllegalStateException badExtensionsConfiguredInClient();
 
     @Message(id = 2044, value = "Compressed message payload is corrupted")
-    IOException badCompressedPayload(@Cause final DataFormatException cause);
+    IOException badCompressedPayload(@Cause DataFormatException cause);
 
     @Message(id = 2045, value = "Unable to send on newly created channel!")
     IllegalStateException unableToSendOnNewChannel();
+
+    @Message(id = 2046, value = "Closing WebSocket, peer went away.")
+    String messageCloseWebSocket();
 }

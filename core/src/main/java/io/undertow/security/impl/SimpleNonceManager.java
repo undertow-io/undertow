@@ -18,6 +18,7 @@
 package io.undertow.security.impl;
 
 import static io.undertow.UndertowMessages.MESSAGES;
+import static org.wildfly.common.Assert.checkNotNullParamWithNullPointerException;
 
 import io.undertow.security.api.SessionNonceManager;
 import io.undertow.server.HttpServerExchange;
@@ -106,6 +107,12 @@ public class SimpleNonceManager implements SessionNonceManager {
     private static final long overallTimeOut = 15 * 60 * 1000;
 
     /**
+     * Create a static instance of SecureRandom, so it can be actually reused by all instances of this class.
+     * This should also increase the randomness of generated numbers.
+     */
+    private static final Random rand = new SecureRandom();
+
+    /**
      * A previously used nonce will be allowed to remain in the knownNonces list for up to 5 minutes.
      *
      * The nonce will be accepted during this 5 minute window but will immediately be replaced causing any additional requests
@@ -127,7 +134,6 @@ public class SimpleNonceManager implements SessionNonceManager {
         this.hashLength = digest.getDigestLength();
 
         // Create a new secret only valid within this NonceManager instance.
-        Random rand = new SecureRandom();
         byte[] secretBytes = new byte[32];
         rand.nextBytes(secretBytes);
         secret = FlexBase64.encodeString(digest.digest(secretBytes), false);
@@ -429,10 +435,7 @@ public class SimpleNonceManager implements SessionNonceManager {
         private final String nonce;
 
         private NonceHolder(final String nonce) {
-            if (nonce == null) {
-                throw new NullPointerException("nonce must not be null.");
-            }
-            this.nonce = nonce;
+            this.nonce = checkNotNullParamWithNullPointerException("nonce", nonce);
         }
 
         @Override
@@ -467,10 +470,6 @@ public class SimpleNonceManager implements SessionNonceManager {
 
         private Nonce(final String nonce) {
             this(nonce, -1, -1);
-        }
-
-        private Nonce(final String nonce, final long timeStamp) {
-            this(nonce, timeStamp, -1);
         }
 
         private Nonce(final String nonce, final long timeStamp, final int initialNC) {
@@ -511,10 +510,7 @@ public class SimpleNonceManager implements SessionNonceManager {
         private final String nonce;
 
         private InvalidNonceCleaner(final String nonce) {
-            if (nonce == null) {
-                throw new NullPointerException("nonce must not be null.");
-            }
-            this.nonce = nonce;
+            this.nonce = checkNotNullParamWithNullPointerException("nonce", nonce);
         }
 
         public void run() {
@@ -527,10 +523,7 @@ public class SimpleNonceManager implements SessionNonceManager {
         private final String nonce;
 
         private KnownNonceCleaner(final String nonce) {
-            if (nonce == null) {
-                throw new NullPointerException("nonce must not be null.");
-            }
-            this.nonce = nonce;
+            this.nonce = checkNotNullParamWithNullPointerException("nonce", nonce);
         }
 
         public void run() {

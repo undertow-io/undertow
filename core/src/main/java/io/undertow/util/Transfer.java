@@ -97,7 +97,7 @@ public class Transfer {
                 free = false;
             }
 
-            final TransferListener<I, O> listener = new TransferListener<I, O>(pool, current, source, sink, sourceListener, sinkListener, writeExceptionHandler, readExceptionHandler, read == -1);
+            final TransferListener<I, O> listener = new TransferListener<>(pool, current, source, sink, sourceListener, sinkListener, writeExceptionHandler, readExceptionHandler, read == -1);
             sink.getWriteSetter().set(listener);
             source.getReadSetter().set(listener);
             //we resume both reads and writes, as we want to keep trying to fill the buffer

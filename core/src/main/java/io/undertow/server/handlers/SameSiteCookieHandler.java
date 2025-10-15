@@ -142,5 +142,10 @@ public class SameSiteCookieHandler implements HttpHandler {
                 }
             };
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

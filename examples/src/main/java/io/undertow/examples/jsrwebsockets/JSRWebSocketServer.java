@@ -18,7 +18,7 @@
 
 package io.undertow.examples.jsrwebsockets;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.server.DefaultByteBufferPool;
 

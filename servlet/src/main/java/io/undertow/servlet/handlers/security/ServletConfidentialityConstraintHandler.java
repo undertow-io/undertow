@@ -28,7 +28,7 @@ import io.undertow.servlet.api.TransportGuaranteeType;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.StatusCodes;
 
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.net.URISyntaxException;
 

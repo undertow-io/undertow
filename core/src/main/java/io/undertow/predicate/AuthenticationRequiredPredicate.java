@@ -59,5 +59,10 @@ public class AuthenticationRequiredPredicate implements Predicate {
         public Predicate build(final Map<String, Object> config) {
             return INSTANCE;
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

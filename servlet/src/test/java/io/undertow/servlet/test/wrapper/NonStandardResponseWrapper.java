@@ -18,16 +18,18 @@
 
 package io.undertow.servlet.test.wrapper;
 
+import static org.wildfly.common.Assert.checkNotNullParam;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.Locale;
 
-import javax.servlet.ServletOutputStream;
-import javax.servlet.ServletResponse;
-import javax.servlet.ServletResponseWrapper;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.ServletResponseWrapper;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * @author Stuart Douglas
@@ -44,10 +46,7 @@ public class NonStandardResponseWrapper implements HttpServletResponse {
      *          if the response is null.
      */
     public NonStandardResponseWrapper(ServletResponse response) {
-        if (response == null) {
-            throw new IllegalArgumentException("Response cannot be null");
-        }
-        this.response = response;
+        this.response = checkNotNullParam("response", response);
     }
 
     /**
@@ -67,10 +66,7 @@ public class NonStandardResponseWrapper implements HttpServletResponse {
      */
 
     public void setResponse(ServletResponse response) {
-        if (response == null) {
-            throw new IllegalArgumentException("Response cannot be null");
-        }
-        this.response = response;
+        this.response = checkNotNullParam("response", response);
     }
 
     /**
@@ -309,30 +305,6 @@ public class NonStandardResponseWrapper implements HttpServletResponse {
     }
 
     /**
-     * The default behavior of this method is to call encodeUrl(String url)
-     * on the wrapped response object.
-     *
-     * @deprecated As of version 2.1, use {@link #encodeURL(String url)}
-     *             instead
-     */
-    @Override
-    public String encodeUrl(String url) {
-        return this._getHttpServletResponse().encodeUrl(url);
-    }
-
-    /**
-     * The default behavior of this method is to return
-     * encodeRedirectUrl(String url) on the wrapped response object.
-     *
-     * @deprecated As of version 2.1, use
-     *             {@link #encodeRedirectURL(String url)} instead
-     */
-    @Override
-    public String encodeRedirectUrl(String url) {
-        return this._getHttpServletResponse().encodeRedirectUrl(url);
-    }
-
-    /**
      * The default behavior of this method is to call sendError(int sc, String msg)
      * on the wrapped response object.
      */
@@ -357,6 +329,21 @@ public class NonStandardResponseWrapper implements HttpServletResponse {
     @Override
     public void sendRedirect(String location) throws IOException {
         this._getHttpServletResponse().sendRedirect(location);
+    }
+
+    @Override
+    public void sendRedirect(final String location, final boolean clearBuffer) throws IOException {
+        this._getHttpServletResponse().sendRedirect(location, clearBuffer);
+    }
+
+    @Override
+    public void sendRedirect(final String location, final int sc) throws IOException {
+        this._getHttpServletResponse().sendRedirect(location, sc);
+    }
+
+    @Override
+    public void sendRedirect(final String location, final int sc, final boolean clearBuffer) throws IOException {
+        this._getHttpServletResponse().sendRedirect(location, sc, clearBuffer);
     }
 
     /**
@@ -420,20 +407,6 @@ public class NonStandardResponseWrapper implements HttpServletResponse {
     @Override
     public void setStatus(int sc) {
         this._getHttpServletResponse().setStatus(sc);
-    }
-
-    /**
-     * The default behavior of this method is to call
-     * setStatus(int sc, String sm) on the wrapped response object.
-     *
-     * @deprecated As of version 2.1, due to ambiguous meaning of the
-     *             message parameter. To set a status code
-     *             use {@link #setStatus(int)}, to send an error with a description
-     *             use {@link #sendError(int, String)}
-     */
-    @Override
-    public void setStatus(int sc, String sm) {
-        this._getHttpServletResponse().setStatus(sc, sm);
     }
 
     /**

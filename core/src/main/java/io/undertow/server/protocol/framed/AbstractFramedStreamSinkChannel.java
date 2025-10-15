@@ -18,6 +18,15 @@
 
 package io.undertow.server.protocol.framed;
 
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
@@ -27,19 +36,13 @@ import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Option;
+import org.xnio.Options;
 import org.xnio.XnioExecutor;
 import org.xnio.XnioIoThread;
 import org.xnio.XnioWorker;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.channels.StreamSourceChannel;
-
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static org.xnio.Bits.allAreClear;
 import static org.xnio.Bits.anyAreSet;
@@ -57,6 +60,24 @@ import static org.xnio.Bits.anyAreSet;
  */
 public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedChannel<C, R, S>, R extends AbstractFramedStreamSourceChannel<C, R, S>, S extends AbstractFramedStreamSinkChannel<C, R, S>> implements StreamSinkChannel {
 
+
+    /**
+     * The maximum timeout to wait on awaitWritable in nanoseconds when not specified.
+     */
+    private static final long AWAIT_WRITABLE_TIMEOUT;
+
+    /**
+     * Extra timeout to make sure the flush has actually timed out
+     */
+    private static final int FUZZ_FACTOR = 50;
+
+
+    static {
+        final long defaultAwaitWritableTimeout = TimeUnit.MINUTES.toNanos(10);
+        long await_writable_timeout = TimeUnit.MILLISECONDS.toNanos(AccessController.doPrivileged((PrivilegedAction<Long>) () -> Long.getLong("io.undertow.await_writable_timeout", defaultAwaitWritableTimeout)));
+        AWAIT_WRITABLE_TIMEOUT = await_writable_timeout > 0? await_writable_timeout : defaultAwaitWritableTimeout;
+    }
+
     private static final PooledByteBuffer EMPTY_BYTE_BUFFER = new ImmediatePooledByteBuffer(ByteBuffer.allocateDirect(0));
 
     private final C channel;
@@ -64,6 +85,21 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     private final ChannelListener.SimpleSetter<S> closeSetter = new ChannelListener.SimpleSetter<>();
 
     private final Object lock = new Object();
+
+    /**
+     * handle to control the time we are waiting for flushing.
+     */
+    private volatile XnioExecutor.Key handle = null;
+
+    /**
+     * Expiration time for flushing the frame.
+     */
+    private volatile long flushExpirationTime = -1;
+
+    /**
+     * The timeout runnable to use for the handle.
+     */
+    private final TimeoutRunnable timeoutRunnable;
 
     /**
      * the state variable, this must only be access by the thread that 'owns' the channel
@@ -115,6 +151,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     protected AbstractFramedStreamSinkChannel(C channel) {
         this.channel = channel;
+        this.timeoutRunnable = new TimeoutRunnable(this);
     }
 
     public long transferFrom(final FileChannel src, final long position, final long count) throws IOException {
@@ -273,29 +310,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public void awaitWritable() throws IOException {
-        if(Thread.currentThread() == getIoThread()) {
-            throw UndertowMessages.MESSAGES.awaitCalledFromIoThread();
-        }
-        synchronized (lock) {
-            if (anyAreSet(state, STATE_CLOSED) || broken) {
-                return;
-            }
-            if (readyForFlush) {
-                try {
-                    waiterCount++;
-                    //we need to re-check after incrementing the waiters count
-
-                    if(readyForFlush && !anyAreSet(state, STATE_CLOSED) && !broken) {
-                        lock.wait();
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new InterruptedIOException();
-                } finally {
-                    waiterCount--;
-                }
-            }
-        }
+        awaitWritable(getAwaitWritableTimeout(), TimeUnit.NANOSECONDS);
     }
 
     @Override
@@ -386,13 +401,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public long write(ByteBuffer[] srcs, int offset, int length) throws IOException {
-        if(!safeToSend()) {
+        final PooledByteBuffer localWriteBuffer = getWriteBuffer();
+        if (localWriteBuffer == null) {
             return 0;
         }
-        if(writeBuffer == null) {
-            writeBuffer = getChannel().getBufferPool().allocate();
-        }
-        ByteBuffer buffer = writeBuffer.getBuffer();
+        final ByteBuffer buffer = localWriteBuffer.getBuffer();
         int copied = Buffers.copy(buffer, srcs, offset, length);
         if(!buffer.hasRemaining()) {
             handleBufferFull();
@@ -408,19 +421,40 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     @Override
     public int write(ByteBuffer src) throws IOException {
-        if(!safeToSend()) {
+        final PooledByteBuffer localWriteBuffer = getWriteBuffer();
+        if (localWriteBuffer == null) {
             return 0;
         }
-        if(writeBuffer == null) {
-            writeBuffer = getChannel().getBufferPool().allocate();
+        final ByteBuffer buffer;
+        try {
+            buffer = localWriteBuffer.getBuffer();
+        } catch (IllegalStateException e) {
+            if (!safeToSend()) {
+                return 0;
+            }
+            throw e;
         }
-        ByteBuffer buffer = writeBuffer.getBuffer();
         int copied = Buffers.copy(buffer, src);
         if(!buffer.hasRemaining()) {
             handleBufferFull();
         }
         writeSucceeded = writeSucceeded || copied > 0;
         return copied;
+    }
+
+    private PooledByteBuffer getWriteBuffer() throws IOException {
+        if(!safeToSend()) {
+            return null;
+        }
+        if(writeBuffer == null) {
+            writeBuffer = getChannel().getBufferPool().allocate();
+        }
+        PooledByteBuffer localWriteBuffer = writeBuffer;
+        // writeBuffer can be null in case of a concurrent close of this channel while writing
+        if (localWriteBuffer == null) {
+            safeToSend();
+        }
+        return localWriteBuffer;
     }
 
     /**
@@ -465,6 +499,27 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         return true;
     }
 
+    /**
+     * Return the timeout used by awaitWritable and flush tasks. First the
+     * channel write timeout is read and if not set the default
+     * AWAIT_WRITABLE_TIMEOUT.
+     *
+     * @return the awaitWritable timeout, in nanoseconds
+     */
+    protected long getAwaitWritableTimeout() {
+        Long timeout = null;
+        try {
+            timeout = TimeUnit.MILLISECONDS.toNanos(getChannel().getOption(Options.WRITE_TIMEOUT));
+        } catch (IOException e) {
+            // should never happen, ignoring
+        }
+        if (timeout != null && timeout > 0) {
+            return timeout;
+        } else {
+            return AWAIT_WRITABLE_TIMEOUT;
+        }
+    }
+
     @Override
     public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
         return Channels.writeFinalBasic(this, srcs, offset, length);
@@ -492,11 +547,12 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     }
 
     private void sendWriteBuffer() throws IOException {
-        if(writeBuffer == null) {
-            writeBuffer = EMPTY_BYTE_BUFFER;
+        PooledByteBuffer localWriteBuffer = getWriteBuffer();
+        if(localWriteBuffer == null) {
+            localWriteBuffer = EMPTY_BYTE_BUFFER;
         }
-        writeBuffer.getBuffer().flip();
-        if(!sendInternal(writeBuffer)) {
+        localWriteBuffer.getBuffer().flip();
+        if(!sendInternal(localWriteBuffer)) {
             throw UndertowMessages.MESSAGES.failedToSendAfterBeingSafe();
         }
         writeBuffer = null;
@@ -551,6 +607,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                     header.getByteBuffer().close();
                     header = null;
                 }
+                removeHandle();
             }
             channelForciblyClosed();
             //we need to wake up/invoke the write listener
@@ -577,6 +634,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
         if(isFirstDataWritten()) {
             getChannel().markWritesBroken(null);
         }
+        removeHandle();
         wakeupWaiters();
     }
 
@@ -612,17 +670,30 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
     final void flushComplete() throws IOException {
         synchronized (lock) {
             try {
+                boolean resetReadyForFlush = true;
                 bufferFull = false;
                 int remaining = header.getRemainingInBuffer();
                 boolean finalFrame = finalFrameQueued;
                 boolean channelClosed = finalFrame && remaining == 0 && !header.isAnotherFrameRequired();
                 if (remaining > 0) {
+                    // We still have a body, but since we just flushed, we transfer it to the write buffer.
+                    // This works as long as you call write() again or if finalFrame is true
+                    //TODO: this code may not work if the channel has frame level compression and flow control
+                    //we don't have an implementation that needs this yet so it is ok for now
                     body.getBuffer().limit(body.getBuffer().limit() + remaining);
+                    body.getBuffer().compact();
+                    writeBuffer = body;
+                    body = null;
+                    state &= ~STATE_PRE_WRITE_CALLED;
                     if (finalFrame) {
-                        //we clear the final frame flag, as it could not actually be written out
-                        //note that we don't attempt to requeue, as whatever stopped it from being written will likely still
-                        //be an issue
+                        // we clear the final frame flag, as it could not actually be written out
                         this.finalFrameQueued = false;
+                        // setting readyForFlush will prevent the final frame to be requeued by write listener, so mark
+                        // it as false; and do not reset it to false later on
+                        // (queueFinalFrame() will set readyForFlush to true and will do so iff readyForFlush is false)
+                        resetReadyForFlush = readyForFlush = false;
+                        flushExpirationTime = -1;
+                        queueFinalFrame();
                     }
                 } else if (header.isAnotherFrameRequired()) {
                     this.finalFrameQueued = false;
@@ -638,22 +709,12 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 }
                 if (channelClosed) {
                     fullyFlushed = true;
+                    removeHandle();
                     if (body != null) {
                         body.close();
                         body = null;
                         state &= ~STATE_PRE_WRITE_CALLED;
                     }
-                } else if (body != null) {
-                    // We still have a body, but since we just flushed, we transfer it to the write buffer.
-                    // This works as long as you call write() again
-
-                    //TODO: this code may not work if the channel has frame level compression and flow control
-                    //we don't have an implementation that needs this yet so it is ok for now
-
-                    body.getBuffer().compact();
-                    writeBuffer = body;
-                    body = null;
-                    state &= ~STATE_PRE_WRITE_CALLED;
                 }
 
                 if (header.getByteBuffer() != null) {
@@ -661,7 +722,11 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 }
                 header = null;
 
-                readyForFlush = false;
+                if (resetReadyForFlush) {
+                    readyForFlush = false;
+                    flushExpirationTime = -1;
+                }
+
                 if (isWriteResumed() && !channelClosed) {
                     wakeupWrites();
                 } else if (isWriteResumed()) {
@@ -705,6 +770,7 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
                 ChannelListeners.invokeChannelListener(getIoThread(), (S) this, closeListener);
             }
         } finally {
+            removeHandle();
             if(header != null) {
                 if( header.getByteBuffer() != null) {
                     header.getByteBuffer().close();
@@ -748,5 +814,86 @@ public abstract class AbstractFramedStreamSinkChannel<C extends AbstractFramedCh
 
     public boolean isBufferFull() {
         return bufferFull;
+    }
+
+    private void removeHandle() {
+        if (handle != null) {
+            synchronized (lock) {
+                if (handle != null) {
+                    handle.remove();
+                    handle = null;
+                }
+            }
+        }
+    }
+
+    private void addHandle(long timeout) {
+        synchronized (lock) {
+            if (handle == null) {
+                handle = getChannel().getIoThread().executeAfter(timeoutRunnable, timeout + FUZZ_FACTOR, TimeUnit.NANOSECONDS);
+            }
+        }
+    }
+
+    /**
+     * Adds the timeout task waiting for flushing. The task is assigned and
+     * not removed until executed or closing the frame. This method is called
+     * by {@link io.undertow.server.protocol.framed.AbstractFramedChannel} when
+     * the frame is held by the frame priority to avoid hangs.
+     */
+    void addReadyForFlushTask() {
+        synchronized (lock) {
+            final long timeout = this.getAwaitWritableTimeout();
+            flushExpirationTime = System.nanoTime() + timeout;
+            // set the handle to avoid wait forever for flushing
+            addHandle(timeout);
+        }
+    }
+
+    /**
+     * Runnable used to execute the timeout and avoid hangs if the other
+     * end does not read the data and the flush is not performed. The task once
+     * added is never removed until executed or the frame is finally closed.
+     * Therefore the task can:
+     * <ol>
+     * <li>Do nothing if the frame was flushed or frame is closed/broken.</li>
+     * <li>Re-schedule the task if the expiration time was extended.</li>
+     * <li>Forcibly close the frame if timeout expired without flushing.</li>
+     * </ol>
+     */
+    private static class TimeoutRunnable implements Runnable {
+
+        private final AbstractFramedStreamSinkChannel channel;
+
+        TimeoutRunnable(AbstractFramedStreamSinkChannel channel) {
+            this.channel = channel;
+        }
+
+        @Override
+        public void run() {
+            long currentTime = System.nanoTime();
+
+            synchronized (channel.lock) {
+                channel.handle = null;
+                final long flushExpirationTime = channel.flushExpirationTime;
+                if (flushExpirationTime < 0 || !channel.isReadyForFlush() || !channel.isOpen() || channel.isBroken()) {
+                    // the channel does not need to check for timeout
+                    return;
+                } else if (currentTime < flushExpirationTime) {
+                    // timeout has been re-scheduled
+                    channel.addHandle(flushExpirationTime - currentTime);
+                    return;
+                }
+            }
+
+            // Reaching this point the flush has been waiting more than the timeout => terminate it
+            UndertowLogger.REQUEST_IO_LOGGER.noFrameflushInTimeout(TimeUnit.NANOSECONDS.toMillis(channel.getAwaitWritableTimeout()));
+            try {
+                channel.channelForciblyClosed();
+            } catch (IOException e) {
+                UndertowLogger.REQUEST_IO_LOGGER.debugf(e, "Exception closing the framed sink channel because of timeout");
+                channel.markBroken();
+            }
+        }
     }
 }

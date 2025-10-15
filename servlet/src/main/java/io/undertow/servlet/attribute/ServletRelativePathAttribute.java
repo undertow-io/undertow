@@ -26,7 +26,7 @@ import io.undertow.attribute.RequestURLAttribute;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletRequestContext;
 
-import javax.servlet.RequestDispatcher;
+import jakarta.servlet.RequestDispatcher;
 
 /**
  * The relative path
@@ -88,7 +88,7 @@ public class ServletRelativePathAttribute implements ExchangeAttribute {
 
         @Override
         public int priority() {
-            return 0;
+            return 1;
         }
     }
 }

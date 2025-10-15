@@ -32,6 +32,14 @@ import io.undertow.server.handlers.cache.LRUCache;
 public class CachingResourceManager implements ResourceManager {
 
     /**
+     * Max age 0, indicating that entries expire upon creation and are not retained;
+     */
+    public static final int MAX_AGE_NO_CACHING = LRUCache.MAX_AGE_NO_CACHING;
+    /**
+     * Mage age -1, this force manager to retain entries until underlying resource manager indicate that entries expired/changed
+     */
+    public static final int MAX_AGE_NO_EXPIRY = LRUCache.MAX_AGE_NO_EXPIRY;
+    /**
      * The biggest file size we cache
      */
     private final long maxFileSize;
@@ -51,14 +59,21 @@ public class CachingResourceManager implements ResourceManager {
      */
     private final LRUCache<String, Object> cache;
 
-    private final int maxAge;
+    private int maxAge;
 
     public CachingResourceManager(final int metadataCacheSize, final long maxFileSize, final DirectBufferCache dataCache, final ResourceManager underlyingResourceManager, final int maxAge) {
         this.maxFileSize = maxFileSize;
         this.underlyingResourceManager = underlyingResourceManager;
         this.dataCache = dataCache;
+
+        if(maxAge > 0 || maxAge == MAX_AGE_NO_CACHING || maxAge == MAX_AGE_NO_EXPIRY) {
+            this.maxAge = maxAge;
+        } else {
+            UndertowLogger.ROOT_LOGGER.wrongCacheTTLValue(maxAge, MAX_AGE_NO_CACHING);
+            this.maxAge = MAX_AGE_NO_CACHING;
+        }
+
         this.cache = new LRUCache<>(metadataCacheSize, maxAge);
-        this.maxAge = maxAge;
         if(underlyingResourceManager.isResourceChangeListenerSupported()) {
             try {
                 underlyingResourceManager.registerResourceChangeListener(new ResourceChangeListener() {
@@ -70,13 +85,21 @@ public class CachingResourceManager implements ResourceManager {
                     }
                 });
             } catch (Exception e) {
-                UndertowLogger.ROOT_LOGGER.couldNotRegisterChangeListener(e);
+                int errorMaxAge = this.maxAge;
+                if(!(this.maxAge > 0 || this.maxAge == CachingResourceManager.MAX_AGE_NO_CACHING)) {
+                    errorMaxAge = CachingResourceManager.MAX_AGE_NO_CACHING;
+                }
+                UndertowLogger.ROOT_LOGGER.failedToRegisterChangeListener(this.maxAge,errorMaxAge,e);
+                this.maxAge = errorMaxAge;
             }
         }
     }
 
     @Override
     public CachedResource getResource(final String p) throws IOException {
+        if( p == null ) {
+            return null;
+        }
         final String path;
         //base always ends with a /
         if (p.startsWith("/")) {
@@ -113,7 +136,9 @@ public class CachingResourceManager implements ResourceManager {
         }
         final Resource underlying = underlyingResourceManager.getResource(path);
         if (underlying == null) {
-            cache.add(path, new NoResourceMarker(maxAge > 0 ? System.currentTimeMillis() + maxAge : -1));
+            if(this.maxAge != MAX_AGE_NO_CACHING) {
+                cache.add(path, new NoResourceMarker(maxAge > 0 ? System.currentTimeMillis() + maxAge : -1));
+            }
             return null;
         }
         final CachedResource resource = new CachedResource(this, underlying, path);

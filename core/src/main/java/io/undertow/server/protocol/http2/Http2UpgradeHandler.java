@@ -74,9 +74,8 @@ public class Http2UpgradeHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         final String upgrade = exchange.getRequestHeaders().getFirst(Headers.UPGRADE);
         final String settings = exchange.getRequestHeaders().getFirst("HTTP2-Settings");
-        if(settings != null && upgrade != null
-                && upgradeStrings.contains(upgrade)) {
-            if(HttpContinue.requiresContinueResponse(exchange) && false) {
+        if(settings != null && upgrade != null && upgradeStrings.contains(upgrade)) {
+            if(HttpContinue.requiresContinueResponse(exchange)) {
                 HttpContinue.sendContinueResponse(exchange, new IoCallback() {
                     @Override
                     public void onComplete(HttpServerExchange exchange, Sender sender) {
@@ -176,6 +175,7 @@ public class Http2UpgradeHandler implements HttpHandler {
                     }
                 }, undertowOptions, exchange.getConnection().getBufferSize(), null);
                 channel.getReceiveSetter().set(receiveListener);
+                // don't decode requests from upgrade, they are already decoded by the parser for protocol HTTP 1.1 (HttpRequestParser)
                 receiveListener.handleInitialRequest(exchange, channel, data);
                 channel.resumeReceives();
             }

@@ -20,10 +20,10 @@ package io.undertow.servlet.test.path;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * @author Tomaz Cerar
@@ -34,7 +34,7 @@ public class RealPathServlet extends HttpServlet {
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp) throws ServletException, IOException {
         PrintWriter writer = resp.getWriter();
         if (req.getPathInfo().equals("/real-path")) {
-            writer.write(req.getRealPath("file.txt"));
+            writer.write(req.getServletContext().getRealPath("file.txt"));
         } else if (req.getPathInfo().equals("/file.txt")) {
             writer.write(req.getPathTranslated());
         }

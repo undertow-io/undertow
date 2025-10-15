@@ -53,4 +53,9 @@ public class PooledAdaptor implements Pooled<ByteBuffer> {
     public void close() {
         buffer.close();
     }
+
+    @Override
+    public String toString() {
+        return "PooledAdaptor(" + buffer + ")";
+    }
 }

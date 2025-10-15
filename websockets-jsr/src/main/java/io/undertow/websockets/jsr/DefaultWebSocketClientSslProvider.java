@@ -24,8 +24,8 @@ import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
 
 import javax.net.ssl.SSLContext;
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.Endpoint;
+import jakarta.websocket.ClientEndpointConfig;
+import jakarta.websocket.Endpoint;
 import java.net.URI;
 
 /**
@@ -63,6 +63,9 @@ public class DefaultWebSocketClientSslProvider implements WebsocketClientSslProv
         }
         //look for some SSL config
         SSLContext sslContext = (SSLContext) cec.getUserProperties().get(SSL_CONTEXT);
+        if (sslContext == null) {
+            sslContext = cec.getSSLContext();
+        }
 
         if (sslContext != null) {
             return new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, sslContext);

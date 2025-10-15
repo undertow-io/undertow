@@ -19,6 +19,7 @@
 package io.undertow.server.handlers;
 
 import java.util.Date;
+import java.util.Map;
 
 /**
  * A HTTP cookie.
@@ -32,43 +33,43 @@ public interface Cookie extends Comparable {
 
     String getValue();
 
-    Cookie setValue(final String value);
+    Cookie setValue(String value);
 
     String getPath();
 
-    Cookie setPath(final String path);
+    Cookie setPath(String path);
 
     String getDomain();
 
-    Cookie setDomain(final String domain);
+    Cookie setDomain(String domain);
 
     Integer getMaxAge();
 
-    Cookie setMaxAge(final Integer maxAge);
+    Cookie setMaxAge(Integer maxAge);
 
     boolean isDiscard();
 
-    Cookie setDiscard(final boolean discard);
+    Cookie setDiscard(boolean discard);
 
     boolean isSecure();
 
-    Cookie setSecure(final boolean secure);
+    Cookie setSecure(boolean secure);
 
     int getVersion();
 
-    Cookie setVersion(final int version);
+    Cookie setVersion(int version);
 
     boolean isHttpOnly();
 
-    Cookie setHttpOnly(final boolean httpOnly);
+    Cookie setHttpOnly(boolean httpOnly);
 
     Date getExpires();
 
-    Cookie setExpires(final Date expires);
+    Cookie setExpires(Date expires);
 
     String getComment();
 
-    Cookie setComment(final String comment);
+    Cookie setComment(String comment);
 
     default boolean isSameSite() {
         return false;
@@ -83,6 +84,39 @@ public interface Cookie extends Comparable {
     }
 
     default Cookie setSameSiteMode(final String mode) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    /**
+     * Returns the attribute associated with the name or {@code null} if no attribute is associated with the name.
+     *
+     * @param name the name of the attribute
+     *
+     * @return the value or {@code null} if not found
+     */
+    default String getAttribute(final String name) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    /**
+     * Sets an attribute for the cookie. If the value is {@code null}, the attribute is removed. If the value is not
+     * {@code null}, the attribute is added to the attributes for this cookie.
+     *
+     * @param name  the name of the attribute
+     * @param value the value of the attribute or {@code null} to remove it
+     *
+     * @return this cookie
+     */
+    default Cookie setAttribute(final String name, final String value) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    /**
+     * Returns an unmodifiable map of the attributes associated with this cookie.
+     *
+     * @return an unmodifiable map of the attributes
+     */
+    default Map<String, String> getAttributes() {
         throw new UnsupportedOperationException("Not implemented");
     }
 

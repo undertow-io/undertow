@@ -39,8 +39,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 
@@ -129,7 +129,7 @@ public class MarkSecureHandlerTestCase {
             Assert.assertEquals("true", result.getHeaders("issecure")[0].getValue());
             // When SecureCookieHandler is enabled with MarkSecureHandler, secure cookie is enabled as this channel is treated as secure
             Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("foo=bar; secure", header.getValue());
+            Assert.assertEquals("foo=bar; Secure", header.getValue());
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals(HELLO_WORLD, response);
         } finally {

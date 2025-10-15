@@ -42,7 +42,7 @@ public interface DigestCredential extends Credential {
      * @param ha1 - The hex encoded a1 value.
      * @return true if verification was successful, false otherwise.
      */
-    boolean verifyHA1(final byte[] ha1);
+    boolean verifyHA1(byte[] ha1);
 
     /**
      * Get the realm name the credential is being validated against.

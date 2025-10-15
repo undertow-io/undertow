@@ -202,10 +202,10 @@ public class GSSAPIAuthenticationMechanism implements AuthenticationMechanism {
             // The AcceptSecurityContext takes over responsibility for setting the result.
             return Subject.doAs(server, new AcceptSecurityContext(exchange, challenge, securityContext));
         } catch (GeneralSecurityException e) {
-            e.printStackTrace();
+            UndertowLogger.SECURITY_LOGGER.failedToObtainSubject(exchange, e);
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         } catch (PrivilegedActionException e) {
-            e.printStackTrace();
+            UndertowLogger.SECURITY_LOGGER.failedToNegotiateAtGSSAPI(exchange, e.getCause());
             return AuthenticationMechanismOutcome.NOT_AUTHENTICATED;
         }
     }

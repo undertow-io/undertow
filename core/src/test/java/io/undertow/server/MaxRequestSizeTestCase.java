@@ -18,10 +18,14 @@
 
 package io.undertow.server;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
+import io.undertow.UndertowOptions;
+import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.ProxyIgnore;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -32,14 +36,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 
-import io.undertow.UndertowOptions;
-import io.undertow.server.handlers.BlockingHandler;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.ProxyIgnore;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.Headers;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
  * @author Stuart Douglas
@@ -122,7 +121,7 @@ public class MaxRequestSizeTestCase {
             post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             result = client.execute(post);
-            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.BAD_REQUEST, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 1000);

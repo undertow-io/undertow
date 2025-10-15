@@ -62,7 +62,6 @@ public class RequestDumpingHandler implements HttpHandler {
         sb.append(" characterEncoding=" + exchange.getRequestHeaders().get(Headers.CONTENT_ENCODING) + "\n");
         sb.append("     contentLength=" + exchange.getRequestContentLength() + "\n");
         sb.append("       contentType=" + exchange.getRequestHeaders().get(Headers.CONTENT_TYPE) + "\n");
-        //sb.append("       contextPath=" + exchange.getContextPath());
         if (sc != null) {
             if (sc.isAuthenticated()) {
                 sb.append("          authType=" + sc.getMechanismName() + "\n");
@@ -98,16 +97,13 @@ public class RequestDumpingHandler implements HttpHandler {
             }
             sb.append("\n");
         }
-        //sb.append("          pathInfo=" + exchange.getPathInfo());
         sb.append("          protocol=" + exchange.getProtocol() + "\n");
         sb.append("       queryString=" + exchange.getQueryString() + "\n");
         sb.append("        remoteAddr=" + exchange.getSourceAddress() + "\n");
         sb.append("        remoteHost=" + exchange.getSourceAddress().getHostName() + "\n");
-        //sb.append("requestedSessionId=" + exchange.getRequestedSessionId());
         sb.append("            scheme=" + exchange.getRequestScheme() + "\n");
         sb.append("              host=" + exchange.getRequestHeaders().getFirst(Headers.HOST) + "\n");
         sb.append("        serverPort=" + exchange.getDestinationAddress().getPort() + "\n");
-        //sb.append("       servletPath=" + exchange.getServletPath());
         sb.append("          isSecure=" + exchange.isSecure() + "\n");
 
         exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
@@ -168,7 +164,7 @@ public class RequestDumpingHandler implements HttpHandler {
                     sb.append(formField)
                             .append("=");
                     for (FormData.FormValue formValue : formValues) {
-                        sb.append(formValue.isFileItem() ? "[file-content]" : formValue.getValue());
+                        sb.append(formValue.isFileItem() && !formValue.isBigField() ? "[file-content]" : formValue.getValue());
                         sb.append("\n");
 
                         if (formValue.getHeaders() != null) {
@@ -219,6 +215,11 @@ public class RequestDumpingHandler implements HttpHandler {
         public HandlerWrapper build(Map<String, Object> config) {
 
             return new Wrapper();
+        }
+
+        @Override
+        public int priority() {
+            return 0;
         }
 
     }

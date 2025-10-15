@@ -1,0 +1,21 @@
+{
+  "undertow": {
+    "title": "compressed resource",
+    "subtype": {
+      "method": "test json compressed resource",
+      "listInfo": {
+        "test": {
+          "json": "js",
+          "compressed": "c",
+          "resource": "this file",
+          "type": "data",
+          "def": {
+            "thisFile": "Test purposes",
+            "seeAlso": ["data2", "json"]
+          },
+          "See": "compression"
+        }
+      }
+    }
+  }
+}

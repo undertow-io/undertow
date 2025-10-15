@@ -197,6 +197,10 @@ public abstract class AbstractModClusterTestBase {
                 }
             }
             servers = null;
+            // sleep 2 s to prevent BindException (Address already in use) when running the CI
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException ignore) {}
         }
     }
 

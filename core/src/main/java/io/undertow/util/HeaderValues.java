@@ -18,6 +18,8 @@
 
 package io.undertow.util;
 
+import static org.wildfly.common.Assert.checkNotNullParam;
+
 import java.util.AbstractCollection;
 import java.util.Arrays;
 import java.util.Collection;
@@ -385,7 +387,7 @@ public final class HeaderValues extends AbstractCollection<String> implements De
     }
 
     public String set(final int index, final String element) {
-        if (element == null) throw new IllegalArgumentException();
+        checkNotNullParam("element", element);
 
         final byte size = this.size;
         if (index < 0 || index >= size) throw new IndexOutOfBoundsException();
@@ -578,5 +580,9 @@ public final class HeaderValues extends AbstractCollection<String> implements De
             add(s);
         }
         return !c.isEmpty();
+    }
+
+    public HeaderValues reversed() {
+        throw new UnsupportedOperationException();
     }
 }

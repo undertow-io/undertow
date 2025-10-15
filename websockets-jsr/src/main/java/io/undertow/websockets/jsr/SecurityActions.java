@@ -17,22 +17,19 @@
  */
 package io.undertow.websockets.jsr;
 
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-import javax.websocket.WebSocketContainer;
+import jakarta.websocket.WebSocketContainer;
 
+@SuppressWarnings("removal")
 class SecurityActions {
     static void addContainer(final ClassLoader classLoader, final WebSocketContainer webSocketContainer) {
         if (System.getSecurityManager() == null) {
             UndertowContainerProvider.addContainer(classLoader, webSocketContainer);
         } else {
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    UndertowContainerProvider.addContainer(classLoader, webSocketContainer);
-                    return null;
-                }
+            java.security.AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                UndertowContainerProvider.addContainer(classLoader, webSocketContainer);
+                return null;
             });
         }
     }
@@ -41,12 +38,9 @@ class SecurityActions {
         if (System.getSecurityManager() == null) {
             UndertowContainerProvider.removeContainer(classLoader);
         } else {
-            AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                @Override
-                public Object run() {
-                    UndertowContainerProvider.removeContainer(classLoader);
-                    return null;
-                }
+            java.security.AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
+                UndertowContainerProvider.removeContainer(classLoader);
+                return null;
             });
         }
     }

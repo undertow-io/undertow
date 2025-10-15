@@ -18,21 +18,10 @@
 
 package io.undertow.server.handlers.proxy;
 
-import static io.undertow.Handlers.jvmRoute;
-import static io.undertow.Handlers.path;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CountDownLatch;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DecompressingHttpClient;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.IoUtils;
 import io.undertow.Undertow;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
@@ -49,6 +38,19 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DecompressingHttpClient;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.IoUtils;
+import org.xnio.XnioWorker;
+
+import static io.undertow.Handlers.jvmRoute;
+import static io.undertow.Handlers.path;
 
 /**
  * Tests the load balancing proxy
@@ -75,8 +77,45 @@ public abstract class AbstractLoadBalancingProxyTestCase {
 
     @AfterClass
     public static void teardown() {
-        server1.stop();
-        server2.stop();
+        XnioWorker worker1 = null, worker2 = null;
+        int countDown = 0;
+        try {
+            if (server1 != null) {
+                final XnioWorker worker = server1.getWorker();
+                server1.stop();
+                // if stop did not shutdown the worker, we need to run the latch to prevent a Address already in use (UNDERTOW-1960)
+                if (worker != null && !worker.isShutdown()) {
+                    countDown++;
+                    worker1 = worker;
+                }
+            }
+        } finally {
+            try {
+                if (server2 != null) {
+                    final XnioWorker worker = server2.getWorker();
+                    server2.stop();
+                    // if stop did not shutdown the worker, we need to run the latch to prevent a Address already in use (UNDERTOW-1960)
+                    if (worker != null && !worker.isShutdown() && worker != worker1) {
+                        worker2 = worker;
+                        countDown ++;
+                    }
+                }
+            } finally {
+                if (countDown != 0) {
+                    // TODO this is needed solely for ssl servers; replace this by the mechanism described in UNDERTOW-1648 once it is implemented
+                    final CountDownLatch latch = new CountDownLatch(countDown);
+                    if (worker1 != null) worker1.getIoThread().execute(latch::countDown);
+                    if (worker2 != null) worker2.getIoThread().execute(latch::countDown);
+                    try {
+                        latch.await();
+                        //double protection, we need to guarantee that the servers have stopped, and some environments seem to need a small delay to re-bind the socket
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        //ignore
+                    }
+                }
+            }
+        }
     }
 
     @Test

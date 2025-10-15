@@ -24,11 +24,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
-import javax.servlet.MultipartConfigElement;
-import javax.servlet.Servlet;
-import javax.servlet.ServletException;
-import javax.servlet.SingleThreadModel;
-import javax.servlet.UnavailableException;
+import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.Servlet;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.UnavailableException;
 
 import io.undertow.server.handlers.form.FormEncodedDataDefinition;
 import io.undertow.server.handlers.form.FormParserFactory;
@@ -60,7 +59,7 @@ public class ManagedServlet implements Lifecycle {
     private final InstanceStrategy instanceStrategy;
     private volatile boolean permanentlyUnavailable = false;
 
-    private long maxRequestSize;
+    private long maxMultipartRequestSize;
     private FormParserFactory formParserFactory;
     private MultipartConfigElement multipartConfig;
 
@@ -72,11 +71,7 @@ public class ManagedServlet implements Lifecycle {
     public ManagedServlet(final ServletInfo servletInfo, final ServletContextImpl servletContext) {
         this.servletInfo = servletInfo;
         this.servletContext = servletContext;
-        if (SingleThreadModel.class.isAssignableFrom(servletInfo.getServletClass())) {
-            instanceStrategy = new SingleThreadModelPoolStrategy(servletInfo.getInstanceFactory(), servletInfo, servletContext);
-        } else {
-            instanceStrategy = new DefaultInstanceStrategy(servletInfo.getInstanceFactory(), servletInfo, servletContext);
-        }
+        instanceStrategy = new DefaultInstanceStrategy(servletInfo.getInstanceFactory(), servletInfo, servletContext);
         setupMultipart(servletContext);
     }
 
@@ -92,9 +87,9 @@ public class ManagedServlet implements Lifecycle {
             //todo: fileSizeThreshold
             MultipartConfigElement config = multipartConfig;
             if (config.getMaxRequestSize() != -1) {
-                maxRequestSize = config.getMaxRequestSize();
+                maxMultipartRequestSize = config.getMaxRequestSize();
             } else {
-                maxRequestSize = -1;
+                maxMultipartRequestSize = -1;
             }
             final Path tempDir;
             if(config.getLocation() == null || config.getLocation().isEmpty()) {
@@ -127,7 +122,7 @@ public class ManagedServlet implements Lifecycle {
         } else {
             //no multipart config we don't allow multipart requests
             formParserFactory = FormParserFactory.builder(false).addParser(formDataParser).build();
-            maxRequestSize = -1;
+            maxMultipartRequestSize = -1;
         }
     }
 
@@ -235,8 +230,22 @@ public class ManagedServlet implements Lifecycle {
         return servletInfo;
     }
 
+    /**
+     * This value determines max multipart message size
+     * @deprecated
+     * @see #getMaxMultipartRequestSize()
+     * @return
+     */
     public long getMaxRequestSize() {
-        return maxRequestSize;
+        return maxMultipartRequestSize;
+    }
+
+    /**
+     * This value determines max multipart message size
+     * @return
+     */
+    public long getMaxMultipartRequestSize() {
+        return maxMultipartRequestSize;
     }
 
     public FormParserFactory getFormParserFactory() {
@@ -335,68 +344,5 @@ public class ManagedServlet implements Lifecycle {
             return instanceHandle;
         }
     }
-
-    /**
-     * pooling strategy for single thread model servlet
-     */
-    private static class SingleThreadModelPoolStrategy implements InstanceStrategy {
-
-
-        private final InstanceFactory<? extends Servlet> factory;
-        private final ServletInfo servletInfo;
-        private final ServletContextImpl servletContext;
-
-        private SingleThreadModelPoolStrategy(final InstanceFactory<? extends Servlet> factory, final ServletInfo servletInfo, final ServletContextImpl servletContext) {
-            this.factory = factory;
-            this.servletInfo = servletInfo;
-            this.servletContext = servletContext;
-        }
-
-        @Override
-        public void start() throws ServletException {
-            if(servletInfo.getLoadOnStartup() != null) {
-                //see UNDERTOW-734, make sure init method is called for load on startup
-                getServlet().release();
-            }
-        }
-
-        @Override
-        public void stop() {
-
-        }
-
-        @Override
-        public InstanceHandle<? extends Servlet> getServlet() throws ServletException {
-            final InstanceHandle<? extends Servlet> instanceHandle;
-            final Servlet instance;
-            //TODO: pooling
-            try {
-                instanceHandle = factory.createInstance();
-            } catch (Exception e) {
-                throw UndertowServletMessages.MESSAGES.couldNotInstantiateComponent(servletInfo.getName(), e);
-            }
-            instance = instanceHandle.getInstance();
-            new LifecyleInterceptorInvocation(servletContext.getDeployment().getDeploymentInfo().getLifecycleInterceptors(), servletInfo, instance, new ServletConfigImpl(servletInfo, servletContext)).proceed();
-
-            return new InstanceHandle<Servlet>() {
-                @Override
-                public Servlet getInstance() {
-                    return instance;
-                }
-
-                @Override
-                public void release() {
-                    try {
-                        instance.destroy();
-                    } catch (Throwable t) {
-                        UndertowServletLogger.REQUEST_LOGGER.failedToDestroy(instance, t);
-                    }
-                    instanceHandle.release();
-                }
-            };
-
-        }
-    }
-
 
 }

@@ -31,8 +31,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import javax.servlet.DispatcherType;
-import javax.servlet.http.MappingMatch;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.http.MappingMatch;
 
 import io.undertow.UndertowLogger;
 import io.undertow.server.HandlerWrapper;
@@ -79,9 +79,9 @@ public class ServletPathMatches {
         this.deployment = deployment;
         this.welcomePages = deployment.getDeploymentInfo().getWelcomePages().toArray(new String[deployment.getDeploymentInfo().getWelcomePages().size()]);
         this.resourceManager = deployment.getDeploymentInfo().getResourceManager();
-        this.pathMatchCacheFixed = new LRUCache<>(1000, -1, true);
+        this.pathMatchCacheFixed = new LRUCache<>(1000, LRUCache.MAX_AGE_NO_EXPIRY, true);
         this.pathMatchCacheResources = new LRUCache<>(1000,
-                resourceManager instanceof CachingResourceManager? ((CachingResourceManager) resourceManager).getMaxAge() : -1, true);
+                resourceManager instanceof CachingResourceManager ? ((CachingResourceManager) resourceManager).getMaxAge() : CachingResourceManager.MAX_AGE_NO_EXPIRY, true);
         // add change listener for welcome pages
         if (this.resourceManager.isResourceChangeListenerSupported()) {
             try {
@@ -305,15 +305,15 @@ public class ServletPathMatches {
                 }
             }
         }
-        ServletHandler managedDefaultServlet = servlets.getServletHandler(DEFAULT_SERVLET_NAME);
-        if(managedDefaultServlet == null) {
-            //we always create a default servlet, even if it is not going to have any path mappings registered
-            managedDefaultServlet = servlets.addServlet(new ServletInfo(DEFAULT_SERVLET_NAME, DefaultServlet.class));
-        }
 
         if (defaultServlet == null) {
             //no explicit default servlet was specified, so we register our mapping
             pathMatches.add("/*");
+
+            ServletHandler managedDefaultServlet = servlets.getServletHandler(DEFAULT_SERVLET_NAME);
+            if (managedDefaultServlet == null) {
+                managedDefaultServlet = servlets.addServlet(new ServletInfo(DEFAULT_SERVLET_NAME, DefaultServlet.class));
+            }
             defaultServlet = managedDefaultServlet;
         }
 
@@ -330,7 +330,7 @@ public class ServletPathMatches {
             //initialize the extension map. This contains all the filers in the noExtension map, plus
             //any filters that match the extension key
             for (String ext : extensionMatches) {
-                extension.put(ext, new EnumMap<DispatcherType, List<ManagedFilter>>(DispatcherType.class));
+                extension.put(ext, new EnumMap<>(DispatcherType.class));
             }
 
             //loop over all the filters, and add them to the appropriate map in the correct order

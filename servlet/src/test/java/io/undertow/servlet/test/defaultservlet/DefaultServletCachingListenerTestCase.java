@@ -19,11 +19,13 @@
 package io.undertow.servlet.test.defaultservlet;
 
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 
-import javax.servlet.DispatcherType;
-import javax.servlet.ServletException;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletException;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.cache.DirectBufferCache;
@@ -48,6 +50,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -64,11 +67,12 @@ import org.xnio.BufferAllocator;
 public class DefaultServletCachingListenerTestCase {
 
     private static final int MAX_FILE_SIZE = 20;
-    private static final int METADATA_MAX_AGE = 1000;
+    private static final int MAX_WAIT_TIME = 300000;
+    private static final int WAIT_TIME = 10000;
     public static final String DIR_NAME = "cacheTest";
 
     private static Path tmpDir;
-    private static DirectBufferCache dataCache = new DirectBufferCache(1000, 10, 1000 * 10 * 1000, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, METADATA_MAX_AGE);
+    private static final DirectBufferCache dataCache = new DirectBufferCache(1000, 10, 1000 * 10 * 1000, BufferAllocator.DIRECT_BYTE_BUFFER_ALLOCATOR, -1);
 
     @Before
     public void before() {
@@ -81,6 +85,11 @@ public class DefaultServletCachingListenerTestCase {
     public static void setup() throws ServletException, IOException {
 
         tmpDir = Files.createTempDirectory(DIR_NAME);
+
+        // assume tmp is in the default file system and watch-service is not the slow polling impl
+        Assume.assumeTrue("WatchService is going to work OK",
+                FileSystems.getDefault().equals(tmpDir.getFileSystem()) &&
+                        !FileSystems.getDefault().newWatchService().getClass().getName().equals("sun.nio.fs.PollingWatchService"));
 
         final PathHandler root = new PathHandler();
         final ServletContainer container = ServletContainer.Factory.newInstance();
@@ -111,6 +120,29 @@ public class DefaultServletCachingListenerTestCase {
         FileUtils.deleteRecursive(tmpDir);
     }
 
+    private static boolean waitUntilRefreshed(TestHttpClient client, String uri, int expectedStatus)
+            throws IOException, InterruptedException {
+        return waitUntilRefreshed(client, uri, expectedStatus, null);
+    }
+
+    private static boolean waitUntilRefreshed(TestHttpClient client, String uri, int expectedStatus, String expectedResponse)
+            throws IOException, InterruptedException {
+        boolean ok = false;
+        long startTime = System.currentTimeMillis();
+        while (!ok && System.currentTimeMillis() - startTime < MAX_WAIT_TIME) {
+            HttpGet get = new HttpGet(uri);
+            HttpResponse result = client.execute(get);
+            String response = HttpClientUtils.readResponse(result);
+            if (result.getStatusLine().getStatusCode() == expectedStatus &&
+                    (expectedResponse == null || expectedResponse.equals(response))) {
+                ok = true;
+            } else {
+                TimeUnit.MILLISECONDS.sleep(WAIT_TIME);
+            }
+        }
+        return ok;
+    }
+
     @Test
     public void testFileExistanceCheckCached() throws IOException, InterruptedException {
         TestHttpClient client = new TestHttpClient();
@@ -123,13 +155,10 @@ public class DefaultServletCachingListenerTestCase {
 
             Path f = tmpDir.resolve(fileName);
             Files.write(f, "hello".getBytes());
-            Thread.sleep(METADATA_MAX_AGE);
 
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("hello", response);
+            Assert.assertTrue("File was not refreshed in " + MAX_WAIT_TIME + "ms",
+                    waitUntilRefreshed(client, DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName, StatusCodes.OK, "hello"));
+
             Files.delete(f);
         } finally {
             client.getConnectionManager().shutdown();
@@ -152,14 +181,10 @@ public class DefaultServletCachingListenerTestCase {
             }
             Files.write(f, "hello world".getBytes());
 
-            Thread.sleep(METADATA_MAX_AGE);
+            Assert.assertTrue("File was not refreshed in " + MAX_WAIT_TIME + "ms",
+                    waitUntilRefreshed(client, DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName, StatusCodes.OK, "hello world"));
 
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("hello world", response);
-
+            Files.delete(f);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -181,14 +206,10 @@ public class DefaultServletCachingListenerTestCase {
             }
             Files.write(f, "hello world".getBytes());
 
-            Thread.sleep(METADATA_MAX_AGE);
+            Assert.assertTrue("File was not refreshed in " + MAX_WAIT_TIME + "ms",
+                    waitUntilRefreshed(client, DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName, StatusCodes.OK, "FILTER_TEXT hello world"));
 
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("FILTER_TEXT hello world", response);
-
+            Files.delete(f);
         } finally {
             client.getConnectionManager().shutdown();
         }
@@ -250,29 +271,17 @@ public class DefaultServletCachingListenerTestCase {
             Path f = tmpDir.resolve(fileName);
             Files.write(f, content.getBytes());
 
-            Thread.sleep(METADATA_MAX_AGE);
-
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(content, HttpClientUtils.readResponse(result));
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(content, HttpClientUtils.readResponse(result));
+            Assert.assertTrue("File was not refreshed in " + MAX_WAIT_TIME + "ms",
+                    waitUntilRefreshed(client, DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName, StatusCodes.OK, content));
+            Assert.assertTrue("File was not refreshed in " + MAX_WAIT_TIME + "ms",
+                    waitUntilRefreshed(client, DefaultServer.getDefaultServerURL() + "/servletContext/", StatusCodes.OK, content));
 
             Files.delete(f);
 
-            Thread.sleep(METADATA_MAX_AGE);
-
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            Assert.assertTrue("File was not refreshed in " + MAX_WAIT_TIME + "ms",
+                    waitUntilRefreshed(client, DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName, StatusCodes.NOT_FOUND));
+            Assert.assertTrue("File was not refreshed in " + MAX_WAIT_TIME + "ms",
+                    waitUntilRefreshed(client, DefaultServer.getDefaultServerURL() + "/servletContext/", StatusCodes.FORBIDDEN));
         } finally {
             client.getConnectionManager().shutdown();
         }

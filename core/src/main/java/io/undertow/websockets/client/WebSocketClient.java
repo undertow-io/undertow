@@ -208,14 +208,14 @@ public class WebSocketClient {
         }
 
         public IoFuture<WebSocketChannel> connect() {
-            return connectImpl(uri, new FutureResult<WebSocketChannel>(), 0);
+            return connectImpl(uri, new FutureResult<>(), 0);
         }
         private IoFuture<WebSocketChannel> connectImpl(final URI uri, final FutureResult<WebSocketChannel> ioFuture, final int redirectCount) {
             WebSocketLogger.REQUEST_LOGGER.debugf("Opening websocket connection to %s", uri);
-            final String scheme = uri.getScheme().equals("wss") ? "https" : "http";
+            final String scheme = isSecure(uri) ? "https" : "http";
             final URI newUri;
             try {
-                newUri = new URI(scheme, uri.getUserInfo(), uri.getHost(), uri.getPort() == -1 ? (uri.getScheme().equals("wss") ? 443 : 80) : uri.getPort(), uri.getPath().isEmpty() ? "/" : uri.getPath(), uri.getQuery(), uri.getFragment());
+                newUri = new URI(scheme, uri.getUserInfo(), uri.getHost(), uri.getPort() == -1 ? (isSecure(uri) ? 443 : 80) : uri.getPort(), uri.getPath().isEmpty() ? "/" : uri.getPath(), uri.getQuery(), uri.getFragment());
             } catch (URISyntaxException e) {
                 throw new RuntimeException(e);
             }
@@ -240,7 +240,7 @@ public class WebSocketClient {
                UndertowClient.getInstance().connect(new ClientCallback<ClientConnection>() {
                     @Override
                     public void completed(final ClientConnection connection) {
-                        int port = uri.getPort() > 0 ? uri.getPort() : uri.getScheme().equals("https") || uri.getScheme().equals("wss") ? 443 : 80;
+                        int port = uri.getPort() > 0 ? uri.getPort() : isSecure(uri) ? 443 : 80;
                         ClientRequest cr = new ClientRequest()
                                 .setMethod(Methods.CONNECT)
                                 .setPath(uri.getHost() + ":" + port)
@@ -257,7 +257,7 @@ public class WebSocketClient {
                                                 try {
                                                     StreamConnection targetConnection = connection.performUpgrade();
                                                     WebSocketLogger.REQUEST_LOGGER.debugf("Established websocket connection to %s", uri);
-                                                    if (uri.getScheme().equals("wss") || uri.getScheme().equals("https")) {
+                                                    if (isSecure(uri)) {
                                                         handleConnectionWithExistingConnection(((UndertowXnioSsl) ssl).wrapExistingConnection(targetConnection, optionMap, uri));
                                                     } else {
                                                         handleConnectionWithExistingConnection(targetConnection);
@@ -353,6 +353,10 @@ public class WebSocketClient {
                 });
             }
             return ioFuture.getIoFuture();
+        }
+
+        private boolean isSecure(final URI uri) {
+            return uri.getScheme().equals("wss") || uri.getScheme().equals("https");
         }
 
         private class WebsocketConnectionListener implements ChannelListener<StreamConnection> {

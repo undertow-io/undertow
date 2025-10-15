@@ -23,11 +23,10 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.function.Consumer;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpSession;
-import javax.servlet.http.HttpSessionContext;
-
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.http.HttpSession;
 import io.undertow.server.session.Session;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
@@ -110,24 +109,11 @@ public class HttpSessionImpl implements HttpSession {
     }
 
     @Override
-    public HttpSessionContext getSessionContext() {
-        return null;
-    }
-
-    @Override
     public Object getAttribute(final String name) {
         if(name.startsWith(IO_UNDERTOW)) {
             throw new SecurityException();
         }
         return session.getAttribute(name);
-    }
-
-    @Override
-    public Object getValue(final String name) {
-        if(name.startsWith(IO_UNDERTOW)) {
-            throw new SecurityException();
-        }
-        return getAttribute(name);
     }
 
     @Override
@@ -148,17 +134,6 @@ public class HttpSessionImpl implements HttpSession {
     }
 
     @Override
-    public String[] getValueNames() {
-        Set<String> names = getFilteredAttributeNames();
-        String[] ret = new String[names.size()];
-        int i = 0;
-        for (String name : names) {
-            ret[i++] = name;
-        }
-        return ret;
-    }
-
-    @Override
     public void setAttribute(final String name, final Object value) {
         if(name.startsWith(IO_UNDERTOW)) {
             throw new SecurityException();
@@ -171,21 +146,11 @@ public class HttpSessionImpl implements HttpSession {
     }
 
     @Override
-    public void putValue(final String name, final Object value) {
-        setAttribute(name, value);
-    }
-
-    @Override
     public void removeAttribute(final String name) {
         if(name.startsWith(IO_UNDERTOW)) {
             throw new SecurityException();
         }
         session.removeAttribute(name);
-    }
-
-    @Override
-    public void removeValue(final String name) {
-        removeAttribute(name);
     }
 
     @Override
@@ -210,6 +175,19 @@ public class HttpSessionImpl implements HttpSession {
         return newSession;
     }
 
+    @Override
+    public Accessor getAccessor() {
+        Session detached = this.session.detach();
+        ServletContext context = this.servletContext;
+        return new Accessor() {
+            @Override
+            public void access(Consumer<HttpSession> consumer) {
+                consumer.accept(new HttpSessionImpl(detached, context, false, null));
+            }
+        };
+    }
+
+    @SuppressWarnings("removal")
     public Session getSession() {
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
@@ -238,13 +216,7 @@ public class HttpSessionImpl implements HttpSession {
         if(invalid) {
             return true;
         }
-        try {
-            //TODO: in 1.5 we need to add session.isValid()
-            session.getMaxInactiveInterval();
-            return false;
-        } catch (IllegalStateException e) {
-            return true;
-        }
+        return this.session.isInvalid();
     }
 
     public static class UnwrapSessionAction implements PrivilegedAction<Session> {

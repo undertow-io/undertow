@@ -24,10 +24,10 @@ import io.undertow.servlet.api.InstanceHandle;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.websocket.Extension;
-import javax.websocket.HandshakeResponse;
-import javax.websocket.server.HandshakeRequest;
-import javax.websocket.server.ServerEndpointConfig;
+import jakarta.websocket.Extension;
+import jakarta.websocket.HandshakeResponse;
+import jakarta.websocket.server.HandshakeRequest;
+import jakarta.websocket.server.ServerEndpointConfig;
 
 /**
  * Server default container configurator.

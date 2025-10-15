@@ -20,9 +20,9 @@ package io.undertow.websockets.jsr.test.annotated;
 
 import java.util.HashSet;
 import java.util.Set;
-import javax.websocket.OnOpen;
-import javax.websocket.Session;
-import javax.websocket.server.ServerEndpoint;
+import jakarta.websocket.OnOpen;
+import jakarta.websocket.Session;
+import jakarta.websocket.server.ServerEndpoint;
 
 /**
  * @author Stuart Douglas
@@ -51,12 +51,9 @@ public class ThreadSafetyEndpoint {
         s = session;
         for (int i = 0; i < NUM_THREADS; ++i) {
             final int tnum = i;
-            Thread t = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    for (int j = 0; j < NUM_MESSAGES; ++j) {
-                        session.getAsyncRemote().sendText("t" + tnum + "-m" + j);
-                    }
+            Thread t = new Thread(() -> {
+                for (int j = 0; j < NUM_MESSAGES; ++j) {
+                    session.getAsyncRemote().sendText("t" + tnum + "-m" + j);
                 }
             });
             t.start();

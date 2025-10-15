@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.websocket.DeploymentException;
+import jakarta.websocket.DeploymentException;
 
 import io.undertow.websockets.jsr.JsrWebSocketMessages;
 
@@ -64,7 +64,7 @@ final class BoundMethod {
             for (int i = 0; i < method.getParameterAnnotations().length; ++i) {
                 for (int j = 0; j < method.getParameterAnnotations()[i].length; ++j) {
                     Annotation annotation = method.getParameterAnnotations()[i][j];
-                    if (annotation.annotationType().getName().equals("javax.ws.rs.PathParam")) {
+                    if (annotation.annotationType().getName().equals("jakarta.ws.rs.PathParam")) {
                         wrongAnnotation = true;
                     }
                 }

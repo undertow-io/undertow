@@ -17,6 +17,8 @@
  */
 package io.undertow.server.handlers;
 
+import static org.wildfly.common.Assert.checkNotNullParam;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -58,9 +60,7 @@ public final class RequestLimitingHandler implements HttpHandler {
      * @param nextHandler the next handler
      */
     public RequestLimitingHandler(int maximumConcurrentRequests, int queueSize, HttpHandler nextHandler) {
-        if (nextHandler == null) {
-            throw new IllegalArgumentException("nextHandler is null");
-        }
+        checkNotNullParam("nextHandler", nextHandler);
         if (maximumConcurrentRequests < 1) {
             throw new IllegalArgumentException("Maximum concurrent requests must be at least 1");
         }
@@ -76,9 +76,7 @@ public final class RequestLimitingHandler implements HttpHandler {
      * @param nextHandler the next handler
      */
     public RequestLimitingHandler(RequestLimit requestLimit, HttpHandler nextHandler) {
-        if (nextHandler == null) {
-            throw new IllegalArgumentException("nextHandler is null");
-        }
+        checkNotNullParam("nextHandler", nextHandler);
         this.requestLimit = requestLimit;
         this.nextHandler = nextHandler;
     }
@@ -121,6 +119,11 @@ public final class RequestLimitingHandler implements HttpHandler {
         @Override
         public HandlerWrapper build(Map<String, Object> config) {
             return new Wrapper((Integer) config.get("requests"));
+        }
+
+        @Override
+        public int priority() {
+            return 0;
         }
 
     }

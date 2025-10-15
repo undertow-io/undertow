@@ -25,9 +25,9 @@ import org.jboss.logging.annotations.Cause;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageBundle;
 
-import javax.websocket.Decoder;
-import javax.websocket.DeploymentException;
-import javax.websocket.Encoder;
+import jakarta.websocket.Decoder;
+import jakarta.websocket.DeploymentException;
+import jakarta.websocket.Encoder;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -131,7 +131,7 @@ public interface JsrWebSocketMessages {
     @Message(id = 3031, value = "Received a binary frame however endpoint does not have a method capable of handling it")
     RuntimeException receivedBinaryFrameButNoMethod();
 
-    @Message(id = 3033, value = "Method %s has invalid parameters at locations %s. It looks like you may have accidentally used javax.ws.rs.PathParam instead of javax.websocket.server.PathParam")
+    @Message(id = 3033, value = "Method %s has invalid parameters at locations %s. It looks like you may have accidentally used jakarta.ws.rs.PathParam instead of jakarta.websocket.server.PathParam")
     DeploymentException invalidParametersWithWrongAnnotation(Method method, Set<Integer> allParams);
 
     @Message(id = 3034, value = "Server provided extension %s which was not in client supported extensions %s")

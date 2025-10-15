@@ -285,11 +285,5 @@ final class ALPNOfferedClientHelloExplorer {
             byte b = input.get();
         }
     }
-
-    private static void processByteVector16(ByteBuffer input) {
-        int int16 = getInt16(input);
-        processByteVector(input, int16);
-    }
-
 }
 

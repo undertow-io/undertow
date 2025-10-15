@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.List;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;

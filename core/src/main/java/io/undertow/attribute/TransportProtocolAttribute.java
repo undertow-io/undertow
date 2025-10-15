@@ -24,7 +24,9 @@ import io.undertow.server.HttpServerExchange;
  * The request method
  *
  * @author Stuart Douglas
+ * @deprecated Please use {@link RequestProtocolAttribute}
  */
+@Deprecated
 public class TransportProtocolAttribute implements ExchangeAttribute {
 
     public static final String TRANSPORT_PROTOCOL = "%{TRANSPORT_PROTOCOL}";

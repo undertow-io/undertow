@@ -18,8 +18,8 @@
 
 package io.undertow.websockets.jsr.test.annotated;
 
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.HandshakeResponse;
+import jakarta.websocket.ClientEndpointConfig;
+import jakarta.websocket.HandshakeResponse;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;

@@ -20,7 +20,7 @@ package io.undertow.servlet.test.proprietry;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.io.IoCallback;
 import io.undertow.server.HandlerWrapper;

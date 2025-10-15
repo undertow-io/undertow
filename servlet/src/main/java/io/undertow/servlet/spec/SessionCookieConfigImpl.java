@@ -22,16 +22,31 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.SessionConfig;
 import io.undertow.servlet.UndertowServletMessages;
 
-import javax.servlet.SessionCookieConfig;
+import jakarta.servlet.SessionCookieConfig;
+
+import java.util.Collections;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * @author Stuart Douglas
  */
 public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConfig {
 
+    private static final String COOKIE_COMMENT_ATTR = "Comment";
+    private static final String COOKIE_DOMAIN_ATTR = "Domain";
+    private static final String COOKIE_MAX_AGE_ATTR = "Max-Age";
+    private static final String COOKIE_PATH_ATTR = "Path";
+    private static final String COOKIE_SECURE_ATTR = "Secure";
+    private static final String COOKIE_HTTP_ONLY_ATTR = "HttpOnly";
+
     private final ServletContextImpl servletContext;
     private final io.undertow.server.session.SessionCookieConfig delegate;
     private SessionConfig fallback;
+    private static final int DEFAULT_MAX_AGE = -1;
+    private static final boolean DEFAULT_HTTP_ONLY = false;
+    private static final boolean DEFAULT_SECURE = false;
+    private final Map<String,String> attributes = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
     public SessionCookieConfigImpl(final ServletContextImpl servletContext) {
         this.servletContext = servletContext;
@@ -93,7 +108,7 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
     }
 
     public String getDomain() {
-        return delegate.getDomain();
+        return getAttribute(COOKIE_DOMAIN_ATTR);
     }
 
     public void setDomain(final String domain) {
@@ -101,10 +116,11 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
         delegate.setDomain(domain);
+        setAttribute(COOKIE_DOMAIN_ATTR, domain);
     }
 
     public String getPath() {
-        return delegate.getPath();
+        return getAttribute(COOKIE_PATH_ATTR);
     }
 
     public void setPath(final String path) {
@@ -112,21 +128,26 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
         delegate.setPath(path);
+        setAttribute(COOKIE_PATH_ATTR, path);
     }
 
+    @Deprecated
     public String getComment() {
-        return delegate.getComment();
+        return getAttribute(COOKIE_COMMENT_ATTR);
     }
 
+    @Deprecated
     public void setComment(final String comment) {
         if(servletContext.isInitialized()) {
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
         delegate.setComment(comment);
+        setAttribute(COOKIE_COMMENT_ATTR, comment);
     }
 
     public boolean isHttpOnly() {
-        return delegate.isHttpOnly();
+        String value = getAttribute(COOKIE_HTTP_ONLY_ATTR);
+        return value == null ? DEFAULT_HTTP_ONLY : Boolean.parseBoolean(value);
     }
 
     public void setHttpOnly(final boolean httpOnly) {
@@ -134,21 +155,24 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
         delegate.setHttpOnly(httpOnly);
+        setAttribute(COOKIE_HTTP_ONLY_ATTR, String.valueOf(httpOnly));
     }
 
     public boolean isSecure() {
-        return delegate.isSecure();
-    }
+        String value = getAttribute(COOKIE_SECURE_ATTR);
+        return value == null ? DEFAULT_SECURE : Boolean.parseBoolean(value);    }
 
     public void setSecure(final boolean secure) {
         if(servletContext.isInitialized()) {
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
         delegate.setSecure(secure);
+        setAttribute(COOKIE_SECURE_ATTR, String.valueOf(secure));
     }
 
     public int getMaxAge() {
-        return delegate.getMaxAge();
+        String value = getAttribute(COOKIE_MAX_AGE_ATTR);
+        return value == null ? DEFAULT_MAX_AGE : Integer.parseInt(value);
     }
 
     public void setMaxAge(final int maxAge) {
@@ -156,6 +180,7 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
             throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
         }
         this.delegate.setMaxAge(maxAge);
+        setAttribute(COOKIE_MAX_AGE_ATTR, String.valueOf(maxAge));
     }
 
     public SessionConfig getFallback() {
@@ -164,5 +189,23 @@ public class SessionCookieConfigImpl implements SessionCookieConfig, SessionConf
 
     public void setFallback(final SessionConfig fallback) {
         this.fallback = fallback;
+    }
+
+    @Override
+    public void setAttribute(final String name, final String value) {
+        if(servletContext.isInitialized()) {
+            throw UndertowServletMessages.MESSAGES.servletContextAlreadyInitialized();
+        }
+        attributes.put(name, value);
+    }
+
+    @Override
+    public String getAttribute(final String name) {
+        return attributes.get(name);
+    }
+
+    @Override
+    public Map<String, String> getAttributes() {
+        return Collections.unmodifiableMap(attributes);
     }
 }

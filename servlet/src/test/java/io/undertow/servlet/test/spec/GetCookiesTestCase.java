@@ -18,7 +18,7 @@
 
 package io.undertow.servlet.test.spec;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;

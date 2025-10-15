@@ -31,7 +31,7 @@ public interface NodeHealthChecker {
      * @param response the client response
      * @return true if the response from the node is healthy
      */
-    boolean checkResponse(final ClientResponse response);
+    boolean checkResponse(ClientResponse response);
 
     /**
      * Receiving a response is a success.

@@ -37,9 +37,12 @@ import io.undertow.conduits.ChunkedStreamSourceConduit;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.FinishableStreamSourceConduit;
 import io.undertow.conduits.FixedLengthStreamSourceConduit;
+import io.undertow.conduits.ReadTimeoutStreamSourceConduit;
+import io.undertow.conduits.WriteTimeoutStreamSinkConduit;
 import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.Connectors;
 import io.undertow.server.protocol.http.HttpContinue;
+import io.undertow.server.protocol.http.HttpOpenListener;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.ConnectionUtils;
 import io.undertow.util.Headers;
@@ -52,8 +55,11 @@ import org.jboss.logging.Logger;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
+import org.xnio.IoUtils;
 import org.xnio.Option;
 import org.xnio.OptionMap;
+import org.xnio.Options;
+
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
@@ -325,12 +331,28 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
 
     @Override
     public void sendRequest(final ClientRequest request, final ClientCallback<ClientExchange> clientCallback) {
+        try {
+            Integer readTimeout = connection.getOption(Options.READ_TIMEOUT);
+            if (readTimeout != null && readTimeout > 0) {
+                connection.getSourceChannel().setConduit(new ReadTimeoutStreamSourceConduit(connection.getSourceChannel().getConduit(), connection, new HttpOpenListener(bufferPool)));
+            }
+            Integer writeTimeout = connection.getOption(Options.WRITE_TIMEOUT);
+            if (writeTimeout != null && writeTimeout > 0) {
+                connection.getSinkChannel().setConduit(new WriteTimeoutStreamSinkConduit(connection.getSinkChannel().getConduit(), connection, new HttpOpenListener(bufferPool)));
+            }
+        }  catch (IOException e) {
+            IoUtils.safeClose(connection);
+            UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
+        }
         if(http2Delegate != null) {
             http2Delegate.sendRequest(request, clientCallback);
             return;
         }
-        if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED | CLOSE_REQ | CLOSED)) {
+        if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED)) {
             clientCallback.failed(UndertowClientMessages.MESSAGES.invalidConnectionState());
+            return;
+        } else if (anyAreSet(state, CLOSE_REQ | CLOSED)) {
+            clientCallback.failed(UndertowClientMessages.MESSAGES.closedConnectionState());
             return;
         }
         final HttpClientExchange httpClientExchange = new HttpClientExchange(clientCallback, request, this);

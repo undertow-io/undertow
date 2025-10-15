@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import javax.websocket.HandshakeResponse;
+import jakarta.websocket.HandshakeResponse;
 
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 

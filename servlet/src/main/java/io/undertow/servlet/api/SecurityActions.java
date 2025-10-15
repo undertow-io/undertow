@@ -18,8 +18,6 @@
 
 package io.undertow.servlet.api;
 
-
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 final class SecurityActions {
@@ -28,15 +26,12 @@ final class SecurityActions {
         // forbidden inheritance
     }
 
+    @SuppressWarnings("removal")
     static String getSystemProperty(final String prop) {
         if (System.getSecurityManager() == null) {
             return System.getProperty(prop);
         } else {
-            return (String) AccessController.doPrivileged(new PrivilegedAction<Object>() {
-                public Object run() {
-                    return System.getProperty(prop);
-                }
-            });
+            return (String) java.security.AccessController.doPrivileged((PrivilegedAction<Object>) () -> System.getProperty(prop));
         }
     }
 }

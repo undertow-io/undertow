@@ -21,8 +21,8 @@ package io.undertow.websockets.jsr;
 import org.xnio.XnioWorker;
 import org.xnio.ssl.XnioSsl;
 
-import javax.websocket.ClientEndpointConfig;
-import javax.websocket.Endpoint;
+import jakarta.websocket.ClientEndpointConfig;
+import jakarta.websocket.Endpoint;
 import java.net.URI;
 
 /**
@@ -33,10 +33,10 @@ import java.net.URI;
  */
 public interface WebsocketClientSslProvider {
 
-    XnioSsl getSsl(XnioWorker worker, final Class<?> annotatedEndpoint, URI uri);
+    XnioSsl getSsl(XnioWorker worker, Class<?> annotatedEndpoint, URI uri);
 
-    XnioSsl getSsl(XnioWorker worker, final Object annotatedEndpointInstance, URI uri);
+    XnioSsl getSsl(XnioWorker worker, Object annotatedEndpointInstance, URI uri);
 
-    XnioSsl getSsl(XnioWorker worker, final Endpoint endpoint, final ClientEndpointConfig cec, URI uri);
+    XnioSsl getSsl(XnioWorker worker, Endpoint endpoint, ClientEndpointConfig cec, URI uri);
 
 }

@@ -32,18 +32,18 @@ import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.util.SavedRequest;
+import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.Headers;
 import io.undertow.util.RedirectBuilder;
 
-import javax.servlet.RequestDispatcher;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpServletResponseWrapper;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponseWrapper;
 
 import java.io.IOException;
-import java.security.AccessController;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -194,14 +194,7 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
         if(!saveOriginalRequest) {
             return;
         }
-        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        HttpSessionImpl httpSession = servletRequestContext.getCurrentServletContext().getSession(exchange, true);
-        Session session;
-        if (System.getSecurityManager() == null) {
-            session = httpSession.getSession();
-        } else {
-            session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
-        }
+        Session session = getAndInitializeSession(exchange, true);
         SessionManager manager = session.getSessionManager();
         if (seenSessionManagers.add(manager)) {
             manager.registerSessionListener(LISTENER);
@@ -216,21 +209,15 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
     @Override
     protected void handleRedirectBack(final HttpServerExchange exchange) {
-        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        HttpServletResponse resp = (HttpServletResponse) servletRequestContext.getServletResponse();
-        HttpSessionImpl httpSession = servletRequestContext.getCurrentServletContext().getSession(exchange, false);
-        if (httpSession != null) {
-            Session session;
-            if (System.getSecurityManager() == null) {
-                session = httpSession.getSession();
-            } else {
-                session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
-            }
+        final Session session = getAndInitializeSession(exchange, false);
+        if (session != null) {
             String path = (String) session.getAttribute(SESSION_KEY);
             if ((path == null || overrideInitial) && defaultPage != null) {
                 path = defaultPage;
             }
             if (path != null) {
+                final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+                final HttpServletResponse resp = (HttpServletResponse) servletRequestContext.getServletResponse();
                 try {
                     resp.sendRedirect(path);
                 } catch (IOException e) {
@@ -238,7 +225,44 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
                 }
             }
         }
+    }
 
+    @SuppressWarnings("removal")
+    private Session getAndInitializeSession(final HttpServerExchange exchange, final boolean createNewSession) {
+        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        final ServletContextImpl servletContextImpl =  servletRequestContext.getCurrentServletContext();
+        HttpSessionImpl httpSession = servletContextImpl.getSession(exchange, false);
+        if (httpSession == null && !createNewSession) return null;
+
+        boolean newSession = false;
+        if (httpSession == null) {
+            httpSession = servletContextImpl.getSession(exchange, true);
+            newSession = true;
+        }
+
+        Session session;
+        if (System.getSecurityManager() == null) {
+            session = httpSession.getSession();
+        } else {
+            session = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+        }
+
+        if (newSession) {
+            final int originalMaxInactiveInterval = session.getMaxInactiveInterval();
+            if (originalMaxInactiveInterval > authenticationSessionTimeout) {
+                session.setAttribute(ORIGINAL_SESSION_TIMEOUT, session.getMaxInactiveInterval());
+                session.setMaxInactiveInterval(authenticationSessionTimeout);
+            }
+        } else {
+            restoreOriginalSessionTimeout(session);
+        }
+
+        return session;
+    }
+
+    @Override
+    protected void restoreOriginalSessionTimeout(final HttpServerExchange exchange) {
+        getAndInitializeSession(exchange, false);
     }
 
     private static class FormResponseWrapper extends HttpServletResponseWrapper {
@@ -247,11 +271,6 @@ public class ServletFormAuthenticationMechanism extends FormAuthenticationMechan
 
         private FormResponseWrapper(final HttpServletResponse wrapped) {
             super(wrapped);
-        }
-
-        @Override
-        public void setStatus(int sc, String sm) {
-            status = sc;
         }
 
         @Override

@@ -20,7 +20,7 @@ package io.undertow.servlet.test.security.constraint;
 
 import java.io.IOException;
 
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
@@ -194,6 +194,19 @@ public class SecurityConstraintUrlMappingTestCase {
     public void testAggregatedRoles() throws IOException {
         runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/1/2/aa", "user4:password4", "user3:password3");
         runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/secured/1/2/aa", "user1:password1", "user2:password2");
+    }
+
+    @Test
+    public void testUnknown() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/unknown");
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 
     @Test

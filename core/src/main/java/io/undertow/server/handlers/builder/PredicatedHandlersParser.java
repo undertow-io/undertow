@@ -42,9 +42,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
+import java.util.Set;
 
 /**
  * Parser for the undertow-handlers.conf file.
@@ -136,6 +138,9 @@ public class PredicatedHandlersParser {
         } else if(node instanceof BlockNode) {
             List<PredicatedHandler> handlers = handleBlockNode(contents, (BlockNode) node, predicateBuilders, handlerBuilders, parser);
             return  new PredicatesHandler.Wrapper(handlers, false);
+        } else if(node instanceof PredicateOperatorNode) {
+            List<PredicatedHandler> handlers = Collections.singletonList(handlePredicateOperatorNode(contents, (PredicateOperatorNode)node, predicateBuilders, handlerBuilders, parser));
+            return  new PredicatesHandler.Wrapper(handlers, false);
         } else {
             throw error(contents, node.getToken().getPosition(), "unexpected token " + node.getToken());
         }
@@ -157,6 +162,8 @@ public class PredicatedHandlersParser {
             throw error(contents, token.getPosition(), "no handler named " + token.getToken() + " known handlers are " + handlerBuilders.keySet());
         }
         Map<String, Object> parameters = new HashMap<>();
+        Set<String> requiredParameters = builder.requiredParameters();
+        requiredParameters = requiredParameters == null? Collections.emptySet() : new HashSet<>(requiredParameters);
 
         for(Map.Entry<String, Node> val : node.getValues().entrySet()) {
             String name = val.getKey();
@@ -177,6 +184,10 @@ public class PredicatedHandlersParser {
             } else {
                 throw error(contents, val.getValue().getToken().getPosition(), "unexpected node " + val.getValue());
             }
+            requiredParameters.remove(name);
+        }
+        if (!requiredParameters.isEmpty()) {
+            throw error(contents, token.getPosition(), "required parameters " + requiredParameters + " not provided for handler " + builder.name());
         }
         return builder.build(parameters);
     }
@@ -213,6 +224,8 @@ public class PredicatedHandlersParser {
             throw error(contents, token.getPosition(), "no predicate named " + token.getToken() + " known predicates are " + handlerBuilders.keySet());
         }
         Map<String, Object> parameters = new HashMap<>();
+        Set<String> requiredParameters = builder.requiredParameters();
+        requiredParameters = requiredParameters == null? Collections.emptySet() : new HashSet<>(requiredParameters);
 
         for(Map.Entry<String, Node> val : node.getValues().entrySet()) {
             String name = val.getKey();
@@ -233,6 +246,10 @@ public class PredicatedHandlersParser {
             } else {
                 throw error(contents, val.getValue().getToken().getPosition(), "unexpected node " + val.getValue());
             }
+            requiredParameters.remove(name);
+        }
+        if (!requiredParameters.isEmpty()) {
+            throw error(contents, token.getPosition(), "required parameters " + requiredParameters + " not provided for predicate " + builder.name());
         }
         return builder.build(parameters);
     }
@@ -343,6 +360,15 @@ public class PredicatedHandlersParser {
                 }
                 break;
             } else if(token.getToken().equals("\n") || token.getToken().equals(";")) {
+                if(token.getToken().equals(";") && tokens.peek()!=null && tokens.peek().getToken().equals(ELSE)) {
+                    // something() -> predicate; ELSE predicate; - dont end processing since its followed by ELSE and its singular block
+                    continue;
+                } else if (token.getToken().equals("\n") && tokens.peek() != null && isOperator(tokens.peek().getToken())) {
+                    // predicate
+                    // OPERATOR predicate
+                    // -> handeler
+                    continue;
+                }
                 handleLineEnd(string, operatorStack, output, blocks);
             } else if (isSpecialChar(token.getToken())) {
                 if (token.getToken().equals("(")) {
@@ -602,15 +628,21 @@ public class PredicatedHandlersParser {
         boolean inVariable = false;
 
         int pos = 0;
+        int braceCount = 0;
         StringBuilder current = new StringBuilder();
         Deque<Token> ret = new ArrayDeque<>();
         while (pos < string.length()) {
             char c = string.charAt(pos);
             if (currentStringDelim != 0) {
-                if (c == currentStringDelim && current.charAt(current.length() - 1) != '\\') {
-                    ret.add(new Token(current.toString(), pos));
-                    current.setLength(0);
-                    currentStringDelim = 0;
+                if (c == currentStringDelim) {
+                    if (current.length() > 0 && current.charAt(current.length() - 1) == '\\') {
+                        current.setLength(current.length() - 1);
+                        current.append(c);
+                    } else {
+                        ret.add(new Token(current.toString(), pos));
+                        current.setLength(0);
+                        currentStringDelim = 0;
+                    }
                 } else if (c == '\n' || c == '\r') {
                     ret.add(new Token(current.toString(), pos));
                     current.setLength(0);
@@ -621,6 +653,23 @@ public class PredicatedHandlersParser {
                 }
             } else {
                 switch (c) {
+                    case '#':
+                        final Token previous = ret.peekLast();
+                        if(previous == null ||(previous != null && previous.getToken().equals("\n"))) {
+                            //its either first line ever or new line
+                            pos++;
+                            while (pos < string.length()) {
+                                char skip = string.charAt(pos);
+                                if(skip == '\n' || skip == '\r') {
+                                    break;
+                                }
+                                pos++;
+                            }
+                            break;
+                        } else {
+                            current.append(c);
+                            break;
+                        }
                     case ' ':
                     case '\t': {
                         if (current.length() != 0) {
@@ -631,7 +680,9 @@ public class PredicatedHandlersParser {
                     }
                     case '\r':
                     case '\n': {
-                        if (current.length() != 0) {
+                        if(braceCount>0) {
+                            break;
+                        } else if (current.length() != 0) {
                             ret.add(new Token(current.toString(), pos));
                             current.setLength(0);
                         }
@@ -647,6 +698,19 @@ public class PredicatedHandlersParser {
                     case ']':
                     case '{':
                     case '}': {
+                        switch (c) {
+                            case '(':
+                            case '[':
+                            case '{':
+                                braceCount++;
+                                break;
+                            case ')':
+                            case ']':
+                            case '}':
+                                braceCount--;
+                                break;
+                            default:
+                        }
                         if (inVariable) {
                             current.append(c);
                             if (c == '}') {

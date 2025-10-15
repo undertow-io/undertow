@@ -45,7 +45,7 @@ import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.servlet.Servlet;
+import jakarta.servlet.Servlet;
 
 /**
  * @author Stuart Douglas

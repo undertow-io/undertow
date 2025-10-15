@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
+import io.undertow.server.protocol.http.HttpContinue;
 import org.xnio.Bits;
 import io.undertow.UndertowLogger;
 
@@ -45,6 +46,7 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
 
     private final HpackDecoder decoder;
     private int frameRemaining = -1;
+    private int totalHeaderLength = 0;
     private boolean invalid = false;
     private boolean processingPseudoHeaders = true;
     private final boolean client;
@@ -80,7 +82,7 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
     protected void handleData(ByteBuffer resource, Http2FrameHeaderParser header) throws IOException {
         boolean continuationFramesComing = Bits.anyAreClear(header.flags, Http2Channel.HEADERS_FLAG_END_HEADERS);
         if (frameRemaining == -1) {
-            frameRemaining = header.length;
+            frameRemaining = totalHeaderLength = header.length;
         }
         final boolean moreDataThisFrame = resource.remaining() < frameRemaining;
         final int pos = resource.position();
@@ -138,12 +140,24 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
         return headerMap;
     }
 
+    boolean isContentExpected() {
+        if (HttpContinue.requiresContinueResponse(headerMap)) {
+            return true;
+        }
+        String contentLengthString = headerMap.getFirst(Headers.CONTENT_LENGTH);
+        try {
+            return contentLengthString != null ? Long.parseLong(contentLengthString) > 0 : false;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
     @Override
     public void emitHeader(HttpString name, String value, boolean neverIndex) throws HpackException {
         if(maxHeaderListSize > 0) {
             headerSize += (name.length() + value.length() + 32);
             if (headerSize > maxHeaderListSize) {
-                throw new HpackException(UndertowMessages.MESSAGES.headerBlockTooLarge(), Http2Channel.ERROR_PROTOCOL_ERROR);
+                throw new HpackException(UndertowMessages.MESSAGES.headerBlockTooLarge(maxHeaderListSize), Http2Channel.ERROR_PROTOCOL_ERROR);
             }
         }
         if(maxHeaders > 0 && headerMap.size() > maxHeaders) {
@@ -187,9 +201,15 @@ abstract class Http2HeaderBlockParser extends Http2PushBackParser implements Hpa
     }
     protected abstract int getPaddingLength();
     @Override
-    protected void moreData(int data) {
-        super.moreData(data);
+    protected boolean moreData(int data) {
+        boolean acceptMoreData = super.moreData(data);
         frameRemaining += data;
+        totalHeaderLength += data;
+        if (maxHeaderListSize > 0 && totalHeaderLength > maxHeaderListSize) {
+            UndertowLogger.REQUEST_LOGGER.debug(UndertowMessages.MESSAGES.headerBlockTooLarge(maxHeaderListSize));
+            return false;
+        }
+        return acceptMoreData;
     }
 
     public boolean isInvalid() {

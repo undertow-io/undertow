@@ -25,10 +25,9 @@ import static org.xnio.Bits.anyAreSet;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import javax.servlet.ReadListener;
-import javax.servlet.ServletInputStream;
+import jakarta.servlet.ReadListener;
+import jakarta.servlet.ServletInputStream;
 
-import org.xnio.Buffers;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
@@ -183,7 +182,8 @@ public class ServletInputStreamImpl extends ServletInputStream {
             return 0;
         }
         ByteBuffer buffer = pooled.getBuffer();
-        int copied = Buffers.copy(ByteBuffer.wrap(b, off, len), buffer);
+        int copied = Math.min(buffer.remaining(), len);
+        buffer.get(b, off, copied);
         if (!buffer.hasRemaining()) {
             pooled.close();
             pooled = null;

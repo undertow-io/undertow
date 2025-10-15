@@ -37,6 +37,7 @@ import org.xnio.conduits.StreamSinkConduit;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.net.ssl.SSLSession;
 
 /**
@@ -45,6 +46,17 @@ import javax.net.ssl.SSLSession;
  * @author Stuart Douglas
  */
 public abstract class ServerConnection extends AbstractAttachable implements ConnectedChannel  {
+
+    private static final AtomicLong CONNECTION_ID_GENERATOR = new AtomicLong(0);
+    private final long id = CONNECTION_ID_GENERATOR.incrementAndGet();
+
+    public final long getId() {
+        return this.id;
+    }
+
+    public String getProtocolRequestId() {
+        return "";
+    }
 
     /**
      *
@@ -205,7 +217,7 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
      *
      * @return The source conduit
      */
-    protected abstract StreamSinkConduit getSinkConduit(HttpServerExchange exchange, final StreamSinkConduit conduit);
+    protected abstract StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit);
 
     /**
      *
@@ -285,6 +297,6 @@ public abstract class ServerConnection extends AbstractAttachable implements Con
 
     public interface CloseListener {
 
-        void closed(final ServerConnection connection);
+        void closed(ServerConnection connection);
     }
 }

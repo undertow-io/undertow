@@ -20,6 +20,7 @@ package io.undertow.servlet.spec;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Map;
 
 import io.undertow.UndertowMessages;
 import io.undertow.server.handlers.Cookie;
@@ -34,13 +35,11 @@ import io.undertow.servlet.UndertowServletMessages;
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
 public class ServletCookieAdaptor implements Cookie {
+    private static final String SAME_SITE = "SameSite";
 
-    private final javax.servlet.http.Cookie cookie;
+    private final jakarta.servlet.http.Cookie cookie;
 
-    private boolean sameSite;
-    private String sameSiteMode;
-
-    public ServletCookieAdaptor(final javax.servlet.http.Cookie cookie) {
+    public ServletCookieAdaptor(final jakarta.servlet.http.Cookie cookie) {
         this.cookie = cookie;
     }
 
@@ -159,18 +158,18 @@ public class ServletCookieAdaptor implements Cookie {
 
     @Override
     public boolean isSameSite() {
-        return sameSite;
+        return cookie.getAttribute(SAME_SITE) != null;
     }
 
     @Override
     public Cookie setSameSite(final boolean sameSite) {
-        this.sameSite = sameSite;
+        cookie.setAttribute(SAME_SITE, CookieSameSiteMode.LAX.toString());
         return this;
     }
 
     @Override
     public String getSameSiteMode() {
-        return sameSiteMode;
+        return cookie.getAttribute(SAME_SITE);
     }
 
     @Override
@@ -178,12 +177,27 @@ public class ServletCookieAdaptor implements Cookie {
         final String m = CookieSameSiteMode.lookupModeString(mode);
         if (m != null) {
             UndertowServletLogger.REQUEST_LOGGER.tracef("Setting SameSite mode to [%s] for cookie [%s]", m, this.getName());
-            this.sameSiteMode = m;
-            this.setSameSite(true);
+           cookie.setAttribute(SAME_SITE, m);
         } else {
             UndertowServletLogger.REQUEST_LOGGER.warnf(UndertowMessages.MESSAGES.invalidSameSiteMode(mode, Arrays.toString(CookieSameSiteMode.values())), "Ignoring specified SameSite mode [%s] for cookie [%s]", mode, this.getName());
         }
         return this;
+    }
+
+    @Override
+    public String getAttribute(final String name) {
+        return cookie.getAttribute(name);
+    }
+
+    @Override
+    public Cookie setAttribute(final String name, final String value) {
+        cookie.setAttribute(name, value);
+        return this;
+    }
+
+    @Override
+    public Map<String, String> getAttributes() {
+        return cookie.getAttributes();
     }
 
     @Override

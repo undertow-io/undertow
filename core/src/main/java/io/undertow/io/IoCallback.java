@@ -27,9 +27,9 @@ import io.undertow.server.HttpServerExchange;
  */
 public interface IoCallback {
 
-    void onComplete(final HttpServerExchange exchange, final Sender sender);
+    void onComplete(HttpServerExchange exchange, Sender sender);
 
-    void onException(final HttpServerExchange exchange, final Sender sender, final IOException exception);
+    void onException(HttpServerExchange exchange, Sender sender, IOException exception);
 
     /**
      * A default callback that simply ends the exchange.

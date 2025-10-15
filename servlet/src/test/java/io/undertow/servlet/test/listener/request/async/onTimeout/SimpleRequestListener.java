@@ -17,8 +17,8 @@
  */
 package io.undertow.servlet.test.listener.request.async.onTimeout;
 
-import javax.servlet.ServletRequestEvent;
-import javax.servlet.ServletRequestListener;
+import jakarta.servlet.ServletRequestEvent;
+import jakarta.servlet.ServletRequestListener;
 
 public class SimpleRequestListener implements ServletRequestListener {
 

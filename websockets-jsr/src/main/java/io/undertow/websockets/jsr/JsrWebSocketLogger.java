@@ -25,7 +25,7 @@ import org.jboss.logging.annotations.LogMessage;
 import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
 
-import javax.websocket.server.PathParam;
+import jakarta.websocket.server.PathParam;
 import java.lang.reflect.Method;
 import java.util.Set;
 

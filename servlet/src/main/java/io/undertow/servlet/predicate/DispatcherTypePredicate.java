@@ -23,7 +23,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import javax.servlet.DispatcherType;
+import jakarta.servlet.DispatcherType;
 
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.PredicateBuilder;
@@ -90,6 +90,11 @@ public class DispatcherTypePredicate implements Predicate {
         public Predicate build(final Map<String, Object> config) {
             String value = (String) config.get("value");
             return new DispatcherTypePredicate(DispatcherType.valueOf(value));
+        }
+
+        @Override
+        public int priority() {
+            return 0;
         }
     }
 

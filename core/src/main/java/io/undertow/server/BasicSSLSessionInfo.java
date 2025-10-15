@@ -43,6 +43,7 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
     private final java.security.cert.Certificate[] peerCertificate;
     private final X509Certificate[] certificate;
     private final Integer keySize;
+    private final String secureProtocol;
 
     /**
      *
@@ -54,21 +55,47 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
      * @throws CertificateException If the client cert could not be decoded
      */
     public BasicSSLSessionInfo(byte[] sessionId, String cypherSuite, String certificate, Integer keySize) throws java.security.cert.CertificateException, CertificateException {
+        this(sessionId, cypherSuite, certificate, keySize, null);
+    }
+
+    /**
+     *
+     * @param sessionId The SSL session ID
+     * @param cypherSuite The cypher suite name
+     * @param certificate A string representation of the client certificate
+     * @param keySize The key-size used by the cypher
+     * @param secureProtocol the secure protocol, example {@code TLSv1.2}
+     * @throws java.security.cert.CertificateException If the client cert could not be decoded
+     * @throws CertificateException If the client cert could not be decoded
+     */
+    public BasicSSLSessionInfo(byte[] sessionId, String cypherSuite, String certificate, Integer keySize, String secureProtocol) throws java.security.cert.CertificateException, CertificateException {
         this.sessionId = sessionId;
         this.cypherSuite = cypherSuite;
         this.keySize = keySize;
+        this.secureProtocol = secureProtocol;
         if (certificate != null) {
             java.security.cert.CertificateFactory cf = java.security.cert.CertificateFactory.getInstance("X.509");
             byte[] certificateBytes = certificate.getBytes(StandardCharsets.US_ASCII);
             ByteArrayInputStream stream = new ByteArrayInputStream(certificateBytes);
             Collection<? extends java.security.cert.Certificate> certCol = cf.generateCertificates(stream);
             this.peerCertificate = new java.security.cert.Certificate[certCol.size()];
-            this.certificate = new X509Certificate[certCol.size()];
+            X509Certificate[] legacyCertificate = new X509Certificate[certCol.size()];
             int i=0;
             for(java.security.cert.Certificate cert : certCol) {
                 this.peerCertificate[i] = cert;
-                this.certificate[i++] = X509Certificate.getInstance(cert.getEncoded());
+                if (legacyCertificate != null) {
+                    try {
+                        legacyCertificate[i] = X509Certificate.getInstance(cert.getEncoded());
+                    } catch (CertificateException ce) {
+                        // [UNDERTOW-1969] We don't care about deprecated JDK methods failure caused by the fact newer JDKs
+                        // doesn't support them anymore. "this.certificate" is used only by deprecated method
+                        // {@link SSLSessionInfo.getPeerCertificateChain()} which call should be avoided by API users.
+                        legacyCertificate = null;
+                    }
+                }
+                i++;
             }
+            this.certificate = legacyCertificate;
         } else {
             this.peerCertificate = null;
             this.certificate = null;
@@ -112,6 +139,20 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
         this(sessionId == null ? null : fromHex(sessionId), cypherSuite, certificate, keySize);
     }
 
+    /**
+     *
+     * @param sessionId The encoded SSL session ID
+     * @param cypherSuite The cypher suite name
+     * @param certificate A string representation of the client certificate
+     * @param keySize The key-size used by the cypher
+     * @param secureProtocol the secure protocol, example {@code TLSv1.2}
+     * @throws java.security.cert.CertificateException If the client cert could not be decoded
+     * @throws CertificateException If the client cert could not be decoded
+     */
+    public BasicSSLSessionInfo(String sessionId, String cypherSuite, String certificate, Integer keySize, String secureProtocol) throws java.security.cert.CertificateException, CertificateException {
+        this(sessionId == null ? null : fromHex(sessionId), cypherSuite, certificate, keySize, secureProtocol);
+    }
+
     @Override
     public byte[] getSessionId() {
         if(sessionId == null) {
@@ -138,12 +179,13 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
 
     @Override
     public java.security.cert.Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
-        if (certificate == null) {
+        if (peerCertificate == null) {
             throw UndertowMessages.MESSAGES.peerUnverified();
         }
         return peerCertificate;
     }
 
+    @Deprecated
     @Override
     public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException {
         if (certificate == null) {
@@ -160,6 +202,11 @@ public class BasicSSLSessionInfo implements SSLSessionInfo {
     @Override
     public SSLSession getSSLSession() {
         return null;
+    }
+
+    @Override
+    public String getSecureProtocol() {
+        return secureProtocol;
     }
 
     private static byte[] fromHex(String sessionId) {
