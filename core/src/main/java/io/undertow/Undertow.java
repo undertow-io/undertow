@@ -177,7 +177,7 @@ public final class Undertow {
                     listenerInfo.add(new ListenerInfo("ajp", server.getLocalAddress(), openListener, null, server));
                 } else {
                     OptionMap undertowOptions = OptionMap.builder().set(UndertowOptions.BUFFER_PIPELINED_DATA, true).addAll(serverOptions).getMap();
-                    boolean http2 = serverOptions.get(UndertowOptions.ENABLE_HTTP2, false);
+                    boolean http2 = serverOptions.get(UndertowOptions.ENABLE_HTTP2, UndertowOptions.DEFAULT_ENABLE_HTTP2);
                     if (listener.type == ListenerType.HTTP) {
                         HttpOpenListener openListener = new HttpOpenListener(buffers, undertowOptions);
                         HttpHandler handler = rootHandler;
