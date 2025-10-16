@@ -557,8 +557,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
         final long startPosition = source.position();
-        final long count = source.size() - source.position();
+        long count = source.size() - source.position();
         final long remainingContentLength = remainingContentLength();
+        if (count > remainingContentLength) {
+            count = remainingContentLength;
+        }
         if (listener == null) {
             if (buffer != null && buffer.position() != 0) {
                 writeBufferBlocking(false);
