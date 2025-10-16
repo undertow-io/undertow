@@ -36,17 +36,8 @@ public interface BufferWritableOutputStream {
 
     /**
      * Transfer the remaining content of the input FileChannel (from its current position, to end of file).
-     * @deprecated use {@link BufferWritableOutputStream#transferFrom(FileChannel, long, long)}.
      */
     @Deprecated
     void transferFrom(FileChannel source) throws IOException;
-
-    /**
-     * Transfer from the input channel to the channel underlying this OutputStream.
-     * @param source the source file channel
-     * @param startPosition the start position in the source file
-     * @param count the number of bytes to transfer
-     */
-    void transferFrom(FileChannel source, long startPosition, long count) throws IOException;
 
 }
