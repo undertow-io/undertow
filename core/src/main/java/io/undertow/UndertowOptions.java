@@ -241,7 +241,14 @@ public class UndertowOptions {
     public static final Option<Boolean> ENABLE_SPDY = Option.simple(UndertowOptions.class, "ENABLE_SPDY", Boolean.class);
 
     /**
+     * Default value of {@link #ENABLE_HTTP2} option.
+     */
+    public static final boolean DEFAULT_ENABLE_HTTP2 = false;
+
+    /**
      * If we should attempt to use HTTP2 for HTTPS connections.
+     * <p>
+     * Defaults to {@link #DEFAULT_ENABLE_HTTP2}
      */
     public static final Option<Boolean> ENABLE_HTTP2 = Option.simple(UndertowOptions.class, "ENABLE_HTTP2", Boolean.class);
 

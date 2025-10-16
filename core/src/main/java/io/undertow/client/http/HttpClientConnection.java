@@ -357,7 +357,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
         }
         final HttpClientExchange httpClientExchange = new HttpClientExchange(clientCallback, request, this);
         boolean ssl = this.connection instanceof SslConnection;
-        if(!ssl && !http2Tried && options.get(UndertowOptions.ENABLE_HTTP2, false) && !request.getRequestHeaders().contains(Headers.UPGRADE)) {
+        if(!ssl && !http2Tried && options.get(UndertowOptions.ENABLE_HTTP2, UndertowOptions.DEFAULT_ENABLE_HTTP2) && !request.getRequestHeaders().contains(Headers.UPGRADE)) {
             //this is the first request, as we want to try a HTTP2 upgrade
             request.getRequestHeaders().put(new HttpString("HTTP2-Settings"), Http2ClearClientProvider.createSettingsFrame(options, bufferPool));
             request.getRequestHeaders().put(Headers.UPGRADE, Http2Channel.CLEARTEXT_UPGRADE_STRING);
