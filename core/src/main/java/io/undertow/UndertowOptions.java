@@ -365,10 +365,15 @@ public class UndertowOptions {
      */
     public static final Option<Integer> MAX_CACHED_HEADER_SIZE = Option.simple(UndertowOptions.class, "MAX_CACHED_HEADER_SIZE", Integer.class);
 
+    /**
+     * Default value of {@link #HTTP_HEADERS_CACHE_SIZE} option.
+     */
     public static final int DEFAULT_HTTP_HEADERS_CACHE_SIZE = 15;
 
     /**
-     * The maximum number of headers that are cached per connection. Defaults to 15. If this is set to zero the cache is disabled.
+     * The maximum number of headers that are cached per connection. If this is set to zero the cache is disabled.
+     * <p>
+     * Defaults to {@link #DEFAULT_HTTP_HEADERS_CACHE_SIZE}
      */
     public static final Option<Integer> HTTP_HEADERS_CACHE_SIZE = Option.simple(UndertowOptions.class, "HTTP_HEADERS_CACHE_SIZE", Integer.class);
 
