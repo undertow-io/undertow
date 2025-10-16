@@ -50,7 +50,7 @@ public class TXServlet extends HttpServlet {
         }
 
         BufferWritableOutputStream stream = (BufferWritableOutputStream) resp.getOutputStream();
-        stream.transferFrom(file, 0, file.size());
+        stream.transferFrom(file);
         file.close();
     }
 
