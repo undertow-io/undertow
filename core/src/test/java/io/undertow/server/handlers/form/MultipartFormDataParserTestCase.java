@@ -265,6 +265,53 @@ public class MultipartFormDataParserTestCase {
         };
     }
 
+    private static HttpHandler createInMemoryUtf8ReadingHandler(final long fileSizeThreshold, final long maxInvidualFileThreshold, final HttpHandler async) {
+        return new HttpHandler() {
+            @Override
+            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                MultiPartParserDefinition multiPartParserDefinition = new MultiPartParserDefinition();
+                multiPartParserDefinition.setFileSizeThreshold(fileSizeThreshold);
+                multiPartParserDefinition.setMaxIndividualFileSize(maxInvidualFileThreshold);
+                multiPartParserDefinition.setDefaultEncoding(StandardCharsets.UTF_8.name());
+                final FormDataParser parser = FormParserFactory.builder(false)
+                        .addParsers(new FormEncodedDataDefinition(), multiPartParserDefinition)
+                        .build().createParser(exchange);
+                if (async == null) {
+                    try {
+                        FormData data = parser.parseBlocking();
+                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                        if (data.getFirst("formValue").getValue().equals("myValue")) {
+                            FormData.FormValue file = data.getFirst("file");
+                            if (file.isFileItem()) {
+                                exchange.setStatusCode(StatusCodes.OK);
+                                logResult(exchange, file.getFileItem().isInMemory(), file.getFileName(), file.getValue());
+                            }
+                        }
+                        exchange.endExchange();
+                    } catch (FileTooLargeException e) {
+                        exchange.setStatusCode(StatusCodes.REQUEST_ENTITY_TOO_LARGE);
+                        exchange.endExchange();
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                        exchange.endExchange();
+                    } finally {
+                        IoUtils.safeClose(parser);
+                    }
+                } else {
+                    parser.parse(async);
+                }
+            }
+
+            private void logResult(HttpServerExchange exchange, boolean inMemory, String fileName, String content) throws IOException {
+                String res = String.format("in_memory:%s;file_name:%s;hash:%s", inMemory, fileName, DigestUtils.md5Hex(content));
+                final OutputStream outputStream = exchange.getOutputStream();
+                outputStream.write(res.getBytes());
+                outputStream.close();
+            }
+        };
+    }
+
     @Test
     public void testFileUploadWithSmallFileSizeThreshold() throws Exception {
         DefaultServer.setRootHandler(new BlockingHandler(createInMemoryReadingHandler(10)));
@@ -292,6 +339,42 @@ public class MultipartFormDataParserTestCase {
         } finally {
             client.getConnectionManager().shutdown();
         }
+    }
+
+    @Test
+    public void testFileUploadWithSmallFileSizeThresholdAndNonEnglishCharacters() throws Exception {
+        DefaultServer.setRootHandler(new BlockingHandler(createInMemoryUtf8ReadingHandler(10, -1, null)));
+        String value = createUtf8PostValue(2000);
+        TestHttpClient client = new TestHttpClient();
+        try {
+
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
+            MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
+
+            entity.addPart("formValue", new StringBody("myValue", "text/plain", StandardCharsets.UTF_8));
+            entity.addPart("file", new StringBody(value, "text/plain", StandardCharsets.UTF_8));
+
+            post.setEntity(entity);
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String resp = HttpClientUtils.readResponse(result);
+
+            Map<String, String> parsedResponse = parse(resp);
+
+            Assert.assertEquals("false", parsedResponse.get("in_memory"));
+            Assert.assertEquals(DigestUtils.md5Hex(value), parsedResponse.get("hash"));
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    private static String createUtf8PostValue(int size) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < size; i++) {
+            sb.append("aÁRVÍZTÜKÖRFÚRÓGÉPárvíztükörfúrógép");
+        }
+        return sb.toString();
     }
 
     @Test
