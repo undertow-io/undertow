@@ -246,11 +246,17 @@ public class UndertowOptions {
     public static final Option<Boolean> ENABLE_HTTP2 = Option.simple(UndertowOptions.class, "ENABLE_HTTP2", Boolean.class);
 
     /**
+     * Default value of {@link #ENABLE_STATISTICS} option.
+     */
+    public static final boolean DEFAULT_ENABLE_STATISTICS = false;
+
+    /**
      * If connector level statistics should be enabled. This has a slight performance impact, but allows statistics such
      * as bytes sent/recevied to be monitored.
      *
      * If this is passed to the client then client statistics will be enabled.
-     *
+     * <p>
+     * Defaults to {@link #DEFAULT_ENABLE_STATISTICS}
      */
     public static final Option<Boolean> ENABLE_STATISTICS = Option.simple(UndertowOptions.class, "ENABLE_STATISTICS", Boolean.class);
 

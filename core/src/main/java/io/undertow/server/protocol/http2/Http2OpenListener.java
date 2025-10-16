@@ -109,7 +109,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
         this.bufferSize = buf.getBuffer().remaining();
         buf.close();
         connectorStatistics = new ConnectorStatisticsImpl();
-        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_STATISTICS, false);
+        statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_STATISTICS, UndertowOptions.DEFAULT_ENABLE_STATISTICS);
         this.protocol = protocol;
     }
 
