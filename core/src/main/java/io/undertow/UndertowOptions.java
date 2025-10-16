@@ -361,7 +361,14 @@ public class UndertowOptions {
     public static final Option<Integer> MAX_CONCURRENT_REQUESTS_PER_CONNECTION = Option.simple(UndertowOptions.class, "MAX_CONCURRENT_REQUESTS_PER_CONNECTION", Integer.class);
 
     /**
-     * The maximum number of buffers that will be used before reads are paused in framed protocols. Defaults to 10
+     * Default value of {@link #MAX_QUEUED_READ_BUFFERS} option.
+     */
+    public static final int DEFAULT_MAX_QUEUED_READ_BUFFERS = 16;
+
+    /**
+     * The maximum number of buffers that will be used before reads are paused in framed protocols.
+     * <p>
+     * Defaults to {@link #DEFAULT_MAX_QUEUED_READ_BUFFERS}
      */
     public static final Option<Integer> MAX_QUEUED_READ_BUFFERS = Option.simple(UndertowOptions.class, "MAX_QUEUED_READ_BUFFERS", Integer.class);
 
