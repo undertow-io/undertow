@@ -309,6 +309,8 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
 
     @Override
     public void transferFrom(FileChannel source) throws IOException {
+        final long startPosition = source.position();
+        final long count = source.size() - source.position();
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
@@ -318,10 +320,8 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         if (channel == null) {
             channel = exchange.getResponseChannel();
         }
-        long position = source.position();
-        long size = source.size();
-        Channels.transferBlocking(channel, source, position, size);
-        updateWritten(size - position);
+        Channels.transferBlocking(channel, source, startPosition, count);
+        updateWritten(count);
     }
 
     /**
