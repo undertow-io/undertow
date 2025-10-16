@@ -309,11 +309,8 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
 
     @Override
     public void transferFrom(FileChannel source) throws IOException {
-        transferFrom(source, source.position(), source.size() - source.position());
-    }
-
-    @Override
-    public void transferFrom(FileChannel source, long startPosition, long count) throws IOException {
+        final long startPosition = source.position();
+        final long count = source.size() - source.position();
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
