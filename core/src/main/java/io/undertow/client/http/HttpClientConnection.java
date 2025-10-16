@@ -150,7 +150,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     HttpClientConnection(final StreamConnection connection, final OptionMap options, final ByteBufferPool bufferPool) {
 
         //first we set up statistics, if required
-        if(options.get(UndertowOptions.ENABLE_STATISTICS, false)) {
+        if(options.get(UndertowOptions.ENABLE_STATISTICS, UndertowOptions.DEFAULT_ENABLE_STATISTICS)) {
             clientStatistics = new ClientStatisticsImpl();
             connection.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(connection.getSinkChannel().getConduit(), new ByteActivityCallback() {
                 @Override
