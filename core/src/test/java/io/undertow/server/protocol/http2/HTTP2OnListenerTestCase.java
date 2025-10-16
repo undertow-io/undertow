@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.jboss.logging.Logger;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -62,6 +63,8 @@ public class HTTP2OnListenerTestCase {
 
     @Test
     public void testExpectedHTTP2() throws Exception {
+        // FIXME UNDERTOW-2635
+        Assume.assumeFalse(System.getProperty("os.name").equals("Mac OS X"));
         doTest(true);
     }
 
