@@ -162,7 +162,7 @@ public class HttpClientProvider implements ClientProvider {
 
     private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final ByteBufferPool bufferPool, final OptionMap options, URI uri) {
 
-        boolean h2 = options.get(UndertowOptions.ENABLE_HTTP2, false);
+        boolean h2 = options.get(UndertowOptions.ENABLE_HTTP2, UndertowOptions.DEFAULT_ENABLE_HTTP2);
         if(connection instanceof SslConnection && (h2)) {
             List<ALPNClientSelector.ALPNProtocol> protocolList = new ArrayList<>();
             if(h2) {
