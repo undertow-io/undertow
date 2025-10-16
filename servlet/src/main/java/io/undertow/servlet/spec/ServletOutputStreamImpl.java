@@ -553,14 +553,11 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
     @Override
     public void transferFrom(FileChannel source) throws IOException {
-        transferFrom(source, source.position(), source.size() - source.position());
-    }
-
-    @Override
-    public void transferFrom(FileChannel source, long startPosition, long count) throws IOException {
         if (anyAreSet(state, FLAG_CLOSED) || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
+        final long startPosition = source.position();
+        final long count = source.size() - source.position();
         final long remainingContentLength = remainingContentLength();
         if (listener == null) {
             if (buffer != null && buffer.position() != 0) {
