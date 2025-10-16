@@ -272,7 +272,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     }
 
     private boolean handleHttp2PriorKnowledge(PooledByteBuffer pooled, HttpServerExchange httpServerExchange) throws IOException {
-        if(httpServerExchange.getRequestMethod().equals(PRI) && connection.getUndertowOptions().get(UndertowOptions.ENABLE_HTTP2, false)) {
+        if(httpServerExchange.getRequestMethod().equals(PRI) && connection.getUndertowOptions().get(UndertowOptions.ENABLE_HTTP2, UndertowOptions.DEFAULT_ENABLE_HTTP2)) {
             handleHttp2PriorKnowledge(connection.getChannel(), connection, pooled);
             return false;
         } else {
