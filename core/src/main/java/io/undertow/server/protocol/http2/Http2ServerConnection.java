@@ -162,6 +162,10 @@ public class Http2ServerConnection extends ServerConnection {
         return channel.getSslSession();
     }
 
+    public Http2Channel getChannel() {
+        return channel;
+    }
+
     @Override
     public ByteBufferPool getByteBufferPool() {
         return channel.getBufferPool();
