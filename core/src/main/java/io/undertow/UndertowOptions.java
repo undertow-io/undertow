@@ -248,6 +248,10 @@ public class UndertowOptions {
     @Deprecated(forRemoval = true)
     public static final Option<Boolean> ENABLE_CONNECTOR_STATISTICS = ENABLE_STATISTICS;
 
+    /**
+     * Default value of {@link #ALLOW_UNKNOWN_PROTOCOLS} option.
+     */
+    public static final Boolean DEFAULT_ALLOW_UNKNOWN_PROTOCOLS = false;
 
     /**
      * If unknown protocols should be allowed. The known protocols are:
@@ -258,8 +262,8 @@ public class UndertowOptions {
      * HTTP/2.0
      *
      * If this is false then requests that specify any other protocol will be rejected with a 400
-     *
-     * Defaults to false
+     * <p>
+     * Defaults to {@link #DEFAULT_ALLOW_UNKNOWN_PROTOCOLS}
      */
     public static final Option<Boolean> ALLOW_UNKNOWN_PROTOCOLS = Option.simple(UndertowOptions.class, "ALLOW_UNKNOWN_PROTOCOLS", Boolean.class);
 
