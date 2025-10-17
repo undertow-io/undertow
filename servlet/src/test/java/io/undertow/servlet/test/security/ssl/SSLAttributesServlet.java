@@ -44,6 +44,8 @@ public class SSLAttributesServlet extends HttpServlet {
             pw.write(req.getAttribute("jakarta.servlet.request.key_size").toString());
         } else if (req.getServletPath().equals("/cipher-suite")) {
             pw.write(req.getAttribute("jakarta.servlet.request.cipher_suite").toString());
+        } else if (req.getServletPath().equals("/secure-protocol")) {
+            pw.write(req.getAttribute("jakarta.servlet.request.secure_protocol").toString());
         } else if (req.getServletPath().equals("/cert")) {
             final X509Certificate[] attribute = (X509Certificate[]) req.getAttribute("jakarta.servlet.request.X509Certificate");
             if (attribute!=null){

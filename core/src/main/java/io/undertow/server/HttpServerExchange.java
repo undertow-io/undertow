@@ -1249,7 +1249,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             Cookies.parseRequestCookies(
                     getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, UndertowOptions.DEFAULT_MAX_COOKIES),
                     getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false),
-                    requestHeaders.get(Headers.COOKIE), requestCookiesParam);
+                    requestHeaders.get(Headers.COOKIE), requestCookiesParam, getConnection().getUndertowOptions().get(UndertowOptions.DISABLE_RFC6265_COOKIE_PARSING, UndertowOptions.DEFAULT_DISABLE_RFC6265_COOKIE_PARSING));
         }
         return requestCookies;
     }

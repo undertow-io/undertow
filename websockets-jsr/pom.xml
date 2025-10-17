@@ -170,7 +170,6 @@
                     <enableAssertions>true</enableAssertions>
                     <runOrder>reversealphabetical</runOrder>
                     <skip>${skipWebSocketTests}</skip>
-                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     <failIfNoTests>true</failIfNoTests>
                     <systemPropertyVariables>
                         <proxy>${proxy}</proxy>
