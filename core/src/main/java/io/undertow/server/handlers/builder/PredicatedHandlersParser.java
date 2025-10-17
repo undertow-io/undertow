@@ -363,6 +363,11 @@ public class PredicatedHandlersParser {
                 if(token.getToken().equals(";") && tokens.peek()!=null && tokens.peek().getToken().equals(ELSE)) {
                     // something() -> predicate; ELSE predicate; - dont end processing since its followed by ELSE and its singular block
                     continue;
+                } else if (token.getToken().equals("\n") && tokens.peek() != null && isOperator(tokens.peek().getToken())) {
+                    // predicate
+                    // OPERATOR predicate
+                    // -> handeler
+                    continue;
                 }
                 handleLineEnd(string, operatorStack, output, blocks);
             } else if (isSpecialChar(token.getToken())) {
@@ -623,6 +628,7 @@ public class PredicatedHandlersParser {
         boolean inVariable = false;
 
         int pos = 0;
+        int braceCount = 0;
         StringBuilder current = new StringBuilder();
         Deque<Token> ret = new ArrayDeque<>();
         while (pos < string.length()) {
@@ -647,6 +653,23 @@ public class PredicatedHandlersParser {
                 }
             } else {
                 switch (c) {
+                    case '#':
+                        final Token previous = ret.peekLast();
+                        if(previous == null ||(previous != null && previous.getToken().equals("\n"))) {
+                            //its either first line ever or new line
+                            pos++;
+                            while (pos < string.length()) {
+                                char skip = string.charAt(pos);
+                                if(skip == '\n' || skip == '\r') {
+                                    break;
+                                }
+                                pos++;
+                            }
+                            break;
+                        } else {
+                            current.append(c);
+                            break;
+                        }
                     case ' ':
                     case '\t': {
                         if (current.length() != 0) {
@@ -657,7 +680,9 @@ public class PredicatedHandlersParser {
                     }
                     case '\r':
                     case '\n': {
-                        if (current.length() != 0) {
+                        if(braceCount>0) {
+                            break;
+                        } else if (current.length() != 0) {
                             ret.add(new Token(current.toString(), pos));
                             current.setLength(0);
                         }
@@ -673,6 +698,19 @@ public class PredicatedHandlersParser {
                     case ']':
                     case '{':
                     case '}': {
+                        switch (c) {
+                            case '(':
+                            case '[':
+                            case '{':
+                                braceCount++;
+                                break;
+                            case ')':
+                            case ']':
+                            case '}':
+                                braceCount--;
+                                break;
+                            default:
+                        }
                         if (inVariable) {
                             current.append(c);
                             if (c == '}') {
