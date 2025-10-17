@@ -85,8 +85,7 @@ public class AsyncContextImpl implements AsyncContext {
     private AsyncContextImpl previousAsyncContext; //the previous async context
 
 
-    //todo: make default configurable
-    private volatile long timeout = 30000;
+    private volatile long timeout = -1;
 
     private volatile XnioExecutor.Key timeoutKey;
 
@@ -114,6 +113,12 @@ public class AsyncContextImpl implements AsyncContext {
                 initialRequestDone();
             }
         });
+        //If its chain and non default value is set, use it
+        if(previousAsyncContext!=null && previousAsyncContext.getTimeout() != servletRequestContext.getDeployment().getDeploymentInfo().getDefaultAsyncConextTimeout()) {
+            this.timeout = previousAsyncContext.getTimeout();
+        } else {
+            this.timeout = servletRequestContext.getDeployment().getDeploymentInfo().getDefaultAsyncConextTimeout();
+        }
     }
 
     public void updateTimeout() {

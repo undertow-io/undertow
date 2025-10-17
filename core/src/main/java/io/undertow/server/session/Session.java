@@ -183,4 +183,10 @@ public interface Session {
      * @return The new session ID
      */
     String changeSessionId(HttpServerExchange exchange, SessionConfig config);
+
+    /**
+     * Return state of session. NOTE: this method does not take into account if process of invalidation start.
+     * @return <ul><li><b>true</b> - if session is no longer valid</li><li><b>false</b> - otherwise</li></ul>
+     */
+    boolean isInvalid();
 }

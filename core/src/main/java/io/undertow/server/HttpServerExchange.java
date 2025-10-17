@@ -40,6 +40,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.Cookies;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
@@ -1927,6 +1928,16 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public XnioIoThread getIoThread() {
         return connection.getIoThread();
+    }
+
+    public boolean isMultiPartExchange() {
+        //NOTE: should this include Range response?
+        final HeaderValues contentTypeHeaders = getRequestHeaders().get("Content-Type");
+        if(contentTypeHeaders != null && contentTypeHeaders.size() >0) {
+            return contentTypeHeaders.getFirst().startsWith("multipart");
+        } else {
+            return false;
+        }
     }
 
     /**

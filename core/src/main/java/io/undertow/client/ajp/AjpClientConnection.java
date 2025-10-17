@@ -237,6 +237,10 @@ class AjpClientConnection extends AbstractAttachable implements Closeable, Clien
             clientCallback.failed(UndertowClientMessages.MESSAGES.invalidConnectionState());
             return;
         }
+        if (anyAreSet(state, CLOSE_REQ | CLOSED)) {
+            clientCallback.failed(new ClosedChannelException());
+            return;
+        }
         final AjpClientExchange AjpClientExchange = new AjpClientExchange(clientCallback, request, this);
         if (currentRequest == null) {
             initiateRequest(AjpClientExchange);
