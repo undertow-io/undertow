@@ -237,7 +237,7 @@ public abstract class AbstractFramedChannel<C extends AbstractFramedChannel<C, R
         FrameCloseListener closeListener = new FrameCloseListener();
         connectedStreamChannel.getSinkChannel().getCloseSetter().set(closeListener);
         connectedStreamChannel.getSourceChannel().getCloseSetter().set(closeListener);
-        this.queuedFrameHighWaterMark = settings.get(UndertowOptions.QUEUED_FRAMES_HIGH_WATER_MARK, 50);
+        this.queuedFrameHighWaterMark = settings.get(UndertowOptions.QUEUED_FRAMES_HIGH_WATER_MARK, UndertowOptions.DEFAULT_QUEUED_FRAMES_HIGH_WATER_MARK);
         this.queuedFrameLowWaterMark = settings.get(UndertowOptions.QUEUED_FRAMES_LOW_WATER_MARK, 10);
     }
 
