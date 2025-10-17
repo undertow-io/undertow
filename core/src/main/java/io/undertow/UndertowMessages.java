@@ -655,4 +655,7 @@ public interface UndertowMessages {
     @Message(id = 210, value = "Buffer content underflow for exchange '%s', buffer '%s'")
     IOException bufferUnderflow(HttpServerExchange exchange, ByteBuffer buf);
 
+    @Message(id = 211, value = "Exchange '%s' already has body or is blocking.")
+    IOException exchangeBlockingOrBlocking(HttpServerExchange e);
+
 }

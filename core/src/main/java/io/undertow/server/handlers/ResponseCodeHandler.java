@@ -64,13 +64,36 @@ public final class ResponseCodeHandler implements HttpHandler {
 
     private final int responseCode;
 
+    private HttpHandler next;
     /**
      * Construct a new instance.
      *
      * @param responseCode the response code to set
+     * @param next next handler
+     */
+    public ResponseCodeHandler(final HttpHandler next, final int responseCode) {
+        assert responseCode > 99;
+        assert responseCode < 600;
+        this.responseCode = responseCode;
+        this.next = next;
+    }
+
+    /**
+     * Construct a new instance.
+     *
+     * @param responseCode the response code to set
+     * @param next next handler
      */
     public ResponseCodeHandler(final int responseCode) {
-        this.responseCode = responseCode;
+        this(null,responseCode);
+    }
+
+    public HttpHandler getNext() {
+        return next;
+    }
+
+    public void setNext(HttpHandler next) {
+        this.next = next;
     }
 
     @Override
@@ -78,6 +101,9 @@ public final class ResponseCodeHandler implements HttpHandler {
         exchange.setStatusCode(responseCode);
         if(debugEnabled) {
             UndertowLogger.PREDICATE_LOGGER.debugf("Response code set to [%s] for %s.", responseCode, exchange);
+        }
+        if(next != null) {
+            next.handleRequest(exchange);
         }
     }
 
