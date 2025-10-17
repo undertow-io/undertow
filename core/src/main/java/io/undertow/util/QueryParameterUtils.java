@@ -152,14 +152,14 @@ public class QueryParameterUtils {
         return key;
     }
 
-    @Deprecated
+    @Deprecated (forRemoval = true)
     public static Map<String, Deque<String>> mergeQueryParametersWithNewQueryString(final Map<String, Deque<String>> queryParameters, final String newQueryString) {
         return mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, StandardCharsets.UTF_8.name());
     }
 
-    @Deprecated
+    @Deprecated (forRemoval = true)
     public static Map<String, Deque<String>> mergeQueryParametersWithNewQueryString(final Map<String, Deque<String>> queryParameters, final String newQueryString, final String encoding) {
-        //DEPRACETED this will create duplicates
+        //DEPRECATED this will create duplicates
         Map<String, Deque<String>> newQueryParameters = parseQueryString(newQueryString, encoding);
         //according to the spec the new query parameters have to 'take precedence'
         for (Map.Entry<String, Deque<String>> entry : queryParameters.entrySet()) {
