@@ -23,12 +23,12 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>2.3.21.Final-SNAPSHOT</version>
+        <version>2.4.0.Alpha1-SNAPSHOT</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>karaf</artifactId>
-    <version>2.3.21.Final-SNAPSHOT</version>
+    <version>2.4.0.Alpha1-SNAPSHOT</version>
 
     <name>Undertow Karaf feature</name>
 
