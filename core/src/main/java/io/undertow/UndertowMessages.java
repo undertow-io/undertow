@@ -658,4 +658,7 @@ public interface UndertowMessages {
     @Message(id = 211, value = "Exchange '%s' already has body or is blocking.")
     IOException exchangeBlockingOrBlocking(HttpServerExchange e);
 
+    @Message(id = 212, value = "Failed to encode query string '%s' with '%s' encoding.")
+    IllegalArgumentException failedToEncodeQueryString(String q, String e);
+
 }
