@@ -178,7 +178,7 @@ public class MockRequestTestCase {
 
         @Override
         public String getContextPath() {
-            return null;
+            return "/aa";
         }
 
         @Override
