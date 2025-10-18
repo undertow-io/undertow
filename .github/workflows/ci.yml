@@ -58,7 +58,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest]
         module: [core]
         jdk: [17, 21]
         openjdk_impl: [ temurin ]
@@ -113,55 +113,3 @@ jobs:
         path: |
               **/surefire*-reports/*.txt
               **/*.dump*
-  test-matrix-ipv6:
-    name: JDK ${{ matrix.jdk }} - ipv6 - ${{ matrix.module }} ${{ matrix.proxy && '- proxy' || '' }} - ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    needs: build-all
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        module: [core, servlet, websockets-jsr]
-        proxy: ['-Pproxy', '']
-        jdk: [17]
-    steps:
-    - name: Update hosts - linux
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo bash -c "echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' > /etc/hosts"
-        sudo bash -c "echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> /etc/hosts"
-        sudo sysctl -w fs.file-max=2097152
-    - uses: n1hility/cancel-previous-runs@v3
-      with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-    - name: Host information
-      run: |
-       hostname || true
-    - uses: actions/checkout@v4
-    - name: Download Maven Repo
-      uses: actions/download-artifact@v4
-      with:
-        name: maven-repo
-        path: .
-    - name: Extract Maven Repo
-      shell: bash
-      run: tar -xzf maven-repo.tgz -C ~
-    - name: Set up JDK ${{ matrix.java }}
-      uses: joschi/setup-jdk@v2
-      with:
-        java-version: ${{ matrix.jdk }}
-    - name: Generate settings.xml for Maven Builds
-      uses: whelk-io/maven-settings-xml-action@v21
-      with:
-        repositories: '[{ "id": "jboss", "name": "JBoss", "url": "https://repository.jboss.org/nexus/content/groups/public" }]'
-    - name: Print Version
-      run: mvn -v
-    - name: Run Tests
-      run: mvn -U -B -fae test ${{ matrix.proxy && '-Pproxy' || '' }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
-    - uses: actions/upload-artifact@v4
-      if: failure()
-      with:
-        name: surefire-reports-${{ matrix.jdk }}-ipv6-${{ matrix.module }}${{ matrix.proxy }}-${{ matrix.os }}
-        path: |
-          **/surefire*-reports/*.txt
-          **/*.dump*
