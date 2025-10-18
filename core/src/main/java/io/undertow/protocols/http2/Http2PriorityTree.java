@@ -52,7 +52,7 @@ public class Http2PriorityTree {
     }
 
     /**
-     * Resisters a stream, with its dependency and dependent information
+     * Registers a stream, with its dependency and dependent information
      * @param streamId The stream id
      * @param dependency The stream this stream depends on, if no stream is specified this should be zero
      * @param weighting The weighting. If no weighting is specified this should be 16

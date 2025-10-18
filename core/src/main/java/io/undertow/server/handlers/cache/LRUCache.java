@@ -47,7 +47,7 @@ public class LRUCache<K, V> {
      */
     public static final int MAX_AGE_NO_CACHING = 0;
     /**
-     * Mage age -1, entries dont expire
+     * Max age -1, entries don't expire
      */
     public static final int MAX_AGE_NO_EXPIRY = -1;
 

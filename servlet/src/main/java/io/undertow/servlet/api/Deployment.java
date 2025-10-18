@@ -102,7 +102,7 @@ public interface Deployment {
     /**
      * Attempts to add a servlet mapping using {@link jakarta.servlet.ServletRegistration#addMapping(String...)}
      *
-     * @return true if the addition was sucessful
+     * @return true if the addition was successful
      */
     Set<String> tryAddServletMappings(ServletInfo servletInfo, String... urlPatterns);
 

@@ -141,7 +141,7 @@ public final class UndertowSession implements Session {
     }
 
     /**
-     * sets the recieve listener This should only be used for annotated endpoints.
+     * sets the receive listener This should only be used for annotated endpoints.
      *
      * @param handler The handler
      */
@@ -204,7 +204,7 @@ public final class UndertowSession implements Session {
             try {
                 try {
                     if (!webSocketChannel.isCloseFrameReceived() && !webSocketChannel.isCloseFrameSent()) {
-                        //if we have already recieved a close frame then the close frame handler
+                        //if we have already received a close frame then the close frame handler
                         //will deal with sending back the reason message
                         if (closeReason == null || closeReason.getCloseCode().getCode() == CloseReason.CloseCodes.NO_STATUS_CODE.getCode()) {
                             webSocketChannel.sendClose();
