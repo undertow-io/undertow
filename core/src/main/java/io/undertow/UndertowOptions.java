@@ -113,12 +113,17 @@ public class UndertowOptions {
     public static final Option<Integer> MAX_COOKIES = Option.simple(UndertowOptions.class, "MAX_COOKIES", Integer.class);
 
     /**
+     * Default value of {@link #ALLOW_ENCODED_SLASH} option.
+     */
+    public static final Boolean DEFAULT_ALLOW_ENCODED_SLASH = Boolean.FALSE;
+
+    /**
      * If a request comes in with encoded / characters (i.e. %2F), will these be decoded.
      * <p>
      * This can cause security problems if a front end proxy does not perform the same decoding, and as a result
      * this is disabled by default.
      * <p>
-     * Defaults to false
+     * Defaults to {@link #DEFAULT_ALLOW_ENCODED_SLASH}
      * <p>
      * See <a href="http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2007-0450">CVE-2007-0450</a>
      * @deprecated - this option was interpreted improperly.
@@ -233,16 +238,29 @@ public class UndertowOptions {
     public static final Option<Boolean> ENABLE_SPDY = Option.simple(UndertowOptions.class, "ENABLE_SPDY", Boolean.class);
 
     /**
+     * Default value of {@link #ENABLE_HTTP2} option.
+     */
+    public static final boolean DEFAULT_ENABLE_HTTP2 = false;
+
+    /**
      * If we should attempt to use HTTP2 for HTTPS connections.
+     * <p>
+     * Defaults to {@link #DEFAULT_ENABLE_HTTP2}
      */
     public static final Option<Boolean> ENABLE_HTTP2 = Option.simple(UndertowOptions.class, "ENABLE_HTTP2", Boolean.class);
+
+    /**
+     * Default value of {@link #ENABLE_STATISTICS} option.
+     */
+    public static final boolean DEFAULT_ENABLE_STATISTICS = false;
 
     /**
      * If connector level statistics should be enabled. This has a slight performance impact, but allows statistics such
      * as bytes sent/recevied to be monitored.
      *
      * If this is passed to the client then client statistics will be enabled.
-     *
+     * <p>
+     * Defaults to {@link #DEFAULT_ENABLE_STATISTICS}
      */
     public static final Option<Boolean> ENABLE_STATISTICS = Option.simple(UndertowOptions.class, "ENABLE_STATISTICS", Boolean.class);
 
@@ -251,9 +269,13 @@ public class UndertowOptions {
      * If connector level statistics should be enabled. This has a slight performance impact, but allows statistics such
      * as bytes sent/recevied to be monitored.
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static final Option<Boolean> ENABLE_CONNECTOR_STATISTICS = ENABLE_STATISTICS;
 
+    /**
+     * Default value of {@link #ALLOW_UNKNOWN_PROTOCOLS} option.
+     */
+    public static final Boolean DEFAULT_ALLOW_UNKNOWN_PROTOCOLS = false;
 
     /**
      * If unknown protocols should be allowed. The known protocols are:
@@ -264,8 +286,8 @@ public class UndertowOptions {
      * HTTP/2.0
      *
      * If this is false then requests that specify any other protocol will be rejected with a 400
-     *
-     * Defaults to false
+     * <p>
+     * Defaults to {@link #DEFAULT_ALLOW_UNKNOWN_PROTOCOLS}
      */
     public static final Option<Boolean> ALLOW_UNKNOWN_PROTOCOLS = Option.simple(UndertowOptions.class, "ALLOW_UNKNOWN_PROTOCOLS", Boolean.class);
 
@@ -293,6 +315,10 @@ public class UndertowOptions {
      */
     public static final Option<Integer> HTTP2_SETTINGS_INITIAL_WINDOW_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_INITIAL_WINDOW_SIZE", Integer.class);
     /**
+     * Default value of {@link #HTTP2_SETTINGS_INITIAL_WINDOW_SIZE}. <br>UNIT: Bytes.
+     */
+    public static final int DEFAULT_HTTP2_SETTINGS_INITIAL_WINDOW_SIZE = 65535;
+    /**
      * Max frame size for HTTP2.
      *  <br>UNIT: Bytes.
      */
@@ -303,7 +329,7 @@ public class UndertowOptions {
      *
      * @see #MAX_HEADER_SIZE
      */
-    @Deprecated
+    @Deprecated(forRemoval = true)
     public static final Option<Integer> HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE", Integer.class);
 
     /**
@@ -332,7 +358,14 @@ public class UndertowOptions {
     public static final Option<Integer> MAX_CONCURRENT_REQUESTS_PER_CONNECTION = Option.simple(UndertowOptions.class, "MAX_CONCURRENT_REQUESTS_PER_CONNECTION", Integer.class);
 
     /**
-     * The maximum number of buffers that will be used before reads are paused in framed protocols. Defaults to 10
+     * Default value of {@link #MAX_QUEUED_READ_BUFFERS} option.
+     */
+    public static final int DEFAULT_MAX_QUEUED_READ_BUFFERS = 16;
+
+    /**
+     * The maximum number of buffers that will be used before reads are paused in framed protocols.
+     * <p>
+     * Defaults to {@link #DEFAULT_MAX_QUEUED_READ_BUFFERS}
      */
     public static final Option<Integer> MAX_QUEUED_READ_BUFFERS = Option.simple(UndertowOptions.class, "MAX_QUEUED_READ_BUFFERS", Integer.class);
 
@@ -417,6 +450,9 @@ public class UndertowOptions {
      *
      * If not specified, the default value is null.
      */
+
+    public static final Option<Integer> DEFAULT_QUEUED_FRAMES_LOW_WATER_MARK = null;
+
     public static final Option<String> AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN = Option.simple(UndertowOptions.class, "AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN", String.class);
 
     /**

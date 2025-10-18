@@ -113,7 +113,7 @@ public class Http2PriorKnowledgeClientProvider implements ClientProvider {
 
             final ClientStatisticsImpl clientStatistics;
             //first we set up statistics, if required
-            if (options.get(UndertowOptions.ENABLE_STATISTICS, false)) {
+            if (options.get(UndertowOptions.ENABLE_STATISTICS, UndertowOptions.DEFAULT_ENABLE_STATISTICS)) {
                 clientStatistics = new ClientStatisticsImpl();
                 connection.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(connection.getSinkChannel().getConduit(), new ByteActivityCallback() {
                     @Override
