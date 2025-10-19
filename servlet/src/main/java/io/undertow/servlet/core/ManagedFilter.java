@@ -19,6 +19,7 @@
 package io.undertow.servlet.core;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
@@ -34,6 +35,8 @@ import io.undertow.servlet.api.InstanceHandle;
 import io.undertow.servlet.spec.FilterConfigImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 
+import static org.xnio.Bits.anyAreSet;
+
 /**
  * @author Stuart Douglas
  */
@@ -42,7 +45,12 @@ public class ManagedFilter implements Lifecycle {
     private final FilterInfo filterInfo;
     private final ServletContextImpl servletContext;
 
-    private volatile boolean started = false;
+    private static final int FLAG_STARTED = 1;
+    private static final int FLAG_STOPPED = 1 << 1;
+    @SuppressWarnings("unused")
+    private volatile int state;
+    private static final AtomicIntegerFieldUpdater<ManagedFilter> stateFieldUpdater = AtomicIntegerFieldUpdater.newUpdater(ManagedFilter.class, "state");
+
     private volatile Filter filter;
     private volatile InstanceHandle<? extends Filter> handle;
 
@@ -55,9 +63,7 @@ public class ManagedFilter implements Lifecycle {
         if(servletContext.getDeployment().getDeploymentState() != DeploymentManager.State.STARTED) {
             throw UndertowServletMessages.MESSAGES.deploymentStopped(servletContext.getDeployment().getDeploymentInfo().getDeploymentName());
         }
-        if (!started) {
-            start();
-        }
+        start();
         getFilter().doFilter(request, response, chain);
     }
 
@@ -83,30 +89,33 @@ public class ManagedFilter implements Lifecycle {
         }
     }
 
-    public synchronized void start() throws ServletException {
-        if (!started) {
-
-            started = true;
-        }
+    public void start() throws ServletException {
+        do {
+            if (anyAreSet(stateFieldUpdater.get(this), FLAG_STOPPED)) {
+                throw UndertowServletMessages.MESSAGES.deploymentStopped(servletContext.getDeployment().getDeploymentInfo().getDeploymentName());
+            }
+        } while (stateFieldUpdater.get(this) != FLAG_STARTED && !stateFieldUpdater.compareAndSet(this, 0, FLAG_STARTED));
     }
 
-    public synchronized void stop() {
-        started = false;
-        if (handle != null) {
-            try {
-                new LifecyleInterceptorInvocation(servletContext.getDeployment().getDeploymentInfo().getLifecycleInterceptors(), filterInfo, filter).proceed();
-            } catch (Exception e) {
-                UndertowServletLogger.ROOT_LOGGER.failedToDestroy(filterInfo, e);
+    public void stop() {
+        stateFieldUpdater.set(this, FLAG_STOPPED);
+        synchronized (this) {
+            if (handle != null) {
+                try {
+                    new LifecyleInterceptorInvocation(servletContext.getDeployment().getDeploymentInfo().getLifecycleInterceptors(), filterInfo, filter).proceed();
+                } catch (Exception e) {
+                    UndertowServletLogger.ROOT_LOGGER.failedToDestroy(filterInfo, e);
+                }
+                handle.release();
             }
-            handle.release();
+            filter = null;
+            handle = null;
         }
-        filter = null;
-        handle = null;
     }
 
     @Override
     public boolean isStarted() {
-        return started;
+        return anyAreSet(state, FLAG_STARTED);
     }
 
     public FilterInfo getFilterInfo() {

@@ -59,7 +59,7 @@ public class PathHandler implements HttpHandler {
 
     public PathHandler(int cacheSize) {
         if(cacheSize > 0) {
-            cache = new LRUCache<>(cacheSize, -1, true);
+            cache = new LRUCache<>(cacheSize, LRUCache.MAX_AGE_NO_EXPIRY, true);
         } else {
             cache = null;
         }
@@ -118,7 +118,7 @@ public class PathHandler implements HttpHandler {
      * @see #addPrefixPath(String, io.undertow.server.HttpHandler)
      * @deprecated Superseded by {@link #addPrefixPath(String, io.undertow.server.HttpHandler)}.
      */
-    @Deprecated
+    @Deprecated(since="1.0.0", forRemoval=true)
     public synchronized PathHandler addPath(final String path, final HttpHandler handler) {
         return addPrefixPath(path, handler);
     }

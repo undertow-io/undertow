@@ -150,7 +150,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
     HttpClientConnection(final StreamConnection connection, final OptionMap options, final ByteBufferPool bufferPool) {
 
         //first we set up statistics, if required
-        if(options.get(UndertowOptions.ENABLE_STATISTICS, false)) {
+        if(options.get(UndertowOptions.ENABLE_STATISTICS, UndertowOptions.DEFAULT_ENABLE_STATISTICS)) {
             clientStatistics = new ClientStatisticsImpl();
             connection.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(connection.getSinkChannel().getConduit(), new ByteActivityCallback() {
                 @Override
@@ -348,13 +348,20 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
             http2Delegate.sendRequest(request, clientCallback);
             return;
         }
-        if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED | CLOSE_REQ | CLOSED)) {
+        if (anyAreSet(state, UPGRADE_REQUESTED | UPGRADED)) {
             clientCallback.failed(UndertowClientMessages.MESSAGES.invalidConnectionState());
+            return;
+        } else if (anyAreSet(state, CLOSE_REQ | CLOSED)) {
+            clientCallback.failed(UndertowClientMessages.MESSAGES.closedConnectionState());
+            return;
+        }
+        if (anyAreSet(state, CLOSE_REQ | CLOSED)) {
+            clientCallback.failed(new ClosedChannelException());
             return;
         }
         final HttpClientExchange httpClientExchange = new HttpClientExchange(clientCallback, request, this);
         boolean ssl = this.connection instanceof SslConnection;
-        if(!ssl && !http2Tried && options.get(UndertowOptions.ENABLE_HTTP2, false) && !request.getRequestHeaders().contains(Headers.UPGRADE)) {
+        if(!ssl && !http2Tried && options.get(UndertowOptions.ENABLE_HTTP2, UndertowOptions.DEFAULT_ENABLE_HTTP2) && !request.getRequestHeaders().contains(Headers.UPGRADE)) {
             //this is the first request, as we want to try a HTTP2 upgrade
             request.getRequestHeaders().put(new HttpString("HTTP2-Settings"), Http2ClearClientProvider.createSettingsFrame(options, bufferPool));
             request.getRequestHeaders().put(Headers.UPGRADE, Http2Channel.CLEARTEXT_UPGRADE_STRING);

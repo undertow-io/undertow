@@ -19,11 +19,8 @@
 package io.undertow.protocols.http2;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
 
-import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.protocol.framed.SendFrameHeader;
 import org.xnio.IoUtils;
@@ -45,7 +42,7 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
 
     private SendFrameHeader header;
 
-    private static final Object flowControlLock = new Object();
+    private final Object flowControlLock = new Object();
 
     Http2StreamSinkChannel(Http2Channel channel, int streamId) {
         super(channel);
@@ -179,52 +176,6 @@ public abstract class Http2StreamSinkChannel extends AbstractHttp2StreamSinkChan
             }
         }
         return ret;
-    }
-
-    /**
-     * Invokes super awaitWritable, with an extra check for flowControlWindow. The purpose of this is to
-     * warn clearly that peer is not updating the flow control window.
-     *
-     * This method will block for the maximum amount of time specified by {@link #getAwaitWritableTimeout()}
-     *
-     * @throws IOException if an IO error occurs
-     */
-    public void awaitWritable() throws IOException {
-        awaitWritable(getAwaitWritableTimeout(), TimeUnit.MILLISECONDS);
-    }
-
-    /**
-     * Invokes super awaitWritable, with an extra check for flowControlWindow. The purpose of this is to
-     * warn clearly that peer is not updating the flow control window.
-     *
-     * @param time the time to wait
-     * @param timeUnit the time unit
-     * @throws IOException if an IO error occurs
-     */
-    public void awaitWritable(long time, TimeUnit timeUnit) throws IOException {
-        final int flowControlWindow;
-        synchronized (flowControlLock) {
-            flowControlWindow = this.flowControlWindow;
-        }
-        long initialTime = System.currentTimeMillis();
-        super.awaitWritable(time, timeUnit);
-        synchronized (flowControlLock) {
-            if (isReadyForFlush() && flowControlWindow <= 0 && flowControlWindow == this.flowControlWindow) {
-                long remainingTimeout;
-                long timeoutInMillis = timeUnit.toMillis(time);
-                while ((remainingTimeout = timeoutInMillis - (System.currentTimeMillis() - initialTime)) > 0) {
-                    try {
-                        flowControlLock.wait(remainingTimeout);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new InterruptedIOException();
-                    }
-                    if (flowControlWindow != this.flowControlWindow)
-                        return;
-                }
-                throw UndertowMessages.MESSAGES.noWindowUpdate(timeoutInMillis);
-            }
-        }
     }
 
     /**

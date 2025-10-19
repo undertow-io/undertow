@@ -20,6 +20,11 @@ package io.undertow.server.handlers.encoding;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Random;
+import java.util.zip.Deflater;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -67,7 +72,6 @@ public class RequestContentEncodingTestCase {
                         exchange.getResponseSender().send(message, IoCallback.END_EXCHANGE);
                     }
                 });
-        final EncodingHandler wrappedEncode = new EncodingHandler(contentEncodingRepository).setNext(encode);
 
         final HttpHandler decode = new RequestEncodingHandler(new HttpHandler() {
             @Override
@@ -75,18 +79,17 @@ public class RequestContentEncodingTestCase {
                 exchange.getRequestReceiver().receiveFullBytes(new Receiver.FullBytesCallback() {
                     @Override
                     public void handle(HttpServerExchange exchange, byte[] message) {
+                        Assert.assertTrue(exchange.getRequestContentLength()>0);
                         exchange.getResponseSender().send(ByteBuffer.wrap(message));
                     }
                 });
             }
         }).addEncoding("deflate", InflatingStreamSourceConduit.WRAPPER)
                 .addEncoding("gzip", GzipStreamSourceConduit.WRAPPER);
-        final HttpHandler wrappedDecode = new RequestEncodingHandler(decode)
-                .addEncoding("deflate", InflatingStreamSourceConduit.WRAPPER)
-                .addEncoding("gzip", GzipStreamSourceConduit.WRAPPER);
+
         PathHandler pathHandler = new PathHandler();
-        pathHandler.addPrefixPath("/encode", wrappedEncode);
-        pathHandler.addPrefixPath("/decode", wrappedDecode);
+        pathHandler.addPrefixPath("/encode", encode);
+        pathHandler.addPrefixPath("/decode", decode);
 
         DefaultServer.setRootHandler(pathHandler);
     }
@@ -105,6 +108,14 @@ public class RequestContentEncodingTestCase {
         runTest(sb.toString(), "deflate");
         runTest("Hello World", "deflate");
 
+        // the default buffer size used for tests is 8kb
+        // ensure we send enough data to require multiple buffer allocations when deflating
+        Random random = new Random();
+        byte[] randomBytes = new byte[65536];
+        random.nextBytes(randomBytes);
+        Base64.Encoder encoder = Base64.getEncoder();
+        String randomString = encoder.encodeToString(randomBytes);
+        runTest(randomString, "deflate");
     }
 
     @Test
@@ -115,8 +126,64 @@ public class RequestContentEncodingTestCase {
             sb.append("a message");
         }
         runTest(sb.toString(), "gzip");
+
+        Random random = new Random();
+        byte[] randomBytes = new byte[65536];
+        random.nextBytes(randomBytes);
+        Base64.Encoder encoder = Base64.getEncoder();
+        String randomString = encoder.encodeToString(randomBytes);
+        runTest(randomString, "gzip");
     }
 
+    private static final String MESSAGE = "COMPRESSED I'AM";
+    private static final byte[] COMPRESSED_MESSAGE = { 0x78, (byte) (0x9C & 0xFF), 0x73, (byte) (0xF6 & 0xFF),
+            (byte) (0xF7 & 0xFF), 0x0D, 0x08, 0x72, 0x0D, 0x0E, 0x76, 0x75, 0x51, (byte) (0xF0 & 0xFF), 0x54, 0x77,
+            (byte) (0xF4 & 0xFF), 0x05, 0x00, 0x22, 0x35, 0x04, 0x14 };
+
+    @Test
+    public void testDeflateWithNoWrapping() throws IOException {
+        HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/decode");
+        post.setEntity(new ByteArrayEntity(COMPRESSED_MESSAGE));
+        post.addHeader(Headers.CONTENT_ENCODING_STRING, "deflate");
+
+        try (CloseableHttpClient client = HttpClientBuilder.create().disableContentCompression().build()) {
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String sb = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(MESSAGE.length(), sb.length());
+            Assert.assertEquals(MESSAGE, sb);
+        }
+    }
+
+    @Test
+    public void testDeflateWithNoWrappingLargeRequestBody() throws IOException {
+        Random random = new Random();
+        byte[] randomBytes = new byte[16384];
+        random.nextBytes(randomBytes);
+        Base64.Encoder encoder = Base64.getEncoder();
+        String randomString = encoder.encodeToString(randomBytes);
+
+        byte[] input = randomString.getBytes(StandardCharsets.UTF_8);
+        byte[] output = new byte[65536];
+        Deflater deflater = new Deflater(-1, true);
+        deflater.setInput(input);
+        deflater.finish();
+        int len = deflater.deflate(output);
+        deflater.end();
+
+        byte[] bodyBytes = Arrays.copyOf(output, len);
+        HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/decode");
+        post.setEntity(new ByteArrayEntity(bodyBytes));
+        post.addHeader(Headers.CONTENT_ENCODING_STRING, "deflate");
+
+        try (CloseableHttpClient client = HttpClientBuilder.create().disableContentCompression().build()) {
+            HttpResponse result = client.execute(post);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String sb = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(randomString.length(), sb.length());
+            Assert.assertEquals(randomString, sb);
+        }
+    }
 
     public void runTest(final String theMessage, String encoding) throws IOException {
         try (CloseableHttpClient client = HttpClientBuilder.create().disableContentCompression().build()){

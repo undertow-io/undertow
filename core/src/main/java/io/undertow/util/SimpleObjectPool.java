@@ -43,7 +43,7 @@ public class SimpleObjectPool<T> implements ObjectPool {
         this.supplier = supplier;
         this.recycler = recycler;
         this.consumer = consumer;
-        pool = new LinkedBlockingDeque<T>(poolSize);
+        pool = new LinkedBlockingDeque<>(poolSize);
     }
 
     public SimpleObjectPool(int poolSize, Supplier<T> supplier, Consumer<T> consumer) {

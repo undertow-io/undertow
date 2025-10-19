@@ -17,6 +17,8 @@
  */
 package io.undertow.websockets.core;
 
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
 import io.undertow.conduits.IdleTimeoutConduit;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
@@ -24,9 +26,12 @@ import io.undertow.server.protocol.framed.FrameHeaderData;
 import io.undertow.websockets.extensions.ExtensionFunction;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
+import org.xnio.ChannelListener.SimpleSetter;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
+import org.xnio.Options;
+
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import org.xnio.StreamConnection;
@@ -82,6 +87,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
      */
     private final Set<WebSocketChannel> peerConnections;
 
+    private static final CloseMessage CLOSE_MSG = new CloseMessage(CloseMessage.GOING_AWAY, WebSocketMessages.MESSAGES.messageCloseWebSocket());
     /**
      * Create a new {@link WebSocketChannel}
      * 8
@@ -104,6 +110,20 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
         this.hasReservedOpCode = extensionFunction.hasExtensionOpCode();
         this.subProtocol = subProtocol;
         this.peerConnections = peerConnections;
+        if(options.contains(UndertowOptions.WEB_SOCKETS_READ_TIMEOUT)) {
+            try {
+                this.setOption(Options.READ_TIMEOUT, options.get(UndertowOptions.WEB_SOCKETS_READ_TIMEOUT));
+            } catch (IOException e) {
+                UndertowLogger.ROOT_LOGGER.failedToSetWSTimeout(e);
+            }
+        }
+        if(options.contains(UndertowOptions.WEB_SOCKETS_WRITE_TIMEOUT)) {
+            try {
+                this.setOption(Options.WRITE_TIMEOUT, options.get(UndertowOptions.WEB_SOCKETS_WRITE_TIMEOUT));
+            } catch (IOException e) {
+                UndertowLogger.ROOT_LOGGER.failedToSetWSTimeout(e);
+            }
+        }
         addCloseTask(new ChannelListener<WebSocketChannel>() {
             @Override
             public void handleEvent(WebSocketChannel channel) {
@@ -157,6 +177,15 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
                 sendClose();
             } catch (IOException e) {
                 IoUtils.safeClose(this);
+            }
+            final ChannelListener<?> listener = ((SimpleSetter<WebSocketChannel>)getReceiveSetter()).get();
+            if(listener instanceof AbstractReceiveListener) {
+                final AbstractReceiveListener abstractReceiveListener = (AbstractReceiveListener) listener;
+                try {
+                    abstractReceiveListener.onCloseMessage(CLOSE_MSG, this);
+                } catch(Exception e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
@@ -415,7 +444,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
         /**
          * @return The channel, or null if the channel is not available yet
          */
-        StreamSourceFrameChannel getChannel(final PooledByteBuffer data);
+        StreamSourceFrameChannel getChannel(PooledByteBuffer data);
 
         /**
          * Handles the data, any remaining data will be pushed back

@@ -20,7 +20,6 @@ package io.undertow.servlet.spec;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Deque;
@@ -45,7 +44,9 @@ import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.handlers.ServletChain;
 import io.undertow.servlet.handlers.ServletPathMatch;
-import io.undertow.util.QueryParameterUtils;
+import io.undertow.servlet.util.DispatchUtils;
+import io.undertow.util.BadRequestException;
+import io.undertow.util.ParameterLimitException;
 
 /**
  * @author Stuart Douglas
@@ -55,24 +56,13 @@ public class RequestDispatcherImpl implements RequestDispatcher {
     private final String path;
     private final ServletContextImpl servletContext;
     private final ServletChain chain;
-    private final ServletPathMatch pathMatch;
     private final boolean named;
 
     public RequestDispatcherImpl(final String path, final ServletContextImpl servletContext) {
         this.path = path;
         this.servletContext = servletContext;
-        String basePath = path;
-        int qPos = basePath.indexOf("?");
-        if (qPos != -1) {
-            basePath = basePath.substring(0, qPos);
-        }
-        int mPos = basePath.indexOf(";");
-        if(mPos != -1) {
-            basePath = basePath.substring(0, mPos);
-        }
-        this.pathMatch = servletContext.getDeployment().getServletPaths().getServletHandlerByPath(basePath);
-        this.chain = pathMatch.getServletChain();
         this.named = false;
+        this.chain = null;
     }
 
     public RequestDispatcherImpl(final ServletChain chain, final ServletContextImpl servletContext) {
@@ -80,20 +70,17 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         this.named = true;
         this.servletContext = servletContext;
         this.path = null;
-        this.pathMatch = null;
     }
 
 
     @Override
+    @SuppressWarnings("removal")
     public void forward(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
         if(System.getSecurityManager() != null) {
             try {
-                AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
-                    @Override
-                    public Object run() throws Exception {
-                        forwardImplSetup(request, response);
-                        return null;
-                    }
+                java.security.AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
+                    forwardImplSetup(request, response);
+                    return null;
                 });
             } catch (PrivilegedActionException e) {
                 if(e.getCause() instanceof ServletException) {
@@ -169,8 +156,6 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         final ServletRequest oldRequest = servletRequestContext.getServletRequest();
         final ServletResponse oldResponse = servletRequestContext.getServletResponse();
 
-        Map<String, Deque<String>> queryParameters = requestImpl.getQueryParameters();
-
         request.removeAttribute(INCLUDE_REQUEST_URI);
         request.removeAttribute(INCLUDE_CONTEXT_PATH);
         request.removeAttribute(INCLUDE_SERVLET_PATH);
@@ -181,38 +166,14 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         final String oldRequestPath = requestImpl.getExchange().getRequestPath();
         final String oldPath = requestImpl.getExchange().getRelativePath();
         final ServletPathMatch oldServletPathMatch = requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletPathMatch();
+
+        ServletPathMatch pathMatch = null;
         if (!named) {
-
-            //only update if this is the first forward
-            if (request.getAttribute(FORWARD_REQUEST_URI) == null) {
-                requestImpl.setAttribute(FORWARD_REQUEST_URI, requestImpl.getRequestURI());
-                requestImpl.setAttribute(FORWARD_CONTEXT_PATH, requestImpl.getContextPath());
-                requestImpl.setAttribute(FORWARD_SERVLET_PATH, requestImpl.getServletPath());
-                requestImpl.setAttribute(FORWARD_PATH_INFO, requestImpl.getPathInfo());
-                requestImpl.setAttribute(FORWARD_QUERY_STRING, requestImpl.getQueryString());
+            try {
+                pathMatch = DispatchUtils.dispatchForward(path, requestImpl, responseImpl, servletContext);
+            } catch (ParameterLimitException | BadRequestException e) {
+                throw new ServletException(e);
             }
-
-            int qsPos = path.indexOf("?");
-            String newServletPath = path;
-            if (qsPos != -1) {
-                String newQueryString = newServletPath.substring(qsPos + 1);
-                newServletPath = newServletPath.substring(0, qsPos);
-
-                String encoding = QueryParameterUtils.getQueryParamEncoding(servletRequestContext.getExchange());
-                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, encoding);
-                requestImpl.getExchange().setQueryString(newQueryString);
-                requestImpl.setQueryParameters(newQueryParameters);
-            }
-            String newRequestUri = servletContext.getContextPath() + newServletPath;
-
-
-
-            requestImpl.getExchange().setRelativePath(newServletPath);
-            requestImpl.getExchange().setRequestPath(newRequestUri);
-            requestImpl.getExchange().setRequestURI(newRequestUri);
-            requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(pathMatch);
-            requestImpl.setServletContext(servletContext);
-            responseImpl.setServletContext(servletContext);
         }
 
         try {
@@ -241,9 +202,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
                         }
                     }
                 }
-            } catch (ServletException e) {
-                throw e;
-            } catch (IOException e) {
+            } catch (ServletException | IOException e) {
                 throw e;
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -263,15 +222,13 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
 
     @Override
+    @SuppressWarnings("removal")
     public void include(final ServletRequest request, final ServletResponse response) throws ServletException, IOException {
         if(System.getSecurityManager() != null) {
             try {
-                AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
-                    @Override
-                    public Object run() throws Exception {
-                        setupIncludeImpl(request, response);
-                        return null;
-                    }
+                java.security.AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
+                    setupIncludeImpl(request, response);
+                    return null;
                 });
             } catch (PrivilegedActionException e) {
                 if(e.getCause() instanceof ServletException) {
@@ -348,6 +305,7 @@ public class RequestDispatcherImpl implements RequestDispatcher {
         Object queryString = null;
         Map<String, Deque<String>> queryParameters = requestImpl.getQueryParameters();
 
+        ServletPathMatch pathMatch = null;
         if (!named) {
             requestUri = request.getAttribute(INCLUDE_REQUEST_URI);
             contextPath = request.getAttribute(INCLUDE_CONTEXT_PATH);
@@ -355,25 +313,11 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             pathInfo = request.getAttribute(INCLUDE_PATH_INFO);
             queryString = request.getAttribute(INCLUDE_QUERY_STRING);
 
-            int qsPos = path.indexOf("?");
-            String newServletPath = path;
-            if (qsPos != -1) {
-                String newQueryString = newServletPath.substring(qsPos + 1);
-                newServletPath = newServletPath.substring(0, qsPos);
-
-                String encoding = QueryParameterUtils.getQueryParamEncoding(servletRequestContext.getExchange());
-                Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, encoding);
-                requestImpl.setQueryParameters(newQueryParameters);
-                requestImpl.setAttribute(INCLUDE_QUERY_STRING, newQueryString);
-            } else {
-                requestImpl.setAttribute(INCLUDE_QUERY_STRING, "");
+            try {
+                pathMatch = DispatchUtils.dispatchInclude(path, requestImpl, responseImpl, servletContext);
+            } catch (ParameterLimitException | BadRequestException e) {
+                throw new ServletException(e);
             }
-            String newRequestUri = servletContext.getContextPath() + newServletPath;
-
-            requestImpl.setAttribute(INCLUDE_REQUEST_URI, newRequestUri);
-            requestImpl.setAttribute(INCLUDE_CONTEXT_PATH, servletContext.getContextPath());
-            requestImpl.setAttribute(INCLUDE_SERVLET_PATH, pathMatch.getMatched());
-            requestImpl.setAttribute(INCLUDE_PATH_INFO, pathMatch.getRemaining());
         }
         boolean inInclude = responseImpl.isInsideInclude();
         responseImpl.setInsideInclude(true);
@@ -386,10 +330,9 @@ public class RequestDispatcherImpl implements RequestDispatcher {
             try {
                 servletRequestContext.setServletRequest(request);
                 servletRequestContext.setServletResponse(response);
-                servletContext.getDeployment().getServletDispatcher().dispatchToServlet(requestImpl.getExchange(), chain, DispatcherType.INCLUDE);
-            } catch (ServletException e) {
-                throw e;
-            } catch (IOException e) {
+                servletContext.getDeployment().getServletDispatcher().dispatchToServlet(requestImpl.getExchange(),
+                        named? chain : pathMatch.getServletChain(), DispatcherType.INCLUDE);
+            } catch (ServletException|IOException e) {
                 throw e;
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -452,59 +395,20 @@ public class RequestDispatcherImpl implements RequestDispatcher {
 
         final ServletRequest oldRequest = servletRequestContext.getServletRequest();
         final ServletResponse oldResponse = servletRequestContext.getServletResponse();
-        servletRequestContext.setDispatcherType(DispatcherType.ERROR);
 
-        //only update if this is the first forward, add forward attrs too
-        if (request.getAttribute(FORWARD_REQUEST_URI) == null) {
-            requestImpl.setAttribute(FORWARD_REQUEST_URI, requestImpl.getRequestURI());
-            requestImpl.setAttribute(FORWARD_CONTEXT_PATH, requestImpl.getContextPath());
-            requestImpl.setAttribute(FORWARD_SERVLET_PATH, requestImpl.getServletPath());
-            requestImpl.setAttribute(FORWARD_PATH_INFO, requestImpl.getPathInfo());
-            requestImpl.setAttribute(FORWARD_QUERY_STRING, requestImpl.getQueryString());
+        ServletPathMatch pathMatch;
+        try {
+            pathMatch = DispatchUtils.dispatchError(path, servletName, exception, message, requestImpl, responseImpl, servletContext);
+        } catch (ParameterLimitException | BadRequestException e) {
+            throw new ServletException(e);
         }
-        requestImpl.setAttribute(ERROR_REQUEST_URI, requestImpl.getRequestURI());
-        requestImpl.setAttribute(ERROR_SERVLET_NAME, servletName);
-        if (exception != null) {
-            if (exception instanceof ServletException && ((ServletException)exception).getRootCause() != null) {
-                requestImpl.setAttribute(ERROR_EXCEPTION, ((ServletException) exception).getRootCause());
-                requestImpl.setAttribute(ERROR_EXCEPTION_TYPE, ((ServletException) exception).getRootCause().getClass());
-            } else {
-                requestImpl.setAttribute(ERROR_EXCEPTION, exception);
-                requestImpl.setAttribute(ERROR_EXCEPTION_TYPE, exception.getClass());
-            }
-        }
-        requestImpl.setAttribute(ERROR_MESSAGE, message);
-        requestImpl.setAttribute(ERROR_STATUS_CODE, responseImpl.getStatus());
-
-        int qsPos = path.indexOf("?");
-        String newServletPath = path;
-        if (qsPos != -1) {
-            Map<String, Deque<String>> queryParameters = requestImpl.getQueryParameters();
-            String newQueryString = newServletPath.substring(qsPos + 1);
-            newServletPath = newServletPath.substring(0, qsPos);
-
-            String encoding = QueryParameterUtils.getQueryParamEncoding(servletRequestContext.getExchange());
-            Map<String, Deque<String>> newQueryParameters = QueryParameterUtils.mergeQueryParametersWithNewQueryString(queryParameters, newQueryString, encoding);
-            requestImpl.getExchange().setQueryString(newQueryString);
-            requestImpl.setQueryParameters(newQueryParameters);
-        }
-        String newRequestUri = servletContext.getContextPath() + newServletPath;
-
-        requestImpl.getExchange().setRelativePath(newServletPath);
-        requestImpl.getExchange().setRequestPath(newRequestUri);
-        requestImpl.getExchange().setRequestURI(newRequestUri);
-        requestImpl.getExchange().getAttachment(ServletRequestContext.ATTACHMENT_KEY).setServletPathMatch(pathMatch);
-        requestImpl.setServletContext(servletContext);
-        responseImpl.setServletContext(servletContext);
 
         try {
             try {
                 servletRequestContext.setServletRequest(request);
                 servletRequestContext.setServletResponse(response);
                 servletContext.getDeployment().getServletDispatcher().dispatchToPath(requestImpl.getExchange(), pathMatch, DispatcherType.ERROR);
-            } catch (ServletException e) {
-                throw e;
-            } catch (IOException e) {
+            } catch (ServletException | IOException e) {
                 throw e;
             } catch (Exception e) {
                 throw new RuntimeException(e);

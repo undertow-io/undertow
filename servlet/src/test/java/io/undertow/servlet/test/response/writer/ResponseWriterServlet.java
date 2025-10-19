@@ -37,13 +37,13 @@ public class ResponseWriterServlet extends HttpServlet {
 
         String test = req.getParameter("test");
         if (test.equals(CONTENT_LENGTH_FLUSH)) {
-            contentLengthFlush(req, resp);
+            contentLengthFlush(resp);
         } else {
             throw new IllegalArgumentException("not a test " + test);
         }
     }
 
-    private void contentLengthFlush(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    protected void contentLengthFlush(HttpServletResponse resp) throws IOException {
         int size = 10;
 
         PrintWriter pw = resp.getWriter();
@@ -54,7 +54,7 @@ public class ResponseWriterServlet extends HttpServlet {
         resp.setContentLength(size);
         //write more data than the content length
         while (i < 20) {
-            tmp = tmp.append("a");
+            tmp.append("a");
             i = i + 1;
         }
         pw.println(tmp);

@@ -20,6 +20,8 @@ package io.undertow.server.handlers;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import io.undertow.server.RequestStatistics;
 import io.undertow.server.HttpHandler;
@@ -37,25 +39,29 @@ public class ActiveRequestTrackerTest {
     public void testRequestTracking() throws InterruptedException {
         final TestHttpClient client = new TestHttpClient();
         try {
-            final ActiveRequestTrackerHandler handler = new ActiveRequestTrackerHandler(new DelayHandler(), null);
+            final CountDownLatch latch = new CountDownLatch(1);
+            final ActiveRequestTrackerHandler handler = new ActiveRequestTrackerHandler(new DelayHandler(latch), null);
             DefaultServer.setRootHandler(handler);
 
-            new Thread(() -> makeRequest(client)).start();
+            // start the thread doing the request
+            final Thread t = new Thread(() -> makeRequest(client));
+            t.start();
 
             List<RequestStatistics> trackedRequests = handler.getTrackedRequests();
-            int attempts = 0;
 
             // This test is somewhat time-sensitive in that an in-flight request is needed to verify that the handler
             // is correctly tracking and returning active requests. To that end, the test submits a request in a
             // Thread (above) to let the request be made in a background thread while the main thread attempts to
-            // get the active request information. There is a short sleep here to force/encourage the JVM to allow the
-            // background thread to start to initiate the request. That thread has a short delay in it as well (see
-            // below) to give this thread time to retrieve the data, and the test loops a few times here in an attempt
-            // to avoid a race condition that would lead to flaky test runs.
-            while (trackedRequests.isEmpty() && attempts < 5) {
-                Thread.sleep(500);
-                trackedRequests = handler.getTrackedRequests();
-                attempts++;
+            // get the active request information. The delay handler waits for termination via latch and
+            // meanwhile this thread tries to retrieve the request statistics. There is a max waiting time of 5 seconds.
+            try {
+                while (trackedRequests.isEmpty() && t.isAlive()) {
+                    TimeUnit.MILLISECONDS.sleep(100);
+                    trackedRequests = handler.getTrackedRequests();
+                }
+            } finally {
+                // finish request thread via latch once the tracked requests are set
+                latch.countDown();
             }
 
             Assert.assertEquals("Expecting 1 tracked request", 1, trackedRequests.size());
@@ -84,9 +90,16 @@ public class ActiveRequestTrackerTest {
     }
 
     private class DelayHandler implements HttpHandler {
+
+        private final CountDownLatch latch;
+
+        DelayHandler(CountDownLatch latch) {
+            this.latch = latch;
+        }
+
         @Override
         public void handleRequest(HttpServerExchange exchange) throws Exception {
-            Thread.sleep(500);
+            latch.await(5, TimeUnit.SECONDS);
         }
     }
 }

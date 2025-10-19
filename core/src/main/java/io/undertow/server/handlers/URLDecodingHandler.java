@@ -76,10 +76,10 @@ public class URLDecodingHandler implements HttpHandler {
     }
 
     private static void decodePath(HttpServerExchange exchange, String charset, StringBuilder sb) {
-        final boolean decodeSlash = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_ENCODED_SLASH, false);
-        exchange.setRequestPath(URLUtils.decode(exchange.getRequestPath(), charset, decodeSlash, false, sb));
-        exchange.setRelativePath(URLUtils.decode(exchange.getRelativePath(), charset, decodeSlash, false, sb));
-        exchange.setResolvedPath(URLUtils.decode(exchange.getResolvedPath(), charset, decodeSlash, false, sb));
+        boolean slashDecodingFlag = URLUtils.getSlashDecodingFlag(exchange.getConnection().getUndertowOptions());
+        exchange.setRequestPath(URLUtils.decode(exchange.getRequestPath(), charset, slashDecodingFlag, false, sb));
+        exchange.setRelativePath(URLUtils.decode(exchange.getRelativePath(), charset, slashDecodingFlag, false, sb));
+        exchange.setResolvedPath(URLUtils.decode(exchange.getResolvedPath(), charset, slashDecodingFlag, false, sb));
     }
 
     private static void decodeQueryString(HttpServerExchange exchange, String charset, StringBuilder sb) {
@@ -149,6 +149,11 @@ public class URLDecodingHandler implements HttpHandler {
         @Override
         public HandlerWrapper build(Map<String, Object> config) {
             return new Wrapper(config.get("charset").toString());
+        }
+
+        @Override
+        public int priority() {
+            return 0;
         }
 
     }

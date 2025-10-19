@@ -22,6 +22,8 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.Cookie;
+import io.undertow.server.protocol.http.HttpRequestParser;
+import io.undertow.util.BadRequestException;
 import io.undertow.util.DateUtils;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
@@ -32,11 +34,16 @@ import io.undertow.util.ParameterLimitException;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.URLUtils;
 import io.undertow.connector.PooledByteBuffer;
+import org.xnio.OptionMap;
 import org.xnio.channels.StreamSourceChannel;
 import org.xnio.conduits.ConduitStreamSinkChannel;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
@@ -53,6 +60,7 @@ public class Connectors {
 
     private static final boolean[] ALLOWED_TOKEN_CHARACTERS = new boolean[256];
     private static final boolean[] ALLOWED_SCHEME_CHARACTERS = new boolean[256];
+    private static final Set<String> KNOWN_ATTRIBUTE_NAMES = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 
     static {
         for(int i = 0; i < ALLOWED_TOKEN_CHARACTERS.length; ++i) {
@@ -104,6 +112,16 @@ public class Connectors {
                 }
             }
         }
+
+        KNOWN_ATTRIBUTE_NAMES.add("Path");
+        KNOWN_ATTRIBUTE_NAMES.add("Domain");
+        KNOWN_ATTRIBUTE_NAMES.add("Discard");
+        KNOWN_ATTRIBUTE_NAMES.add("Secure");
+        KNOWN_ATTRIBUTE_NAMES.add("HttpOnly");
+        KNOWN_ATTRIBUTE_NAMES.add("Max-Age");
+        KNOWN_ATTRIBUTE_NAMES.add("Expires");
+        KNOWN_ATTRIBUTE_NAMES.add("Comment");
+        KNOWN_ATTRIBUTE_NAMES.add("SameSite");
     }
     /**
      * Flattens the exchange cookie map into the response header map. This should be called by a
@@ -144,8 +162,12 @@ public class Connectors {
             System.arraycopy(buffers, 0, newArray, 0, buffers.length);
         } else {
             newArray = new PooledByteBuffer[existing.length + buffers.length];
-            System.arraycopy(existing, 0, newArray, 0, existing.length);
-            System.arraycopy(buffers, 0, newArray, existing.length, buffers.length);
+            // If there are previous buffers we are re-buffering data so although
+            // counterintuitive first put the new data and then the existing buffers.
+            // Example: there are buffered data with buffers A,B and A is retrieved
+            // but returned, it should be A,B again and not B,A
+            System.arraycopy(buffers, 0, newArray, 0, buffers.length);
+            System.arraycopy(existing, 0, newArray, buffers.length, existing.length);
         }
         exchange.putAttachment(HttpServerExchange.BUFFERED_REQUEST_DATA, newArray); //todo: force some kind of wakeup?
         exchange.addExchangeCompleteListener(BufferedRequestDataCleanupListener.INSTANCE);
@@ -216,9 +238,6 @@ public class Connectors {
             header.append("; Domain=");
             header.append(cookie.getDomain());
         }
-        if (cookie.isDiscard()) {
-            header.append("; Discard");
-        }
         if (cookie.isSecure()) {
             header.append("; Secure");
         }
@@ -226,7 +245,10 @@ public class Connectors {
             header.append("; HttpOnly");
         }
         if (cookie.getMaxAge() != null) {
-            if (cookie.getMaxAge() >= 0) {
+            // TODO (jrp) Per the TCK test "RFC 6265 - server should only send +ve values for Max-Age"
+            // TODO (jrp) This is possibly per https://datatracker.ietf.org/doc/html/rfc6265#section-5.2.2, however
+            // TODO (jrp) I'm not sure not adding the value is correct.
+            if (cookie.getMaxAge() > 0) {
                 header.append("; Max-Age=");
                 header.append(cookie.getMaxAge());
             }
@@ -262,6 +284,7 @@ public class Connectors {
                 header.append(cookie.getSameSiteMode());
             }
         }
+        appendAttributes(cookie, header);
         return header.toString();
     }
 
@@ -290,7 +313,10 @@ public class Connectors {
             header.append("; Expires=");
             header.append(DateUtils.toOldCookieDateString(cookie.getExpires()));
         } else if (cookie.getMaxAge() != null) {
-            if (cookie.getMaxAge() >= 0) {
+            // TODO (jrp) Per the TCK test "RFC 6265 - server should only send +ve values for Max-Age"
+            // TODO (jrp) This is possibly per https://datatracker.ietf.org/doc/html/rfc6265#section-5.2.2, however
+            // TODO (jrp) I'm not sure not adding the value is correct.
+            if (cookie.getMaxAge() > 0) {
                 header.append("; Max-Age=");
                 header.append(cookie.getMaxAge());
             }
@@ -312,6 +338,7 @@ public class Connectors {
                 header.append(cookie.getSameSiteMode());
             }
         }
+        appendAttributes(cookie, header);
         return header.toString();
 
     }
@@ -342,7 +369,10 @@ public class Connectors {
             header.append("; HttpOnly");
         }
         if (cookie.getMaxAge() != null) {
-            if (cookie.getMaxAge() >= 0) {
+            // TODO (jrp) Per the TCK test "RFC 6265 - server should only send +ve values for Max-Age"
+            // TODO (jrp) This is possibly per https://datatracker.ietf.org/doc/html/rfc6265#section-5.2.2, however
+            // TODO (jrp) I'm not sure not adding the value is correct.
+            if (cookie.getMaxAge() > 0) {
                 header.append("; Max-Age=");
                 header.append(cookie.getMaxAge());
             }
@@ -378,6 +408,7 @@ public class Connectors {
                 header.append(cookie.getSameSiteMode());
             }
         }
+        appendAttributes(cookie, header);
         return header.toString();
     }
 
@@ -438,29 +469,80 @@ public class Connectors {
     @Deprecated
     public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean allowEncodedSlash, StringBuilder decodeBuffer) {
         try {
-            setExchangeRequestPath(exchange, encodedPath, charset, decode, allowEncodedSlash, decodeBuffer, exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS));
-        } catch (ParameterLimitException e) {
+            final boolean slashDecodingFlag = URLUtils.getSlashDecodingFlag(allowEncodedSlash, exchange.getConnection().getUndertowOptions().get(UndertowOptions.DECODE_SLASH));
+            setExchangeRequestPath(exchange, encodedPath, charset, decode, slashDecodingFlag, decodeBuffer, exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS));
+        } catch (ParameterLimitException | BadRequestException e) {
             throw new RuntimeException(e);
         }
     }
-        /**
-         * Sets the request path and query parameters, decoding to the requested charset.
-         *
-         * @param exchange    The exchange
-         * @param encodedPath        The encoded path
-         * @param charset     The charset
-         */
-    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean allowEncodedSlash, StringBuilder decodeBuffer, int maxParameters) throws ParameterLimitException {
+
+    /**
+     * Sets the request path and query parameters, decoding to the requested charset.
+     * All the options are retrieved from the exchange undertow options.
+     *
+     * @param exchange The exchange
+     * @param encodedPath The encoded path to decode
+     * @param decodeBuffer The decode buffer to use
+     * @throws ParameterLimitException
+     * @throws BadRequestException
+     */
+    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, StringBuilder decodeBuffer) throws ParameterLimitException, BadRequestException {
+        final OptionMap options = exchange.getConnection().getUndertowOptions();
+        boolean slashDecodingFlag = URLUtils.getSlashDecodingFlag(options);
+        setExchangeRequestPath(exchange, encodedPath,
+                options.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name()),
+                options.get(UndertowOptions.DECODE_URL, true),
+                slashDecodingFlag,
+                decodeBuffer,
+                options.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS));
+    }
+
+    /**
+     * Sets the request path and query parameters, decoding to the requested charset.
+     *
+     * @param exchange             the exchange
+     * @param encodedPath          the encoded path
+     * @param decode               indicates if the request path should be decoded
+     * @param decodeSlashFlag      indicates if slash characters contained in the encoded path should be decoded
+     * @param decodeBuffer         the buffer used for decoding
+     * @param maxParameters        maximum number of parameters allowed in the path
+     * @param charset                  the charset
+     * @throws BadRequestException if there is something wrong with the request, such as non-allowed characters
+     */
+    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, final boolean decodeSlashFlag, StringBuilder decodeBuffer, int maxParameters) throws ParameterLimitException, BadRequestException {
+        setExchangeRequestPath(exchange, encodedPath, charset, decode, decode, decodeSlashFlag, decodeBuffer, maxParameters);
+    }
+
+    /**
+     * Sets the request path and query parameters, decoding to the requested charset.
+     *
+     * @param exchange             the exchange
+     * @param encodedPath          the encoded path
+     * @param decode               indicates if the request path should be decoded, apart from the query string part of the
+     *                             request (see next parameter)
+     * @param decodeQueryString    indicates if the query string of the path, when present, should be decoded
+     * @param decodeSlashFlag      indicates if slash characters contained in the request path should be decoded
+     * @param decodeBuffer         the buffer used for decoding
+     * @param maxParameters        maximum number of parameters allowed in the path
+     * @param charset                  the charset
+     * @throws BadRequestException if there is something wrong with the request, such as non-allowed characters
+     */
+    public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, boolean decodeQueryString, final boolean decodeSlashFlag, StringBuilder decodeBuffer, int maxParameters) throws ParameterLimitException, BadRequestException {
+        final OptionMap options = exchange.getConnection().getUndertowOptions();
+        final boolean allowUnescapedCharactersInUrl = options.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
         boolean requiresDecode = false;
         final StringBuilder pathBuilder = new StringBuilder();
         int currentPathPartIndex = 0;
         for (int i = 0; i < encodedPath.length(); ++i) {
             char c = encodedPath.charAt(i);
+            if(!allowUnescapedCharactersInUrl && !HttpRequestParser.isTargetCharacterAllowed(c)) {
+                throw new BadRequestException(UndertowMessages.MESSAGES.invalidCharacterInRequestTarget(c));
+            }
             if (c == '?') {
                 String part;
                 String encodedPart = encodedPath.substring(currentPathPartIndex, i);
                 if (requiresDecode) {
-                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash,false, decodeBuffer);
+                    part = URLUtils.decode(encodedPart, charset, decodeSlashFlag,false, decodeBuffer);
                 } else {
                     part = encodedPart;
                 }
@@ -468,24 +550,51 @@ public class Connectors {
                 part = pathBuilder.toString();
                 exchange.setRequestPath(part);
                 exchange.setRelativePath(part);
-                exchange.setRequestURI(encodedPath.substring(0, i));
+                if(requiresDecode && allowUnescapedCharactersInUrl) {
+                    final String uri = URLUtils.decode(encodedPath.substring(0, i), charset, decodeSlashFlag,false, decodeBuffer);
+                    exchange.setRequestURI(uri);
+                } else {
+                    exchange.setRequestURI(encodedPath.substring(0, i));
+                }
+
                 final String qs = encodedPath.substring(i + 1);
-                exchange.setQueryString(qs);
-                URLUtils.parseQueryString(qs, exchange, charset, decode, maxParameters);
+                if (decode && !requiresDecode && allowUnescapedCharactersInUrl) {
+                    for (int j = 0; j < qs.length(); j++) {
+                        char qsChar = qs.charAt(j);
+                        if (qsChar == '+' || qsChar == '%' || qsChar > 127) {
+                            requiresDecode = true;
+                            break;
+                        }
+                    }
+                }
+                if(requiresDecode && allowUnescapedCharactersInUrl) {
+                    final String decodedQS = URLUtils.decode(qs, charset, decodeSlashFlag,false, decodeBuffer);
+                    exchange.setQueryString(decodedQS);
+                } else {
+                    exchange.setQueryString(qs);
+                }
+
+                URLUtils.parseQueryString(qs, exchange, charset, decodeQueryString, maxParameters);
                 return;
             } else if(c == ';') {
                 String part;
                 String encodedPart = encodedPath.substring(currentPathPartIndex, i);
                 if (requiresDecode) {
-                    part = URLUtils.decode(encodedPart, charset, allowEncodedSlash, false, decodeBuffer);
+                    part = URLUtils.decode(encodedPart, charset, decodeSlashFlag, false, decodeBuffer);
                 } else {
                     part = encodedPart;
                 }
                 pathBuilder.append(part);
-                exchange.setRequestURI(encodedPath);
+                if(requiresDecode && allowUnescapedCharactersInUrl) {
+                    final String uri = URLUtils.decode(encodedPath, charset, decodeSlashFlag,false, decodeBuffer);
+                    exchange.setRequestURI(uri);
+                } else {
+                    exchange.setRequestURI(encodedPath);
+                }
+
                 currentPathPartIndex = i + 1 + URLUtils.parsePathParams(encodedPath.substring(i + 1), exchange, charset, decode, maxParameters);
                 i = currentPathPartIndex -1 ;
-            } else if(c == '%' || c == '+') {
+            } else if(decode && (c == '+' || c == '%' || c > 127)) {
                 requiresDecode = decode;
             }
         }
@@ -493,7 +602,7 @@ public class Connectors {
         String part;
         String encodedPart = encodedPath.substring(currentPathPartIndex);
         if (requiresDecode) {
-            part = URLUtils.decode(encodedPart, charset, allowEncodedSlash, false, decodeBuffer);
+            part = URLUtils.decode(encodedPart, charset, decodeSlashFlag, false, decodeBuffer);
         } else {
             part = encodedPart;
         }
@@ -578,5 +687,19 @@ public class Connectors {
             return false;
         }
         return true;
+    }
+
+    private static void appendAttributes(final Cookie cookie, final StringBuilder header) {
+        for (Map.Entry<String, String> entry : cookie.getAttributes().entrySet()) {
+            if (KNOWN_ATTRIBUTE_NAMES.contains(entry.getKey())) {
+                continue;
+            }
+            header.append("; ")
+                    .append(entry.getKey());
+            if (!entry.getValue().isBlank()) {
+                header.append('=')
+                        .append(entry.getValue());
+            }
+        }
     }
 }

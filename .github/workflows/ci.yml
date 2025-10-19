@@ -1,33 +1,35 @@
 # This workflow will build a Java project with Maven
-# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-maven
 
 name: Undertow CI
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
 
 jobs:
   build-all:
-    name: Compile (no tests) with JDK 11
+    name: Compile (no tests) with JDK 17
     runs-on: ubuntu-latest
     steps:
-    - uses: n1hility/cancel-previous-runs@v2
+    - uses: n1hility/cancel-previous-runs@v3
       with:
           token: ${{ secrets.GITHUB_TOKEN }}
-    - uses: actions/cache@v1
+    - uses: actions/cache@v4
       with:
         path: ~/.m2/repository
         key: m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
             m2-
-    - uses: actions/checkout@v2
-    - name: Set up JDK 11
-      uses: joschi/setup-jdk@v2
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
       with:
-        java-version: 11
+        distribution: temurin
+        java-version: 17
     - name: Generate settings.xml for Maven Builds
-      uses: whelk-io/maven-settings-xml-action@v20
+      uses: whelk-io/maven-settings-xml-action@v21
       with:
         repositories: '[{ "id": "jboss", "name": "JBoss", "url": "https://repository.jboss.org/nexus/content/groups/public" }]'
     - name: Print Version
@@ -38,11 +40,11 @@ jobs:
       shell: bash
       run: tar -czf maven-repo.tgz -C ~ .m2/repository
     - name: Persist Maven Repo
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       with:
         name: maven-repo
         path: maven-repo.tgz
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: surefire-reports-build
@@ -50,15 +52,17 @@ jobs:
           **/surefire*-reports/*.txt
           **/*.dump*
   test-matrix:
-    name: JDK ${{ matrix.jdk }} - ${{ matrix.module }} - ${{ matrix.os }}
+    name: JDK ${{ matrix.jdk }} - ${{ matrix.module }} - ${{ matrix.os }} ${{ matrix.openssl && '- openssl' || '' }}
     runs-on: ${{ matrix.os }}
     needs: build-all
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        module: [core, servlet, websockets-jsr]
-        jdk: [11, 17]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        module: [core]
+        jdk: [17, 21]
+        openjdk_impl: [ temurin ]
+        openssl: [false, true]
     steps:
     - name: Update hosts - linux
       if: matrix.os == 'ubuntu-latest'
@@ -74,15 +78,15 @@ jobs:
         echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' >	%SystemRoot%\System32\drivers\etc\hosts
         echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> %SystemRoot%\System32\drivers\etc\hosts
       shell: cmd
-    - uses: n1hility/cancel-previous-runs@v2
+    - uses: n1hility/cancel-previous-runs@v3
       with:
           token: ${{ secrets.GITHUB_TOKEN }}
     - name: Host information
       run: |
        hostname || true
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Download Maven Repo
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v4
       with:
         name: maven-repo
         path: .
@@ -90,18 +94,19 @@ jobs:
       shell: bash
       run: tar -xzf maven-repo.tgz -C ~
     - name: Set up JDK ${{ matrix.java }}
-      uses: joschi/setup-jdk@v2
+      uses: actions/setup-java@v4
       with:
+        distribution: ${{ matrix.openjdk_impl }}
         java-version: ${{ matrix.jdk }}
     - name: Generate settings.xml for Maven Builds
-      uses: whelk-io/maven-settings-xml-action@v20
+      uses: whelk-io/maven-settings-xml-action@v21
       with:
         repositories: '[{ "id": "jboss", "name": "JBoss", "url": "https://repository.jboss.org/nexus/content/groups/public" }]'
     - name: Print Version
       run: mvn -v
     - name: Run Tests
-      run: mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }}
-    - uses: actions/upload-artifact@v2
+      run: mvn -U -B -fae test -Pproxy '-Dopenssl=${{ matrix.openssl }} -DfailIfNoTests=false' -pl ${{ matrix.module }}
+    - uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: surefire-reports-${{ matrix.jdk }}-${{ matrix.module }}-${{ matrix.os }}
@@ -109,7 +114,7 @@ jobs:
               **/surefire*-reports/*.txt
               **/*.dump*
   test-matrix-ipv6:
-    name: JDK ${{ matrix.jdk }} - ipv6 - ${{ matrix.module }} ${{ matrix.proxy }} - ${{ matrix.os }}
+    name: JDK ${{ matrix.jdk }} - ipv6 - ${{ matrix.module }} ${{ matrix.proxy && '- proxy' || '' }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     needs: build-all
     strategy:
@@ -118,7 +123,7 @@ jobs:
         os: [ubuntu-latest]
         module: [core, servlet, websockets-jsr]
         proxy: ['-Pproxy', '']
-        jdk: [11]
+        jdk: [17]
     steps:
     - name: Update hosts - linux
       if: matrix.os == 'ubuntu-latest'
@@ -126,15 +131,15 @@ jobs:
         sudo bash -c "echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' > /etc/hosts"
         sudo bash -c "echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> /etc/hosts"
         sudo sysctl -w fs.file-max=2097152
-    - uses: n1hility/cancel-previous-runs@v2
+    - uses: n1hility/cancel-previous-runs@v3
       with:
           token: ${{ secrets.GITHUB_TOKEN }}
     - name: Host information
       run: |
        hostname || true
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Download Maven Repo
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v4
       with:
         name: maven-repo
         path: .
@@ -146,14 +151,14 @@ jobs:
       with:
         java-version: ${{ matrix.jdk }}
     - name: Generate settings.xml for Maven Builds
-      uses: whelk-io/maven-settings-xml-action@v20
+      uses: whelk-io/maven-settings-xml-action@v21
       with:
         repositories: '[{ "id": "jboss", "name": "JBoss", "url": "https://repository.jboss.org/nexus/content/groups/public" }]'
     - name: Print Version
       run: mvn -v
     - name: Run Tests
-      run: mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
-    - uses: actions/upload-artifact@v2
+      run: mvn -U -B -fae test ${{ matrix.proxy && '-Pproxy' || '' }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
+    - uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: surefire-reports-${{ matrix.jdk }}-ipv6-${{ matrix.module }}${{ matrix.proxy }}-${{ matrix.os }}

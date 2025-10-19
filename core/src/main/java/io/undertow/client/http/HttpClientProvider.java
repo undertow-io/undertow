@@ -36,9 +36,9 @@ import org.xnio.XnioWorker;
 import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -49,6 +49,20 @@ import java.util.Set;
  * @author Stuart Douglas
  */
 public class HttpClientProvider implements ClientProvider {
+
+    private static final String HTTP_1_1 = "http/1.1";
+
+    public static final String DISABLE_HTTPS_ENDPOINT_IDENTIFICATION_PROPERTY = "io.undertow.client.https.disableEndpointIdentification";
+    public static final boolean DISABLE_HTTPS_ENDPOINT_IDENTIFICATION;
+
+    static {
+        @SuppressWarnings("removal")
+        String disable = System.getSecurityManager() == null
+                ? System.getProperty(DISABLE_HTTPS_ENDPOINT_IDENTIFICATION_PROPERTY)
+                : java.security.AccessController.doPrivileged(
+                (PrivilegedAction<String>) () -> System.getProperty(DISABLE_HTTPS_ENDPOINT_IDENTIFICATION_PROPERTY));
+        DISABLE_HTTPS_ENDPOINT_IDENTIFICATION = disable != null && (disable.isEmpty() || Boolean.parseBoolean(disable));
+    }
 
     @Override
     public Set<String> handlesSchemes() {
@@ -72,7 +86,11 @@ public class HttpClientProvider implements ClientProvider {
                 listener.failed(UndertowMessages.MESSAGES.sslWasNull());
                 return;
             }
-            OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
+            OptionMap tlsOptions = OptionMap.builder()
+                    .set(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, DISABLE_HTTPS_ENDPOINT_IDENTIFICATION? "" : "HTTPS")
+                    .addAll(options)
+                    .set(Options.SSL_STARTTLS, true)
+                    .getMap();
             if (bindAddress == null) {
                 ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions, uri), tlsOptions).addNotifier(createNotifier(listener), null);
             } else {
@@ -94,7 +112,11 @@ public class HttpClientProvider implements ClientProvider {
                 listener.failed(UndertowMessages.MESSAGES.sslWasNull());
                 return;
             }
-            OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
+            OptionMap tlsOptions = OptionMap.builder()
+                    .set(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, DISABLE_HTTPS_ENDPOINT_IDENTIFICATION? "" : "HTTPS")
+                    .addAll(options)
+                    .set(Options.SSL_STARTTLS, true)
+                    .getMap();
             if (bindAddress == null) {
                 ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, bufferPool, tlsOptions, uri), tlsOptions).addNotifier(createNotifier(listener), null);
             } else {
@@ -129,16 +151,24 @@ public class HttpClientProvider implements ClientProvider {
         };
     }
 
+    public static ALPNClientSelector.ALPNProtocol alpnProtocol(final ClientCallback<ClientConnection> listener, URI uri, ByteBufferPool bufferPool, OptionMap options) {
+        return new ALPNClientSelector.ALPNProtocol(new ChannelListener<SslConnection>() {
+            @Override
+            public void handleEvent(SslConnection connection) {
+                listener.completed(new HttpClientConnection(connection, options, bufferPool));
+            }
+        }, HTTP_1_1);
+    }
 
     private void handleConnected(final StreamConnection connection, final ClientCallback<ClientConnection> listener, final ByteBufferPool bufferPool, final OptionMap options, URI uri) {
 
-        boolean h2 = options.get(UndertowOptions.ENABLE_HTTP2, false);
+        boolean h2 = options.get(UndertowOptions.ENABLE_HTTP2, UndertowOptions.DEFAULT_ENABLE_HTTP2);
         if(connection instanceof SslConnection && (h2)) {
             List<ALPNClientSelector.ALPNProtocol> protocolList = new ArrayList<>();
             if(h2) {
                 protocolList.add(Http2ClientProvider.alpnProtocol(listener, uri, bufferPool, options));
             }
-
+            protocolList.add(alpnProtocol(listener, uri, bufferPool, options));
             ALPNClientSelector.runAlpn((SslConnection) connection, new ChannelListener<SslConnection>() {
                 @Override
                 public void handleEvent(SslConnection connection) {
@@ -147,11 +177,14 @@ public class HttpClientProvider implements ClientProvider {
             }, listener, protocolList.toArray(new ALPNClientSelector.ALPNProtocol[protocolList.size()]));
         } else {
             if(connection instanceof SslConnection) {
-                try {
-                    ((SslConnection) connection).startHandshake();
-                } catch (Throwable t) {
-                    listener.failed((t instanceof IOException) ? (IOException) t : new IOException(t));
-                }
+                List<ALPNClientSelector.ALPNProtocol> protocolList = new ArrayList<>();
+                protocolList.add(alpnProtocol(listener, uri, bufferPool, options));
+                ALPNClientSelector.runAlpn((SslConnection) connection, new ChannelListener<SslConnection>() {
+                    @Override
+                    public void handleEvent(SslConnection connection) {
+                        listener.completed(new HttpClientConnection(connection, options, bufferPool));
+                    }
+                }, listener, protocolList.toArray(new ALPNClientSelector.ALPNProtocol[protocolList.size()]));
             }
             listener.completed(new HttpClientConnection(connection, options, bufferPool));
         }

@@ -18,17 +18,6 @@
 
 package io.undertow.client.http;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import javax.net.ssl.SSLContext;
-
 import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientExchange;
@@ -63,6 +52,19 @@ import org.xnio.XnioWorker;
 import org.xnio.channels.ReadTimeoutException;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.ssl.XnioSsl;
+
+import javax.net.ssl.SSLContext;
+import java.io.IOException;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static io.undertow.testutils.StopServerWithExternalWorkerUtils.stopWorker;
 
@@ -330,6 +332,41 @@ public class HttpClientTestCase {
         }
     }
 
+    @Test
+    public void testSslServerIdentity() throws Exception {
+        final UndertowClient client = createClient();
+        exception = null;
+
+        final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch = new CountDownLatch(1);
+        DefaultServer.startSSLServer();
+        SSLContext context = DefaultServer.getClientSSLContext();
+        XnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, context);
+
+        // change the URI to use the IP instead the "localhost" name set in the certificate
+        URI uri = new URI(DefaultServer.getDefaultServerSSLAddress());
+        InetAddress address = InetAddress.getByName(uri.getHost());
+        String hostname = address instanceof Inet6Address? "[" + address.getHostAddress() + "]" : address.getHostAddress();
+        uri = new URI(uri.getScheme(), uri.getUserInfo(), hostname, uri.getPort(), uri.getPath(), uri.getQuery(), uri.getFragment());
+
+        // this should fail as IP alternative name is not set in the certificate
+        final ClientConnection connection = client.connect(uri, worker, ssl, DefaultServer.getBufferPool(), OptionMap.EMPTY).get();
+        try {
+            connection.getIoThread().execute(() -> {
+                final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(MESSAGE);
+                request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+                connection.sendRequest(request, createClientCallback(responses, latch));
+            });
+
+            latch.await(10, TimeUnit.SECONDS);
+
+            Assert.assertEquals(0, responses.size());
+            Assert.assertTrue(exception instanceof ClosedChannelException);
+        } finally {
+            connection.getIoThread().execute(() -> IoUtils.safeClose(connection));
+            DefaultServer.stopSSLServer();
+        }
+    }
 
     @Test
     public void testConnectionClose() throws Exception {

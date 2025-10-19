@@ -31,8 +31,6 @@ import io.undertow.servlet.spec.HttpSessionImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.SavedRequest;
 
-import java.security.AccessController;
-
 import jakarta.servlet.http.HttpSession;
 
 /**
@@ -124,12 +122,13 @@ public class CachedAuthenticatedSessionHandler implements HttpHandler {
 
     }
 
+    @SuppressWarnings("removal")
     protected Session underlyingSession(HttpSessionImpl httpSession) {
         Session session;
         if (System.getSecurityManager() == null) {
             session = httpSession.getSession();
         } else {
-            session = AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
+            session = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(httpSession));
         }
         return session;
     }

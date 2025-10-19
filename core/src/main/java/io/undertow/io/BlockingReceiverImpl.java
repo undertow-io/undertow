@@ -30,6 +30,7 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 
@@ -106,6 +107,9 @@ public class BlockingReceiverImpl implements Receiver {
             return;
         }
         String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        if(contentLengthString == null) {
+            contentLengthString = exchange.getRequestHeaders().getFirst(Headers.X_CONTENT_LENGTH);
+        }
         long contentLength;
         final ByteArrayOutputStream sb;
         if (contentLengthString != null) {
@@ -133,10 +137,19 @@ public class BlockingReceiverImpl implements Receiver {
         }
         int s;
         try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
-            while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
-                sb.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), s);
+            if (pooled != null) {
+                while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
+                    sb.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), s);
+                }
+                final String message = sb.toString(charset.name());
+                final HeaderMap requestHeaders = exchange.getRequestHeaders();
+                if(requestHeaders.contains(Headers.X_CONTENT_LENGTH) && !requestHeaders.contains(Headers.CONTENT_LENGTH)) {
+                    requestHeaders.put(Headers.CONTENT_LENGTH, message.length());
+                }
+                callback.handle(exchange, message);
+            } else {
+                throw UndertowMessages.MESSAGES.failedToAllocateResource();
             }
-            callback.handle(exchange, sb.toString(charset.name()));
         } catch (IOException e) {
             error.error(exchange, e);
         }
@@ -162,6 +175,9 @@ public class BlockingReceiverImpl implements Receiver {
             return;
         }
         String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        if(contentLengthString == null) {
+            contentLengthString = exchange.getRequestHeaders().getFirst(Headers.X_CONTENT_LENGTH);
+        }
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
@@ -177,13 +193,17 @@ public class BlockingReceiverImpl implements Receiver {
         CharsetDecoder decoder = charset.newDecoder();
         int s;
         try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
-            while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
-                pooled.getBuffer().limit(s);
-                CharBuffer res = decoder.decode(pooled.getBuffer());
-                callback.handle(exchange, res.toString(), false);
-                pooled.getBuffer().clear();
+            if (pooled != null) {
+                while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
+                    pooled.getBuffer().limit(s);
+                    CharBuffer res = decoder.decode(pooled.getBuffer());
+                    callback.handle(exchange, res.toString(), false);
+                    pooled.getBuffer().clear();
+                }
+                callback.handle(exchange, "", true);
+            } else {
+                throw UndertowMessages.MESSAGES.failedToAllocateResource();
             }
-            callback.handle(exchange, "", true);
         } catch (IOException e) {
             error.error(exchange, e);
         }
@@ -209,6 +229,9 @@ public class BlockingReceiverImpl implements Receiver {
             return;
         }
         String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        if(contentLengthString == null) {
+            contentLengthString = exchange.getRequestHeaders().getFirst(Headers.X_CONTENT_LENGTH);
+        }
         long contentLength;
         final ByteArrayOutputStream sb;
         if (contentLengthString != null) {
@@ -236,10 +259,19 @@ public class BlockingReceiverImpl implements Receiver {
         }
         int s;
         try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
-            while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
-                sb.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), s);
+            if (pooled != null) {
+                while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
+                    sb.write(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), s);
+                }
+                final byte[] message = sb.toByteArray();
+                final HeaderMap requestHeaders = exchange.getRequestHeaders();
+                if(requestHeaders.contains(Headers.X_CONTENT_LENGTH) && !requestHeaders.contains(Headers.CONTENT_LENGTH)) {
+                    requestHeaders.put(Headers.CONTENT_LENGTH, message.length);
+                }
+                callback.handle(exchange, message);
+            } else {
+                throw UndertowMessages.MESSAGES.failedToAllocateResource();
             }
-            callback.handle(exchange, sb.toByteArray());
         } catch (IOException e) {
             error.error(exchange, e);
         }
@@ -265,6 +297,9 @@ public class BlockingReceiverImpl implements Receiver {
             return;
         }
         String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        if(contentLengthString == null) {
+            contentLengthString = exchange.getRequestHeaders().getFirst(Headers.X_CONTENT_LENGTH);
+        }
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
@@ -279,12 +314,16 @@ public class BlockingReceiverImpl implements Receiver {
         }
         int s;
         try (PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().getArrayBackedPool().allocate()) {
-            while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
-                byte[] newData = new byte[s];
-                System.arraycopy(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), newData, 0, s);
-                callback.handle(exchange, newData, false);
+            if (pooled != null) {
+                while ((s = inputStream.read(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), pooled.getBuffer().remaining())) > 0) {
+                    byte[] newData = new byte[s];
+                    System.arraycopy(pooled.getBuffer().array(), pooled.getBuffer().arrayOffset(), newData, 0, s);
+                    callback.handle(exchange, newData, false);
+                }
+                callback.handle(exchange, EMPTY_BYTE_ARRAY, true);
+            } else {
+                throw UndertowMessages.MESSAGES.failedToAllocateResource();
             }
-            callback.handle(exchange, EMPTY_BYTE_ARRAY, true);
         } catch (IOException e) {
             error.error(exchange, e);
         }

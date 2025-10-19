@@ -18,27 +18,29 @@
 
 package io.undertow.client.http;
 
-import io.undertow.client.ClientRequest;
-import io.undertow.server.TruncatedResponseException;
-import io.undertow.util.HeaderMap;
-import io.undertow.util.HttpString;
-import org.jboss.logging.Logger;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.connector.PooledByteBuffer;
-import org.xnio.XnioWorker;
-import org.xnio.channels.StreamSourceChannel;
-import org.xnio.conduits.AbstractStreamSinkConduit;
-import org.xnio.conduits.Conduits;
-import org.xnio.conduits.StreamSinkConduit;
+import static org.xnio.Bits.allAreClear;
+import static org.xnio.Bits.allAreSet;
+import static org.xnio.Bits.anyAreSet;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
-import static org.xnio.Bits.allAreClear;
-import static org.xnio.Bits.allAreSet;
+import io.undertow.client.ClientRequest;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.TruncatedResponseException;
+import io.undertow.util.HeaderMap;
+import io.undertow.util.HttpString;
+import org.jboss.logging.Logger;
+import org.xnio.XnioWorker;
+import org.xnio.channels.StreamSourceChannel;
+import org.xnio.conduits.AbstractStreamSinkConduit;
+import org.xnio.conduits.Conduits;
+import org.xnio.conduits.StreamSinkConduit;
 
 /**
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
@@ -50,7 +52,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
 
     private final ByteBufferPool pool;
 
-    private int state = STATE_START;
+    private volatile int state = STATE_START;
 
     private Iterator<HttpString> nameIterator;
     private String string;
@@ -75,6 +77,11 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
 
     private static final int MASK_STATE         = 0x0000000F;
     private static final int FLAG_SHUTDOWN      = 0x00000010;
+    private static final int FLAG_WRITING       = 0x00000020;
+
+    private static final AtomicIntegerFieldUpdater<HttpRequestConduit> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(
+            HttpRequestConduit.class, "state");
+
 
     HttpRequestConduit(final StreamSinkConduit next, final ByteBufferPool pool, final ClientRequest request) {
         super(next);
@@ -94,7 +101,23 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
      * @return
      * @throws java.io.IOException
      */
-    private int processWrite(int state, final ByteBuffer userData) throws IOException {
+    private int processWrite(int state, final Object userData) throws IOException {
+        return doProcessWrite(state, userData);
+    }
+
+    /**
+     * Handles writing out the header data. It can also take a byte buffer of user
+     * data, to enable both user data and headers to be written out in a single operation,
+     * which has a noticeable performance impact.
+     *
+     * It is up to the caller to note the current position of this buffer before and after they
+     * call this method, and use this to figure out how many bytes (if any) have been written.
+     * @param state
+     * @param userData
+     * @return
+     * @throws java.io.IOException
+     */
+    private int doProcessWrite(int state, final Object userData) throws IOException {
         if (state == STATE_START) {
             pooledBuffer = pool.allocate();
         }
@@ -308,7 +331,7 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                             this.string = null;
                             buffer.flip();
                             //for performance reasons we use a gather write if there is user data
-                            if(userData == null) {
+                            if (userData == null) {
                                 do {
                                     res = next.write(buffer);
                                     if (res == 0) {
@@ -316,15 +339,14 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                                         return STATE_BUF_FLUSH;
                                     }
                                 } while (buffer.hasRemaining());
+                            } else if (userData instanceof ByteBuffer[]) {
+                                if (!writeBufferArray(buildDataArray((ByteBuffer[]) userData, buffer))) {
+                                    return STATE_BUF_FLUSH;
+                                }
                             } else {
-                                ByteBuffer[] b = {buffer, userData};
-                                do {
-                                    long r = next.write(b, 0, b.length);
-                                    if (r == 0 && buffer.hasRemaining()) {
-                                        log.trace("Continuation");
-                                        return STATE_BUF_FLUSH;
-                                    }
-                                } while (buffer.hasRemaining());
+                                if (!writeBufferArray(new ByteBuffer[] {buffer, (ByteBuffer) userData})) {
+                                    return STATE_BUF_FLUSH;
+                                }
                             }
                             pooledBuffer.close();
                             pooledBuffer = null;
@@ -416,14 +438,16 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
                             }
                         } while (buffer.hasRemaining());
                     } else {
-                        ByteBuffer[] b = {buffer, userData};
-                        do {
-                            long r = next.write(b, 0, b.length);
-                            if (r == 0 && buffer.hasRemaining()) {
-                                log.trace("Continuation");
+
+                        if (userData instanceof ByteBuffer[]) {
+                            if (!writeBufferArray(buildDataArray((ByteBuffer[]) userData, buffer))) {
                                 return STATE_BUF_FLUSH;
                             }
-                        } while (buffer.hasRemaining());
+                        } else {
+                            if (!writeBufferArray(new ByteBuffer[] {buffer, (ByteBuffer) userData})) {
+                                return STATE_BUF_FLUSH;
+                            }
+                        }
                     }
                     // fall thru
                 }
@@ -483,7 +507,13 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
 
     public int write(final ByteBuffer src) throws IOException {
         log.trace("write");
-        int oldState = this.state;
+        int oldState;
+        do {
+            oldState = state;
+            if (anyAreSet(oldState, FLAG_WRITING)) {
+                return 0;
+            }
+        } while (!stateUpdater.compareAndSet(this, oldState, oldState | FLAG_WRITING));
         int state = oldState & MASK_STATE;
         int alreadyWritten = 0;
         int originalRemaining = - 1;
@@ -525,12 +555,18 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         if (length == 0) {
             return 0L;
         }
-        int oldVal = state;
+        int oldVal;
+        do {
+            oldVal = state;
+            if (anyAreSet(oldVal, FLAG_WRITING)) {
+                return 0;
+            }
+        } while (!stateUpdater.compareAndSet(this, oldVal, oldVal | FLAG_WRITING));
         int state = oldVal & MASK_STATE;
         try {
             if (state != 0) {
                 //todo: use gathering write here
-                state = processWrite(state, null);
+                state = processWrite(state, srcs);
                 if (state != 0) {
                     return 0;
                 }
@@ -567,7 +603,13 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
         if (count == 0L) {
             return 0L;
         }
-        int oldVal = state;
+        int oldVal;
+        do {
+            oldVal = state;
+            if (anyAreSet(oldVal, FLAG_WRITING)) {
+                return 0;
+            }
+        } while (!stateUpdater.compareAndSet(this, oldVal, oldVal | FLAG_WRITING));
         int state = oldVal & MASK_STATE;
         try {
             if (state != 0) {
@@ -599,7 +641,13 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
             throughBuffer.clear().limit(0);
             return 0L;
         }
-        int oldVal = state;
+        int oldVal;
+        do {
+            oldVal = state;
+            if (anyAreSet(oldVal, FLAG_WRITING)) {
+                return 0;
+            }
+        } while (!stateUpdater.compareAndSet(this, oldVal, oldVal | FLAG_WRITING));
         int state = oldVal & MASK_STATE;
         try {
             if (state != 0) {
@@ -628,7 +676,13 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
     public boolean flush() throws IOException {
 
         log.trace("flush");
-        int oldVal = state;
+        int oldVal;
+        do {
+            oldVal = state;
+            if (anyAreSet(oldVal, FLAG_WRITING)) {
+                return false;
+            }
+        } while (!stateUpdater.compareAndSet(this, oldVal, oldVal | FLAG_WRITING));
         int state = oldVal & MASK_STATE;
         try {
             if (state != 0) {
@@ -695,5 +749,36 @@ final class HttpRequestConduit extends AbstractStreamSinkConduit<StreamSinkCondu
             pooledBuffer = null;
             this.state = state & ~MASK_STATE | FLAG_SHUTDOWN;
         }
+    }
+
+    private static ByteBuffer[] buildDataArray(ByteBuffer[] userData, ByteBuffer buffer) {
+        int userDataLen = userData.length;
+        ByteBuffer[] data = new ByteBuffer[userDataLen + 1];
+        data[0] = buffer;
+        System.arraycopy(userData, 0, data, 1, userDataLen);
+        return data;
+    }
+
+    private boolean writeBufferArray(ByteBuffer[] data) throws IOException {
+        long totalWritten = 0;
+        long totalRemaining = 0;
+
+        for (ByteBuffer buffer : data) {
+            totalRemaining += buffer.remaining();
+        }
+
+        do {
+            long r = next.write(data, 0, data.length);
+            totalWritten += r;
+            if ((r == 0) && (totalWritten < totalRemaining)) {
+                log.trace("Continuation");
+                return false;
+            }
+        } while (totalWritten < totalRemaining);
+
+        // ? The original code allowed for an early return under certain conditions. If that condition is met, retunr
+        // false from the loop. Otherwise, return true here to indicate a successful completion. Can't return bytes
+        // written since it might get confused for STATE_BUF_FLUSH
+        return true;
     }
 }

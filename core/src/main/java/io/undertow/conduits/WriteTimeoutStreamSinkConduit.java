@@ -22,8 +22,8 @@ import io.undertow.UndertowLogger;
 import io.undertow.UndertowOptions;
 import io.undertow.server.OpenListener;
 import io.undertow.util.WorkerUtils;
-
 import org.xnio.Buffers;
+import org.xnio.ChannelListener;
 import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.Options;
@@ -47,7 +47,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkConduit<StreamSinkConduit> {
 
-    private XnioExecutor.Key handle;
+    private volatile XnioExecutor.Key handle;
     private final StreamConnection connection;
     private volatile long expireTime = -1;
     private final OpenListener openListener;
@@ -82,6 +82,16 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
         super(delegate);
         this.connection = connection;
         this.openListener = openListener;
+        this.connection.getCloseSetter().set((ChannelListener<StreamConnection>) channel -> {
+            if (handle != null) {
+                synchronized (WriteTimeoutStreamSinkConduit.this) {
+                    if (handle != null) {
+                        handle.remove();
+                        handle = null;
+                    }
+                }
+            }
+        });
     }
 
     private void handleWriteTimeout(final long ret) throws IOException {
@@ -98,6 +108,8 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
         long currentTime = System.currentTimeMillis();
         long expireTimeVar = expireTime;
         if (expireTimeVar != -1 && currentTime > expireTimeVar) {
+            this.expireTime = -1;
+            connection.getSinkChannel().shutdownWrites();
             IoUtils.safeClose(connection);
             throw new ClosedChannelException();
         }
@@ -122,10 +134,14 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
     public int writeFinal(ByteBuffer src) throws IOException {
         int ret = super.writeFinal(src);
         handleWriteTimeout(ret);
-        if(!src.hasRemaining()) {
-            if(handle != null) {
-                handle.remove();
-                handle = null;
+        if (!src.hasRemaining()) {
+            if (handle != null) {
+                synchronized (this) {
+                    if (handle != null) {
+                        handle.remove();
+                        handle = null;
+                    }
+                }
             }
         }
         return ret;
@@ -135,10 +151,14 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
     public long writeFinal(ByteBuffer[] srcs, int offset, int length) throws IOException {
         long ret = super.writeFinal(srcs, offset, length);
         handleWriteTimeout(ret);
-        if(!Buffers.hasRemaining(srcs)) {
-            if(handle != null) {
-                handle.remove();
-                handle = null;
+        if (!Buffers.hasRemaining(srcs)) {
+            if (handle != null) {
+                synchronized (this) {
+                    if (handle != null) {
+                        handle.remove();
+                        handle = null;
+                    }
+                }
             }
         }
         return ret;
@@ -198,19 +218,33 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
 
     @Override
     public void terminateWrites() throws IOException {
-        super.terminateWrites();
-        if(handle != null) {
-            handle.remove();
-            handle = null;
+        try {
+            super.terminateWrites();
+        } finally {
+            if(handle != null) {
+                synchronized (this) {
+                    if (this.handle != null) {
+                        handle.remove();
+                        handle = null;
+                    }
+                }
+            }
         }
     }
 
     @Override
     public void truncateWrites() throws IOException {
-        super.truncateWrites();
-        if(handle != null) {
-            handle.remove();
-            handle = null;
+        try {
+            super.truncateWrites();
+        } finally {
+            if (handle != null) {
+                synchronized (this) {
+                    if (this.handle != null) {
+                        handle.remove();
+                        handle = null;
+                    }
+                }
+            }
         }
     }
 
@@ -223,10 +257,20 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
     @Override
     public void suspendWrites() {
         super.suspendWrites();
+
+        // Reset the expireTime - we don't want to keep counting if the writes has been suspended. The expireTime will be set
+        // again during next write. This is applies for instance for remoting connections which are effectively single HTTP
+        // request, but server is suspending and resuming writes during subsequent remoting calls.
+        expireTime = -1;
+
         XnioExecutor.Key handle = this.handle;
         if(handle != null) {
-            handle.remove();
-            this.handle = null;
+            synchronized (this) {
+                if (this.handle != null) {
+                    handle.remove();
+                    this.handle = null;
+                }
+            }
         }
     }
 
@@ -245,7 +289,11 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
         expireTime = currentTime + timeout;
         XnioExecutor.Key key = handle;
         if (key == null) {
-            handle = connection.getIoThread().executeAfter(timeoutCommand, timeout, TimeUnit.MILLISECONDS);
+            synchronized (this) {
+                if (handle == null) {
+                    handle = connection.getIoThread().executeAfter(timeoutCommand, timeout, TimeUnit.MILLISECONDS);
+                }
+            }
         }
     }
 }

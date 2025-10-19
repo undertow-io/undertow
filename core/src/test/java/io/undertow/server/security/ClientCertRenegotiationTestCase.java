@@ -34,6 +34,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -67,6 +68,8 @@ public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
 
     @BeforeClass
     public static void startSSL() throws Exception {
+        Assume.assumeTrue("UNDERTOW-2112 New version TLSv1.3 and JDK14 and newer versions are breaking this feature",
+                getJavaSpecificationVersion() < 14);
         DefaultServer.startSSLServer(OptionMap.create(SSL_CLIENT_AUTH_MODE, NOT_REQUESTED));
         clientSSLContext = DefaultServer.getClientSSLContext();
     }
@@ -148,5 +151,11 @@ public class ClientCertRenegotiationTestCase extends AuthenticationTestBase {
         assertEquals("CN=Test Client,OU=OU,O=Org,L=City,ST=State,C=GB", values[0].getValue());
         HttpClientUtils.readResponse(result);
         assertSingleNotificationType(EventType.AUTHENTICATED);
+    }
+
+    private static int getJavaSpecificationVersion() {
+        String versionString = System.getProperty("java.specification.version");
+        versionString = versionString.startsWith("1.") ? versionString.substring(2) : versionString;
+        return Integer.parseInt(versionString);
     }
 }

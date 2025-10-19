@@ -118,6 +118,11 @@ public class PathTemplatePredicate implements Predicate {
             String value = (String) config.get("value");
             return new PathTemplatePredicate(value, match);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 
 }

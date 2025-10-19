@@ -25,16 +25,30 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.SocketException;
 import java.nio.channels.Channel;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import io.undertow.io.IoCallback;
+import io.undertow.io.Sender;
+import io.undertow.server.handlers.BlockingHandler;
+import io.undertow.server.handlers.form.FormData;
+import io.undertow.server.handlers.form.FormDataParser;
+import io.undertow.server.handlers.form.FormEncodedDataDefinition;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StringWriteChannelListener;
+import org.apache.http.NameValuePair;
+import org.apache.http.NoHttpResponseException;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.AbstractHttpEntity;
+import org.apache.http.message.BasicNameValuePair;
+import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,6 +69,9 @@ import org.xnio.channels.StreamSourceChannel;
 @RunWith(DefaultServer.class)
 @HttpOneOnly
 public class ReadTimeoutTestCase {
+
+    private static final Logger LOG = Logger.getLogger(ReadTimeoutTestCase.class);
+    private static final int FORM_PARAM_LENGTH = 1024 * 16;
 
     private volatile Exception exception;
 
@@ -136,7 +153,7 @@ public class ReadTimeoutTestCase {
                 client.execute(post);
             } catch (SocketException e) {
                 Assert.assertTrue(e.getMessage(), e.getMessage().contains("Broken pipe")
-                        || e.getMessage().contains("connection abort"));
+                        || e.getMessage().contains("connection abort") || e.getMessage().contains("connection was aborted"));
                 socketFailure = true;
             }
             Assert.assertTrue("Test sent request without any exception", socketFailure);
@@ -154,6 +171,62 @@ public class ReadTimeoutTestCase {
             }
         } finally {
             client.getConnectionManager().shutdown();
+        }
+    }
+
+    /**
+     * This verifies that read-timeout is cleaned-up after request is completely parsed. I.e. slow request processing
+     * happening after the request has been fully read should not trigger read-timeout.
+     */
+    @Test
+    public void testReadTimeoutWithSlowResponder() throws IOException {
+        DefaultServer.setRootHandler(new BlockingHandler((final HttpServerExchange exchange) -> {
+            FormParserFactory parserFactory = new FormParserFactory.Builder()
+                    .addParser(new FormEncodedDataDefinition())
+                    .build();
+
+            // Reads and parses the request.
+            try (FormDataParser formDataParser = parserFactory.createParser(exchange)) {
+                FormData formData = formDataParser.parseBlocking();
+                FormData.FormValue test = formData.getFirst("test");
+                Assert.assertNotNull(test);
+                Assert.assertEquals(FORM_PARAM_LENGTH, test.getValue().length());
+            }
+
+            // Write some response with delays, to breach read-timeout if it hasn't been cleaned-up.
+            Sender responseSender = exchange.getResponseSender();
+            for (int i = 0; i < 5; i++) {
+                Thread.sleep(200);
+                responseSender.send("*", new IoCallback() {
+                    @Override
+                    public void onComplete(HttpServerExchange exchange, Sender sender) {
+                        LOG.debug("Sent '*'");
+                    }
+
+                    @Override
+                    public void onException(HttpServerExchange exchange, Sender sender, IOException exception) {
+                        LOG.warn("Failed to write data to response channel.", exception);
+                    }
+                });
+            }
+        }));
+
+        try (TestHttpClient client = new TestHttpClient()) {
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL());
+
+            // Generate 2 KB form param value.
+            List<NameValuePair> nameValuePairs = new ArrayList<>();
+            StringBuilder sb = new StringBuilder(FORM_PARAM_LENGTH);
+            for (int i = 0; i < FORM_PARAM_LENGTH; i++) {
+                sb.append('a');
+            }
+            nameValuePairs.add(new BasicNameValuePair("test", sb.toString()));
+            post.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+
+            // Request should succeed.
+            client.execute(post);
+        } catch (NoHttpResponseException e) {
+            Assert.fail("No response was received, this was presumably caused by read-timeout closing the connection.");
         }
     }
 

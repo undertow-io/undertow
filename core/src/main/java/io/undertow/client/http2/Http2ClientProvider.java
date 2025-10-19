@@ -26,6 +26,7 @@ import io.undertow.client.ClientCallback;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientProvider;
 import io.undertow.client.ClientStatistics;
+import io.undertow.client.http.HttpClientProvider;
 import io.undertow.conduits.ByteActivityCallback;
 import io.undertow.conduits.BytesReceivedStreamSourceConduit;
 import io.undertow.conduits.BytesSentStreamSinkConduit;
@@ -56,8 +57,6 @@ import java.util.Set;
 public class Http2ClientProvider implements ClientProvider {
 
     private static final String HTTP2 = "h2";
-    private static final String HTTP_1_1 = "http/1.1";
-
     private static final ChannelListener<SslConnection> FAILED = new ChannelListener<SslConnection>() {
         @Override
         public void handleEvent(SslConnection connection) {
@@ -78,7 +77,7 @@ public class Http2ClientProvider implements ClientProvider {
 
     @Override
     public Set<String> handlesSchemes() {
-        return new HashSet<>(Arrays.asList(new String[]{"h2"}));
+        return new HashSet<>(Arrays.asList(new String[]{HTTP2}));
     }
 
     @Override
@@ -87,7 +86,11 @@ public class Http2ClientProvider implements ClientProvider {
             listener.failed(UndertowMessages.MESSAGES.sslWasNull());
             return;
         }
-        OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
+        OptionMap tlsOptions = OptionMap.builder()
+                .set(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, HttpClientProvider.DISABLE_HTTPS_ENDPOINT_IDENTIFICATION? "" : "HTTPS")
+                .addAll(options)
+                .set(Options.SSL_STARTTLS, true)
+                .getMap();
         if(bindAddress == null) {
             ssl.openSslConnection(worker, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
         } else {
@@ -102,11 +105,15 @@ public class Http2ClientProvider implements ClientProvider {
             listener.failed(UndertowMessages.MESSAGES.sslWasNull());
             return;
         }
+        OptionMap tlsOptions = OptionMap.builder()
+                .set(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, HttpClientProvider.DISABLE_HTTPS_ENDPOINT_IDENTIFICATION? "" : "HTTPS")
+                .addAll(options)
+                .set(Options.SSL_STARTTLS, true)
+                .getMap();
         if(bindAddress == null) {
-            OptionMap tlsOptions = OptionMap.builder().addAll(options).set(Options.SSL_STARTTLS, true).getMap();
-            ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, tlsOptions), options).addNotifier(createNotifier(listener), null);
+            ssl.openSslConnection(ioThread, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
         } else {
-            ssl.openSslConnection(ioThread, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, options), options).addNotifier(createNotifier(listener), null);
+            ssl.openSslConnection(ioThread, bindAddress, new InetSocketAddress(uri.getHost(), uri.getPort() == -1 ? 443 : uri.getPort()), createOpenListener(listener, uri, ssl, bufferPool, tlsOptions), tlsOptions).addNotifier(createNotifier(listener), null);
         }
 
     }
@@ -148,7 +155,7 @@ public class Http2ClientProvider implements ClientProvider {
 
         final ClientStatisticsImpl clientStatistics;
         //first we set up statistics, if required
-        if (options.get(UndertowOptions.ENABLE_STATISTICS, false)) {
+        if (options.get(UndertowOptions.ENABLE_STATISTICS, UndertowOptions.DEFAULT_ENABLE_STATISTICS)) {
             clientStatistics = new ClientStatisticsImpl();
             connection.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(connection.getSinkChannel().getConduit(), new ByteActivityCallback() {
                 @Override

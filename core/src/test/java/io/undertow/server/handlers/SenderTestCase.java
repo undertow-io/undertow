@@ -33,7 +33,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
@@ -187,7 +186,6 @@ public class SenderTestCase {
     }
 
     @Test
-    @ProxyIgnore("UNDERTOW-1926 fails with proxy http2 sporadically") // FIXME
     public void testAsyncTransfer() throws Exception {
         StringBuilder sb = new StringBuilder(TXS);
         for (int i = 0; i < TXS; ++i) {
@@ -213,7 +211,6 @@ public class SenderTestCase {
     }
 
     @Test
-    @ProxyIgnore("UNDERTOW-1926 fails with proxy http2 sporadically") // FIXME
     public void testSyncTransfer() throws Exception {
         StringBuilder sb = new StringBuilder(TXS);
         for (int i = 0; i < TXS; ++i) {

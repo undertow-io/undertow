@@ -21,7 +21,6 @@ package io.undertow.servlet.spec;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Locale;
 
@@ -41,6 +40,7 @@ public final class ServletPrintWriterDelegate extends PrintWriter {
         UNSAFE = getUnsafe();
     }
 
+    @SuppressWarnings("removal")
     public static ServletPrintWriterDelegate newInstance(final ServletPrintWriter servletPrintWriter) {
         final ServletPrintWriterDelegate delegate;
         if (System.getSecurityManager() == null) {
@@ -50,14 +50,11 @@ public final class ServletPrintWriterDelegate extends PrintWriter {
                 throw new RuntimeException(e);
             }
         } else {
-            delegate = AccessController.doPrivileged(new PrivilegedAction<ServletPrintWriterDelegate>() {
-                @Override
-                public ServletPrintWriterDelegate run() {
-                    try {
-                        return  (ServletPrintWriterDelegate) UNSAFE.allocateInstance(ServletPrintWriterDelegate.class);
-                    } catch (InstantiationException e) {
-                        throw new RuntimeException(e);
-                    }
+            delegate = java.security.AccessController.doPrivileged((PrivilegedAction<ServletPrintWriterDelegate>) () -> {
+                try {
+                    return  (ServletPrintWriterDelegate) UNSAFE.allocateInstance(ServletPrintWriterDelegate.class);
+                } catch (InstantiationException e) {
+                    throw new RuntimeException(e);
                 }
             });
         }
@@ -249,9 +246,11 @@ public final class ServletPrintWriterDelegate extends PrintWriter {
         return this;
     }
 
+    @SuppressWarnings("removal")
     private static Unsafe getUnsafe() {
         if (System.getSecurityManager() != null) {
-            return AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
+            //noinspection Convert2Lambda
+            return java.security.AccessController.doPrivileged(new PrivilegedAction<Unsafe>() {
                 public Unsafe run() {
                     return getUnsafe0();
                 }

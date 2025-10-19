@@ -41,7 +41,7 @@ final class ShutdownFallbackExecutor {
                 if (EXECUTOR == null) {
                     EXECUTOR = new ThreadPoolExecutor(0, 1,
                             10, TimeUnit.MILLISECONDS,
-                            new LinkedBlockingQueue<Runnable>(),
+                            new LinkedBlockingQueue<>(),
                             new ShutdownFallbackThreadFactory());
                 }
             }

@@ -165,7 +165,7 @@ public class ResourceHandler implements HttpHandler {
 
     private void serveResource(final HttpServerExchange exchange, final boolean sendContent) throws Exception {
 
-        if (DirectoryUtils.sendRequestedBlobs(exchange)) {
+        if (directoryListingEnabled && DirectoryUtils.sendRequestedBlobs(exchange)) {
             return;
         }
 
@@ -502,6 +502,11 @@ public class ResourceHandler implements HttpHandler {
         @Override
         public HandlerWrapper build(Map<String, Object> config) {
             return new Wrapper((String)config.get("location"), (Boolean) config.get("allow-listing"));
+        }
+
+        @Override
+        public int priority() {
+            return 0;
         }
 
     }

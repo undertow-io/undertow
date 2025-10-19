@@ -25,6 +25,7 @@ import org.jboss.logging.annotations.MessageBundle;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.channels.ClosedChannelException;
 
 /**
  * starting from 1000
@@ -45,7 +46,7 @@ public interface UndertowClientMessages {
 
     // 1020
     @Message(id = 1020, value = "Failed to upgrade channel due to response %s (%s)")
-    String failedToUpgradeChannel(final int responseCode, String reason);
+    String failedToUpgradeChannel(int responseCode, String reason);
 
     // 1030
     @Message(id = 1030, value = "invalid content length %d")
@@ -74,4 +75,7 @@ public interface UndertowClientMessages {
 
     @Message(id = 1038, value = "Received invalid AJP chunk %s with response already complete")
     IOException receivedInvalidChunk(byte prefix);
+
+    @Message(id = 1039, value = "Closed connection state")
+    ClosedChannelException closedConnectionState();
 }

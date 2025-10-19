@@ -35,7 +35,7 @@ final class Paths {
     static boolean isForbidden(final String path) {
         final StringTokenizer st = new StringTokenizer(path, "/\\", false);
         String subPath;
-        while (st.hasMoreTokens()) {
+        if (st.hasMoreTokens()) {
             subPath = st.nextToken();
             if (META_INF.equalsIgnoreCase(subPath) || WEB_INF.equalsIgnoreCase(subPath)) {
                 return true;

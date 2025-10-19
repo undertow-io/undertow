@@ -69,22 +69,7 @@ public class ClientEndpointReconnectTestCase {
                                 .setWorker(DefaultServer.getWorkerSupplier())
                                 .addEndpoint(DisconnectServerEndpoint.class)
                                 .addEndpoint(AnnotatedClientReconnectEndpoint.class)
-                                .addListener(containerReady -> deployment = containerReady).setReconnectHandler(new WebSocketReconnectHandler() {
-                            @Override
-                            public long disconnected(CloseReason closeReason, URI connectionUri, Session session, int disconnectCount) {
-                                if (disconnectCount < 3) {
-                                    return 1;
-                                } else {
-                                    return -1;
-                                }
-                            }
-
-                            @Override
-                            public long reconnectFailed(IOException exception, URI connectionUri, Session session, int failedCount) {
-                                failed = true;
-                                return -1;
-                            }
-                        })
+                                .addListener(containerReady -> deployment = containerReady).setReconnectHandler(new CustomWebSocketReconnectHandler())
                 )
                 .setDeploymentName("servletContext.war");
         deploymentManager = container.addDeployment(builder);
@@ -124,5 +109,23 @@ public class ClientEndpointReconnectTestCase {
         Assert.assertEquals("CLOSE", endpoint.message());
         Assert.assertNull(endpoint.quickMessage());
         Assert.assertFalse(failed);
+    }
+
+    private static class CustomWebSocketReconnectHandler implements WebSocketReconnectHandler {
+
+        @Override
+        public long disconnected(CloseReason closeReason, URI connectionUri, Session session, int disconnectCount) {
+            if (disconnectCount < 3) {
+                return 1;
+            } else {
+                return -1;
+            }
+        }
+
+        @Override
+        public long reconnectFailed(IOException exception, URI connectionUri, Session session, int failedCount) {
+            failed = true;
+            return -1;
+        }
     }
 }

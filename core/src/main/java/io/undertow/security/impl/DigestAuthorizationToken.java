@@ -43,7 +43,8 @@ public enum DigestAuthorizationToken implements HeaderToken {
     OPAQUE(Headers.OPAQUE, true),
     MESSAGE_QOP(Headers.QOP, true),
     NONCE_COUNT(Headers.NONCE_COUNT, false),
-    AUTH_PARAM(Headers.AUTH_PARAM, false);
+    AUTH_PARAM(Headers.AUTH_PARAM, false),
+    RESPONSE_AUTH(Headers.RESPONSE_AUTH, true);
 
     private static final HeaderTokenParser<DigestAuthorizationToken> TOKEN_PARSER;
 

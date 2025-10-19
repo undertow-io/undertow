@@ -25,12 +25,12 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>2.3.0.Alpha2-SNAPSHOT</version>
+        <version>2.5.0.Alpha1-SNAPSHOT</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-core</artifactId>
-    <version>2.3.0.Alpha2-SNAPSHOT</version>
+    <version>2.5.0.Alpha1-SNAPSHOT</version>
 
     <name>Undertow Core</name>
 
@@ -83,12 +83,6 @@
             <artifactId>jboss-threads</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.eclipse.jetty.alpn</groupId>
-            <artifactId>alpn-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
         <!-- Test dependencies -->
 
         <dependency>
@@ -111,9 +105,15 @@
         
         <dependency>
             <groupId>org.apache.directory.server</groupId>
-            <artifactId>apacheds-all</artifactId>
+            <artifactId>apacheds-test-framework</artifactId>
             <scope>test</scope>
-        </dependency>        
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.directory.server</groupId>
+            <artifactId>apacheds-interceptor-kerberos</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
@@ -148,7 +148,6 @@
         <dependency>
             <groupId>org.wildfly.openssl</groupId>
             <artifactId>wildfly-openssl</artifactId>
-            <version>${version.org.wildfly.openssl}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -189,7 +188,6 @@
                                     io.undertow.*;version=${project.version};-noimport:=true
                                 </Export-Package>
                                 <Import-Package>
-                                    org.eclipse.jetty.*;resolution:=optional;version="[1,2)",
                                     !org.xnio._private,
                                     org.xnio.*;version="[3.8,4)",
                                     !., !sun.*,
@@ -239,6 +237,7 @@
                 <configuration>
                     <enableAssertions>true</enableAssertions>
                     <runOrder>reversealphabetical</runOrder>
+                    <failIfNoTests>true</failIfNoTests>
                     <systemPropertyVariables>
                         <test.ajp>${ajp}</test.ajp>
                         <test.proxy>${proxy}</test.proxy>
@@ -282,47 +281,6 @@
             <properties>
                 <libraryPath>-Djava.library.path=${java.library.path}</libraryPath>
             </properties>
-        </profile>
-
-        <profile>
-            <id>jetty-alpn</id>
-            <activation>
-                <property><name>jetty-alpn</name></property>
-            </activation>
-            <dependencies>
-                <dependency>
-                    <groupId>org.mortbay.jetty.alpn</groupId>
-                    <artifactId>alpn-boot</artifactId>
-                    <version>${version.org.mortbay.jetty.alpn}</version>
-                    <scope>test</scope>
-                </dependency>
-            </dependencies>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <enableAssertions>true</enableAssertions>
-                            <runOrder>reversealphabetical</runOrder>
-                            <systemPropertyVariables>
-                                <io.undertow.disable-jdk8-alpn>true</io.undertow.disable-jdk8-alpn>
-                                <test.proxy>true</test.proxy>
-                                <test.dump>${dump}</test.dump>
-                                <test.bufferSize>${bufferSize}</test.bufferSize>
-                                <default.server.address>localhost</default.server.address>
-                                <default.server.port>7777</default.server.port>
-                                <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-                                <test.level>${test.level}</test.level>
-                                <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
-                                <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
-                                <alpn-boot-string>true</alpn-boot-string>
-                            </systemPropertyVariables>
-                            <reportsDirectory>${project.build.directory}/surefire-proxy-reports</reportsDirectory>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
         </profile>
 
         <profile>
@@ -413,6 +371,9 @@
                                 <configuration>
                                     <enableAssertions>true</enableAssertions>
                                     <runOrder>reversealphabetical</runOrder>
+                                    <excludes>
+                                        <exclude>*LongURLTestCase, *LotsOfQueryParametersTestCase, *LotsOfHeadersResponseTestCase</exclude>
+                                    </excludes>
                                     <systemPropertyVariables>
                                         <test.h2>true</test.h2>
                                         <test.dump>${dump}</test.dump>
@@ -437,6 +398,9 @@
                                 <configuration>
                                     <enableAssertions>true</enableAssertions>
                                     <runOrder>reversealphabetical</runOrder>
+                                    <excludes>
+                                        <exclude>*LongURLTestCase, *LotsOfQueryParametersTestCase, *LotsOfHeadersResponseTestCase</exclude>
+                                    </excludes>
                                     <systemPropertyVariables>
                                         <test.h2c>true</test.h2c>
                                         <test.dump>${dump}</test.dump>
@@ -452,7 +416,6 @@
                                     <reportsDirectory>${project.build.directory}/surefire-h2c-reports</reportsDirectory>
                                 </configuration>
                             </execution>
-
                             <execution>
                                 <id>proxy-h2c-upgrade</id>
                                 <phase>test</phase>
@@ -462,6 +425,9 @@
                                 <configuration>
                                     <enableAssertions>true</enableAssertions>
                                     <runOrder>reversealphabetical</runOrder>
+                                    <excludes>
+                                        <exclude>*LongURLTestCase, *LotsOfQueryParametersTestCase, *LotsOfHeadersResponseTestCase</exclude>
+                                    </excludes>
                                     <systemPropertyVariables>
                                         <test.h2c-upgrade>true</test.h2c-upgrade>
                                         <test.dump>${dump}</test.dump>
@@ -473,6 +439,91 @@
                                         <test.level>${test.level}</test.level>
                                         <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
                                         <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
+                                    </systemPropertyVariables>
+                                    <reportsDirectory>${project.build.directory}/surefire-h2c-upgrade-reports</reportsDirectory>
+                                </configuration>
+                            </execution>
+                            <!-- TODO: remove these executions as soon as UndertowOptions.MAX_HTTP2_HEADER_SIZE is created -->
+                            <execution>
+                                <id>proxy-h2-big-http2-max-header-size</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <enableAssertions>true</enableAssertions>
+                                    <runOrder>reversealphabetical</runOrder>
+                                    <includes>
+                                        <include>*LongURLTestCase, *LotsOfQueryParametersTestCase, *LotsOfHeadersResponseTestCase</include>
+                                    </includes>
+                                    <systemPropertyVariables>
+                                        <test.h2>true</test.h2>
+                                        <test.dump>${dump}</test.dump>
+                                        <test.bufferSize>${bufferSize}</test.bufferSize>
+                                        <default.server.address>localhost</default.server.address>
+                                        <default.server.port>7777</default.server.port>
+                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
+                                        </java.util.logging.manager>
+                                        <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
+                                        <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
+                                        <io.undertow.http2-max-header-size>600000</io.undertow.http2-max-header-size>
+                                    </systemPropertyVariables>
+                                    <reportsDirectory>${project.build.directory}/surefire-h2-reports</reportsDirectory>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>proxy-h2c-big-http2-max-header-size</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <enableAssertions>true</enableAssertions>
+                                    <runOrder>reversealphabetical</runOrder>
+                                    <includes>
+                                        <include>*LongURLTestCase, *LotsOfQueryParametersTestCase, *LotsOfHeadersResponseTestCase</include>
+                                    </includes>
+                                    <systemPropertyVariables>
+                                        <test.h2c>true</test.h2c>
+                                        <test.dump>${dump}</test.dump>
+                                        <test.bufferSize>${bufferSize}</test.bufferSize>
+                                        <default.server.address>localhost</default.server.address>
+                                        <default.server.port>7777</default.server.port>
+                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
+                                        </java.util.logging.manager>
+                                        <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
+                                        <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
+                                        <io.undertow.http2-max-header-size>600000</io.undertow.http2-max-header-size>
+                                    </systemPropertyVariables>
+                                    <reportsDirectory>${project.build.directory}/surefire-h2c-reports</reportsDirectory>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>proxy-h2c-upgrade-big-http2-max-header-size</id>
+                                <phase>test</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <enableAssertions>true</enableAssertions>
+                                    <runOrder>reversealphabetical</runOrder>
+                                    <includes>
+                                        <include>*LongURLTestCase, *LotsOfQueryParametersTestCase, *LotsOfHeadersResponseTestCase</include>
+                                    </includes>
+                                    <systemPropertyVariables>
+                                        <test.h2c-upgrade>true</test.h2c-upgrade>
+                                        <test.dump>${dump}</test.dump>
+                                        <test.bufferSize>${bufferSize}</test.bufferSize>
+                                        <default.server.address>localhost</default.server.address>
+                                        <default.server.port>7777</default.server.port>
+                                        <java.util.logging.manager>org.jboss.logmanager.LogManager
+                                        </java.util.logging.manager>
+                                        <test.level>${test.level}</test.level>
+                                        <java.net.preferIPv6Addresses>${test.ipv6}</java.net.preferIPv6Addresses>
+                                        <sun.net.useExclusiveBind>false</sun.net.useExclusiveBind>
+                                        <io.undertow.http2-max-header-size>600000</io.undertow.http2-max-header-size>
                                     </systemPropertyVariables>
                                     <reportsDirectory>${project.build.directory}/surefire-h2c-upgrade-reports</reportsDirectory>
                                 </configuration>

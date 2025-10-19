@@ -40,10 +40,12 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.util.EntityUtils;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -272,22 +274,55 @@ public class DefaultServletTestCase {
     }
 
     @Test
-    public void testDirectoryListing() throws IOException {
+    public void testAccessToMetaInfSubDirResource() throws IOException {
         TestHttpClient client = new TestHttpClient();
         try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path");
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo/meta-inf/notsecret");
             HttpResponse result = client.execute(get);
-            Header contentType = result.getFirstHeader(Headers.CONTENT_TYPE_STRING);
-            Assert.assertNotNull(contentType);
-            Assert.assertTrue(contentType.getValue().contains("text/html"));
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
         } finally {
             client.getConnectionManager().shutdown();
         }
     }
 
+    @Test
+    public void testAccessToWebInfSubDirResource() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo/web-inf/notsecret");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 
+    @Test
+    public void testDirectoryListing() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path"))) {
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                Assert.assertNotNull(result.getFirstHeader(Headers.CONTENT_TYPE_STRING));
+                MatcherAssert.assertThat(result.getFirstHeader(Headers.CONTENT_TYPE_STRING).getValue(), CoreMatchers.startsWith("text/html"));
+                MatcherAssert.assertThat(HttpClientUtils.readResponse(result), CoreMatchers.containsString(".gitkeep"));
+            }
+            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path?js"))) {
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                Assert.assertNotNull(result.getFirstHeader(Headers.CONTENT_TYPE_STRING));
+                MatcherAssert.assertThat(result.getFirstHeader(Headers.CONTENT_TYPE_STRING).getValue(), CoreMatchers.startsWith("application/javascript"));
+                MatcherAssert.assertThat(HttpClientUtils.readResponse(result), CoreMatchers.containsString("growit()"));
+            }
+            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path?css"))) {
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                Assert.assertNotNull(result.getFirstHeader(Headers.CONTENT_TYPE_STRING));
+                MatcherAssert.assertThat(result.getFirstHeader(Headers.CONTENT_TYPE_STRING).getValue(), CoreMatchers.startsWith("text/css"));
+                MatcherAssert.assertThat(HttpClientUtils.readResponse(result), CoreMatchers.containsString("data:image/png;base64"));
+            }
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 
     @Test
     public void testIfMoodifiedSince() throws IOException {

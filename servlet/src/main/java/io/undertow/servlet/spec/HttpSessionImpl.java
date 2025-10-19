@@ -23,10 +23,10 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpSession;
-
 import io.undertow.server.session.Session;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
@@ -175,6 +175,19 @@ public class HttpSessionImpl implements HttpSession {
         return newSession;
     }
 
+    @Override
+    public Accessor getAccessor() {
+        Session detached = this.session.detach();
+        ServletContext context = this.servletContext;
+        return new Accessor() {
+            @Override
+            public void access(Consumer<HttpSession> consumer) {
+                consumer.accept(new HttpSessionImpl(detached, context, false, null));
+            }
+        };
+    }
+
+    @SuppressWarnings("removal")
     public Session getSession() {
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
@@ -203,13 +216,7 @@ public class HttpSessionImpl implements HttpSession {
         if(invalid) {
             return true;
         }
-        try {
-            //TODO: in 1.5 we need to add session.isValid()
-            session.getMaxInactiveInterval();
-            return false;
-        } catch (IllegalStateException e) {
-            return true;
-        }
+        return this.session.isInvalid();
     }
 
     public static class UnwrapSessionAction implements PrivilegedAction<Session> {

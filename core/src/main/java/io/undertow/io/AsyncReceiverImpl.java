@@ -24,6 +24,7 @@ import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.xnio.ChannelListener;
@@ -112,6 +113,9 @@ public class AsyncReceiverImpl implements Receiver {
             return;
         }
         String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        if(contentLengthString == null) {
+            contentLengthString = exchange.getRequestHeaders().getFirst(Headers.X_CONTENT_LENGTH);
+        }
         long contentLength;
         final ByteArrayOutputStream sb;
         if (contentLengthString != null) {
@@ -147,7 +151,12 @@ public class AsyncReceiverImpl implements Receiver {
                     res = channel.read(buffer);
                     if (res == -1) {
                         done = true;
-                        callback.handle(exchange, sb.toString(charset.name()));
+                        final String message = sb.toString(charset.name());
+                        final HeaderMap requestHeaders = exchange.getRequestHeaders();
+                        if(requestHeaders.contains(Headers.X_CONTENT_LENGTH) && !requestHeaders.contains(Headers.CONTENT_LENGTH)) {
+                            requestHeaders.put(Headers.CONTENT_LENGTH, message.length());
+                        }
+                        callback.handle(exchange, message);
                         return;
                     } else if (res == 0) {
                         channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
@@ -169,7 +178,12 @@ public class AsyncReceiverImpl implements Receiver {
                                                 Connectors.executeRootHandler(new HttpHandler() {
                                                     @Override
                                                     public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                                        callback.handle(exchange, sb.toString(charset.name()));
+                                                        final String message = sb.toString(charset.name());
+                                                        final HeaderMap requestHeaders = exchange.getRequestHeaders();
+                                                        if(requestHeaders.contains(Headers.X_CONTENT_LENGTH) && !requestHeaders.contains(Headers.CONTENT_LENGTH)) {
+                                                            requestHeaders.put(Headers.CONTENT_LENGTH, message.length());
+                                                        }
+                                                        callback.handle(exchange, message);
                                                     }
                                                 }, exchange);
                                                 return;
@@ -248,6 +262,9 @@ public class AsyncReceiverImpl implements Receiver {
             return;
         }
         String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        if(contentLengthString == null) {
+            contentLengthString = exchange.getRequestHeaders().getFirst(Headers.X_CONTENT_LENGTH);
+        }
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);
@@ -408,7 +425,12 @@ public class AsyncReceiverImpl implements Receiver {
                     res = channel.read(buffer);
                     if (res == -1) {
                         done = true;
-                        callback.handle(exchange, sb.toByteArray());
+                        final byte[] message = sb.toByteArray();
+                        final HeaderMap requestHeaders = exchange.getRequestHeaders();
+                        if(requestHeaders.contains(Headers.X_CONTENT_LENGTH) && !requestHeaders.contains(Headers.CONTENT_LENGTH)) {
+                            requestHeaders.put(Headers.CONTENT_LENGTH, message.length);
+                        }
+                        callback.handle(exchange, message);
                         return;
                     } else if (res == 0) {
                         channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
@@ -430,7 +452,12 @@ public class AsyncReceiverImpl implements Receiver {
                                                 Connectors.executeRootHandler(new HttpHandler() {
                                                     @Override
                                                     public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                                        callback.handle(exchange, sb.toByteArray());
+                                                        final byte[] message = sb.toByteArray();
+                                                        final HeaderMap requestHeaders = exchange.getRequestHeaders();
+                                                        if(requestHeaders.contains(Headers.X_CONTENT_LENGTH) && !requestHeaders.contains(Headers.CONTENT_LENGTH)) {
+                                                            requestHeaders.put(Headers.CONTENT_LENGTH, message.length);
+                                                        }
+                                                        callback.handle(exchange, message);
                                                     }
                                                 }, exchange);
                                                 return;
@@ -507,6 +534,9 @@ public class AsyncReceiverImpl implements Receiver {
             return;
         }
         String contentLengthString = exchange.getRequestHeaders().getFirst(Headers.CONTENT_LENGTH);
+        if(contentLengthString == null) {
+            contentLengthString = exchange.getRequestHeaders().getFirst(Headers.X_CONTENT_LENGTH);
+        }
         long contentLength;
         if (contentLengthString != null) {
             contentLength = Long.parseLong(contentLengthString);

@@ -74,7 +74,7 @@ public class DeploymentInfo implements Cloneable {
     private int majorVersion = DEFAULT_MAJOR_VERSION;
     private int minorVersion = 0;
     private int containerMajorVersion = DEFAULT_MAJOR_VERSION;
-    private int containerMinorVersion = 0;
+    private int containerMinorVersion = 1;
     private Executor executor;
     private Executor asyncExecutor;
     private Path tempDir;
@@ -86,6 +86,7 @@ public class DeploymentInfo implements Cloneable {
     private ConfidentialPortManager confidentialPortManager;
     private boolean allowNonStandardWrappers = false;
     private int defaultSessionTimeout = 60 * 30;
+    private long defaultAsyncContextTimeout = 30000;
     private ConcurrentMap<String, Object> servletContextAttributeBackingMap;
     private ServletSessionConfig servletSessionConfig;
     private String hostName = "localhost";
@@ -111,6 +112,7 @@ public class DeploymentInfo implements Cloneable {
     private boolean sendCustomReasonPhraseOnError = false;
     private boolean useCachedAuthenticationMechanism = true;
     private boolean preservePathOnForward = true;
+    private boolean allowOrphanSession = false;
     private AuthenticationMode authenticationMode = AuthenticationMode.PRO_ACTIVE;
     private ExceptionHandler exceptionHandler;
     private final Map<String, ServletInfo> servlets = new HashMap<>();
@@ -315,6 +317,18 @@ public class DeploymentInfo implements Cloneable {
      */
     public DeploymentInfo setDefaultSessionTimeout(final int defaultSessionTimeout) {
         this.defaultSessionTimeout = defaultSessionTimeout;
+        return this;
+    }
+
+    public long getDefaultAsyncContextTimeout() {
+        return defaultAsyncContextTimeout;
+    }
+
+    /**
+     * @param defaultAsyncContextTimeout The default async context timeout, in milliseconds
+     */
+    public DeploymentInfo setDefaultAsyncContextTimeout(final long defaultAsyncContextTimeout) {
+        this.defaultAsyncContextTimeout = defaultAsyncContextTimeout;
         return this;
     }
 
@@ -1269,7 +1283,7 @@ public class DeploymentInfo implements Cloneable {
 
     /**
      * If this is true then the message parameter of {@link jakarta.servlet.http.HttpServletResponse#sendError(int, String)} and
-     * {@link jakarta.servlet.http.HttpServletResponse#setStatus(int, String)} will be used as the HTTP reason phrase in
+     * {@code jakarta.servlet.http.HttpServletResponse.setStatus(int, String)} will be used as the HTTP reason phrase in
      * the response.
      *
      * @param sendCustomReasonPhraseOnError If the parameter to sendError should be used as a HTTP reason phrase
@@ -1406,6 +1420,14 @@ public class DeploymentInfo implements Cloneable {
         return deploymentCompleteListeners;
     }
 
+    public boolean isOrphanSessionAllowed() {
+        return this.allowOrphanSession;
+    }
+
+    public void setOrphanSessionAllowed(boolean allowOrphanSession) {
+        this.allowOrphanSession = allowOrphanSession;
+    }
+
     @Override
     public DeploymentInfo clone() {
         final DeploymentInfo info = new DeploymentInfo()
@@ -1459,6 +1481,7 @@ public class DeploymentInfo implements Cloneable {
         info.notificationReceivers.addAll(notificationReceivers);
         info.allowNonStandardWrappers = allowNonStandardWrappers;
         info.defaultSessionTimeout = defaultSessionTimeout;
+        info.defaultAsyncContextTimeout = defaultAsyncContextTimeout;
         info.servletContextAttributeBackingMap = servletContextAttributeBackingMap;
         info.servletSessionConfig = servletSessionConfig;
         info.hostName = hostName;
@@ -1502,6 +1525,7 @@ public class DeploymentInfo implements Cloneable {
         info.containerMinorVersion = containerMinorVersion;
         info.deploymentCompleteListeners.addAll(deploymentCompleteListeners);
         info.preservePathOnForward = preservePathOnForward;
+        info.allowOrphanSession = allowOrphanSession;
         return info;
     }
 

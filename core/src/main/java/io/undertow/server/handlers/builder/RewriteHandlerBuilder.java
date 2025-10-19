@@ -18,8 +18,10 @@
 
 package io.undertow.server.handlers.builder;
 
+import io.undertow.attribute.ConstantExchangeAttribute;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
+import io.undertow.attribute.ReadOnlyAttributeException;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -56,7 +58,29 @@ public class RewriteHandlerBuilder implements HandlerBuilder {
 
     @Override
     public HandlerWrapper build(final Map<String, Object> config) {
-        final ExchangeAttribute value = (ExchangeAttribute) config.get("value");
+        final ExchangeAttribute configValue = (ExchangeAttribute) config.get("value");
+        ExchangeAttribute tmpValue = null;
+        if(configValue instanceof ConstantExchangeAttribute) {
+            tmpValue = new ConstantExchangeAttribute(normalize(configValue.readAttribute(null)));
+        } else {
+            tmpValue = new ExchangeAttribute() {
+
+                @Override
+                public String readAttribute(HttpServerExchange exchange) {
+                    return normalize(configValue.readAttribute(exchange));
+                }
+
+                @Override
+                public void writeAttribute(HttpServerExchange exchange, String newValue) throws ReadOnlyAttributeException {
+                    throw new ReadOnlyAttributeException("constant", newValue);
+                }
+
+                public String toString() {
+                    return "NDA";
+                };
+            };
+        }
+        final ExchangeAttribute value = tmpValue;
 
         return new HandlerWrapper() {
             @Override
@@ -67,6 +91,7 @@ public class RewriteHandlerBuilder implements HandlerBuilder {
                         UndertowLogger.PREDICATE_LOGGER.debugf("Request rewritten to [%s] for %s.", getValue().readAttribute(exchange), exchange);
                         super.handleRequest(exchange);
                     }
+
                    @Override
                     public String toString() {
                         return "rewrite( '" + getValue().toString() + "' )";
@@ -76,5 +101,18 @@ public class RewriteHandlerBuilder implements HandlerBuilder {
             }
 
         };
+    }
+
+    @Override
+    public int priority() {
+        return 0;
+    }
+
+    private String normalize(final String readAttribute) {
+        if (readAttribute.startsWith("/")) {
+            return readAttribute;
+        } else {
+            return "/" + readAttribute;
+        }
     }
 }

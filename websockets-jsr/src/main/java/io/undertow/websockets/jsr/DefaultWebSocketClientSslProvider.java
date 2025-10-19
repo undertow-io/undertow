@@ -63,6 +63,9 @@ public class DefaultWebSocketClientSslProvider implements WebsocketClientSslProv
         }
         //look for some SSL config
         SSLContext sslContext = (SSLContext) cec.getUserProperties().get(SSL_CONTEXT);
+        if (sslContext == null) {
+            sslContext = cec.getSSLContext();
+        }
 
         if (sslContext != null) {
             return new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, sslContext);

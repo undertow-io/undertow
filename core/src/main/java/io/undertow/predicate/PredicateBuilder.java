@@ -60,6 +60,16 @@ public interface PredicateBuilder {
      * @param config The predicate config
      * @return The new predicate
      */
-    Predicate build(final Map<String, Object> config);
+    Predicate build(Map<String, Object> config);
+
+    /**
+     * The priority of the builder. Builders will be tried in priority builder. Built in builders use the priority range 0-100.
+     * Default implementation returns 1 for backwards compatibility.
+     *
+     * @return The priority
+     */
+    default int priority() {
+        return 1;
+    }
 
 }

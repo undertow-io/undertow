@@ -18,11 +18,11 @@
 
 package io.undertow.util;
 
-import io.undertow.UndertowMessages;
-import io.undertow.connector.PooledByteBuffer;
-
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+import io.undertow.UndertowMessages;
+import io.undertow.connector.PooledByteBuffer;
 
 /**
  * A reference counted pooled implementation, that basically consists of a main buffer, that can be sliced off into smaller buffers,
@@ -125,14 +125,17 @@ public class ReferenceCountedPooled implements PooledByteBuffer {
         increaseReferenceCount();
         return new PooledByteBuffer() {
 
-            boolean free = false;
+            volatile boolean free = false;
 
             @Override
             public void close() {
                 //make sure that a given view can only be freed once
                 if(!free) {
-                    free = true;
-                    ReferenceCountedPooled.this.freeInternal();
+                    synchronized (this) {
+                        if (free) return;
+                        free = true;
+                        ReferenceCountedPooled.this.freeInternal();
+                    }
                 }
             }
 

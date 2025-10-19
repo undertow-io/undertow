@@ -82,8 +82,7 @@ import java.util.function.Predicate;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
- * Based on revision 1.88 of ConcurrentLinkedDeque
- * (see http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/src/main/java/util/concurrent/ConcurrentLinkedDeque.java?revision=1.88&view=markup)
+ * Based on revision 1.88 of ConcurrentLinkedDeque.
  * This is the version used in JDK 9 b156.
  *
  * @since 1.7
@@ -300,7 +299,7 @@ public class FastConcurrentDirectDeque<E>
      * can only be seen after piggy-backing publication via CAS.
      */
     static <E> Node<E> newNode(E item) {
-        Node<E> node = new Node<E>();
+        Node<E> node = new Node<>();
         ITEM.set(node, item);
         return node;
     }
@@ -765,7 +764,7 @@ public class FastConcurrentDirectDeque<E>
      * Constructs an empty deque.
      */
     public FastConcurrentDirectDeque() {
-        head = tail = new Node<E>();
+        head = tail = new Node<>();
     }
 
     /**
@@ -799,10 +798,10 @@ public class FastConcurrentDirectDeque<E>
     private void initHeadTail(Node<E> h, Node<E> t) {
         if (h == t) {
             if (h == null)
-                h = t = new Node<E>();
+                h = t = new Node<>();
             else {
                 // Avoid edge case of a single Node with non-null item.
-                Node<E> newNode = new Node<E>();
+                Node<E> newNode = new Node<>();
                 NEXT.set(t, newNode);
                 PREV.set(newNode, t);
                 t = newNode;
@@ -1701,9 +1700,9 @@ public class FastConcurrentDirectDeque<E>
     private static final VarHandle NEXT;
     private static final VarHandle ITEM;
     static {
-        PREV_TERMINATOR = new Node<Object>();
+        PREV_TERMINATOR = new Node<>();
         PREV_TERMINATOR.next = PREV_TERMINATOR;
-        NEXT_TERMINATOR = new Node<Object>();
+        NEXT_TERMINATOR = new Node<>();
         NEXT_TERMINATOR.prev = NEXT_TERMINATOR;
         try {
             MethodHandles.Lookup l = MethodHandles.lookup();

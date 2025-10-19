@@ -176,7 +176,7 @@ public class RewriteCond {
 
     protected Substitution test = null;
 
-    protected ThreadLocal<Condition> condition = new ThreadLocal<Condition>();
+    protected ThreadLocal<Condition> condition = new ThreadLocal<>();
 
     /**
      * This makes the test case-insensitive, i.e., there is no difference between

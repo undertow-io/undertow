@@ -169,6 +169,11 @@ public class ByteRangeHandler implements HttpHandler {
             Boolean send = (Boolean) config.get("send-accept-ranges");
             return new Wrapper(send != null && send);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 
 

@@ -27,6 +27,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystemNotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -150,10 +151,16 @@ public class URLResource implements Resource, RangeAwareResource {
         try {
             if (file != null) {
                 try (DirectoryStream<Path> stream = Files.newDirectoryStream(file)) {
-                    for (Path child : stream) {
-                        result.add(new URLResource(child.toUri().toURL(), child.toString()));
+                    if (stream != null) {
+                        for (Path child : stream) {
+                            result.add(new URLResource(child.toUri().toURL(), child.toString()));
+                        }
+                    } else {
+                        UndertowLogger.ROOT_LOGGER.failedToListPathsForFile(file);
                     }
                 }
+            } else {
+                UndertowLogger.ROOT_LOGGER.noSourceToListResourcesFrom();
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -293,8 +300,15 @@ public class URLResource implements Resource, RangeAwareResource {
             } catch (URISyntaxException e) {
                 return null;
             }
+        } else {
+            //deffer to Paths/FS --> ServiceLoader for java.nio.file.spi.FileSystemProvider
+            //NOTE: FS has to be installed: java.nio.file.FileSystems#newFileSystem
+            try {
+                return Paths.get(url.toURI());
+            } catch(FileSystemNotFoundException|IllegalArgumentException|URISyntaxException e) {
+                return null;
+            }
         }
-        return null;
     }
 
     @Override

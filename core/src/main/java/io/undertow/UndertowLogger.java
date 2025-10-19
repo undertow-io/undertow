@@ -81,7 +81,7 @@ public interface UndertowLogger extends BasicLogger {
 
 //    @LogMessage(level = INFO)
 //    @Message(id = 5002, value = "Exception reading file %s: %s")
-//    void exceptionReadingFile(final Path file, final IOException e);
+//    void exceptionReadingFile(Path file, IOException e);
 
     @LogMessage(level = ERROR)
     @Message(id = 5003, value = "IOException reading from channel")
@@ -101,15 +101,15 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = DEBUG)
     @Message(id = 5008, value = "An invalid token '%s' with value '%s' has been received.")
-    void invalidTokenReceived(final String tokenName, final String tokenValue);
+    void invalidTokenReceived(String tokenName, String tokenValue);
 
     @LogMessage(level = DEBUG)
     @Message(id = 5009, value = "A mandatory token %s is missing from the request.")
-    void missingAuthorizationToken(final String tokenName);
+    void missingAuthorizationToken(String tokenName);
 
     @LogMessage(level = DEBUG)
     @Message(id = 5010, value = "Verification of authentication tokens for user '%s' has failed using mechanism '%s'.")
-    void authenticationFailed(final String userName, final String mechanism);
+    void authenticationFailed(String userName, String mechanism);
 
     @LogMessage(level = ERROR)
     @Message(id = 5011, value = "Ignoring AJP request with prefix %s")
@@ -443,13 +443,49 @@ public interface UndertowLogger extends BasicLogger {
 
     @LogMessage(level = DEBUG)
     @Message(id = 5096, value = "Authentication failed for digest header %s in %s")
-    void authenticationFailedFor(final String header, final HttpServerExchange exchange, final @Cause Exception e);
+    void authenticationFailedFor(String header, HttpServerExchange exchange, @Cause Exception e);
 
     @LogMessage(level = DEBUG)
     @Message(id = 5097, value = "Failed to obtain subject for %s")
-    void failedToObtainSubject(final HttpServerExchange exchange, final @Cause GeneralSecurityException e);
+    void failedToObtainSubject(HttpServerExchange exchange, @Cause GeneralSecurityException e);
 
     @LogMessage(level = DEBUG)
     @Message(id = 5098, value = "GSSAPI negotiation failed for %s")
-    void failedToNegotiateAtGSSAPI(final HttpServerExchange exchange, final @Cause Throwable e);
+    void failedToNegotiateAtGSSAPI(HttpServerExchange exchange, @Cause Throwable e);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5099, value = "Failed to create SSO for session '%s'")
+    void failedToCreateSSOForSession(String sessionId);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5100, value = "Failed to list paths for '%s'")
+    void failedToListPathsForFile(Path f);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5101, value = "No source to list resources from")
+    void noSourceToListResourcesFrom();
+
+    @LogMessage(level = WARN)
+    @Message(id = 5102, value = "Flushing waiting in a frame more than %s miliseconds. The framed channel will be forcibly closed.")
+    void noFrameflushInTimeout(long timeoutMiliseconds);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5103, value = "Cache TTL set to wrong value '%sms'. Defaulting to '%sms'.")
+    void wrongCacheTTLValue(int ttl, int defaultTtl);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5104, value = "Could not register resource change listener for caching resource manager, automatic invalidation of cached resource will not work. TTL value configured '%sms'. Defaulting to '%sms'.")
+    void failedToRegisterChangeListener(int ttl, int defaultTtl, @Cause Exception e);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5105, value = "Cache entry content mismatch for '%s'. Expected length '%s', but was '%s'.")
+    void cacheEntryMismatchContent(Object key, int cacheIndicatedSize, long written);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5106, value = "Content mismatch for '%s'. Expected length '%s', but was '%s'.")
+    void contentEntryMismatch(Object key, long indicatedSize, long written);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5107, value = "Failed to set web socket timeout.")
+    void failedToSetWSTimeout(@Cause Exception e);
 }

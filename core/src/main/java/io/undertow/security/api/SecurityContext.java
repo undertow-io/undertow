@@ -103,7 +103,7 @@ public interface SecurityContext {
      * @param mechanism The mechanism to add
      * @deprecated This method is now only applicable to {@code SecurityContext} implementations that also implement the {@link AuthenticationMechanismContext} interface.
      */
-    @Deprecated
+    @Deprecated(since="1.3.0", forRemoval=true)
     void addAuthenticationMechanism(AuthenticationMechanism mechanism);
 
     /**
@@ -111,7 +111,7 @@ public interface SecurityContext {
      * @return A list of all authentication mechanisms in this context
      * @deprecated Obtaining lists of mechanisms is discouraged, however there should not be a need to call this anyway.
      */
-    @Deprecated
+    @Deprecated(since="1.3.0", forRemoval=true)
     List<AuthenticationMechanism> getAuthenticationMechanisms();
 
     /*
@@ -149,7 +149,7 @@ public interface SecurityContext {
      * @return The associated {@link IdentityManager}
      * @deprecated Authentication mechanisms that rely on the {@link IdentityManager} should instead hold their own reference to it.
      */
-    @Deprecated
+    @Deprecated(since="1.2.0", forRemoval=true)
     IdentityManager getIdentityManager();
 
     /**
@@ -162,7 +162,7 @@ public interface SecurityContext {
      * @param mechanismName - The name of the mechanism used to authenticate the account.
      * @param cachingRequired - If this mechanism requires caching
      */
-    void authenticationComplete(final Account account, final String mechanismName, final boolean cachingRequired);
+    void authenticationComplete(Account account, String mechanismName, boolean cachingRequired);
 
     /**
      * Called by the {@link AuthenticationMechanism} to indicate that an authentication attempt has failed.
@@ -176,7 +176,7 @@ public interface SecurityContext {
      * @param message - The message describing the failure.
      * @param mechanismName - The name of the mechanism reporting the failure.
      */
-    void authenticationFailed(final String message, final String mechanismName);
+    void authenticationFailed(String message, String mechanismName);
 
     /*
      * Methods for the management of NotificationHandler registrations.
@@ -187,7 +187,7 @@ public interface SecurityContext {
      *
      * @param receiver - The {@link NotificationReceiver} to register.
      */
-    void registerNotificationReceiver(final NotificationReceiver receiver);
+    void registerNotificationReceiver(NotificationReceiver receiver);
 
     /**
      * Remove a previously registered {@link NotificationReceiver} from this SecurityContext.
@@ -196,5 +196,5 @@ public interface SecurityContext {
      *
      * @param receiver - The {@link NotificationReceiver} to remove.
      */
-    void removeNotificationReceiver(final NotificationReceiver receiver);
+    void removeNotificationReceiver(NotificationReceiver receiver);
 }

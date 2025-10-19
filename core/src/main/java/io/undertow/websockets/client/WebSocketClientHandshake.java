@@ -54,11 +54,11 @@ public abstract class WebSocketClientHandshake {
         this.url = url;
     }
 
-    public abstract WebSocketChannel createChannel(final StreamConnection channel, final String wsUri, final ByteBufferPool bufferPool, OptionMap options);
+    public abstract WebSocketChannel createChannel(StreamConnection channel, String wsUri, ByteBufferPool bufferPool, OptionMap options);
 
     public abstract Map<String, String> createHeaders();
 
-    public abstract ExtendedHandshakeChecker handshakeChecker(final URI uri, final Map<String, List<String>> requestHeaders);
+    public abstract ExtendedHandshakeChecker handshakeChecker(URI uri, Map<String, List<String>> requestHeaders);
 
 
 }

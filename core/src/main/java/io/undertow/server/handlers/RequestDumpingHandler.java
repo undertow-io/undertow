@@ -164,7 +164,7 @@ public class RequestDumpingHandler implements HttpHandler {
                     sb.append(formField)
                             .append("=");
                     for (FormData.FormValue formValue : formValues) {
-                        sb.append(formValue.isFileItem() ? "[file-content]" : formValue.getValue());
+                        sb.append(formValue.isFileItem() && !formValue.isBigField() ? "[file-content]" : formValue.getValue());
                         sb.append("\n");
 
                         if (formValue.getHeaders() != null) {
@@ -215,6 +215,11 @@ public class RequestDumpingHandler implements HttpHandler {
         public HandlerWrapper build(Map<String, Object> config) {
 
             return new Wrapper();
+        }
+
+        @Override
+        public int priority() {
+            return 0;
         }
 
     }

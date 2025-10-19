@@ -175,8 +175,10 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
         String sessionID = config.findSessionId(serverExchange);
         final SessionImpl session = new SessionImpl(this, config, serverExchange.getIoThread(), serverExchange.getConnection().getWorker(), defaultSessionTimeout);
         if (sessionID != null) {
-            if (!saveSessionID(sessionID, session))
+            if (!saveSessionID(sessionID, session)) {
+                session.destroy();
                 throw UndertowMessages.MESSAGES.sessionWithIdAlreadyExists(sessionID);
+            }
             // else: succeeded to use requested session id
         } else {
             sessionID = createAndSaveNewID(session);
@@ -226,13 +228,18 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
     public Session getSession(final HttpServerExchange serverExchange, final SessionConfig config) {
         if (serverExchange != null) {
             SessionImpl newSession = serverExchange.getAttachment(NEW_SESSION);
-            if(newSession != null) {
+            if (newSession != null) {
                 return newSession;
             }
         }
+
+        if (config == null) {
+            throw UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig();
+        }
+
         String sessionId = config.findSessionId(serverExchange);
         InMemorySessionManager.SessionImpl session = (SessionImpl) getSession(sessionId);
-        if(session != null && serverExchange != null) {
+        if (session != null && serverExchange != null) {
             session.requestStarted(serverExchange);
         }
         return session;
@@ -640,17 +647,21 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
 
         @Override
         public String changeSessionId(final HttpServerExchange exchange, final SessionConfig config) {
-            final String oldId = sessionId;
-            String newId = sessionManager.createAndSaveNewID(this);
-            this.sessionId = newId;
-            if(!invalid) {
-                config.setSessionId(exchange, this.getId());
-            }
-            sessionManager.sessions.remove(oldId);
-            sessionManager.sessionListeners.sessionIdChanged(this, oldId);
-            UndertowLogger.SESSION_LOGGER.debugf("Changing session id %s to %s", oldId, newId);
+            synchronized(SessionImpl.this) {
+                if (invalidationStarted) {
+                    return null;
+                } else {
+                    final String oldId = sessionId;
+                    String newId = sessionManager.createAndSaveNewID(this);
+                    this.sessionId = newId;
+                    config.setSessionId(exchange, this.getId());
+                    sessionManager.sessions.remove(oldId);
+                    sessionManager.sessionListeners.sessionIdChanged(this, oldId);
+                    UndertowLogger.SESSION_LOGGER.debugf("Changing session id %s to %s", oldId, newId);
 
-            return newId;
+                    return newId;
+                }
+            }
         }
 
         private synchronized void destroy() {
@@ -658,6 +669,11 @@ public class InMemorySessionManager implements SessionManager, SessionManagerSta
                 timerCancelKey.remove();
             }
             cancelTask = null;
+        }
+
+        @Override
+        public boolean isInvalid() {
+            return this.invalid;
         }
 
     }

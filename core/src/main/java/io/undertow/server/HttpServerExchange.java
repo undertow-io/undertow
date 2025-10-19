@@ -40,6 +40,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.Cookies;
 import io.undertow.util.HeaderMap;
+import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
@@ -79,6 +80,7 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreClear;
@@ -165,7 +167,8 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     // mutable state
 
-    private int state = 200;
+    private volatile int state = 200;
+    private static final AtomicIntegerFieldUpdater<HttpServerExchange> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(HttpServerExchange.class, "state");
     private HttpString requestMethod = HttpString.EMPTY;
     private String requestScheme;
 
@@ -205,9 +208,13 @@ public final class HttpServerExchange extends AbstractAttachable {
     private String resolvedPath = "";
 
     /**
-     * the query string
+     * the query string - percent encoded
      */
     private String queryString = "";
+    /**
+     * the non-decoded query string. Set only when query string goes through decoding
+     */
+    private String nonDecodedQueryString = null;
 
     private int requestWrapperCount = 0;
     private ConduitWrapper<StreamSourceConduit>[] requestWrappers; //we don't allocate these by default, as for get requests they are not used
@@ -463,6 +470,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Examples:
      * GET http://localhost:8080/myFile.jsf?foo=bar HTTP/1.1 -&gt; 'http://localhost:8080/myFile.jsf'
      * POST /my+File.jsf?foo=bar HTTP/1.1 -&gt; '/my+File.jsf'
+     * For the query string, see {@link #getQueryString} and {@link #getNonDecodedQueryString} .
      */
     public String getRequestURI() {
         return requestURI;
@@ -487,9 +495,9 @@ public final class HttpServerExchange extends AbstractAttachable {
     public HttpServerExchange setRequestURI(final String requestURI, boolean containsHost) {
         this.requestURI = requestURI;
         if (containsHost) {
-            this.state |= FLAG_URI_CONTAINS_HOST;
+            setFlags(FLAG_URI_CONTAINS_HOST);
         } else {
-            this.state &= ~FLAG_URI_CONTAINS_HOST;
+            clearFlags(FLAG_URI_CONTAINS_HOST);
         }
         return this;
     }
@@ -581,15 +589,45 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
-     * Set query string.  Leading ? char will be removed automatically.
+     * Set query string.  Leading {@code '?'} char will be removed automatically.
+     *
+     * @return this http server exchange
      */
     public HttpServerExchange setQueryString(final String queryString) {
         // Clean leading ?
         if( queryString.length() > 0 && queryString.charAt(0) == '?' ) {
-                this.queryString = queryString.substring(1);
-            } else {
-                this.queryString = queryString;
-            }
+            this.queryString = queryString.substring(1);
+        } else {
+            this.queryString = queryString;
+        }
+        return this;
+    }
+
+    /**
+     * Returns the query string as originally contained in the request, without any decoding.
+     * The returned string does not contain the leading {@code '?'} char.
+     *
+     * @return The request query string, without the leading {@code '?'}, non-decoded.
+     */
+    public String getNonDecodedQueryString() {
+        return this.nonDecodedQueryString == null? this.queryString: this.nonDecodedQueryString;
+    }
+
+    /**
+     * Sets the non-decoded query string.  Leading {@code '?'} char will be removed automatically.<p>
+     * Must be invoked only if the {@link #getQueryString() query string} has gone through decoding. In such case, we expect
+     * that both forms of the query string will be set in the exchange: {@link #setQueryString decoded} and non-decoded.
+     *
+     * @param nonDecodedQueryString the query string as originally contained in the request, without any decoding
+     * @return this http server exchange
+     */
+    public HttpServerExchange setNonDecodedQueryString(String nonDecodedQueryString) {
+        // Clean leading ?
+        if( nonDecodedQueryString.length() > 0 && nonDecodedQueryString.charAt(0) == '?' ) {
+            this.nonDecodedQueryString = nonDecodedQueryString.substring(1);
+        } else {
+            this.nonDecodedQueryString = nonDecodedQueryString;
+        }
         return this;
     }
 
@@ -770,9 +808,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public HttpServerExchange setPersistent(final boolean persistent) {
         if (persistent) {
-            this.state = this.state | FLAG_PERSISTENT;
+            setFlags(FLAG_PERSISTENT);
         } else {
-            this.state = this.state & ~FLAG_PERSISTENT;
+            clearFlags(FLAG_PERSISTENT);
         }
         return this;
     }
@@ -782,7 +820,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     public HttpServerExchange unDispatch() {
-        state &= ~FLAG_DISPATCHED;
+        clearFlags(FLAG_DISPATCHED);
         dispatchTask = null;
         return this;
     }
@@ -796,7 +834,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     @Deprecated
     public HttpServerExchange dispatch() {
-        state |= FLAG_DISPATCHED;
+        setFlags(FLAG_DISPATCHED);
         return this;
     }
 
@@ -832,7 +870,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             if (executor != null) {
                 this.dispatchExecutor = executor;
             }
-            state |= FLAG_DISPATCHED;
+            setFlags(FLAG_DISPATCHED);
             if(anyAreSet(state, FLAG_SHOULD_RESUME_READS | FLAG_SHOULD_RESUME_WRITES)) {
                 throw UndertowMessages.MESSAGES.resumedAndDispatched();
             }
@@ -856,6 +894,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         final Runnable runnable = new Runnable() {
             @Override
             public void run() {
+                // avoid dispatching when the connection is no longer opened
+                if (!connection.isOpen()) {
+                    return;
+                }
                 Connectors.executeRootHandler(handler, HttpServerExchange.this);
             }
         };
@@ -899,9 +941,9 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     HttpServerExchange setInCall(boolean value) {
         if (value) {
-            state |= FLAG_IN_CALL;
+            setFlags(FLAG_IN_CALL);
         } else {
-            state &= ~FLAG_IN_CALL;
+            clearFlags(FLAG_IN_CALL);
         }
         return this;
     }
@@ -1153,7 +1195,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return A mutable map of request cookies
      * @deprecated use either {@link #requestCookies()} or {@link #getRequestCookie(String)} or {@link #setRequestCookie(Cookie)} methods instead
      */
-    @Deprecated
+    @Deprecated(since="2.2.0", forRemoval=true)
     public Map<String, Cookie> getRequestCookies() {
         if (deprecatedRequestCookies == null) {
             deprecatedRequestCookies = new MapDelegatingToSet((Set<Cookie>)((DelegatingIterable<Cookie>)requestCookies()).getDelegate());
@@ -1205,9 +1247,9 @@ public final class HttpServerExchange extends AbstractAttachable {
             Set<Cookie> requestCookiesParam = new OverridableTreeSet<>();
             requestCookies = new DelegatingIterable<>(requestCookiesParam);
             Cookies.parseRequestCookies(
-                    getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, 200),
+                    getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, UndertowOptions.DEFAULT_MAX_COOKIES),
                     getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false),
-                    requestHeaders.get(Headers.COOKIE), requestCookiesParam);
+                    requestHeaders.get(Headers.COOKIE), requestCookiesParam, getConnection().getUndertowOptions().get(UndertowOptions.DISABLE_RFC6265_COOKIE_PARSING, UndertowOptions.DEFAULT_DISABLE_RFC6265_COOKIE_PARSING));
         }
         return requestCookies;
     }
@@ -1238,7 +1280,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @return A mutable map of response cookies
      * @deprecated use either {@link #responseCookies()} or {@link #setResponseCookie(Cookie)} methods instead
      */
-    @Deprecated
+    @Deprecated(since="2.2.0", forRemoval=true)
     public Map<String, Cookie> getResponseCookies() {
         if (deprecatedResponseCookies == null) {
             deprecatedResponseCookies = new MapDelegatingToSet((Set<Cookie>)((DelegatingIterable<Cookie>)responseCookies()).getDelegate());
@@ -1275,7 +1317,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     public StreamSourceChannel getRequestChannel() {
         if (requestChannel != null) {
             if(anyAreSet(state, FLAG_REQUEST_RESET)) {
-                state &= ~FLAG_REQUEST_RESET;
+                clearFlags(FLAG_REQUEST_RESET);
                 return requestChannel;
             }
             return null;
@@ -1294,7 +1336,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     void resetRequestChannel() {
-        state |= FLAG_REQUEST_RESET;
+        setFlags(FLAG_REQUEST_RESET);
     }
 
     public boolean isRequestChannelAvailable() {
@@ -1335,16 +1377,16 @@ public final class HttpServerExchange extends AbstractAttachable {
      * the socket or implement a transfer coding.
      */
     void terminateRequest() {
-        int oldVal = state;
-        if (allAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
+        if (allAreSet(state, FLAG_REQUEST_TERMINATED)) {
             // idempotent
             return;
         }
         if (requestChannel != null) {
+            requestChannel.suspendReads();
             requestChannel.requestDone();
         }
-        this.state = oldVal | FLAG_REQUEST_TERMINATED;
-        if (anyAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
+        setFlags(FLAG_REQUEST_TERMINATED);
+        if (anyAreSet(state, FLAG_RESPONSE_TERMINATED)) {
             invokeExchangeCompleteListeners();
         }
     }
@@ -1482,8 +1524,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         if (statusCode < 0 || statusCode > 999) {
             throw new IllegalArgumentException("Invalid response code");
         }
-        int oldVal = state;
-        if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
+        if (allAreSet(state, FLAG_RESPONSE_SENT)) {
             throw UndertowMessages.MESSAGES.responseAlreadyStarted();
         }
         if(statusCode >= 500) {
@@ -1491,7 +1532,8 @@ public final class HttpServerExchange extends AbstractAttachable {
                 UndertowLogger.ERROR_RESPONSE.debugf(new RuntimeException(), "Setting error code %s for exchange %s", statusCode, this);
             }
         }
-        this.state = oldVal & ~MASK_RESPONSE_CODE | statusCode & MASK_RESPONSE_CODE;
+        clearFlags(MASK_RESPONSE_CODE);
+        setFlags(statusCode & MASK_RESPONSE_CODE);
         return this;
     }
 
@@ -1631,16 +1673,16 @@ public final class HttpServerExchange extends AbstractAttachable {
      * the socket or implement a transfer coding.
      */
     HttpServerExchange terminateResponse() {
-        int oldVal = state;
-        if (allAreSet(oldVal, FLAG_RESPONSE_TERMINATED)) {
+        if (allAreSet(state, FLAG_RESPONSE_TERMINATED)) {
             // idempotent
             return this;
         }
         if(responseChannel != null) {
+            responseChannel.suspendWrites();
             responseChannel.responseDone();
         }
-        this.state = oldVal | FLAG_RESPONSE_TERMINATED;
-        if (anyAreSet(oldVal, FLAG_REQUEST_TERMINATED)) {
+        setFlags(FLAG_RESPONSE_TERMINATED);
+        if (anyAreSet(state, FLAG_REQUEST_TERMINATED)) {
             invokeExchangeCompleteListeners();
         }
         return this;
@@ -1875,11 +1917,10 @@ public final class HttpServerExchange extends AbstractAttachable {
      * @throws IllegalStateException if the response headers were already sent
      */
     HttpServerExchange startResponse() throws IllegalStateException {
-        int oldVal = state;
-        if (allAreSet(oldVal, FLAG_RESPONSE_SENT)) {
+        if (allAreSet(state, FLAG_RESPONSE_SENT)) {
             throw UndertowMessages.MESSAGES.responseAlreadyStarted();
         }
-        this.state = oldVal | FLAG_RESPONSE_SENT;
+        setFlags(FLAG_RESPONSE_SENT);
 
         log.tracef("Starting to write response for %s", this);
         return this;
@@ -1887,6 +1928,16 @@ public final class HttpServerExchange extends AbstractAttachable {
 
     public XnioIoThread getIoThread() {
         return connection.getIoThread();
+    }
+
+    public boolean isMultiPartExchange() {
+        //NOTE: should this include Range response?
+        final HeaderValues contentTypeHeaders = getRequestHeaders().get("Content-Type");
+        if(contentTypeHeaders != null && contentTypeHeaders.size() >0) {
+            return contentTypeHeaders.getFirst().startsWith("multipart");
+        } else {
+            return false;
+        }
     }
 
     /**
@@ -1914,6 +1965,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         return securityContext;
     }
 
+    @SuppressWarnings("removal")
     public void setSecurityContext(SecurityContext securityContext) {
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
@@ -2021,9 +2073,15 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public void close() throws IOException {
             try {
-                getInputStream().close();
+                // close the input stream if open or force closing if the request is incomplete
+                if (inputStream != null || !exchange.isRequestComplete()) {
+                    getInputStream().close();
+                }
             } finally {
-                getOutputStream().close();
+                // same for the output stream
+                if (outputStream != null || !exchange.isResponseComplete()) {
+                    getOutputStream().close();
+                }
             }
         }
 
@@ -2058,7 +2116,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public void resumeWrites() {
             if (isInCall()) {
-                state |= FLAG_SHOULD_RESUME_WRITES;
+                setFlags(FLAG_SHOULD_RESUME_WRITES);
                 if(anyAreSet(state, FLAG_DISPATCHED)) {
                     throw UndertowMessages.MESSAGES.resumedAndDispatched();
                 }
@@ -2069,7 +2127,7 @@ public final class HttpServerExchange extends AbstractAttachable {
 
         @Override
         public void suspendWrites() {
-            state &= ~FLAG_SHOULD_RESUME_WRITES;
+            clearFlags(FLAG_SHOULD_RESUME_WRITES);
             super.suspendWrites();
         }
 
@@ -2080,7 +2138,7 @@ public final class HttpServerExchange extends AbstractAttachable {
             }
             if (isInCall()) {
                 wakeup = true;
-                state |= FLAG_SHOULD_RESUME_WRITES;
+                setFlags(FLAG_SHOULD_RESUME_WRITES);
                 if(anyAreSet(state, FLAG_DISPATCHED)) {
                     throw UndertowMessages.MESSAGES.resumedAndDispatched();
                 }
@@ -2101,10 +2159,10 @@ public final class HttpServerExchange extends AbstractAttachable {
                 } else {
                     if (wakeup) {
                         wakeup = false;
-                        state &= ~FLAG_SHOULD_RESUME_WRITES;
+                        clearFlags(FLAG_SHOULD_RESUME_WRITES);
                         delegate.wakeupWrites();
                     } else {
-                        state &= ~FLAG_SHOULD_RESUME_WRITES;
+                        clearFlags(FLAG_SHOULD_RESUME_WRITES);
                         delegate.resumeWrites();
                     }
                 }
@@ -2231,7 +2289,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         public void resumeReads() {
             readsResumed = true;
             if (isInCall()) {
-                state |= FLAG_SHOULD_RESUME_READS;
+                setFlags(FLAG_SHOULD_RESUME_READS);
                 if(anyAreSet(state, FLAG_DISPATCHED)) {
                     throw UndertowMessages.MESSAGES.resumedAndDispatched();
                 }
@@ -2244,7 +2302,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         public void wakeupReads() {
             if (isInCall()) {
                 wakeup = true;
-                state |= FLAG_SHOULD_RESUME_READS;
+                setFlags(FLAG_SHOULD_RESUME_READS);
                 if(anyAreSet(state, FLAG_DISPATCHED)) {
                     throw UndertowMessages.MESSAGES.resumedAndDispatched();
                 }
@@ -2301,7 +2359,7 @@ public final class HttpServerExchange extends AbstractAttachable {
         @Override
         public void suspendReads() {
             readsResumed = false;
-            state &= ~(FLAG_SHOULD_RESUME_READS);
+            clearFlags(FLAG_SHOULD_RESUME_READS);
             super.suspendReads();
         }
 
@@ -2471,10 +2529,10 @@ public final class HttpServerExchange extends AbstractAttachable {
                 } else {
                     if (wakeup) {
                         wakeup = false;
-                        state &= ~FLAG_SHOULD_RESUME_READS;
+                        clearFlags(FLAG_SHOULD_RESUME_READS);
                         delegate.wakeupReads();
                     } else {
-                        state &= ~FLAG_SHOULD_RESUME_READS;
+                        clearFlags(FLAG_SHOULD_RESUME_READS);
                         delegate.resumeReads();
                     }
                 }
@@ -2538,5 +2596,19 @@ public final class HttpServerExchange extends AbstractAttachable {
     @Override
     public String toString() {
         return "HttpServerExchange{ " + getRequestMethod().toString() + " " + getRequestURI() + '}';
+    }
+
+    private void setFlags(int flags) {
+        int old;
+        do {
+            old = state;
+        } while (!stateUpdater.compareAndSet(this, old, old | flags));
+    }
+
+    private void clearFlags(int flags) {
+        int old;
+        do {
+            old = state;
+        } while (!stateUpdater.compareAndSet(this, old, old & ~flags));
     }
 }

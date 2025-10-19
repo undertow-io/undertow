@@ -24,6 +24,7 @@ import io.undertow.util.ConduitFactory;
 import io.undertow.util.ObjectPool;
 import org.xnio.conduits.StreamSinkConduit;
 
+import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 
@@ -79,7 +80,7 @@ public class GzipStreamSinkConduit extends DeflatingStreamSinkConduit {
     }
 
     @Override
-    protected void preDeflate(byte[] data) {
+    protected void postDeflate(ByteBuffer data) {
         crc.update(data);
     }
 

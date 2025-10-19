@@ -96,5 +96,10 @@ public class EqualsPredicate implements Predicate {
             ExchangeAttribute[] value = (ExchangeAttribute[]) config.get("value");
             return new EqualsPredicate(value);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

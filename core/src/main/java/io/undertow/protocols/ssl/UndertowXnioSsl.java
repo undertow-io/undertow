@@ -19,8 +19,6 @@
 package io.undertow.protocols.ssl;
 
 import java.io.IOException;
-import java.net.Inet6Address;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
@@ -70,6 +68,7 @@ import org.xnio.ssl.SslConnection;
 import org.xnio.ssl.XnioSsl;
 
 import static org.xnio.IoUtils.safeClose;
+import static io.undertow.UndertowMessages.MESSAGES;
 
 /**
  * @author Stuart Douglas
@@ -246,7 +245,7 @@ public class UndertowXnioSsl extends XnioSsl {
         SSLEngine sslEngine = createSSLEngine(sslContext, optionMap, getPeerAddress(destinationURI), true);
         SSLParameters sslParameters = sslEngine.getSSLParameters();
         if (sslParameters.getServerNames() == null || sslParameters.getServerNames().isEmpty()) {
-            sslParameters.setServerNames(Collections.singletonList(new SNIHostName(destinationURI.getHost())));
+            setSNIHostName(connection.getPeerAddress(InetSocketAddress.class), optionMap, sslParameters);
             sslEngine.setSSLParameters(sslParameters);
         }
         return new UndertowSslConnection(connection, sslEngine, bufferPool, delegatedTaskExecutor);
@@ -279,8 +278,8 @@ public class UndertowXnioSsl extends XnioSsl {
         engine.setEnableSessionCreation(optionMap.get(Options.SSL_ENABLE_SESSION_CREATION, true));
         final Sequence<String> cipherSuites = optionMap.get(Options.SSL_ENABLED_CIPHER_SUITES);
         if (cipherSuites != null) {
-            final Set<String> supported = new HashSet<String>(Arrays.asList(engine.getSupportedCipherSuites()));
-            final List<String> finalList = new ArrayList<String>();
+            final Set<String> supported = new HashSet<>(Arrays.asList(engine.getSupportedCipherSuites()));
+            final List<String> finalList = new ArrayList<>();
             for (String name : cipherSuites) {
                 if (supported.contains(name)) {
                     finalList.add(name);
@@ -290,8 +289,8 @@ public class UndertowXnioSsl extends XnioSsl {
         }
         final Sequence<String> protocols = optionMap.get(Options.SSL_ENABLED_PROTOCOLS);
         if (protocols != null) {
-            final Set<String> supported = new HashSet<String>(Arrays.asList(engine.getSupportedProtocols()));
-            final List<String> finalList = new ArrayList<String>();
+            final Set<String> supported = new HashSet<>(Arrays.asList(engine.getSupportedProtocols()));
+            final List<String> finalList = new ArrayList<>();
             for (String name : protocols) {
                 if (supported.contains(name)) {
                     finalList.add(name);
@@ -324,7 +323,7 @@ public class UndertowXnioSsl extends XnioSsl {
             sslParameters.setUseCipherSuitesOrder(true);
             engine.setSSLParameters(sslParameters);
         }
-        final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, null);
+        final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM);
         if (endpointIdentificationAlgorithm != null) {
             SSLParameters sslParameters = engine.getSSLParameters();
             sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
@@ -449,6 +448,23 @@ public class UndertowXnioSsl extends XnioSsl {
         return server;
     }
 
+    private void setSNIHostName(InetSocketAddress destination, OptionMap optionMap, SSLParameters params) {
+        String hostnameValue = optionMap.get(UndertowOptions.SSL_SNI_HOSTNAME);
+        if (hostnameValue == null && destination != null && !destination.getHostString().equals(destination.getAddress().getHostAddress())) {
+            // just add the SNIHostName if it's a hostname, SNI cannot be an IP address
+            hostnameValue = destination.getHostString();
+        }
+        if (hostnameValue != null) {
+            SNIHostName sniHostName = null;
+            try {
+                sniHostName = new SNIHostName(hostnameValue);
+            } catch (IllegalArgumentException e) {
+                throw MESSAGES.invalidSniHostname(hostnameValue, e);
+            }
+            params.setServerNames(Collections.singletonList(sniHostName));
+        }
+    }
+
     private class StreamConnectionChannelListener implements ChannelListener<StreamConnection> {
         private final OptionMap optionMap;
         private final InetSocketAddress destination;
@@ -467,15 +483,8 @@ public class UndertowXnioSsl extends XnioSsl {
 
                 SSLEngine sslEngine = JsseSslUtils.createSSLEngine(sslContext, optionMap, destination);
                 SSLParameters params = sslEngine.getSSLParameters();
-                InetAddress address = destination.getAddress();
-                String hostnameValue = destination.getHostString();
-                if (address instanceof Inet6Address && hostnameValue.contains(":")) {
-                    // WFLY-13748 get hostname value instead of IPV6adress if it's ipv6
-                    // SNIHostname throw exception if adress contains :
-                    hostnameValue = address.getHostName();
-                }
-                params.setServerNames(Collections.singletonList(new SNIHostName(hostnameValue)));
-                final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM, null);
+                setSNIHostName(destination, optionMap, params);
+                final String endpointIdentificationAlgorithm = optionMap.get(UndertowOptions.ENDPOINT_IDENTIFICATION_ALGORITHM);
                 if (endpointIdentificationAlgorithm != null) {
                     params.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
                 }

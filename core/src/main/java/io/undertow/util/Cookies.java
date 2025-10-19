@@ -23,6 +23,8 @@ import io.undertow.UndertowMessages;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.server.handlers.CookieImpl;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -173,6 +175,8 @@ public class Cookies {
         } else if (key.equalsIgnoreCase("samesite")) {
             cookie.setSameSite(true);
             cookie.setSameSiteMode(value);
+        } else {
+            cookie.setAttribute(key, value);
         }
         //otherwise ignore this key-value pair
     }
@@ -204,22 +208,23 @@ public class Cookies {
      * @see <a href="http://tools.ietf.org/search/rfc2109">rfc2109</a>
      * @deprecated use {@link #parseRequestCookies(int, boolean, List, Set)} instead
      */
-    @Deprecated
+    @Deprecated(since="2.2.0", forRemoval=true)
     public static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies) {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, LegacyCookieSupport.COMMA_IS_SEPARATOR);
     }
 
+    @Deprecated(since = "2.4.0", forRemoval=true)
     public static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies) {
-        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, LegacyCookieSupport.COMMA_IS_SEPARATOR);
+        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, LegacyCookieSupport.COMMA_IS_SEPARATOR, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0, false);
+    }
+
+    public static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean rfc6265ParsingDisabled) {
+        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, LegacyCookieSupport.COMMA_IS_SEPARATOR, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0, rfc6265ParsingDisabled);
     }
 
     @Deprecated
     static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator) {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0);
-    }
-
-    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean commaIsSeperator) {
-        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0);
     }
 
     static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
@@ -228,7 +233,7 @@ public class Cookies {
         }
         final Set<Cookie> parsedCookies = new HashSet<>();
         for (String cookie : cookies) {
-            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0);
+            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0, true);
         }
 
         final Map<String, Cookie> retVal = new TreeMap<>();
@@ -238,19 +243,20 @@ public class Cookies {
         return retVal;
     }
 
-    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
+    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0, boolean rfc6265ParsingDisabled) {
         if (cookies != null) {
             for (String cookie : cookies) {
-                parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0);
+                parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0, rfc6265ParsingDisabled);
             }
         }
     }
 
-    private static void parseCookie(final String cookie, final Set<Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
+    private static void parseCookie(final String cookie, final Set<Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator, boolean allowHttpSepartorsV0, boolean rfc6265ParsingDisabled) {
         int state = 0;
         String name = null;
         int start = 0;
         boolean containsEscapedQuotes = false;
+        boolean inQuotes = false;
         int cookieCount = parsedCookies.size();
         final Map<String, String> cookies = new HashMap<>();
         final Map<String, String> additional = new HashMap<>();
@@ -291,6 +297,7 @@ public class Cookies {
                         start = i + 1;
                     } else if (c == '"' && start == i) { //only process the " if it is the first character
                         containsEscapedQuotes = false;
+                        inQuotes = true;
                         state = 3;
                         start = i + 1;
                     } else if (c == '=') {
@@ -313,7 +320,17 @@ public class Cookies {
                 case 3: {
                     //extract quoted value
                     if (c == '"') {
-                        cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        if (!rfc6265ParsingDisabled && inQuotes) {
+                            start = start - 1;
+                            inQuotes = false;
+                            i++;
+                            cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        } else {
+                            cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        }
+                        state = 0;
+                        start = i + 1;
+                    } else if (c == ';' || (commaIsSeperator && c == ',')) {
                         state = 0;
                         start = i + 1;
                     }
@@ -330,6 +347,7 @@ public class Cookies {
                         // Skip the next double quote char ('"' behind '\') in the cookie value
                         i++;
                         containsEscapedQuotes = true;
+                        inQuotes = false;
                     }
                     break;
                 }
@@ -417,6 +435,78 @@ public class Cookies {
         return new String(tmp, 0, dest);
     }
 
+    private static final String CRUMB_SEPARATOR = "; ";
+
+    /**
+     * Cookie headers form: https://www.rfc-editor.org/rfc/rfc6265#section-4.2.1
+     * If more than one header entry exist for "Cookie", it will be assembled into one that conforms to rfc.
+     * @param headerMap
+     */
+    public static void assembleCrumbs(final HeaderMap headerMap) {
+        final HeaderValues cookieValues = headerMap.get(Headers.COOKIE);
+
+        if (cookieValues != null && cookieValues.size() > 1) {
+            final StringBuilder oreos = new StringBuilder();
+            final String[] _cookieValues = cookieValues.toArray();
+            int slices = _cookieValues.length;
+            for (final String slice : _cookieValues) {
+                oreos.append(slice);
+                slices--;
+                if (slices >= 1) {
+                    oreos.append(CRUMB_SEPARATOR);
+                }
+            }
+            cookieValues.clear();
+            cookieValues.add(oreos.toString());
+        }
+    }
+
+    /**
+     * IF there is single entry that follows RFC separation rules, it will be turned into singular fields. This should be only
+     * used PRIOR to compression.
+     *
+     * @param headerMap
+     */
+    public static void disperseCrumbs(final HeaderMap headerMap) {
+        final HeaderValues cookieValues = headerMap.get(Headers.COOKIE);
+        // NOTE: If cookies are up2standard, thats the only case
+        // otherwise something is up, dont touch it
+        if (cookieValues != null && cookieValues.size() == 1) {
+            if (cookieValues.getFirst().contains(CRUMB_SEPARATOR)) {
+                final String[] cookieJar = cookieValues.getFirst().split(CRUMB_SEPARATOR);
+                headerMap.remove(Headers.COOKIE);
+                for (final String crumb : cookieJar) {
+                    headerMap.addLast(Headers.COOKIE, crumb);
+                }
+            }
+        }
+    }
+
+    /**
+     * Fetch list containing crumbs( singular entries of Cookie header )
+     * @param headerMap
+     * @return
+     */
+    public static List<String> getCrumbs(final HeaderMap headerMap) {
+        final HeaderValues cookieValues = headerMap.get(Headers.COOKIE);
+        if (cookieValues != null) {
+            if (cookieValues.size() == 1 && cookieValues.getFirst().contains(CRUMB_SEPARATOR)) {
+                final String[] cookieJar = cookieValues.getFirst().split(CRUMB_SEPARATOR);
+                return Arrays.asList(cookieJar);
+            } else {
+                return cookieValues;
+            }
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    private static final String CRUMBS_ASSEMBLY_DISABLE = "io.undertow.server.protocol.http.DisableCookieCrumbsAssembly";
+    private static final Boolean CRUMBS_ASSEMBLY_DISABLED = Boolean.valueOf(SecurityActions.getSystemProperty(CRUMBS_ASSEMBLY_DISABLE, "false"));
+
+    public static boolean isCrumbsAssemplyDisabled() {
+        return Cookies.CRUMBS_ASSEMBLY_DISABLED.booleanValue();
+    }
     private Cookies() {
 
     }

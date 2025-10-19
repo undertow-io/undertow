@@ -31,11 +31,11 @@ import java.util.Map;
  */
 public interface SessionPersistenceManager {
 
-    void persistSessions(final String deploymentName, Map<String, PersistentSession> sessionData);
+    void persistSessions(String deploymentName, Map<String, PersistentSession> sessionData);
 
-    Map<String, PersistentSession> loadSessionAttributes(final String deploymentName, final ClassLoader classLoader);
+    Map<String, PersistentSession> loadSessionAttributes(String deploymentName, ClassLoader classLoader);
 
-    void clear(final String deploymentName);
+    void clear(String deploymentName);
 
     class PersistentSession {
         private final Date expiration;

@@ -60,6 +60,12 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
     private final WebSocketClientNegotiation negotiation;
     private final Set<ExtensionHandshake> extensions;
 
+    /**
+     * Create a static instance of SecureRandom, so it can be actually reused by all instances of this class.
+     * This should also increase the randomness of generated numbers.
+     */
+    private static final SecureRandom random = new SecureRandom();
+
     public WebSocket13ClientHandshake(final URI url, WebSocketClientNegotiation negotiation, Set<ExtensionHandshake> extensions) {
         super(url);
         this.negotiation = negotiation;
@@ -85,9 +91,9 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
                     }
                 }
             }
-            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation.getSelectedSubProtocol(), true, !negotiated.isEmpty(), CompositeExtensionFunction.compose(negotiated), new HashSet<WebSocketChannel>(), options);
+            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation.getSelectedSubProtocol(), true, !negotiated.isEmpty(), CompositeExtensionFunction.compose(negotiated), new HashSet<>(), options);
         } else {
-            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation != null ? negotiation.getSelectedSubProtocol() : "", true, false, NoopExtensionFunction.INSTANCE, new HashSet<WebSocketChannel>(), options);
+            return new WebSocket13Channel(channel, bufferPool, wsUri, negotiation != null ? negotiation.getSelectedSubProtocol() : "", true, false, NoopExtensionFunction.INSTANCE, new HashSet<>(), options);
         }
     }
 
@@ -142,7 +148,6 @@ public class WebSocket13ClientHandshake extends WebSocketClientHandshake {
     }
 
     protected String createSecKey() {
-        SecureRandom random = new SecureRandom();
         byte[] data = new byte[16];
         for (int i = 0; i < 4; ++i) {
             int val = random.nextInt();

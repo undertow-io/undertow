@@ -28,6 +28,7 @@ import io.undertow.server.handlers.form.MultiPartParserDefinition;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionConfig;
+import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.api.AuthorizationManager;
 import io.undertow.servlet.api.Deployment;
@@ -47,6 +48,25 @@ import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.LocaleUtils;
+import jakarta.servlet.AsyncContext;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.MultipartConfigElement;
+import jakarta.servlet.RequestDispatcher;
+import jakarta.servlet.ServletConnection;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletRequestWrapper;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.ServletResponseWrapper;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletMapping;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.HttpUpgradeHandler;
+import jakarta.servlet.http.Part;
+import jakarta.servlet.http.PushBuilder;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -73,25 +93,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import jakarta.servlet.AsyncContext;
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.MultipartConfigElement;
-import jakarta.servlet.RequestDispatcher;
-import jakarta.servlet.ServletConnection;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletInputStream;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletRequestWrapper;
-import jakarta.servlet.ServletResponse;
-import jakarta.servlet.ServletResponseWrapper;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletMapping;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-import jakarta.servlet.http.HttpUpgradeHandler;
-import jakarta.servlet.http.Part;
-import jakarta.servlet.http.PushBuilder;
 
 /**
  * The http servlet request implementation. This class is not thread safe
@@ -240,37 +241,41 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             match = src.getServletPathMatch();
         }
         String matchValue;
-        switch (match.getMappingMatch()) {
-            case EXACT:
-                matchValue = match.getMatched();
-                if(matchValue.startsWith("/")) {
-                    matchValue = matchValue.substring(1);
-                }
-                break;
-            case DEFAULT:
-            case CONTEXT_ROOT:
-                matchValue = "";
-                break;
-            case PATH:
-                matchValue = match.getRemaining();
-                if (matchValue == null) {
+        if (match != null) {
+            switch (match.getMappingMatch()) {
+                case EXACT:
+                    matchValue = match.getMatched();
+                    if (matchValue.startsWith("/")) {
+                        matchValue = matchValue.substring(1);
+                    }
+                    break;
+                case DEFAULT:
+                case CONTEXT_ROOT:
                     matchValue = "";
-                } else if (matchValue.startsWith("/")) {
-                    matchValue = matchValue.substring(1);
-                }
-                break;
-            case EXTENSION:
-                String matched = match.getMatched();
-                String matchString = match.getMatchString();
-                int startIndex = matched.startsWith("/") ? 1 : 0;
-                int endIndex = matched.length() - matchString.length() + 1;
-                matchValue = matched.substring(startIndex, endIndex);
-                break;
-            default:
-                matchValue = match.getRemaining();
+                    break;
+                case PATH:
+                    matchValue = match.getRemaining();
+                    if (matchValue == null) {
+                        matchValue = "";
+                    } else if (matchValue.startsWith("/")) {
+                        matchValue = matchValue.substring(1);
+                    }
+                    break;
+                case EXTENSION:
+                    String matched = match.getMatched();
+                    String matchString = match.getMatchString();
+                    int startIndex = matched.startsWith("/") ? 1 : 0;
+                    int endIndex = matched.length() - matchString.length() + 1;
+                    matchValue = matched.substring(startIndex, endIndex);
+                    break;
+                default:
+                    matchValue = match.getRemaining();
+            }
+            return new MappingImpl(matchValue, match.getMatchString(), match.getMappingMatch(), match.getServletChain().getManagedServlet().getServletInfo().getName());
         }
-        return new MappingImpl(matchValue, match.getMatchString(), match.getMappingMatch(), match.getServletChain().getManagedServlet().getServletInfo().getName());
-    }
+        else
+            return null;
+        }
 
     @Override
     public int getIntHeader(final String name) {
@@ -371,10 +376,17 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     }
 
     @Override
+    @SuppressWarnings("removal")
     public String changeSessionId() {
         HttpSessionImpl session = servletContext.getSession(originalServletContext, exchange, false);
         if (session == null) {
             throw UndertowServletMessages.MESSAGES.noSession();
+        }
+        if (this.exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletResponse().isCommitted()) {
+            if (!this.servletContext.getDeployment().getDeploymentInfo().isOrphanSessionAllowed()) {
+                throw UndertowServletMessages.MESSAGES.sessionIdChangeAfterResponseCommittedNotAllowed();
+            }
+            UndertowServletLogger.REQUEST_LOGGER.debug("Servlet container configured to permit session identifier changes after response was committed. This can result in a memory leak if session has no timeout.");
         }
         String oldId = session.getId();
         Session underlyingSession;
@@ -474,7 +486,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
     @Override
     public boolean authenticate(final HttpServletResponse response) throws IOException, ServletException {
         if (response.isCommitted()) {
-            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommitted();
         }
 
         SecurityContext sc = exchange.getSecurityContext();
@@ -542,7 +554,6 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Collection<Part> getParts() throws IOException, ServletException {
-        verifyMultipartServlet();
         if (parts == null) {
             loadParts();
         }
@@ -559,11 +570,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public Part getPart(final String name) throws IOException, ServletException {
-        verifyMultipartServlet();
-        if (parts == null) {
-            loadParts();
-        }
-        for (Part part : parts) {
+        for (Part part : getParts()) {
             if (part.getName().equals(name)) {
                 return part;
             }
@@ -589,6 +596,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         final ServletRequestContext requestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
 
         if (parts == null) {
+            verifyMultipartServlet();
             final List<Part> parts = new ArrayList<>();
             String mimeType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
             if (mimeType != null && mimeType.startsWith(MultiPartParserDefinition.MULTIPART_FORM_DATA)) {
@@ -747,7 +755,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             final FormData parsedFormData = parseFormData();
             if (parsedFormData != null) {
                 FormData.FormValue res = parsedFormData.getFirst(name);
-                if (res == null || res.isFileItem()) {
+                if (res == null || res.isFileItem() && !res.isBigField()) {
                     return null;
                 } else {
                     return res.getValue();
@@ -770,7 +778,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             while (it.hasNext()) {
                 String name = it.next();
                 for(FormData.FormValue param : parsedFormData.get(name)) {
-                    if(!param.isFileItem()) {
+                    if(!param.isFileItem() || param.isBigField()) {
                         parameterNames.add(name);
                         break;
                     }
@@ -797,7 +805,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
             Deque<FormData.FormValue> res = parsedFormData.get(name);
             if (res != null) {
                 for (FormData.FormValue value : res) {
-                    if(!value.isFileItem()) {
+                    if(!value.isFileItem() || value.isBigField()) {
                         ret.add(value.getValue());
                     }
                 }
@@ -828,14 +836,14 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
                 if (arrayMap.containsKey(name)) {
                     ArrayList<String> existing = arrayMap.get(name);
                     for (final FormData.FormValue v : val) {
-                        if(!v.isFileItem()) {
+                        if(!v.isFileItem() || v.isBigField()) {
                             existing.add(v.getValue());
                         }
                     }
                 } else {
                     final ArrayList<String> values = new ArrayList<>();
                     for (final FormData.FormValue v : val) {
-                        if(!v.isFileItem()) {
+                        if(!v.isFileItem() || v.isBigField()) {
                             values.add(v.getValue());
                         }
                     }
@@ -1026,7 +1034,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
      * Gets the host name for this IP address.
      * If this InetAddress was created with a host name, this host name will be remembered and returned; otherwise, a reverse name lookup will be performed and the result will be returned based on the system configured name lookup service. If a lookup of the name service is required, call getCanonicalHostName.
      * If there is a security manager, its checkConnect method is first called with the hostname and -1 as its arguments to see if the operation is allowed. If the operation is not allowed, it will return the textual representation of the IP address.
-     * @see InetAddres#getHostName
+     * @see InetAddress#getHostName(boolean)
      */
     @Override
     public String getLocalName() {
@@ -1064,9 +1072,10 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         } else if (asyncStarted) {
             throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
-        asyncStarted = true;
         final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        return asyncContext = new AsyncContextImpl(exchange, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), servletRequestContext, false, asyncContext);
+        asyncContext = new AsyncContextImpl(exchange, servletRequestContext.getServletRequest(), servletRequestContext.getServletResponse(), servletRequestContext, false, asyncContext);
+        asyncStarted = true;
+        return asyncContext;
     }
 
     @Override
@@ -1089,10 +1098,11 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
         } else if (asyncStarted) {
             throw UndertowServletMessages.MESSAGES.asyncAlreadyStarted();
         }
-        asyncStarted = true;
         servletRequestContext.setServletRequest(servletRequest);
         servletRequestContext.setServletResponse(servletResponse);
-        return asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse, servletRequestContext, true, asyncContext);
+        asyncContext = new AsyncContextImpl(exchange, servletRequest, servletResponse, servletRequestContext, true, asyncContext);
+        asyncStarted = true;
+        return asyncContext;
     }
 
     @Override

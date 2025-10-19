@@ -30,10 +30,14 @@ import java.nio.channels.FileChannel;
  */
 public interface BufferWritableOutputStream {
 
-    void write(final ByteBuffer[] buffers) throws IOException;
+    void write(ByteBuffer[] buffers) throws IOException;
 
-    void write(final ByteBuffer byteBuffer) throws IOException;
+    void write(ByteBuffer byteBuffer) throws IOException;
 
+    /**
+     * Transfer the remaining content of the input FileChannel (from its current position, to end of file).
+     */
+    @Deprecated
     void transferFrom(FileChannel source) throws IOException;
 
 }

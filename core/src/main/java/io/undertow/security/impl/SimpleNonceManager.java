@@ -107,6 +107,12 @@ public class SimpleNonceManager implements SessionNonceManager {
     private static final long overallTimeOut = 15 * 60 * 1000;
 
     /**
+     * Create a static instance of SecureRandom, so it can be actually reused by all instances of this class.
+     * This should also increase the randomness of generated numbers.
+     */
+    private static final Random rand = new SecureRandom();
+
+    /**
      * A previously used nonce will be allowed to remain in the knownNonces list for up to 5 minutes.
      *
      * The nonce will be accepted during this 5 minute window but will immediately be replaced causing any additional requests
@@ -128,7 +134,6 @@ public class SimpleNonceManager implements SessionNonceManager {
         this.hashLength = digest.getDigestLength();
 
         // Create a new secret only valid within this NonceManager instance.
-        Random rand = new SecureRandom();
         byte[] secretBytes = new byte[32];
         rand.nextBytes(secretBytes);
         secret = FlexBase64.encodeString(digest.digest(secretBytes), false);

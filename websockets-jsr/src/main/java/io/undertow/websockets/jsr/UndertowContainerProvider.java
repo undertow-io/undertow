@@ -18,28 +18,26 @@
 
 package io.undertow.websockets.jsr;
 
-import static org.wildfly.common.Assert.checkNotNullParam;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.server.DefaultByteBufferPool;
+import io.undertow.servlet.api.ClassIntrospecter;
+import io.undertow.servlet.api.InstanceFactory;
+import io.undertow.servlet.util.DefaultClassIntrospector;
+import jakarta.websocket.ContainerProvider;
+import jakarta.websocket.WebSocketContainer;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+import org.xnio.Xnio;
+import org.xnio.XnioWorker;
 
 import java.io.IOException;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
-import jakarta.websocket.ContainerProvider;
-import jakarta.websocket.WebSocketContainer;
-
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import org.xnio.Xnio;
-import org.xnio.XnioWorker;
-import io.undertow.connector.ByteBufferPool;
-import io.undertow.server.DefaultByteBufferPool;
-import io.undertow.servlet.api.ClassIntrospecter;
-import io.undertow.servlet.api.InstanceFactory;
-import io.undertow.servlet.util.DefaultClassIntrospector;
+import static org.wildfly.common.Assert.checkNotNullParam;
 
 /**
  * @author Stuart Douglas
@@ -59,17 +57,14 @@ public class UndertowContainerProvider extends ContainerProvider {
     private static final SwitchableClassIntrospector defaultIntrospector = new SwitchableClassIntrospector();
 
     @Override
+    @SuppressWarnings("removal")
     protected WebSocketContainer getContainer() {
         ClassLoader tccl;
         if (System.getSecurityManager() == null) {
             tccl = Thread.currentThread().getContextClassLoader();
         } else {
-            tccl = AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
-                @Override
-                public ClassLoader run() {
-                    return Thread.currentThread().getContextClassLoader();
-                }
-            });
+            tccl = java.security.AccessController.doPrivileged(
+                    (PrivilegedAction<ClassLoader>) () -> Thread.currentThread().getContextClassLoader());
         }
         WebSocketContainer webSocketContainer = webSocketContainers.get(tccl);
         if (webSocketContainer == null) {
@@ -115,6 +110,7 @@ public class UndertowContainerProvider extends ContainerProvider {
         }
     }
 
+    @SuppressWarnings("removal")
     public static void addContainer(final ClassLoader classLoader, final WebSocketContainer webSocketContainer) {
         SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
@@ -123,6 +119,7 @@ public class UndertowContainerProvider extends ContainerProvider {
         webSocketContainers.put(classLoader, webSocketContainer);
     }
 
+    @SuppressWarnings("removal")
     public static void removeContainer(final ClassLoader classLoader) {
         SecurityManager sm = System.getSecurityManager();
         if (sm != null) {
@@ -135,6 +132,7 @@ public class UndertowContainerProvider extends ContainerProvider {
         defaultIntrospector.setIntrospecter(checkNotNullParam("classIntrospector", classIntrospector));
     }
 
+    @SuppressWarnings("removal")
     public static void disableDefaultContainer() {
         SecurityManager sm = System.getSecurityManager();
         if (sm != null) {

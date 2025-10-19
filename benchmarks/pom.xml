@@ -25,11 +25,11 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>2.3.0.Alpha2-SNAPSHOT</version>
+        <version>2.5.0.Alpha1-SNAPSHOT</version>
     </parent>
 
     <artifactId>undertow-benchmarks</artifactId>
-    <version>2.3.0.Alpha2-SNAPSHOT</version>
+    <version>2.5.0.Alpha1-SNAPSHOT</version>
 
     <name>Undertow Benchmarks</name>
 
@@ -93,6 +93,21 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
+                <configuration>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/MANIFEST.MF</exclude>
+                                <exclude>META-INF/LICENSE.txt</exclude>
+                                <exclude>META-INF/NOTICE.txt</exclude>
+                                <exclude>META-INF/DEPENDENCIES</exclude>
+                                <exclude>META-INF/LICENSE</exclude>
+                                <exclude>META-INF/NOTICE</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
                 <executions>
                     <execution>
                         <phase>package</phase>

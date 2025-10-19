@@ -24,17 +24,20 @@ import io.undertow.security.api.AuthenticationMechanism.AuthenticationMechanismO
 import io.undertow.security.api.AuthenticationMechanism.ChallengeResult;
 import io.undertow.security.api.AuthenticationMechanismContext;
 import io.undertow.security.api.AuthenticationMode;
+import io.undertow.security.api.NotificationReceiver;
+import io.undertow.security.api.SecurityNotification;
 import io.undertow.security.idm.Account;
 import io.undertow.security.idm.IdentityManager;
 import io.undertow.security.idm.PasswordCredential;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.StatusCodes;
 
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
+import static io.undertow.security.api.SecurityNotification.EventType.AUTHENTICATED;
 
 /**
  * The internal SecurityContext used to hold the state of security for the current exchange.
@@ -63,6 +66,7 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
         this(exchange, AuthenticationMode.PRO_ACTIVE, identityManager);
     }
 
+    @SuppressWarnings("removal")
     public SecurityContextImpl(final HttpServerExchange exchange, final AuthenticationMode authenticationMode, final IdentityManager identityManager) {
         super(exchange);
         this.authenticationMode = authenticationMode;
@@ -168,6 +172,16 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
             }
             cur.next = new Node<>(handler);
         }
+        if (handler instanceof FormAuthenticationMechanism) {
+            registerNotificationReceiver(new NotificationReceiver() {
+                @Override
+                public void handleNotification(final SecurityNotification notification) {
+                    if (notification.getEventType() == AUTHENTICATED) {
+                        ((FormAuthenticationMechanism) handler).restoreOriginalSessionTimeout(exchange);
+                    }
+                }
+            });
+        }
     }
 
     @Override
@@ -189,20 +203,17 @@ public class SecurityContextImpl extends AbstractSecurityContext implements Auth
     }
 
     @Override
+    @SuppressWarnings("removal")
     public boolean login(final String username, final String password) {
 
-        UndertowLogger.SECURITY_LOGGER.debugf("Attempting programatic login for user %s for request %s", username, exchange);
+        UndertowLogger.SECURITY_LOGGER.debugf("Attempting programmatic login for user %s for request %s", username, exchange);
 
         final Account account;
         if(System.getSecurityManager() == null) {
             account = identityManager.verify(username, new PasswordCredential(password.toCharArray()));
         } else {
-            account = AccessController.doPrivileged(new PrivilegedAction<Account>() {
-                @Override
-                public Account run() {
-                    return identityManager.verify(username, new PasswordCredential(password.toCharArray()));
-                }
-            });
+            account = java.security.AccessController.doPrivileged(
+                    (PrivilegedAction<Account>) () -> identityManager.verify(username, new PasswordCredential(password.toCharArray())));
         }
 
         if (account == null) {

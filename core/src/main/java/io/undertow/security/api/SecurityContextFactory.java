@@ -28,7 +28,7 @@ import io.undertow.server.HttpServerExchange;
  * @author <a href="mailto:sguilhen@redhat.com">Stefan Guilhen</a>
  * @deprecated Instead extend AbstractSecurityContextAssociationHandler to provide alternative contexts.
  */
-@Deprecated()
+@Deprecated(since="1.3.0", forRemoval=true)
 public interface SecurityContextFactory {
 
     /**
@@ -42,6 +42,6 @@ public interface SecurityContextFactory {
      * @param programmaticMechName a {@code String} representing the programmatic mechanism name. Can be null.
      * @return the constructed {@code SecurityContext} instance.
      */
-    SecurityContext createSecurityContext(final HttpServerExchange exchange, final AuthenticationMode mode,
-        final IdentityManager identityManager, final String programmaticMechName);
+    SecurityContext createSecurityContext(HttpServerExchange exchange, AuthenticationMode mode,
+        IdentityManager identityManager, String programmaticMechName);
 }

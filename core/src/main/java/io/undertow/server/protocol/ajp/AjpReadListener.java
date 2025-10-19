@@ -19,6 +19,7 @@
 package io.undertow.server.protocol.ajp;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.ConduitListener;
 import io.undertow.conduits.EmptyStreamSourceConduit;
@@ -165,8 +166,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 }
                 if (read > maxRequestSize) {
                     UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
-                    safeClose(connection);
-                    return;
+                    throw UndertowMessages.MESSAGES.badRequest();
                 }
             } while (!state.isComplete());
 

@@ -53,7 +53,7 @@ public class RewriteConfig {
 
 
     public String toString() {
-        StringBuffer buffer = new StringBuffer();
+        StringBuilder buffer = new StringBuilder();
         // FIXME: Output maps if possible
         for (int i = 0; i < rules.length; i++) {
             for (int j = 0; j < rules[i].getConditions().length; j++) {

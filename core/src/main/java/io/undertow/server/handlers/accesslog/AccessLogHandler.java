@@ -72,11 +72,10 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
  * commonly utilized patterns:</p>
  * <ul>
  * <li><b>common</b> - <code>%h %l %u %t "%r" %s %b</code>
- * <li><b>combined</b> -
- * <code>%h %l %u %t "%r" %s %b "%{i,Referer}" "%{i,User-Agent}"</code>
+ * <li><b>commonv</b> - <code>%h %l %u %t "%r" %s %b %T "%I"</code>
+ * <li><b>combined</b> - <code>%h %l %u %t "%r" %s %b "%{i,Referer}" "%{i,User-Agent}"</code>
  * <li><b>commonobf</b> - <code>%o %l %u %t "%r" %s %b</code>
- * <li><b>combinedobf</b> -
- * <code>%o %l %u %t "%r" %s %b "%{i,Referer}" "%{i,User-Agent}"</code>
+ * <li><b>combinedobf</b> - <code>%o %l %u %t "%r" %s %b "%{i,Referer}" "%{i,User-Agent}"</code>
  * </ul>
  * <p>
  * <p>
@@ -131,6 +130,8 @@ public class AccessLogHandler implements HttpHandler {
     private static String handleCommonNames(String formatString) {
         if(formatString.equals("common")) {
             return "%h %l %u %t \"%r\" %s %b";
+        } if(formatString.equals("commonv")) {
+            return "%h %l %u %t \"%r\" %s %b %T \"%I\"";
         } else if (formatString.equals("combined")) {
             return "%h %l %u %t \"%r\" %s %b \"%{i,Referer}\" \"%{i,User-Agent}\"";
         } else if(formatString.equals("commonobf")) {
@@ -196,6 +197,11 @@ public class AccessLogHandler implements HttpHandler {
         @Override
         public HandlerWrapper build(Map<String, Object> config) {
             return new Wrapper((String) config.get("format"), (String) config.get("category"));
+        }
+
+        @Override
+        public int priority() {
+            return 0;
         }
 
     }

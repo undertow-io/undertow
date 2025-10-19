@@ -18,6 +18,11 @@
 
 package io.undertow.attribute;
 
+import java.util.Map;
+
+import io.undertow.predicate.PathPrefixPredicate;
+import io.undertow.predicate.PathPrefixPredicate.PathPrefixMatchRecord;
+import io.undertow.predicate.Predicate;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.QueryParameterUtils;
 
@@ -61,6 +66,13 @@ public class RequestURLAttribute implements ExchangeAttribute {
             exchange.getQueryParameters().putAll(QueryParameterUtils.parseQueryString(newQueryString.substring(1), QueryParameterUtils.getQueryParamEncoding(exchange)));
         }
 
+        final Map<String, Object> context = exchange.getAttachment(Predicate.PREDICATE_CONTEXT);
+        if(context != null) {
+            final PathPrefixPredicate.PathPrefixMatchRecord trans = (PathPrefixMatchRecord) context.get(PathPrefixPredicate.PREFIX_MATCH_RECORD);
+            if(trans != null) {
+                trans.overWritten();
+            }
+        }
     }
 
     @Override

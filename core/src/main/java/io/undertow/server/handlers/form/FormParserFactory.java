@@ -67,7 +67,7 @@ public class FormParserFactory {
 
     public interface ParserDefinition<T> {
 
-        FormDataParser create(final HttpServerExchange exchange);
+        FormDataParser create(HttpServerExchange exchange);
 
         T setDefaultEncoding(String charset);
     }

@@ -31,11 +31,12 @@ public class AsyncDispatchServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+        final String path = req.getHeader("dispatch") != null? req.getHeader("dispatch") : "/message";
         final AsyncContext ac = req.startAsync(req, new TestAsyncRespWrapper(resp));
         ac.start(new Runnable() {
             @Override
             public void run() {
-                ac.dispatch("/message");
+                ac.dispatch(path);
             }
         });
     }

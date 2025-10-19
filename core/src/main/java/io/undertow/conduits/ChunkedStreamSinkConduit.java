@@ -35,6 +35,7 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.ImmediatePooledByteBuffer;
+import org.xnio.Buffers;
 import org.xnio.IoUtils;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
@@ -128,6 +129,109 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         return doWrite(src);
     }
 
+    long doWrite(final ByteBuffer[] srcs, int offset, int length) throws IOException {
+        if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
+            throw new ClosedChannelException();
+        }
+        // Write as many buffers as possible without a chunk-size overflowing an integer.
+        long totalRemaining = 0;
+        for (int i = 0; i < length; i++) {
+            ByteBuffer buf = srcs[i + offset];
+            int remaining = buf.remaining();
+            if (totalRemaining + remaining > Integer.MAX_VALUE) {
+                // Avoid producing chunks too large for clients by reducing the number of buffers
+                // until total remaining fits within a 32-bit signed integer value. This is safe
+                // because a single java ByteBuffer has a capacity represented by an integer.
+                length = i;
+                break;
+            }
+            totalRemaining += remaining;
+        }
+        if(totalRemaining == 0) {
+            return 0;
+        }
+        int remaining = (int) totalRemaining;
+        this.state |= FLAG_FIRST_DATA_WRITTEN;
+        int oldLimit = srcs[length - 1].limit();
+        boolean dataRemaining = false; //set to true if there is data in src that still needs to be written out
+        if (chunkleft == 0 && !chunkingSepBuffer.hasRemaining()) {
+            chunkingBuffer.clear();
+            putIntAsHexString(chunkingBuffer, remaining);
+            chunkingBuffer.put(CRLF);
+            chunkingBuffer.flip();
+            chunkingSepBuffer.clear();
+            chunkingSepBuffer.put(CRLF);
+            chunkingSepBuffer.flip();
+            state |= FLAG_WRITTEN_FIRST_CHUNK;
+            chunkleft = remaining;
+        } else {
+            int maxRemaining = chunkleft;
+            for (int i = 0; i < length; i++) {
+                ByteBuffer buf = srcs[offset + i];
+                int bufRemaining = buf.remaining();
+                if (bufRemaining >= maxRemaining) {
+                    length = i + 1;
+                    oldLimit = buf.limit();
+                    dataRemaining = true;
+                    buf.limit(buf.position() + maxRemaining);
+                    break;
+                }
+                maxRemaining -= bufRemaining;
+            }
+        }
+        try {
+            int chunkingSize = chunkingBuffer.remaining();
+            int chunkingSepSize = chunkingSepBuffer.remaining();
+            if (chunkingSize > 0 || chunkingSepSize > 0 || lastChunkBuffer != null) {
+                int originalRemaining = (int) Buffers.remaining(srcs, offset, length);
+                long result;
+                if (lastChunkBuffer == null || dataRemaining) {
+                    // chunkingBuffer
+                    // srcs (taking into account offset+length)
+                    // chunkingSepBuffer
+                    final ByteBuffer[] buf = new ByteBuffer[2 + length];
+                    buf[0] = chunkingBuffer;
+                    System.arraycopy(srcs, offset , buf, 1, length);
+                    buf[length + 1] = chunkingSepBuffer;
+                    result = next.write(buf, 0, buf.length);
+                } else {
+                    // chunkingBuffer
+                    // srcs (taking into account offset+length)
+                    // lastChunkBuffer
+                    final ByteBuffer[] buf = new ByteBuffer[2 + length];
+                    buf[0] = chunkingBuffer;
+                    System.arraycopy(srcs, offset , buf, 1, length);
+                    buf[length + 1] = lastChunkBuffer.getBuffer();
+                    if (anyAreSet(state, CONF_FLAG_PASS_CLOSE)) {
+                        result = next.writeFinal(buf, 0, buf.length);
+                    } else {
+                        result = next.write(buf, 0, buf.length);
+                    }
+                    if (Buffers.remaining(srcs, offset, length) == 0) {
+                        state |= FLAG_WRITES_SHUTDOWN;
+                    }
+                    if (!lastChunkBuffer.getBuffer().hasRemaining()) {
+                        state |= FLAG_NEXT_SHUTDOWN;
+                        lastChunkBuffer.close();
+                    }
+                }
+                int srcWritten = originalRemaining - (int) Buffers.remaining(srcs, offset, length);
+                chunkleft -= srcWritten;
+                if (result < chunkingSize) {
+                    return 0;
+                } else {
+                    return srcWritten;
+                }
+            } else {
+                long result = next.write(srcs, offset, length);
+                chunkleft -= result;
+                return result;
+
+            }
+        } finally {
+            srcs[length - 1].limit(oldLimit);
+        }
+    }
 
     int doWrite(final ByteBuffer src) throws IOException {
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
@@ -195,11 +299,13 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         } finally {
             src.limit(oldLimit);
         }
-
     }
 
     @Override
     public void truncateWrites() throws IOException {
+        if (anyAreSet(state, FLAG_FINISHED)) {
+            return;
+        }
         try {
             if (lastChunkBuffer != null) {
                 lastChunkBuffer.close();
@@ -214,12 +320,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
 
     @Override
     public long write(final ByteBuffer[] srcs, final int offset, final int length) throws IOException {
-        for (int i = offset; i < length; ++i) {
-            if (srcs[i].hasRemaining()) {
-                return write(srcs[i]);
-            }
-        }
-        return 0;
+        return doWrite(srcs, offset, length);
     }
 
     @Override
@@ -258,6 +359,9 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
 
     @Override
     public boolean flush() throws IOException {
+        if (anyAreSet(state, FLAG_FINISHED)) {
+            return true;
+        }
         this.state |= FLAG_FIRST_DATA_WRITTEN;
         if (anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             if (anyAreSet(state, FLAG_NEXT_SHUTDOWN)) {
@@ -300,10 +404,6 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
         if(anyAreSet(state, FLAG_WRITES_SHUTDOWN)) {
             return;
         }
-        if (this.chunkleft != 0) {
-            UndertowLogger.REQUEST_IO_LOGGER.debugf("Channel closed mid-chunk");
-            next.truncateWrites();
-        }
         if (!anyAreSet(state, FLAG_FIRST_DATA_WRITTEN)) {
             //if no data was actually sent we just remove the transfer encoding header, and set content length 0
             //TODO: is this the best way to do it?
@@ -311,12 +411,28 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             responseHeaders.put(Headers.CONTENT_LENGTH, "0"); //according to the spec we don't actually need this, but better to be safe
             responseHeaders.remove(Headers.TRANSFER_ENCODING);
             state |= FLAG_NEXT_SHUTDOWN | FLAG_WRITES_SHUTDOWN;
+            try {
+                flush();
+            } catch (IOException ignore) {
+                // just log it at debug level, this is nothing but an attempt to flush the last bytes
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(ignore);
+            }
             if(anyAreSet(state, CONF_FLAG_PASS_CLOSE)) {
                 next.terminateWrites();
             }
         } else {
             createLastChunk(false);
             state |= FLAG_WRITES_SHUTDOWN;
+            try {
+                flush();
+            } catch (IOException ignore) {
+                // just log it at debug level, this is nothing but an attempt to flush the last bytes
+                UndertowLogger.REQUEST_IO_LOGGER.ioException(ignore);
+            }
+        }
+        if (this.chunkleft != 0) {
+            UndertowLogger.REQUEST_IO_LOGGER.debugf("Channel closed mid-chunk");
+            next.truncateWrites();
         }
     }
 
@@ -363,7 +479,7 @@ public class ChunkedStreamSinkConduit extends AbstractStreamSinkConduit<StreamSi
             lastChunkBuffer.put(CRLF);
         }
         //horrible hack
-        //there is a situation where we can get a buffer leak here if the connection is terminated abnormaly
+        //there is a situation where we can get a buffer leak here if the connection is terminated abnormally
         //this should be fixed once this channel has its lifecycle tied to the connection, same as fixed length
         lastChunkBuffer.flip();
         ByteBuffer data = ByteBuffer.allocate(lastChunkBuffer.remaining());

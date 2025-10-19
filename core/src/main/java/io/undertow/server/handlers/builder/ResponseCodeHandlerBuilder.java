@@ -61,8 +61,13 @@ public class ResponseCodeHandlerBuilder implements HandlerBuilder {
         return new HandlerWrapper() {
             @Override
             public HttpHandler wrap(HttpHandler handler) {
-                return new ResponseCodeHandler(value);
+                return new ResponseCodeHandler(handler, value);
             }
         };
+    }
+
+    @Override
+    public int priority() {
+        return 0;
     }
 }

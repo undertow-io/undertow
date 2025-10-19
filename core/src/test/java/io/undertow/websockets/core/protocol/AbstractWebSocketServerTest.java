@@ -26,8 +26,10 @@ import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.core.AbstractReceiveListener;
 import io.undertow.websockets.core.BufferedBinaryMessage;
 import io.undertow.websockets.core.BufferedTextMessage;
+import io.undertow.websockets.core.CloseMessage;
 import io.undertow.websockets.core.WebSocketCallback;
 import io.undertow.websockets.core.WebSocketChannel;
+import io.undertow.websockets.core.WebSocketMessages;
 import io.undertow.websockets.core.WebSockets;
 import io.undertow.websockets.spi.WebSocketHttpExchange;
 import io.undertow.websockets.utils.FrameChecker;
@@ -46,6 +48,7 @@ import org.xnio.Pooled;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -165,6 +168,50 @@ public class AbstractWebSocketServerTest {
         latch.getIoFuture().get();
         Assert.assertFalse(receivedResponse.get());
         client.destroy();
+    }
+
+    @Test
+    public void testCloseOnPeerGone() throws Exception {
+        if (getVersion() == WebSocketVersion.V00) {
+            // ignore 00 tests for now
+            return;
+        }
+        final AtomicBoolean connected = new AtomicBoolean(false);
+        final FutureResult<CloseMessage> latch = new FutureResult();
+        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
+            @Override
+            public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
+                connected.set(true);
+                channel.getReceiveSetter().set(new AbstractReceiveListener() {
+
+                    @Override
+                    protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) {
+                        Assert.fail();
+                    }
+
+                    @Override
+                    protected void onCloseMessage(CloseMessage msg, WebSocketChannel channel) {
+                        latch.setResult(msg);
+                    }
+
+                    @Override
+                    protected void onError(WebSocketChannel channel, Throwable t) {
+                        Assert.fail();
+                    }
+                });
+                channel.resumeReceives();
+            }
+        }));
+
+        WebSocketTestClient client = new WebSocketTestClient(getVersion(),
+                new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":"
+                        + DefaultServer.getHostPort("default") + "/"));
+        client.connect();
+        client.destroy(true);
+        latch.getIoFuture().await(5000, TimeUnit.MILLISECONDS);
+        final CloseMessage msg = latch.getIoFuture().get();
+        Assert.assertNotNull(msg);
+        Assert.assertEquals(WebSocketMessages.MESSAGES.messageCloseWebSocket(), msg.getReason());
     }
 
     protected WebSocketVersion getVersion() {

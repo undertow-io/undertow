@@ -18,6 +18,8 @@
 
 package io.undertow.server.handlers.cache;
 
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -40,6 +42,14 @@ import io.undertow.util.ConcurrentDirectDeque;
  */
 public class LRUCache<K, V> {
     private static final int SAMPLE_INTERVAL = 5;
+    /**
+     * Max age 0, indicating that entries expire upon creation and are not retained;
+     */
+    public static final int MAX_AGE_NO_CACHING = 0;
+    /**
+     * Mage age -1, entries dont expire
+     */
+    public static final int MAX_AGE_NO_EXPIRY = -1;
 
     /**
      * Max active entries that are present in the cache.
@@ -61,6 +71,7 @@ public class LRUCache<K, V> {
         this.maxEntries = maxEntries;
         this.fifo = false;
     }
+
     public LRUCache(int maxEntries, final int maxAge, boolean fifo) {
         this.maxAge = maxAge;
         this.cache = new ConcurrentHashMap<>(16);
@@ -73,8 +84,10 @@ public class LRUCache<K, V> {
         CacheEntry<K, V> value = cache.get(key);
         if (value == null) {
             long expires;
-            if(maxAge == -1) {
-                expires = -1;
+            if(maxAge == MAX_AGE_NO_EXPIRY) {
+                expires = MAX_AGE_NO_EXPIRY;
+            } else if (maxAge == MAX_AGE_NO_CACHING) {
+                return;
             } else {
                 expires = System.currentTimeMillis() + maxAge;
             }
@@ -101,7 +114,7 @@ public class LRUCache<K, V> {
             return null;
         }
         long expires = cacheEntry.getExpires();
-        if(expires != -1) {
+        if(expires != MAX_AGE_NO_EXPIRY) {
             if(System.currentTimeMillis() > expires) {
                 remove(key);
                 return null;
@@ -115,6 +128,10 @@ public class LRUCache<K, V> {
         }
 
         return cacheEntry.getValue();
+    }
+
+    public Set<K> keySet(){
+        return Collections.unmodifiableSet(this.cache.keySet());
     }
 
     private void bumpAccess(CacheEntry<K, V> cacheEntry) {

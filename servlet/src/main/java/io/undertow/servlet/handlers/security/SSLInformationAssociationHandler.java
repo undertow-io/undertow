@@ -20,13 +20,13 @@ package io.undertow.servlet.handlers.security;
 
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
-import jakarta.servlet.ServletRequest;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.SSLSessionInfo;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.util.HexConverter;
+import jakarta.servlet.ServletRequest;
 
 /**
  * Handler that associates SSL metadata with request
@@ -105,6 +105,10 @@ public class SSLInformationAssociationHandler implements HttpHandler {
         if (ssl != null) {
             String cipherSuite = ssl.getCipherSuite();
             byte[] sessionId = ssl.getSessionId();
+            // Required since Jakarta Servlet 6.1
+            if (ssl.getSecureProtocol() != null) {
+                request.setAttribute("jakarta.servlet.request.secure_protocol", ssl.getSecureProtocol());
+            }
             request.setAttribute("jakarta.servlet.request.cipher_suite", cipherSuite);
             request.setAttribute("jakarta.servlet.request.key_size", ssl.getKeySize());
             request.setAttribute("jakarta.servlet.request.ssl_session_id", sessionId != null? HexConverter.convertToHexString(sessionId) : null);

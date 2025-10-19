@@ -38,6 +38,7 @@ public class MimeMappings {
         Map<String, String> defaultMappings = new HashMap<>(101);
         defaultMappings.put("txt", "text/plain");
         defaultMappings.put("css", "text/css");
+        defaultMappings.put("csv", "text/csv");
         defaultMappings.put("html", "text/html");
         defaultMappings.put("htm", "text/html");
         defaultMappings.put("gif", "image/gif");
@@ -45,8 +46,9 @@ public class MimeMappings {
         defaultMappings.put("jpe", "image/jpeg");
         defaultMappings.put("jpeg", "image/jpeg");
         defaultMappings.put("bmp", "image/bmp");
-        defaultMappings.put("js", "application/javascript");
+        defaultMappings.put("webp", "image/webp");
         defaultMappings.put("png", "image/png");
+        defaultMappings.put("js", "application/javascript");
         defaultMappings.put("java", "text/plain");
         defaultMappings.put("body", "text/html");
         defaultMappings.put("rtx", "text/richtext");
@@ -118,6 +120,10 @@ public class MimeMappings {
         defaultMappings.put("mpeg", "video/mpeg");
         defaultMappings.put("mpg", "video/mpeg");
         defaultMappings.put("mpe", "video/mpeg");
+        defaultMappings.put("mp4", "video/mp4");
+        defaultMappings.put("webm", "video/webm");
+        defaultMappings.put("flac", "audio/flac");
+        defaultMappings.put("weba", "audio/webm");
         defaultMappings.put("qt", "video/quicktime");
         defaultMappings.put("mov", "video/quicktime");
         defaultMappings.put("avi", "video/x-msvideo");
@@ -126,7 +132,6 @@ public class MimeMappings {
         defaultMappings.put("wrl", "x-world/x-vrml");
         defaultMappings.put("mpv2", "video/mpeg2");
         defaultMappings.put("jnlp", "application/x-java-jnlp-file");
-
         defaultMappings.put("eot", "application/vnd.ms-fontobject");
         defaultMappings.put("woff", "application/font-woff");
         defaultMappings.put("woff2", "application/font-woff2");

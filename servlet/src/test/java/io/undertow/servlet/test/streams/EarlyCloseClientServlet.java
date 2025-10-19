@@ -18,9 +18,6 @@
 
 package io.undertow.servlet.test.streams;
 
-import io.undertow.testutils.DefaultServer;
-import org.junit.runner.RunWith;
-
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServlet;
@@ -33,7 +30,6 @@ import java.util.concurrent.CountDownLatch;
 /**
  * @author Stuart Douglas
  */
-@RunWith(DefaultServer.class)
 public class EarlyCloseClientServlet extends HttpServlet {
 
     private static volatile boolean exceptionThrown;

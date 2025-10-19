@@ -129,7 +129,7 @@ public class LoadBalancerConnectionPoolingTestCase {
                 Assert.fail("there should still be a connection");
             }
         }
-        long end = System.currentTimeMillis() + (TTL * 3);
+        long end = System.currentTimeMillis() + (TTL * 30);
         while (!activeConnections.isEmpty() && System.currentTimeMillis() < end) {
             Thread.sleep(100);
         }

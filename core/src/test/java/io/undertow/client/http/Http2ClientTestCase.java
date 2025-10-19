@@ -16,8 +16,11 @@
 package io.undertow.client.http;
 
 import java.io.IOException;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.channels.ClosedChannelException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -79,6 +82,8 @@ public class Http2ClientTestCase {
     private static URI ADDRESS;
 
     private static final AttachmentKey<String> RESPONSE_BODY = AttachmentKey.create(String.class);
+
+    private IOException exception;
 
     static {
         final OptionMap.Builder builder = OptionMap.builder()
@@ -195,6 +200,32 @@ public class Http2ClientTestCase {
         }
     }
 
+    @Test
+    public void testH2ServerIdentity() throws Exception {
+        final UndertowClient client = createClient();
+        exception = null;
+
+        final List<ClientResponse> responses = new CopyOnWriteArrayList<>();
+        final CountDownLatch latch = new CountDownLatch(1);
+        InetAddress address = InetAddress.getByName(ADDRESS.getHost());
+        String hostname = address instanceof Inet6Address? "[" + address.getHostAddress() + "]" : address.getHostAddress();
+        URI uri = new URI("h2", ADDRESS.getUserInfo(), hostname, ADDRESS.getPort(), ADDRESS.getPath(), ADDRESS.getQuery(), ADDRESS.getFragment());
+        final ClientConnection connection = client.connect(uri, worker, new UndertowXnioSsl(worker.getXnio(), OptionMap.EMPTY, DefaultServer.getClientSSLContext()), DefaultServer.getBufferPool(), OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+        try {
+            connection.getIoThread().execute(() -> {
+                final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(MESSAGE);
+                request.getRequestHeaders().put(Headers.HOST, DefaultServer.getHostAddress());
+                connection.sendRequest(request, createClientCallback(responses, latch));
+            });
+
+            latch.await(10, TimeUnit.SECONDS);
+
+            Assert.assertEquals(0, responses.size());
+            Assert.assertTrue(exception instanceof ClosedChannelException);
+        } finally {
+            IoUtils.safeClose(connection);
+        }
+    }
 
     @Test
     public void testHeadRequest() throws Exception {
@@ -317,7 +348,7 @@ public class Http2ClientTestCase {
                             @Override
                             protected void error(IOException e) {
                                 e.printStackTrace();
-
+                                exception = e;
                                 latch.countDown();
                             }
                         }.setup(result.getResponseChannel());
@@ -326,7 +357,7 @@ public class Http2ClientTestCase {
                     @Override
                     public void failed(IOException e) {
                         e.printStackTrace();
-
+                        exception = e;
                         latch.countDown();
                     }
                 });
@@ -338,6 +369,7 @@ public class Http2ClientTestCase {
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
+                    exception = e;
                     latch.countDown();
                 }
             }
@@ -345,6 +377,7 @@ public class Http2ClientTestCase {
             @Override
             public void failed(IOException e) {
                 e.printStackTrace();
+                exception = e;
                 latch.countDown();
             }
         };

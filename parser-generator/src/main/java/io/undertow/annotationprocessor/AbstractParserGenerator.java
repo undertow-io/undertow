@@ -119,7 +119,7 @@ public abstract class AbstractParserGenerator {
     protected void createStateMachine(final String[] originalItems, final String className, final ClassFile file, final ClassMethod sctor, final AtomicInteger fieldCounter, final String methodName, final CustomStateMachine stateMachine, boolean expectNewline) {
 
         //list of all states except the initial
-        final List<State> allStates = new ArrayList<State>();
+        final List<State> allStates = new ArrayList<>();
         final State initial = new State((byte) 0, "");
         for (String value : originalItems) {
             addStates(initial, value, allStates);
@@ -225,7 +225,7 @@ public abstract class AbstractParserGenerator {
         c.branchEnd(nonZero);
 
 
-        final List<State> states = new ArrayList<State>();
+        final List<State> states = new ArrayList<>();
         states.add(initial);
         states.addAll(allStates);
         Collections.sort(states);
@@ -255,7 +255,7 @@ public abstract class AbstractParserGenerator {
         c.iload(CURRENT_STATE_VAR);
         //switch on the current state
         TableSwitchBuilder builder = new TableSwitchBuilder(-2, noStates);
-        final IdentityHashMap<State, AtomicReference<BranchEnd>> ends = new IdentityHashMap<State, AtomicReference<BranchEnd>>();
+        final IdentityHashMap<State, AtomicReference<BranchEnd>> ends = new IdentityHashMap<>();
         final AtomicReference<BranchEnd> prefixMatch = builder.add();
         final AtomicReference<BranchEnd> noState = builder.add();
 
@@ -318,8 +318,8 @@ public abstract class AbstractParserGenerator {
         c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
         c.dup();
         c.dup();
-        final Set<BranchEnd> prefixHandleSpace = new LinkedHashSet<BranchEnd>();
-        final Set<BranchEnd> badPrefixHandleSpace = new LinkedHashSet<BranchEnd>();
+        final Set<BranchEnd> prefixHandleSpace = new LinkedHashSet<>();
+        final Set<BranchEnd> badPrefixHandleSpace = new LinkedHashSet<>();
         if (stateMachine.isHeader()) {
             c.iconst(':');
             prefixHandleSpace.add(c.ifIcmpeq());
@@ -443,8 +443,8 @@ public abstract class AbstractParserGenerator {
         c.invokevirtual(ByteBuffer.class.getName(), "get", "()B");
         c.dup();
 
-        final Set<BranchEnd> nostateHandleSpace = new LinkedHashSet<BranchEnd>();
-        final Set<BranchEnd> badNostateHandleSpace = new LinkedHashSet<BranchEnd>();
+        final Set<BranchEnd> nostateHandleSpace = new LinkedHashSet<>();
+        final Set<BranchEnd> badNostateHandleSpace = new LinkedHashSet<>();
         if (stateMachine.isHeader()) {
             c.iconst(':');
             nostateHandleSpace.add(c.ifIcmpeq());
@@ -590,7 +590,7 @@ public abstract class AbstractParserGenerator {
         c.dup();
         final Set<BranchEnd> tokenEnds = new LinkedHashSet<>();
         final Set<BranchEnd> badTokenEnds = new LinkedHashSet<>();
-        final Map<State, BranchEnd> ends = new IdentityHashMap<State, BranchEnd>();
+        final Map<State, BranchEnd> ends = new IdentityHashMap<>();
         for (State state : currentState.next.values()) {
             c.iconst(state.value);
             ends.put(state, c.ifIcmpeq());
@@ -741,8 +741,8 @@ public abstract class AbstractParserGenerator {
         String httpStringFieldName;
         final byte value;
         final String soFar;
-        final Map<Byte, State> next = new LinkedHashMap<Byte, State>();
-        private final Set<BranchEnd> branchEnds = new LinkedHashSet<BranchEnd>();
+        final Map<Byte, State> next = new LinkedHashMap<>();
+        private final Set<BranchEnd> branchEnds = new LinkedHashSet<>();
         private CodeLocation location;
 
         private State(final byte value, final String soFar) {

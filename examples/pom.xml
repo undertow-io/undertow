@@ -25,13 +25,13 @@
     <parent>
         <groupId>io.undertow</groupId>
         <artifactId>undertow-parent</artifactId>
-        <version>2.3.0.Alpha2-SNAPSHOT</version>
+        <version>2.5.0.Alpha1-SNAPSHOT</version>
     </parent>
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-examples</artifactId>
     <name>Undertow Examples</name>
-    <version>2.3.0.Alpha2-SNAPSHOT</version>
+    <version>2.5.0.Alpha1-SNAPSHOT</version>
 
     <dependencies>
 
@@ -91,6 +91,31 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
+                <configuration>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/MANIFEST.MF</exclude>
+                                <exclude>module-info.class</exclude>
+                                <exclude>META-INF/services/io.undertow.attribute.ExchangeAttributeBuilder</exclude>
+                                <exclude>META-INF/services/io.undertow.predicate.PredicateBuilder</exclude>
+                                <exclude>META-INF/services/io.undertow.server.handlers.builder.HandlerBuilder</exclude>
+                                <exclude>META-INF/LICENSE.md</exclude>
+                                <exclude>META-INF/LICENSE.txt</exclude>
+                                <exclude>META-INF/NOTICE.md</exclude>
+                            </excludes>
+                        </filter>
+                        <filter>
+                            <artifact>io.undertow/undertow-core</artifact>
+                            <excludes>
+                                <include>META-INF/services/io.undertow.attribute.ExchangeAttributeBuilder</include>
+                                <include>META-INF/services/io.undertow.predicate.PredicateBuilder</include>
+                                <include>META-INF/services/io.undertow.server.handlers.builder.HandlerBuilder</include>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -114,7 +139,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
-                <version>1.2.1</version>
                 <configuration>
                     <executable>java</executable>
                     <arguments>

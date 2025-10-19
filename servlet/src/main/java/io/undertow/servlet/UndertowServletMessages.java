@@ -101,8 +101,8 @@ public interface UndertowServletMessages {
     @Message(id = 10018, value = "Async not started")
     IllegalStateException asyncNotStarted();
 
-    @Message(id = 10019, value = "Response already commited")
-    IllegalStateException responseAlreadyCommited();
+    @Message(id = 10019, value = "Response already committed")
+    IllegalStateException responseAlreadyCommitted();
 
     @Message(id = 10020, value = "Content has been written")
     IllegalStateException contentHasBeenWritten();
@@ -244,4 +244,10 @@ public interface UndertowServletMessages {
 
     //@Message(id = 10066, value = "Can not set invoke 'declareRoles' from dynamic listener in servlet context for context path '%s' in deployment '%s' ")
     //UnsupportedOperationException cantCallFromDynamicListener(String deploymentName, String contextPath);
+
+    @Message(id = 10067, value = "Servlet container does not permit session creation after response was committed.")
+    IllegalStateException sessionCreationAfterResponseCommittedNotAllowed();
+
+    @Message(id = 10068, value = "Servlet container does not permit session identifier change after response was committed.")
+    IllegalStateException sessionIdChangeAfterResponseCommittedNotAllowed();
 }

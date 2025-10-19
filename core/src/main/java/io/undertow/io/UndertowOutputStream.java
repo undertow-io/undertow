@@ -272,11 +272,18 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
      * {@inheritDoc}
      */
     public void flush() throws IOException {
-        if (anyAreSet(state, FLAG_CLOSED)) {
-            throw UndertowMessages.MESSAGES.streamIsClosed();
-        }
+        boolean closed = anyAreSet(state, FLAG_CLOSED);
         if (buffer != null && buffer.position() != 0) {
+            if (closed) {
+                throw UndertowMessages.MESSAGES.streamIsClosed();
+            }
             writeBufferBlocking(false);
+        } else if (closed) {
+            // No-op if flush is called with no buffered data on a closed channel.
+            // This stream closes itself when a Content-Length is provided, once sufficient
+            // bytes have been written -- a flush following the last write is entirely
+            // reasonable.
+            return;
         }
         if (channel == null) {
             channel = exchange.getResponseChannel();
@@ -291,12 +298,8 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         buffer.flip();
 
         while (buffer.hasRemaining()) {
-            if(writeFinal) {
-                channel.writeFinal(buffer);
-            } else {
-                channel.write(buffer);
-            }
-            if(buffer.hasRemaining()) {
+            int result = writeFinal ? channel.writeFinal(buffer) : channel.write(buffer);
+            if (result == 0) {
                 channel.awaitWritable();
             }
         }
@@ -306,6 +309,8 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
 
     @Override
     public void transferFrom(FileChannel source) throws IOException {
+        final long startPosition = source.position();
+        final long count = source.size() - source.position();
         if (anyAreSet(state, FLAG_CLOSED)) {
             throw UndertowMessages.MESSAGES.streamIsClosed();
         }
@@ -315,10 +320,8 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         if (channel == null) {
             channel = exchange.getResponseChannel();
         }
-        long position = source.position();
-        long size = source.size();
-        Channels.transferBlocking(channel, source, position, size);
-        updateWritten(size - position);
+        Channels.transferBlocking(channel, source, startPosition, count);
+        updateWritten(count);
     }
 
     /**

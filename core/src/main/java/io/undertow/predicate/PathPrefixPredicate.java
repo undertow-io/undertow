@@ -33,6 +33,7 @@ import io.undertow.UndertowLogger;
  */
 public class PathPrefixPredicate implements Predicate {
 
+    public static final String PREFIX_MATCH_RECORD = "PREFIX_MATCH_RECORD";
     private final PathMatcher<Boolean> pathMatcher;
     private static final boolean traceEnabled;
 
@@ -71,6 +72,10 @@ public class PathPrefixPredicate implements Predicate {
                 UndertowLogger.PREDICATE_LOGGER.tracef("Storing \"remaining\" string of [%s] for %s.", result.getRemaining(), value);
             }
             context.put("remaining", result.getRemaining());
+            final PathPrefixMatchRecord transformer = new PathPrefixMatchRecord();
+            transformer.setRemaining(result.getRemaining());
+            transformer.setPrefix(result.getMatched());
+            context.put(PREFIX_MATCH_RECORD, transformer);
         }
         return matches;
     }
@@ -111,5 +116,42 @@ public class PathPrefixPredicate implements Predicate {
             String[] path = (String[]) config.get("path");
             return new PathPrefixPredicate(path);
         }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
+    }
+
+    public static class PathPrefixMatchRecord {
+
+        private String prefix;
+        private String remaining;
+        private boolean overWritten;
+
+        public void setPrefix(final String prefix) {
+            this.prefix = prefix;
+        }
+
+        public void setRemaining(final String remaining) {
+            this.remaining = remaining;
+        }
+
+        public void overWritten() {
+            this.overWritten = true;
+        }
+
+        public boolean isOverWritten() {
+            return this.overWritten;
+        }
+
+        public String getPrefix() {
+            return prefix;
+        }
+
+        public String getRemaining() {
+            return remaining;
+        }
+
     }
 }

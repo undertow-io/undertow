@@ -197,6 +197,19 @@ public class SecurityConstraintUrlMappingTestCase {
     }
 
     @Test
+    public void testUnknown() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/unknown");
+            HttpResponse result = client.execute(get);
+            assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
     public void testHttpMethod() throws IOException {
         TestHttpClient client = new TestHttpClient();
         final String url = DefaultServer.getDefaultServerURL() + "/servletContext/public/postSecured/a";

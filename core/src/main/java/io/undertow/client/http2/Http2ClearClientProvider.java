@@ -170,7 +170,7 @@ public class Http2ClearClientProvider implements ClientProvider {
             if (options.contains(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE)) {
                 pushOption(currentBuffer, Http2Setting.SETTINGS_MAX_HEADER_LIST_SIZE, options.get(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE));
             } else if(options.contains(UndertowOptions.MAX_HEADER_SIZE)) {
-                pushOption(currentBuffer, Http2Setting.SETTINGS_MAX_HEADER_LIST_SIZE, options.get(UndertowOptions.HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE));
+                pushOption(currentBuffer, Http2Setting.SETTINGS_MAX_HEADER_LIST_SIZE, options.get(UndertowOptions.MAX_HEADER_SIZE));
             }
             currentBuffer.flip();
             return FlexBase64.encodeStringURL(currentBuffer, false);
@@ -207,7 +207,7 @@ public class Http2ClearClientProvider implements ClientProvider {
 
             final ClientStatisticsImpl clientStatistics;
             //first we set up statistics, if required
-            if (options.get(UndertowOptions.ENABLE_STATISTICS, false)) {
+            if (options.get(UndertowOptions.ENABLE_STATISTICS, UndertowOptions.DEFAULT_ENABLE_STATISTICS)) {
                 clientStatistics = new ClientStatisticsImpl();
                 channel.getSinkChannel().setConduit(new BytesSentStreamSinkConduit(channel.getSinkChannel().getConduit(), new ByteActivityCallback() {
                     @Override

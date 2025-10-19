@@ -92,6 +92,11 @@ public class SetErrorHandler implements HttpHandler {
             return new Wrapper((Integer) config.get("response-code"));
         }
 
+        @Override
+        public int priority() {
+            return 0;
+        }
+
     }
 
     private static class Wrapper implements HandlerWrapper {

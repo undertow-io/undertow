@@ -56,12 +56,16 @@ import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.RedirectBuilder;
 import io.undertow.util.StatusCodes;
+import org.xnio.Bits;
 
 import static io.undertow.util.URLUtils.isAbsoluteUrl;
 
 /**
+ * Implementation of {@code HttpServletResponse}.
+ *
  * @author Stuart Douglas
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
+ * @author Flavia Rainone
  */
 public final class HttpServletResponseImpl implements HttpServletResponse {
 
@@ -74,15 +78,22 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private PrintWriter writer;
     private Integer bufferSize;
     private long contentLength = -1;
-    private boolean insideInclude = false;
+
+    private int flags = 0;
+    // response is inside include
+    private static final int INSIDE_INCLUDE_FLAG          = 1 << 0x00;
+    // response is done
+    private static final int RESPONSE_DONE_FLAG           = 1 << 0x01;
+    // ignored flush has been performed
+    private static final int IGNORED_FLUSH_PERFORMED_FLAG = 1 << 0x02;
+    // prevents anything to be added to response
+    private static final int TREAT_AS_COMMITTED_FLAG      = 1 << 0x03;
+    // indicates that we are closing the response and no further content should be written
+    private static final int CONTENT_FULLY_WRITTEN_FLAG   = 1 << 0x04;
+    //if a content type has been set either implicitly or implicitly
+    private static final int CHARSET_SET_FLAG             = 1 << 0x05;
+
     private Locale locale;
-    private boolean responseDone = false;
-
-    private boolean ignoredFlushPerformed = false;
-
-    private boolean treatAsCommitted = false;
-
-    private boolean charsetSet = false; //if a content type has been set either implicitly or implicitly
     private String contentType;
     private String charset;
     private Supplier<Map<String, String>> trailerSupplier;
@@ -99,7 +110,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void addCookie(final Cookie newCookie) {
-        if (insideInclude) {
+        if (Bits.anyAreSet(flags, INSIDE_INCLUDE_FLAG)) {
             return;
         }
         final ServletCookieAdaptor servletCookieAdaptor = new ServletCookieAdaptor(newCookie);
@@ -116,7 +127,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendError(final int sc, final String msg) throws IOException {
-        if(insideInclude) {
+        if (Bits.anyAreSet(flags, INSIDE_INCLUDE_FLAG)) {
             //not 100% sure this is the correct action
             return;
         }
@@ -125,7 +136,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             if(src.getErrorCode() > 0) {
                 return; //error already set
             }
-            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommitted();
         }
         if(servletContext.getDeployment().getDeploymentInfo().isSendCustomReasonPhraseOnError()) {
             exchange.setReasonPhrase(msg);
@@ -135,7 +146,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         exchange.setStatusCode(sc);
         if(src.isRunningInsideHandler()) {
             //all we do is set the error on the context, we handle it when the request is returned
-            treatAsCommitted = true;
+            flags |= TREAT_AS_COMMITTED_FLAG;
             src.setError(sc, msg);
         } else {
             //if the src is null there is no outer handler, as we are in an asnc request
@@ -147,7 +158,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         writer = null;
         responseState = ResponseState.NONE;
         resetBuffer();
-        treatAsCommitted = false;
+        exchange.getResponseHeaders().remove(Headers.CONTENT_LENGTH);
+        flags &= ~TREAT_AS_COMMITTED_FLAG;
         final String location = servletContext.getDeployment().getErrorPages().getErrorLocation(sc);
         if (location != null) {
             RequestDispatcherImpl requestDispatcher = new RequestDispatcherImpl(location, servletContext);
@@ -177,11 +189,20 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void sendRedirect(final String location) throws IOException {
+        sendRedirect(location, StatusCodes.FOUND, true);
+    }
+
+    @Override
+    public void sendRedirect(final String location, final int sc, final boolean clearBuffer) throws IOException {
         if (responseStarted()) {
-            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommitted();
         }
-        resetBuffer();
-        setStatus(StatusCodes.FOUND);
+        if (clearBuffer) {
+            resetBuffer();
+        }
+        // TODO (jrp) should this only be cleared if clearBuffer is set to false? I somewhat think no.
+        exchange.getResponseHeaders().remove(Headers.CONTENT_LENGTH);
+        setStatus(sc);
         String realPath;
         if (isAbsoluteUrl(location)) {//absolute url
             exchange.getResponseHeaders().put(Headers.LOCATION, location);
@@ -197,7 +218,14 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
                 } else {
                     current = "";
                 }
-                realPath = CanonicalPathUtils.canonicalize(servletContext.getContextPath() + current + location);
+                String precanonLocation = location;
+                String query = "";
+                int firstQuestionMark = location.indexOf("?");
+                if (firstQuestionMark >= 0) {
+                    precanonLocation = location.substring(0, firstQuestionMark);
+                    query = location.substring(firstQuestionMark);
+                }
+                realPath = CanonicalPathUtils.canonicalize(servletContext.getContextPath() + current + precanonLocation) + query;
             }
             String loc = exchange.getRequestScheme() + "://" + exchange.getHostAndPort() + realPath;
             exchange.getResponseHeaders().put(Headers.LOCATION, loc);
@@ -228,7 +256,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if(name == null) {
             throw UndertowServletMessages.MESSAGES.headerNameWasNull();
         }
-        if (insideInclude || ignoredFlushPerformed) {
+        if (Bits.anyAreSet(flags, INSIDE_INCLUDE_FLAG | IGNORED_FLUSH_PERFORMED_FLAG)) {
             return;
         }
         if(name.equals(Headers.CONTENT_TYPE)) {
@@ -250,7 +278,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if(name == null) {
             throw UndertowServletMessages.MESSAGES.headerNameWasNull();
         }
-        if (insideInclude || ignoredFlushPerformed || treatAsCommitted) {
+        if (Bits.anyAreSet(flags, INSIDE_INCLUDE_FLAG | IGNORED_FLUSH_PERFORMED_FLAG | TREAT_AS_COMMITTED_FLAG | CONTENT_FULLY_WRITTEN_FLAG)) {
             return;
         }
         if(name.equals(Headers.CONTENT_TYPE) && !exchange.getResponseHeaders().contains(Headers.CONTENT_TYPE)) {
@@ -272,7 +300,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setStatus(final int sc) {
-        if (insideInclude || treatAsCommitted) {
+        if (Bits.anyAreSet(flags, INSIDE_INCLUDE_FLAG | TREAT_AS_COMMITTED_FLAG)) {
             return;
         }
         if (responseStarted()) {
@@ -330,7 +358,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public String getContentType() {
         if (contentType != null) {
-            if (charsetSet) {
+            if (Bits.anyAreSet(flags, CHARSET_SET_FLAG)) {
                 return contentType + ";charset=" + getCharacterEncoding();
             } else {
                 return contentType;
@@ -352,7 +380,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public PrintWriter getWriter() throws IOException {
         if (writer == null) {
-            if (!charsetSet) {
+            if (!Bits.anyAreSet(flags, CHARSET_SET_FLAG)) {
                 //servet 5.5
                 setCharacterEncoding(getCharacterEncoding());
             }
@@ -379,10 +407,14 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setCharacterEncoding(final String charset) {
-        if (insideInclude || responseStarted() || writer != null || isCommitted()) {
+        if (Bits.anyAreSet(flags, INSIDE_INCLUDE_FLAG) || responseStarted() || writer != null || isCommitted()) {
             return;
         }
-        charsetSet = charset != null;
+        if (charset != null) {
+            flags |= CHARSET_SET_FLAG;
+        } else {
+            flags &= ~CHARSET_SET_FLAG;
+        }
         this.charset = charset;
         if (contentType != null) {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, getContentType());
@@ -396,7 +428,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void setContentLengthLong(final long len) {
-        if (insideInclude || responseStarted()) {
+        if (Bits.anyAreSet(flags, INSIDE_INCLUDE_FLAG) || responseStarted()) {
             return;
         }
         if(len >= 0) {
@@ -408,20 +440,24 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     boolean isIgnoredFlushPerformed() {
-        return ignoredFlushPerformed;
+        return Bits.anyAreSet(flags, IGNORED_FLUSH_PERFORMED_FLAG);
     }
 
     void setIgnoredFlushPerformed(boolean ignoredFlushPerformed) {
-        this.ignoredFlushPerformed = ignoredFlushPerformed;
+        if (ignoredFlushPerformed) {
+            flags |= IGNORED_FLUSH_PERFORMED_FLAG;
+        } else {
+            flags &= ~IGNORED_FLUSH_PERFORMED_FLAG;
+        }
     }
 
     private boolean responseStarted() {
-        return exchange.isResponseStarted() || ignoredFlushPerformed || treatAsCommitted;
+        return exchange.isResponseStarted() || Bits.anyAreSet(flags, IGNORED_FLUSH_PERFORMED_FLAG | TREAT_AS_COMMITTED_FLAG);
     }
 
     @Override
     public void setContentType(final String type) {
-        if (type == null || insideInclude || responseStarted()) {
+        if (type == null || Bits.anyAreSet(flags, INSIDE_INCLUDE_FLAG) || responseStarted()) {
             return;
         }
         ContentTypeInfo ct = servletContext.parseContentType(type);
@@ -429,10 +465,10 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         boolean useCharset = false;
         if(ct.getCharset() != null && writer == null && !isCommitted()) {
             charset = ct.getCharset();
-            charsetSet = true;
+            flags |= CHARSET_SET_FLAG;
             useCharset = true;
         }
-        if(useCharset || !charsetSet) {
+        if(useCharset || !Bits.anyAreSet(flags, CHARSET_SET_FLAG)) {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getHeader());
         } else if(ct.getCharset() == null) {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, ct.getHeader() + "; charset=" + charset);
@@ -470,7 +506,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     public void closeStreamAndWriter() throws IOException {
-        if(treatAsCommitted) {
+        if(Bits.anyAreSet(flags, TREAT_AS_COMMITTED_FLAG)) {
             return;
         }
         if (writer != null) {
@@ -523,17 +559,17 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         responseState = ResponseState.NONE;
         exchange.getResponseHeaders().clear();
         exchange.setStatusCode(StatusCodes.OK);
-        treatAsCommitted = false;
+        flags &= ~(TREAT_AS_COMMITTED_FLAG | CONTENT_FULLY_WRITTEN_FLAG);
     }
 
     @Override
     public void setLocale(final Locale loc) {
-        if (insideInclude || responseStarted()) {
+        if (Bits.anyAreSet(flags, INSIDE_INCLUDE_FLAG) || responseStarted()) {
             return;
         }
         this.locale = loc;
         exchange.getResponseHeaders().put(Headers.CONTENT_LANGUAGE, loc.getLanguage() + "-" + loc.getCountry());
-        if (!charsetSet && writer == null) {
+        if (!Bits.anyAreSet(flags, CHARSET_SET_FLAG) && writer == null) {
             final Map<String, String> localeCharsetMapping = servletContext.getDeployment().getDeploymentInfo().getLocaleCharsetMapping();
             // first try DD provided mappings
             String charset = null;
@@ -570,10 +606,10 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     public void responseDone() {
-        if (responseDone || treatAsCommitted) {
+        if (Bits.anyAreSet(flags, RESPONSE_DONE_FLAG | TREAT_AS_COMMITTED_FLAG)) {
             return;
         }
-        responseDone = true;
+        flags |= RESPONSE_DONE_FLAG;
         try {
             closeStreamAndWriter();
         } catch (IOException e) {
@@ -584,11 +620,15 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     public boolean isInsideInclude() {
-        return insideInclude;
+        return Bits.anyAreSet(flags, INSIDE_INCLUDE_FLAG);
     }
 
     public void setInsideInclude(final boolean insideInclude) {
-        this.insideInclude = insideInclude;
+        if (insideInclude) {
+            this.flags |= INSIDE_INCLUDE_FLAG;
+        } else {
+            this.flags &= ~INSIDE_INCLUDE_FLAG;
+        }
     }
 
     public void setServletContext(final ServletContextImpl servletContext) {
@@ -777,13 +817,13 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     public boolean isTreatAsCommitted() {
-        return treatAsCommitted;
+        return Bits.anyAreSet(flags, TREAT_AS_COMMITTED_FLAG);
     }
 
     @Override
     public void setTrailerFields(Supplier<Map<String, String>> supplier) {
         if(exchange.isResponseStarted()) {
-            throw UndertowServletMessages.MESSAGES.responseAlreadyCommited();
+            throw UndertowServletMessages.MESSAGES.responseAlreadyCommitted();
         }
         if(exchange.getProtocol() == Protocols.HTTP_1_0) {
             throw UndertowServletMessages.MESSAGES.trailersNotSupported("HTTP/1.0 request");
@@ -806,6 +846,13 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     @Override
     public Supplier<Map<String, String>> getTrailerFields() {
         return trailerSupplier;
+    }
+
+    /**
+     * Marks this response as closed for writing extra bytes, including the addition of headers.
+     */
+    void setContentFullyWritten() {
+        this.flags |= CONTENT_FULLY_WRITTEN_FLAG;
     }
 
 }

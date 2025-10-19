@@ -40,6 +40,7 @@ import io.undertow.servlet.spec.HttpServletResponseImpl;
 import io.undertow.servlet.spec.RequestDispatcherImpl;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.HeaderValues;
+import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
@@ -65,7 +66,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -92,25 +92,21 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     private final ServletPathMatches paths;
 
     private final ExceptionHandler exceptionHandler;
-    private final HttpHandler dispatchHandler = new HttpHandler() {
-        @Override
-        public void handleRequest(final HttpServerExchange exchange) throws Exception {
-            final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-            if (System.getSecurityManager() == null) {
+    @SuppressWarnings("removal")
+    private final HttpHandler dispatchHandler = exchange -> {
+        final ServletRequestContext servletRequestContext = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        if (System.getSecurityManager() == null) {
+            dispatchRequest(exchange, servletRequestContext, servletRequestContext.getOriginalServletPathMatch().getServletChain(), DispatcherType.REQUEST);
+        } else {
+            //sometimes thread pools inherit some random
+            java.security.AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
                 dispatchRequest(exchange, servletRequestContext, servletRequestContext.getOriginalServletPathMatch().getServletChain(), DispatcherType.REQUEST);
-            } else {
-                //sometimes thread pools inherit some random
-                AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
-                    @Override
-                    public Object run() throws Exception {
-                        dispatchRequest(exchange, servletRequestContext, servletRequestContext.getOriginalServletPathMatch().getServletChain(), DispatcherType.REQUEST);
-                        return null;
-                    }
-                });
-            }
+                return null;
+            });
         }
     };
 
+    @SuppressWarnings("removal")
     public ServletInitialHandler(final ServletPathMatches paths, final HttpHandler next, final Deployment deployment, final ServletContextImpl servletContext) {
         this.next = next;
         this.servletContext = servletContext;
@@ -118,7 +114,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         this.listeners = servletContext.getDeployment().getApplicationListeners();
         SecurityManager sm = System.getSecurityManager();
         if(sm != null) {
-            //handle request can use doPrivilidged
+            //handle request can use doPrivileged
             //we need to make sure this is not abused
             sm.checkPermission(PERMISSION);
         }
@@ -155,8 +151,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         final HttpServletRequestImpl request = new HttpServletRequestImpl(exchange, servletContext);
         final ServletRequestContext servletRequestContext = new ServletRequestContext(servletContext.getDeployment(), request, response, info);
         //set the max request size if applicable
-        if (info.getServletChain().getManagedServlet().getMaxRequestSize() > 0 && isMultiPartExchange(exchange)) {
-            exchange.setMaxEntitySize(info.getServletChain().getManagedServlet().getMaxRequestSize());
+        if (info.getServletChain().getManagedServlet().getMaxMultipartRequestSize() > 0 && exchange.isMultiPartExchange()) {
+            exchange.setMaxEntitySize(info.getServletChain().getManagedServlet().getMaxMultipartRequestSize());
         }
         exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
 
@@ -220,8 +216,8 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         servletRequestContext.setServletRequest(request);
         servletRequestContext.setServletResponse(response);
         //set the max request size if applicable
-        if (info.getServletChain().getManagedServlet().getMaxRequestSize() > 0 && isMultiPartExchange(exchange)) {
-            exchange.setMaxEntitySize(info.getServletChain().getManagedServlet().getMaxRequestSize());
+        if (info.getServletChain().getManagedServlet().getMaxMultipartRequestSize() > 0 && exchange.isMultiPartExchange()) {
+            exchange.setMaxEntitySize(info.getServletChain().getManagedServlet().getMaxMultipartRequestSize());
         }
         exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
 
@@ -238,10 +234,10 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         }
     }
 
-    private boolean isMultiPartExchange(final HttpServerExchange exhange) {
+    private boolean isMultiPartExchange(final HttpServerExchange exchange) {
         //NOTE: should this include Range response?
-        final HeaderValues contentTypeHeaders = exhange.getRequestHeaders().get("Content-Type");
-        if(contentTypeHeaders != null && contentTypeHeaders.size() >0) {
+        final HeaderValues contentTypeHeaders = exchange.getRequestHeaders().get(Headers.CONTENT_TYPE);
+        if (contentTypeHeaders != null && !contentTypeHeaders.isEmpty()) {
             return contentTypeHeaders.getFirst().startsWith("multipart");
         } else {
             return false;
