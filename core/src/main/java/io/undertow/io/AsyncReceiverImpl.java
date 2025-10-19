@@ -56,7 +56,6 @@ public class AsyncReceiverImpl implements Receiver {
     private final HttpServerExchange exchange;
     private final StreamSourceChannel channel;
 
-    private int maxBufferSize = -1;
     private long maxContentSize = Integer.MAX_VALUE;
     private boolean paused = false;
     private boolean done = false;
@@ -67,11 +66,6 @@ public class AsyncReceiverImpl implements Receiver {
         if (channel == null) {
             throw UndertowMessages.MESSAGES.requestChannelAlreadyProvided();
         }
-    }
-
-    @Override
-    public void setMaxBufferSize(int maxBufferSize) {
-        this.maxBufferSize = maxBufferSize;
     }
 
     @Override
@@ -129,17 +123,9 @@ public class AsyncReceiverImpl implements Receiver {
             contentLength = -1;
             sb = new ByteArrayOutputStream();
         }
-        if(maxContentSize > 0){
-            if(contentLength > maxContentSize){
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
-        }
-        if (maxBufferSize > 0) {
-            if (contentLength > maxBufferSize) {
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
+        if (maxContentSize > 0 && contentLength > maxContentSize){
+            error.error(exchange, new RequestToLargeException());
+            return;
         }
         PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
         final ByteBuffer buffer = pooled.getBuffer();
@@ -194,7 +180,7 @@ public class AsyncReceiverImpl implements Receiver {
                                                 while (buffer.hasRemaining()) {
                                                     sb.write(buffer.get());
                                                 }
-                                                if (maxBufferSize > 0 && sb.size() > maxBufferSize) {
+                                                if (maxContentSize > 0 && sb.size() > maxContentSize) {
                                                     Connectors.executeRootHandler(new HttpHandler() {
                                                         @Override
                                                         public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -227,7 +213,7 @@ public class AsyncReceiverImpl implements Receiver {
                         while (buffer.hasRemaining()) {
                             sb.write(buffer.get());
                         }
-                        if (maxBufferSize > 0 && sb.size() > maxBufferSize) {
+                        if (maxContentSize > 0 && sb.size() > maxContentSize) {
                             error.error(exchange, new RequestToLargeException());
                             return;
                         }
@@ -271,11 +257,9 @@ public class AsyncReceiverImpl implements Receiver {
         } else {
             contentLength = -1;
         }
-        if(maxContentSize > 0){
-            if(contentLength > maxContentSize){
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
+        if (maxContentSize > 0 && contentLength > maxContentSize){
+            error.error(exchange, new RequestToLargeException());
+            return;
         }
         final CharsetDecoder decoder = charset.newDecoder();
         PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
@@ -403,17 +387,9 @@ public class AsyncReceiverImpl implements Receiver {
             contentLength = -1;
             sb = new ByteArrayOutputStream();
         }
-        if(maxContentSize > 0){
-            if(contentLength > maxContentSize){
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
-        }
-        if (maxBufferSize > 0) {
-            if (contentLength > maxBufferSize) {
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
+        if (maxContentSize > 0 && contentLength > maxContentSize){
+            error.error(exchange, new RequestToLargeException());
+            return;
         }
         PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
         final ByteBuffer buffer = pooled.getBuffer();
@@ -468,7 +444,7 @@ public class AsyncReceiverImpl implements Receiver {
                                                 while (buffer.hasRemaining()) {
                                                     sb.write(buffer.get());
                                                 }
-                                                if (maxBufferSize > 0 && sb.size() > maxBufferSize) {
+                                                if (maxContentSize > 0 && sb.size() > maxContentSize) {
                                                     Connectors.executeRootHandler(new HttpHandler() {
                                                         @Override
                                                         public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -500,7 +476,7 @@ public class AsyncReceiverImpl implements Receiver {
                         while (buffer.hasRemaining()) {
                             sb.write(buffer.get());
                         }
-                        if (maxBufferSize > 0 && sb.size() > maxBufferSize) {
+                        if (maxContentSize > 0 && sb.size() > maxContentSize) {
                             error.error(exchange, new RequestToLargeException());
                             return;
                         }
@@ -543,11 +519,9 @@ public class AsyncReceiverImpl implements Receiver {
         } else {
             contentLength = -1;
         }
-        if(maxContentSize > 0){
-            if(contentLength > maxContentSize){
-                error.error(exchange, new RequestToLargeException());
-                return;
-            }
+        if (maxContentSize > 0 && contentLength > maxContentSize) {
+            error.error(exchange, new RequestToLargeException());
+            return;
         }
         PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
         final ByteBuffer buffer = pooled.getBuffer();
