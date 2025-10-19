@@ -262,6 +262,7 @@ public class AsyncReceiverImpl implements Receiver {
             return;
         }
         final CharsetDecoder decoder = charset.newDecoder();
+        final long[] totalRead = new long[1];
         PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
         final ByteBuffer buffer = pooled.getBuffer();
         channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
@@ -293,6 +294,16 @@ public class AsyncReceiverImpl implements Receiver {
                             } else if (res == 0) {
                                 return;
                             } else {
+                                totalRead[0] += res;
+                                if (maxContentSize > 0 && totalRead[0] > maxContentSize) {
+                                    Connectors.executeRootHandler(new HttpHandler() {
+                                        @Override
+                                        public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                            error.error(exchange, new RequestToLargeException());
+                                        }
+                                    }, exchange);
+                                    return;
+                                }
                                 buffer.flip();
                                 final CharBuffer cb = decoder.decode(buffer);
                                 Connectors.executeRootHandler(new HttpHandler() {
@@ -336,6 +347,11 @@ public class AsyncReceiverImpl implements Receiver {
                         channel.resumeReads();
                         return;
                     } else {
+                        totalRead[0] += res;
+                        if (maxContentSize > 0 && totalRead[0] > maxContentSize) {
+                            error.error(exchange, new RequestToLargeException());
+                            return;
+                        }
                         buffer.flip();
                         CharBuffer cb = decoder.decode(buffer);
                         callback.handle(exchange, cb.toString(), false);
@@ -523,6 +539,7 @@ public class AsyncReceiverImpl implements Receiver {
             error.error(exchange, new RequestToLargeException());
             return;
         }
+        final long[] totalRead = new long[1];
         PooledByteBuffer pooled = exchange.getConnection().getByteBufferPool().allocate();
         final ByteBuffer buffer = pooled.getBuffer();
         channel.getReadSetter().set(new ChannelListener<StreamSourceChannel>() {
@@ -554,6 +571,16 @@ public class AsyncReceiverImpl implements Receiver {
                             } else if (res == 0) {
                                 return;
                             } else {
+                                totalRead[0] += res;
+                                if (maxContentSize > 0 && totalRead[0] > maxContentSize) {
+                                    Connectors.executeRootHandler(new HttpHandler() {
+                                        @Override
+                                        public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                            error.error(exchange, new RequestToLargeException());
+                                        }
+                                    }, exchange);
+                                    return;
+                                }
                                 buffer.flip();
                                 final byte[] data = new byte[buffer.remaining()];
                                 buffer.get(data);
@@ -598,6 +625,11 @@ public class AsyncReceiverImpl implements Receiver {
                         channel.resumeReads();
                         return;
                     } else {
+                        totalRead[0] += res;
+                        if (maxContentSize > 0 && totalRead[0] > maxContentSize) {
+                            error.error(exchange, new RequestToLargeException());
+                            return;
+                        }
                         buffer.flip();
                         byte[] data = new byte[buffer.remaining()];
                         buffer.get(data);
