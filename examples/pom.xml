@@ -86,7 +86,6 @@
                         <filter>
                             <artifact>*:*</artifact>
                             <excludes>
-                                <exclude>META-INF/MANIFEST.MF</exclude>
                                 <exclude>module-info.class</exclude>
                                 <exclude>META-INF/services/io.undertow.attribute.ExchangeAttributeBuilder</exclude>
                                 <exclude>META-INF/services/io.undertow.predicate.PredicateBuilder</exclude>
@@ -123,6 +122,9 @@
                         <manifest>
                             <mainClass>io.undertow.examples.Runner</mainClass>
                         </manifest>
+                        <manifestEntries>
+                            <Multi-Release>true</Multi-Release>
+                        </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>
