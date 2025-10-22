@@ -488,4 +488,20 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = WARN)
     @Message(id = 5107, value = "Failed to set web socket timeout.")
     void failedToSetWSTimeout(@Cause Exception e);
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5108, value = "Access Log Worker failed to transition gracefuly.")
+    void accessLogWorkerFailureOnTransition();
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5109, value = "Access Log Worker failed to reschedule.")
+    void accessLogWorkerFailureOnReschedule();
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5110, value = "Access Log Worker did not terminate cleanly.")
+    void accessLogWorkerNoTermination();
+
+    @LogMessage(level = DEBUG)
+    @Message(id = 5111, value = "Interruption in close()")
+    void closeInterrupted(@Cause InterruptedException ie);
 }
