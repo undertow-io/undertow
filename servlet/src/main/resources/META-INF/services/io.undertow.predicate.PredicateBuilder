@@ -1,3 +1,0 @@
-io.undertow.servlet.predicate.DispatcherTypePredicate$Builder
-io.undertow.servlet.predicate.DirectoryPredicate$Builder
-io.undertow.servlet.predicate.FilePredicate$Builder
