@@ -243,7 +243,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         int queueIdx = getQueueIndex();
         do {
             size = currentQueueLengths.get(queueIdx);
-            if (size >= perQueueMax) {
+            if (size > perQueueMax) {
                 DirectByteBufferDeallocator.free(buffer);
                 return;
             }
