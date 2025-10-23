@@ -48,7 +48,6 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
     private final ConcurrentLinkedQueue<ByteBuffer>[] queues;
     private final int queueCount;
-    private final int queueMask;
     private final int perQueueMax;
 
     private final boolean direct;
@@ -93,7 +92,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
      * @param maximumPoolSize      The maximum pool size, in number of buffers, it does not include buffers in thread local caches
      * @param threadLocalCacheSize The maximum number of buffers that can be stored in a thread local cache
      * @param leakDecetionPercent  The percentage of allocations that should track leaks
-     * @param queueCount           Number of queues to use for reduced contention (will be rounded up to a power of 2)
+     * @param queueCount           Number of queues to use for reduced contention
      */
     @SuppressWarnings("unchecked")
     public DefaultByteBufferPool(boolean direct, int bufferSize, int maximumPoolSize, int threadLocalCacheSize,
@@ -103,17 +102,9 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         this.maximumPoolSize = maximumPoolSize;
         this.threadLocalCacheSize = threadLocalCacheSize;
         this.leakDectionPercent = leakDecetionPercent;
+        this.queueCount = Math.max(1, queueCount);
 
-        // Round up to next power of 2 for efficient masking
-        int n = Math.max(1, queueCount);
-        n = Integer.highestOneBit(n);
-        if (n < queueCount) {
-            n <<= 1;
-        }
-        this.queueCount = n;
-        this.queueMask = n - 1;
-
-        // Calculate per-queue maximum. Minimum size of 1 to prevent 0-sized queues.
+        // Calculate per-queue maximum. Minimum size of 1
         this.perQueueMax = maximumPoolSize > 0 ? Math.max(1, maximumPoolSize / this.queueCount) : Integer.MAX_VALUE;
 
         this.queues = new ConcurrentLinkedQueue[this.queueCount];
@@ -152,7 +143,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
     private int getQueueIndex() {
         long threadId = Thread.currentThread().getId();
-        return (int)threadId & queueMask;
+        return (int)(threadId % queueCount);
     }
 
     @Override
