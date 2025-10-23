@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 @BenchmarkMode(Mode.Throughput)  // Measure operations per second
 @OutputTimeUnit(TimeUnit.SECONDS)
 @State(Scope.Benchmark)
-@Fork(value = 1, jvmArgs = {"-Xms1G", "-Xmx1G"})  // Single fork with 1GB heap
+@Fork(0)  // No forking - run in same JVM
 @Warmup(iterations = 3, time = 1)  // 3 warmup iterations, 1 second each
 @Measurement(iterations = 5, time = 1)  // 5 measurement iterations, 1 second each
 public class ByteBufferPoolBenchmark {
@@ -75,7 +75,7 @@ public class ByteBufferPoolBenchmark {
     public static void main(String[] args) throws RunnerException {
         Options opt = new OptionsBuilder()
                 .include(".*" + ByteBufferPoolBenchmark.class.getSimpleName() + ".*")
-                .forks(1)
+                .forks(0)  // No forking - run in same JVM
                 .warmupIterations(3)
                 .measurementIterations(5)
                 .build();

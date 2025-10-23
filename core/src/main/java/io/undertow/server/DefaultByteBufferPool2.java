@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
  * @author Stuart Douglas
  */
 // TODO: move this somewhere more appropriate
-public class DefaultByteBufferPool implements ByteBufferPool {
+public class DefaultByteBufferPool2 implements ByteBufferPool {
 
     private final ThreadLocalCache threadLocalCache = new ThreadLocalCache();
     // Access requires synchronization on the threadLocalDataList instance
@@ -60,18 +60,18 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
     @SuppressWarnings({"unused", "FieldCanBeLocal"})
     private volatile int reclaimedThreadLocals = 0;
-    private static final AtomicIntegerFieldUpdater<DefaultByteBufferPool> reclaimedThreadLocalsUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultByteBufferPool.class, "reclaimedThreadLocals");
+    private static final AtomicIntegerFieldUpdater<DefaultByteBufferPool2> reclaimedThreadLocalsUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultByteBufferPool2.class, "reclaimedThreadLocals");
 
     private volatile boolean closed;
 
-    private final DefaultByteBufferPool arrayBackedPool;
+    private final DefaultByteBufferPool2 arrayBackedPool;
 
 
     /**
      * @param direct               If this implementation should use direct buffers
      * @param bufferSize           The buffer size to use
      */
-    public DefaultByteBufferPool(boolean direct, int bufferSize) {
+    public DefaultByteBufferPool2(boolean direct, int bufferSize) {
         this(direct, bufferSize, -1, 12, 0);
     }
     /**
@@ -80,7 +80,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
      * @param maximumPoolSize      The maximum pool size, in number of buffers, it does not include buffers in thread local caches
      * @param threadLocalCacheSize The maximum number of buffers that can be stored in a thread local cache
      */
-    public DefaultByteBufferPool(boolean direct, int bufferSize, int maximumPoolSize, int threadLocalCacheSize, int leakDecetionPercent) {
+    public DefaultByteBufferPool2(boolean direct, int bufferSize, int maximumPoolSize, int threadLocalCacheSize, int leakDecetionPercent) {
         this(direct, bufferSize, maximumPoolSize, threadLocalCacheSize, leakDecetionPercent,
                 Runtime.getRuntime().availableProcessors() * 2);
     }
@@ -94,7 +94,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
      * @param queueCount           Number of queues to use for reduced contention
      */
     @SuppressWarnings("unchecked")
-    public DefaultByteBufferPool(boolean direct, int bufferSize, int maximumPoolSize, int threadLocalCacheSize,
+    public DefaultByteBufferPool2(boolean direct, int bufferSize, int maximumPoolSize, int threadLocalCacheSize,
                                  int leakDecetionPercent, int queueCount) {
         this.direct = direct;
         this.bufferSize = bufferSize;
@@ -111,7 +111,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         }
 
         if(direct) {
-            arrayBackedPool = new DefaultByteBufferPool(false, bufferSize, maximumPoolSize, 0, leakDecetionPercent, this.queueCount);
+            arrayBackedPool = new DefaultByteBufferPool2(false, bufferSize, maximumPoolSize, 0, leakDecetionPercent, this.queueCount);
         } else {
             arrayBackedPool = this;
         }
@@ -124,7 +124,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
      * @param maximumPoolSize      The maximum pool size, in number of buffers, it does not include buffers in thread local caches
      * @param threadLocalCacheSize The maximum number of buffers that can be stored in a thread local cache
      */
-    public DefaultByteBufferPool(boolean direct, int bufferSize, int maximumPoolSize, int threadLocalCacheSize) {
+    public DefaultByteBufferPool2(boolean direct, int bufferSize, int maximumPoolSize, int threadLocalCacheSize) {
         this(direct, bufferSize, maximumPoolSize, threadLocalCacheSize, 0,
                 Runtime.getRuntime().availableProcessors() * 2);
     }
@@ -285,14 +285,14 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
     private static class DefaultPooledBuffer implements PooledByteBuffer {
 
-        private final DefaultByteBufferPool pool;
+        private final DefaultByteBufferPool2 pool;
         private final LeakDetector leakDetector;
         private ByteBuffer buffer;
 
         private volatile int referenceCount = 1;
         private static final AtomicIntegerFieldUpdater<DefaultPooledBuffer> referenceCountUpdater = AtomicIntegerFieldUpdater.newUpdater(DefaultPooledBuffer.class, "referenceCount");
 
-        DefaultPooledBuffer(DefaultByteBufferPool pool, ByteBuffer buffer, boolean detectLeaks) {
+        DefaultPooledBuffer(DefaultByteBufferPool2 pool, ByteBuffer buffer, boolean detectLeaks) {
             this.pool = pool;
             this.buffer = buffer;
             this.leakDetector = detectLeaks ? new LeakDetector() : null;
@@ -341,7 +341,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         @Override
         protected void finalize() throws Throwable {
             try {
-                reclaimedThreadLocalsUpdater.incrementAndGet(DefaultByteBufferPool.this);
+                reclaimedThreadLocalsUpdater.incrementAndGet(DefaultByteBufferPool2.this);
                 if (buffers != null) {
                     // Recycle them
                     ByteBuffer buffer;
