@@ -414,6 +414,11 @@ public class UndertowOptions {
      */
     public static final Option<String> SSL_SNI_HOSTNAME = Option.simple(UndertowOptions.class, "SSL_SNI_HOSTNAME", String.class);
 
+    /**
+     * Default value of {@link #ALLOW_UNESCAPED_CHARACTERS_IN_URL} option.
+     */
+    public static final boolean DEFAULT_ALLOW_UNESCAPED_CHARACTERS_IN_URL = false;
+
     public static final Option<Boolean> ALLOW_UNESCAPED_CHARACTERS_IN_URL = Option.simple(UndertowOptions.class,"ALLOW_UNESCAPED_CHARACTERS_IN_URL", Boolean.class);
 
     /**
