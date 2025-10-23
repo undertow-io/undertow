@@ -46,7 +46,6 @@ public class DefaultByteBufferPool implements ByteBufferPool {
     // Access requires synchronization on the threadLocalDataList instance
     private final List<WeakReference<ThreadLocalData>> threadLocalDataList = new ArrayList<>();
 
-    // Multiple queues to reduce contention (especially for virtual threads)
     private final ConcurrentLinkedQueue<ByteBuffer>[] queues;
     private final int queueCount;
     private final int queueMask;
@@ -59,7 +58,6 @@ public class DefaultByteBufferPool implements ByteBufferPool {
     private final int leakDectionPercent;
     private int count; //racily updated count used in leak detection
 
-    // Array of queue lengths for each queue - using AtomicIntegerArray for better memory locality
     private final AtomicIntegerArray currentQueueLengths;
 
     @SuppressWarnings({"unused", "FieldCanBeLocal"})
@@ -84,7 +82,6 @@ public class DefaultByteBufferPool implements ByteBufferPool {
      * @param maximumPoolSize      The maximum pool size, in number of buffers, it does not include buffers in thread local caches
      * @param threadLocalCacheSize The maximum number of buffers that can be stored in a thread local cache
      */
-    @SuppressWarnings("unchecked")
     public DefaultByteBufferPool(boolean direct, int bufferSize, int maximumPoolSize, int threadLocalCacheSize, int leakDecetionPercent) {
         this(direct, bufferSize, maximumPoolSize, threadLocalCacheSize, leakDecetionPercent,
                 Runtime.getRuntime().availableProcessors() * 2);
@@ -96,7 +93,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
      * @param maximumPoolSize      The maximum pool size, in number of buffers, it does not include buffers in thread local caches
      * @param threadLocalCacheSize The maximum number of buffers that can be stored in a thread local cache
      * @param leakDecetionPercent  The percentage of allocations that should track leaks
-     * @param queueCount           Number of queues to use for reduced contention (will be rounded to power of 2)
+     * @param queueCount           Number of queues to use for reduced contention (will be rounded up to a power of 2)
      */
     @SuppressWarnings("unchecked")
     public DefaultByteBufferPool(boolean direct, int bufferSize, int maximumPoolSize, int threadLocalCacheSize,
@@ -116,15 +113,13 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         this.queueCount = n;
         this.queueMask = n - 1;
 
-        // Calculate per-queue maximum
+        // Calculate per-queue maximum. Minimum size of 1 to prevent 0-sized queues.
         this.perQueueMax = maximumPoolSize > 0 ? Math.max(1, maximumPoolSize / this.queueCount) : Integer.MAX_VALUE;
 
-        // Initialize multiple queues
         this.queues = new ConcurrentLinkedQueue[this.queueCount];
         this.currentQueueLengths = new AtomicIntegerArray(this.queueCount);
         for (int i = 0; i < this.queueCount; i++) {
             this.queues[i] = new ConcurrentLinkedQueue<>();
-            // AtomicIntegerArray initializes to 0 by default
         }
 
         if(direct) {
@@ -133,7 +128,6 @@ public class DefaultByteBufferPool implements ByteBufferPool {
             arrayBackedPool = this;
         }
     }
-
 
     /**
      * @param direct               If this implementation should use direct buffers
@@ -156,10 +150,6 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         return direct;
     }
 
-    /**
-     * Get the queue index for the current thread.
-     * Uses thread ID with masking to distribute threads across queues.
-     */
     private int getQueueIndex() {
         long threadId = Thread.currentThread().getId();
         return (int)threadId & queueMask;
@@ -190,7 +180,6 @@ public class DefaultByteBufferPool implements ByteBufferPool {
             }
         }
         if (buffer == null) {
-            // Try to get from this thread's queue
             int queueIdx = getQueueIndex();
             buffer = queues[queueIdx].poll();
             if (buffer != null) {
@@ -258,21 +247,16 @@ public class DefaultByteBufferPool implements ByteBufferPool {
     }
 
     private void queueIfUnderMax(ByteBuffer buffer) {
-        // Get queue index for this thread
+        int size;
         int queueIdx = getQueueIndex();
-
-        // Try to add to this thread's queue
-        int currentLength;
         do {
-            currentLength = currentQueueLengths.get(queueIdx);
-            if (maximumPoolSize > 0 && currentLength >= perQueueMax) {
-                // Queue is full, free the buffer
+            size = currentQueueLengths.get(queueIdx);
+            if (maximumPoolSize > 0 && size >= perQueueMax) {
                 DirectByteBufferDeallocator.free(buffer);
                 return;
             }
-        } while (!currentQueueLengths.compareAndSet(queueIdx, currentLength, currentLength + 1));
+        } while (!currentQueueLengths.compareAndSet(queueIdx, size, size + 1));
 
-        // Successfully incremented counter, add buffer to queue
         queues[queueIdx].add(buffer);
     }
 
@@ -283,7 +267,6 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         }
         closed = true;
 
-        // Clear all queues
         for (int i = 0; i < queueCount; i++) {
             queues[i].clear();
             currentQueueLengths.set(i, 0);
