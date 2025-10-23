@@ -33,6 +33,13 @@
 
     <name>Undertow Benchmarks</name>
 
+    <properties>
+        <!-- Override parent to use Java 25 for virtual threads -->
+        <maven.compiler.release>25</maven.compiler.release>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+    </properties>
+
     <dependencies>
 
         <dependency>
