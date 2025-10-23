@@ -52,7 +52,6 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
     private final boolean direct;
     private final int bufferSize;
-    private final int maximumPoolSize;
     private final int threadLocalCacheSize;
     private final int leakDectionPercent;
     private int count; //racily updated count used in leak detection
@@ -99,13 +98,11 @@ public class DefaultByteBufferPool implements ByteBufferPool {
                                  int leakDecetionPercent, int queueCount) {
         this.direct = direct;
         this.bufferSize = bufferSize;
-        this.maximumPoolSize = maximumPoolSize;
         this.threadLocalCacheSize = threadLocalCacheSize;
         this.leakDectionPercent = leakDecetionPercent;
         this.queueCount = Math.max(1, queueCount);
 
-        // Calculate per-queue maximum. Minimum size of 1
-        this.perQueueMax = maximumPoolSize > 0 ? Math.max(1, maximumPoolSize / this.queueCount) : Integer.MAX_VALUE;
+        this.perQueueMax = maximumPoolSize >= 0 ? maximumPoolSize / this.queueCount : Integer.MAX_VALUE;
 
         this.queues = new ConcurrentLinkedQueue[this.queueCount];
         this.currentQueueLengths = new AtomicIntegerArray(this.queueCount);
