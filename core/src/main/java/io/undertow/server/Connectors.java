@@ -529,7 +529,7 @@ public class Connectors {
      */
     public static void setExchangeRequestPath(final HttpServerExchange exchange, final String encodedPath, final String charset, boolean decode, boolean decodeQueryString, final boolean decodeSlashFlag, StringBuilder decodeBuffer, int maxParameters) throws ParameterLimitException, BadRequestException {
         final OptionMap options = exchange.getConnection().getUndertowOptions();
-        final boolean allowUnescapedCharactersInUrl = options.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
+        final boolean allowUnescapedCharactersInUrl = options.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, UndertowOptions.DEFAULT_ALLOW_UNESCAPED_CHARACTERS_IN_URL);
         boolean requiresDecode = false;
         final StringBuilder pathBuilder = new StringBuilder();
         int currentPathPartIndex = 0;
