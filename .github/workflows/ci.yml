@@ -59,7 +59,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        module: [core]
+        module: [core, servlet, websockets-jsr]
         jdk: [11, 17, 21]
         openjdk_impl: [ temurin ]
         openssl: [false, true]
