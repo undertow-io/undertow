@@ -52,7 +52,7 @@ jobs:
           **/surefire*-reports/*.txt
           **/*.dump*
   test-matrix:
-    name: JDK ${{ matrix.jdk }} - ${{ matrix.module }} - ${{ matrix.os }}
+    name: JDK ${{ matrix.jdk }} - ${{ matrix.module }} - ${{ matrix.os }} ${{ matrix.openssl && '- openssl' || '' }}
     runs-on: ${{ matrix.os }}
     needs: build-all
     strategy:
@@ -62,6 +62,7 @@ jobs:
         module: [core]
         jdk: [11, 17, 21]
         openjdk_impl: [ temurin ]
+        openssl: [false, true]
     steps:
     - name: Update hosts - linux
       if: matrix.os == 'ubuntu-latest'
@@ -104,7 +105,7 @@ jobs:
     - name: Print Version
       run: mvn -v
     - name: Run Tests
-      run: mvn -U -B -fae test -Pproxy '-DfailIfNoTests=false' -pl ${{ matrix.module }}
+      run: mvn -U -B -fae test -Pproxy '-Dopenssl=${{ matrix.openssl }} -DfailIfNoTests=false' -pl ${{ matrix.module }}
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
@@ -113,7 +114,7 @@ jobs:
               **/surefire*-reports/*.txt
               **/*.dump*
   test-matrix-ipv6:
-    name: JDK ${{ matrix.jdk }} - ipv6 - ${{ matrix.module }} ${{ matrix.proxy }} - ${{ matrix.os }}
+    name: JDK ${{ matrix.jdk }} - ipv6 - ${{ matrix.module }} ${{ matrix.proxy && '- proxy' || '' }} - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     needs: build-all
     strategy:
@@ -156,7 +157,7 @@ jobs:
     - name: Print Version
       run: mvn -v
     - name: Run Tests
-      run: mvn -U -B -fae test ${{ matrix.proxy }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
+      run: mvn -U -B -fae test ${{ matrix.proxy && '-Pproxy' || '' }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
