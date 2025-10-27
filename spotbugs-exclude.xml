@@ -83,10 +83,6 @@
                 <Field name="elected"/>
             </And>
             <And>
-                <Class name="io.undertow.websockets.jsr.SessionContainer"/>
-                <Field name="waiterCount"/>
-            </And>
-            <And>
                 <Class name="io.undertow.protocols.ssl.SslConduit"/>
                 <Field name="outstandingTasks"/>
             </And>
@@ -225,10 +221,7 @@
     <!-- Is done actually only once, no harm in it -->
     <Match>
         <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE"/>
-        <Or>
-            <Class name="io.undertow.security.impl.SimpleNonceManager" />
-            <Class name="io.undertow.websockets.client.WebSocket13ClientHandshake" />
-        </Or>
+        <Class name="io.undertow.security.impl.SimpleNonceManager" />
     </Match>
 
     <Match>
@@ -245,45 +238,9 @@
         <Class name="io.undertow.server.handlers.proxy.mod_cluster.MCMPAdvertiseTask"/>
     </Match>
 
-
-    <!--We don't care whether it is Runtime or checked exception-->
-    <Match>
-        <Bug pattern="REC_CATCH_EXCEPTION"/>
-        <Class name="io.undertow.servlet.handlers.security.SSLInformationAssociationHandler"/>
-        <Method name="getCerts"/>
-    </Match>
-
     <!--Ignoring checking for examples-->
     <Match>
         <Package name="~io\.undertow\.examples.*"/>
-    </Match>
-
-    <!-- The proper class type returned is handled by createInstance() method being overridden for each subclass => ignoring -->
-    <Match>
-
-        <Bug pattern="CN_IDIOM_NO_SUPER_CALL"/>
-        <Or>
-            <Class name="io.undertow.servlet.api.SecurityInfo"/>
-            <Class name="io.undertow.servlet.api.AuthMethodConfig"/>
-            <Class name="io.undertow.servlet.api.DeploymentInfo"/>
-            <Class name="io.undertow.servlet.api.LoginConfig"/>
-            <Class name="io.undertow.servlet.api.FilterInfo"/>
-            <Class name="io.undertow.servlet.api.ServletInfo"/>
-            <Class name="io.undertow.websockets.jsr.WebSocketDeploymentInfo"/>
-        </Or>
-    </Match>
-
-    <!-- intentional -->
-    <Match>
-        <Bug pattern="DM_DEFAULT_ENCODING"/>
-        <Or>
-            <Class name="io.undertow.servlet.spec.ServletPrintWriterDelegate"/>
-        </Or>
-    </Match>
-
-    <Match>
-        <Bug pattern="UG_SYNC_SET_UNSYNC_GET"/>
-        <Class name="io.undertow.servlet.spec.AsyncContextImpl"/>
     </Match>
 
     <Match>
@@ -300,15 +257,6 @@
     <Match>
         <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
         <Class name="io.undertow.server.protocol.http.AlpnOpenListener$AlpnConnectionListener"/>
-    </Match>
-    <!-- Field can be modified by code between the first check-->
-    <!-- see https://github.com/spotbugs/spotbugs/issues/1338 -->
-    <!-- Comparison of cookies path and domain with == before invoking equals is necessary because
-         both could be null; only if the == fails we check for one of them != null && equals the other -->
-    <Match>
-        <Bug pattern="ES_COMPARING_STRINGS_WITH_EQ"/>
-        <Class name="io.undertow.servlet.spec.HttpServletResponseImpl"/>
-        <Method name="addCookie"/>
     </Match>
     <!-- UNDERTOW-1839: we don't want to increase contention to synchronize all blocks that access the fields:
          engine, invokingReadListenerHandshake, readListenerInvocationCount. The less contention the better,
@@ -334,20 +282,6 @@
             <Class name="io.undertow.server.DefaultByteBufferPool$LeakDetector"/>
             <Class name="io.undertow.server.DefaultByteBufferPool$ThreadLocalData"/>
         </Or>
-    </Match>
-
-    <Match>
-        <Bug pattern="MS_EXPOSE_REP"/>
-        <Or>
-            <Class name="io.undertow.servlet.Servlets"/>
-            <Class name="io.undertow.servlet.core.ServletExtensionHolder"/>
-        </Or>
-    </Match>
-
-    <Match>
-        <!-- The getEndpointClassInstance is expected to invoke newInstance -->
-        <Bug pattern="REFLC_REFLECTION_MAY_INCREASE_ACCESSIBILITY_OF_CLASS"/>
-        <Class name="io.undertow.websockets.jsr.DefaultContainerConfigurator"/>
     </Match>
 
     <Match>
@@ -451,8 +385,6 @@
                 <Or>
                     <Class name="io.undertow.server.handlers.error.FileErrorPageHandler$2"/>
                     <Class name="io.undertow.util.Headers$1"/>
-                    <Class name="io.undertow.servlet.core.ServletUpgradeListener$4"/>
-                    <Class name="io.undertow.servlet.spec.ServletPrintWriterDelegate$1"/>
                 </Or>
                 <Method name="run"/>
             </And>
@@ -565,174 +497,6 @@
                 <Method name="redirect"/>
             </And>
             <And>
-                <Class name="io.undertow.websockets.client.WebSocket13ClientHandshake"/>
-                <Method name="solve"/>
-            </And>
-            <And>
-                <Class name="io.undertow.websockets.client.WebSocketClient$ConnectionBuilder"/>
-                <Method name="connectImpl"/>
-            </And>
-            <And>
-                <Class name="io.undertow.websockets.core.protocol.version07.WebSocket07Channel$WebSocketFrameHeader"/>
-                <Method name="createChannel"/>
-            </And>
-            <And>
-                <Class name="io.undertow.websockets.core.protocol.version07.WebSocket07FrameSinkChannel"/>
-                <Method name="preWriteTransform"/>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.compat.rewrite.UndertowResolver"/>
-                <Method name="resolveResource"/>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.core.ApplicationListeners"/>
-                <Or>
-                    <Method name="addListener"/>
-                    <Method name="requestInitialized"/>
-                </Or>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.core.DeploymentManagerImpl"/>
-                <Or>
-                    <Method name="deploy"/>
-                    <Method name="setupSecurityHandlers"/>
-                    <Method name="start"/>
-                    <Method name="stop"/>
-                    <Method name="undeploy"/>
-                </Or>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.core.ServletBlockingHttpExchange"/>
-                <Or>
-                    <Method name="getInputStream"/>
-                    <Method name="getOutputStream"/>
-                    <Method name="getSender"/>
-                </Or>
-            </And>
-            <And>
-                <Or>
-                    <Class name="io.undertow.servlet.core.ServletUpgradeListener$3"/>
-                    <Class name="io.undertow.servlet.spec.WebConnectionImpl$1"/>
-                </Or>
-                <Method name="handleEvent"/>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.handlers.FilterHandler$FilterChainImpl"/>
-                <Method name="doFilter"/>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.handlers.ServletInitialHandler"/>
-                <Method name="dispatchMockRequest"/>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.handlers.ServletPathMatches"/>
-                <Method name="getServletHandlerByPath"/>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.handlers.security.ServletFormAuthenticationMechanism"/>
-                <Or>
-                    <Method name="handleRedirectBack"/>
-                    <Method name="servePage"/>
-                </Or>
-            </And>
-            <And>
-                <Or>
-                    <Class name="io.undertow.servlet.predicate.DirectoryPredicate"/>
-                    <Class name="io.undertow.servlet.predicate.FilePredicate"/>
-                </Or>
-                <Method name="resolve"/>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.spec.HttpServletRequestImpl"/>
-                <Or>
-                    <Method name="upgrade"/>
-                    <Method name="parseFormData"/>
-                </Or>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.spec.HttpServletResponseImpl"/>
-                <Or>
-                    <Method name="doErrorDispatch"/>
-                    <Method name="resetBuffer"/>
-                </Or>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.spec.PartImpl"/>
-                <Method name="getSize"/>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.spec.RequestDispatcherImpl"/>
-                <Or>
-                    <Method name="forward"/>
-                    <Method name="forwardImpl"/>
-                    <Method name="include"/>
-                    <Method name="includeImpl"/>
-                    <Method name="error"/>
-                </Or>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.spec.ServletContextImpl"/>
-                <Or>
-                    <Method name="addServlet"/>
-                    <Method name="addFilter"/>
-                    <Method name="invokeAction"/>
-                    <Method name="invokeOnDataAvailable"/>
-                    <Method name="invokeOnAllDataRead"/>
-                    <Method name="invokeOnWritePossible"/>
-                    <Method name="invokeRunnable"/>
-                </Or>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.spec.ServletPrintWriterDelegate"/>
-                <Or>
-                    <Method name="newInstance"/>
-                    <Method name="getUnsafe0"/>
-                </Or>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.core.SessionListenerBridge"/>
-                <Method name="sessionDestroyed"/>
-            </And>
-              <And>
-                <!-- TODO: figure out lambda ref? -->
-                <Class name="io.undertow.servlet.spec.ServletContextImpl"/>
-            </And>
-             <And>
-                <Class name="io.undertow.websockets.jsr.Bootstrap"/>
-                <Method name="handleDeployment"/>
-            </And>
-            <And>
-                <Class name="io.undertow.websockets.jsr.DefaultContainerConfigurator"/>
-                <Method name="getEndpointInstance"/>
-            </And>
-            <And>
-                <Class name="io.undertow.websockets.jsr.EncodingFactory"/>
-                <Method name="createEncoding"/>
-            </And>
-            <And>
-                <Class name="io.undertow.websockets.jsr.ServerWebSocketContainer"/>
-                <Or>
-                    <Method name="connectToServer"/>
-                    <Method name="invokeEndpointMethod"/>
-                    <Method name="getClientEndpoint"/>
-                    <Method name="validateDeployment"/>
-                </Or>
-            </And>
-            <And>
-                <!-- java.util.function.Supplier does not have any exception in interface def -->
-                <Class name="io.undertow.websockets.jsr.UndertowContainerProvider$2"/>
-                <Method name="get"/>
-            </And>
-            <And>
-                <!-- java.lang.Runnable does not have any exception in interface def -->
-                <Class name="io.undertow.websockets.jsr.annotated.AnnotatedEndpoint$5"/>
-                <Method name="run"/>
-            </And>
-            <And>
-                <Class name="io.undertow.websockets.jsr.annotated.BoundMethod"/>
-                <Method name="invoke"/>
-            </And>
-            <And>
                 <Or>
                     <!-- TODO: figure out static{} block reference -->
                     <Class name="io.undertow.client.http.HttpResponseParser"/>
@@ -802,27 +566,6 @@
                     <Class name="io.undertow.server.protocol.http2.Http2UpgradeHandler"/>
                     <Class name="io.undertow.server.protocol.http2.Http2UpgradeHandler$4$1"/>
                     <Class name="io.undertow.server.session.SessionAttachmentHandler"/>
-                    <Class name="io.undertow.websockets.WebSocketProtocolHandshakeHandler"/>
-                    <Class name="io.undertow.servlet.compat.rewrite.RewriteHandler"/>
-                    <Class name="io.undertow.servlet.core.MetricsChainHandler"/>
-                    <Class name="io.undertow.servlet.handlers.CrawlerSessionManagerHandler"/>
-                    <Class name="io.undertow.servlet.handlers.FilterHandler"/>
-                    <Class name="io.undertow.servlet.handlers.MarkSecureHandler"/>
-                    <Class name="io.undertow.servlet.handlers.RedirectDirHandler"/>
-                    <Class name="io.undertow.servlet.handlers.SendErrorPageHandler"/>
-                    <Class name="io.undertow.servlet.handlers.ServletDispatchingHandler"/>
-                    <Class name="io.undertow.servlet.handlers.ServletInitialHandler"/>
-                    <Class name="io.undertow.servlet.handlers.security.CachedAuthenticatedSessionHandler"/>
-                    <Class name="io.undertow.servlet.handlers.security.SSLInformationAssociationHandler"/>
-                    <Class name="io.undertow.servlet.handlers.security.ServletAuthenticationCallHandler"/>
-                    <Class name="io.undertow.servlet.handlers.security.ServletSecurityConstraintHandler"/>
-                    <Class name="io.undertow.servlet.handlers.security.ServletSecurityRoleHandler"/>
-                    <Class name="io.undertow.servlet.handlers.ServletChain$1"/>
-                    <Class name="io.undertow.servlet.handlers.ServletInitialHandler$1"/>
-                    <Class name="io.undertow.servlet.handlers.SessionRestoringHandler"/>
-                    <Class name="io.undertow.servlet.handlers.security.ServletConfidentialityConstraintHandler"/>
-                    <Class name="io.undertow.servlet.spec.AsyncContextImpl$2$1"/>
-                    <Class name="io.undertow.servlet.spec.AsyncContextImpl$TimeoutTask$1$1$1"/>
                 </Or>
                 <Method name="handleRequest"/>
             </And>
@@ -846,69 +589,6 @@
                 <Class name="io.undertow.server.handlers.resource.ResourceHandler"/>
                 <Method name="serveResource"/>
             </And>
-            <!-- io.undertow.servlet.api.ThreadsetupHandler.Action interface and impl -->
-            <And>
-                <Or>
-                    <Class name="io.undertow.servlet.api.ThreadSetupHandler$Action"/>
-                    <Class name="io.undertow.servlet.api.LegacyThreadSetupActionWrapper$1"/>
-                    <Class name="io.undertow.servlet.core.ContextClassLoaderSetupAction$1"/>
-                    <Class name="io.undertow.servlet.core.DeploymentManagerImpl$1"/>
-                    <Class name="io.undertow.servlet.core.DeploymentManagerImpl$2"/>
-                    <Class name="io.undertow.servlet.core.DeploymentManagerImpl$3"/>
-                    <Class name="io.undertow.servlet.core.DeploymentManagerImpl$4"/>
-                    <Class name="io.undertow.servlet.core.ServletRequestContextThreadSetupAction$1"/>
-                    <Class name="io.undertow.servlet.core.ServletUpgradeListener$1"/>
-                    <Class name="io.undertow.servlet.core.ServletUpgradeListener$2"/>
-                    <Class name="io.undertow.servlet.core.SessionListenerBridge$1"/>
-                    <Class name="io.undertow.servlet.handlers.ServletInitialHandler$2"/>
-                    <Class name="io.undertow.servlet.spec.RequestDispatcherImpl$2"/>
-                    <Class name="io.undertow.servlet.spec.RequestDispatcherImpl$4"/>
-                    <Class name="io.undertow.servlet.spec.ServletContextImpl$1"/>
-                    <Class name="io.undertow.servlet.spec.ServletContextImpl$2"/>
-                    <Class name="io.undertow.servlet.spec.ServletContextImpl$3"/>
-                    <Class name="io.undertow.servlet.spec.ServletContextImpl$4"/>
-                    <Class name="io.undertow.servlet.spec.ServletContextImpl$5"/>
-                    <Class name="io.undertow.websockets.jsr.ServerWebSocketContainer$1"/>
-                </Or>
-                <Method name="call"/>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.api.ServletDispatcher"/>
-                <Or>
-                    <Method name="dispatchToPath"/>
-                    <Method name="dispatchToServlet"/>
-                </Or>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.handlers.ServletInitialHandler"/>
-                <Or>
-                    <Method name="dispatchToPath"/>
-                    <Method name="dispatchToServlet"/>
-                    <Method name="handleFirstRequest"/>
-                    <Method name="dispatchRequest"/>
-                </Or>
-            </And>
-            <And>
-                <!-- java.security.PrivilegedExceptionAction -->
-                <Or>
-                    <Class name="io.undertow.servlet.handlers.ServletInitialHandler$1$1"/>
-                    <Class name="io.undertow.servlet.spec.RequestDispatcherImpl$1"/>
-                    <Class name="io.undertow.servlet.spec.RequestDispatcherImpl$3"/>
-                </Or>
-                <Method name="run"/>
-            </And>
-            <And>
-                <Class name="io.undertow.servlet.spec.WebConnectionImpl"/>
-                <Method name="close"/>
-            </And>
-            <And>
-                <!-- TODO: figure out lambda ref? -->
-                <Class name="io.undertow.servlet.spec.ServletContextImpl"/>
-            </And>
-            <And>
-                <Class name="io.undertow.websockets.jsr.annotated.BoundMethod"/>
-                <Method name="invoke"/>
-            </And>
         </Or>
     </Match>
     <Match>
@@ -925,13 +605,10 @@
     </Match>
     <Match>
         <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE"/>
-        <Or>
-            <And>
-                <Class name="io.undertow.client.http.HttpClientConnection$ClientReadListener"/>
-                <Method name="handleEvent"/>
-            </And>
-            <Class name="io.undertow.servlet.spec.ServletOutputStreamImpl"/>
-        </Or>
+        <And>
+            <Class name="io.undertow.client.http.HttpClientConnection$ClientReadListener"/>
+            <Method name="handleEvent"/>
+        </And>
     </Match>
     <!-- ignore benchmarks -->
     <Match>
