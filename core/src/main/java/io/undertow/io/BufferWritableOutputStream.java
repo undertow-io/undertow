@@ -34,6 +34,10 @@ public interface BufferWritableOutputStream {
 
     void write(ByteBuffer byteBuffer) throws IOException;
 
+    /**
+     * Transfer the remaining content of the input FileChannel (from its current position, to end of file).
+     */
+    @Deprecated
     void transferFrom(FileChannel source) throws IOException;
 
 }
