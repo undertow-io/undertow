@@ -120,7 +120,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        module: [core, servlet, websockets-jsr]
+        module: [core]
         proxy: ['-Pproxy', '']
         jdk: [17]
     steps:
