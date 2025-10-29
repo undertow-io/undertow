@@ -470,7 +470,7 @@ public class Cookies {
     public static void disperseCrumbs(final HeaderMap headerMap) {
         final HeaderValues cookieValues = headerMap.get(Headers.COOKIE);
         // NOTE: If cookies are up2standard, thats the only case
-        // otherwise something is up, dont touch it
+        // otherwise something is up, don't touch it
         if (cookieValues != null && cookieValues.size() == 1) {
             if (cookieValues.getFirst().contains(CRUMB_SEPARATOR)) {
                 final String[] cookieJar = cookieValues.getFirst().split(CRUMB_SEPARATOR);

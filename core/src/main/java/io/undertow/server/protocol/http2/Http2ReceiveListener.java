@@ -66,7 +66,7 @@ import static io.undertow.protocols.http2.Http2Channel.SCHEME;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 /**
- * The recieve listener for a Http2 connection.
+ * The receive listener for a Http2 connection.
  * <p>
  * A new instance is created per connection.
  *

@@ -36,7 +36,7 @@ public class CachingResourceManager implements ResourceManager {
      */
     public static final int MAX_AGE_NO_CACHING = LRUCache.MAX_AGE_NO_CACHING;
     /**
-     * Mage age -1, this force manager to retain entries until underlying resource manager indicate that entries expired/changed
+     * Max age -1, this forces manager to retain entries until underlying resource manager indicates that entries expired/changed
      */
     public static final int MAX_AGE_NO_EXPIRY = LRUCache.MAX_AGE_NO_EXPIRY;
     /**
