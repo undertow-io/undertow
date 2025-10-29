@@ -175,7 +175,7 @@
         <version.com.twitter.hpack>1.0.2</version.com.twitter.hpack>
 
         <!-- Non-default maven plugin versions and configuration -->
-        <version.org.wildfly.openssl>1.0.4.Final</version.org.wildfly.openssl>
+        <version.org.wildfly.openssl>1.1.3.Final</version.org.wildfly.openssl>
         <version.checkstyle>7.1</version.checkstyle>
         <version.bundle.plugin>5.1.1</version.bundle.plugin>
 
