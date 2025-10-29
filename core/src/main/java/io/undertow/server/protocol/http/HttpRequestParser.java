@@ -213,7 +213,7 @@ public abstract class HttpRequestParser {
         maxParameters = options.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS);
         maxHeaders = options.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS);
         slashDecodingFlag = URLUtils.getSlashDecodingFlag(options);
-        decode = options.get(UndertowOptions.DECODE_URL, true);
+        decode = options.get(UndertowOptions.DECODE_URL, UndertowOptions.DEFAULT_DECODE_URL);
         charset = options.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
         maxCachedHeaderSize = options.get(UndertowOptions.MAX_CACHED_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_CACHED_HEADER_SIZE);
         this.allowUnescapedCharactersInUrl = options.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
