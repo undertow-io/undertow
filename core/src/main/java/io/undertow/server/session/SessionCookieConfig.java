@@ -18,6 +18,8 @@
 
 package io.undertow.server.session;
 
+import java.util.Map;
+
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
@@ -33,15 +35,9 @@ import io.undertow.server.handlers.CookieImpl;
 public class SessionCookieConfig implements SessionConfig {
 
     public static final String DEFAULT_SESSION_ID = "JSESSIONID";
-
+    public static final String DEFAULT_PATH = "/";
     private String cookieName = DEFAULT_SESSION_ID;
-    private String path = "/";
-    private String domain;
-    private boolean discard;
-    private boolean secure;
-    private boolean httpOnly;
-    private int maxAge = -1;
-    private String comment;
+    private CookieImpl kernel = new CookieImpl(cookieName);
 
 
     @Override
@@ -49,30 +45,24 @@ public class SessionCookieConfig implements SessionConfig {
         return originalUrl;
     }
 
+    public SessionCookieConfig() {
+        super();
+        //NOTE some client dont consider lack of path as "/"...
+        this.kernel.setPath(DEFAULT_PATH);
+    }
+
     @Override
     public void setSessionId(final HttpServerExchange exchange, final String sessionId) {
-        Cookie cookie = new CookieImpl(cookieName, sessionId)
-                .setPath(path)
-                .setDomain(domain)
-                .setDiscard(discard)
-                .setSecure(secure)
-                .setHttpOnly(httpOnly)
-                .setComment(comment);
-        if (maxAge > 0) {
-            cookie.setMaxAge(maxAge);
-        }
+
+        Cookie cookie = new CookieImpl(cookieName, sessionId, this.kernel);
+
         exchange.setResponseCookie(cookie);
         UndertowLogger.SESSION_LOGGER.tracef("Setting session cookie session id %s on %s", sessionId, exchange);
     }
 
     @Override
     public void clearSession(final HttpServerExchange exchange, final String sessionId) {
-        Cookie cookie = new CookieImpl(cookieName, sessionId)
-                .setPath(path)
-                .setDomain(domain)
-                .setDiscard(discard)
-                .setSecure(secure)
-                .setHttpOnly(httpOnly)
+        Cookie cookie = new CookieImpl(cookieName, sessionId, this.kernel)
                 .setMaxAge(0);
         exchange.setResponseCookie(cookie);
         UndertowLogger.SESSION_LOGGER.tracef("Clearing session cookie session id %s on %s", sessionId, exchange);
@@ -103,65 +93,78 @@ public class SessionCookieConfig implements SessionConfig {
     }
 
     public String getPath() {
-        return path;
+        return this.kernel.getPath();
     }
 
     public SessionCookieConfig setPath(final String path) {
-        this.path = path;
+        this.kernel.setPath(path);
         return this;
     }
 
     public String getDomain() {
-        return domain;
+        return this.kernel.getDomain();
     }
 
     public SessionCookieConfig setDomain(final String domain) {
-        this.domain = domain;
+        this.kernel.setDomain(domain);
         return this;
     }
 
     public boolean isDiscard() {
-        return discard;
+        return this.kernel.isDiscard();
     }
 
     public SessionCookieConfig setDiscard(final boolean discard) {
-        this.discard = discard;
+        this.kernel.setDiscard(discard);
         return this;
     }
 
     public boolean isSecure() {
-        return secure;
+        return this.kernel.isSecure();
     }
 
     public SessionCookieConfig setSecure(final boolean secure) {
-        this.secure = secure;
+        this.kernel.setSecure(secure);
         return this;
     }
 
     public boolean isHttpOnly() {
-        return httpOnly;
+        return this.kernel.isHttpOnly();
     }
 
     public SessionCookieConfig setHttpOnly(final boolean httpOnly) {
-        this.httpOnly = httpOnly;
+        this.kernel.setHttpOnly(httpOnly);
         return this;
     }
 
     public int getMaxAge() {
-        return maxAge;
+        return kernel.getMaxAge();
     }
 
     public SessionCookieConfig setMaxAge(final int maxAge) {
-        this.maxAge = maxAge;
+        this.kernel.setMaxAge(maxAge);
         return this;
     }
 
     public String getComment() {
-        return comment;
+        return this.kernel.getComment();
     }
 
     public SessionCookieConfig setComment(final String comment) {
-        this.comment = comment;
+        this.kernel.setComment(comment);
         return this;
+    }
+
+    public SessionCookieConfig setAttribute(final String name, final String value) {
+        kernel.setAttribute(name, value);
+        return this;
+    }
+
+    public String getAttribute(final String name) {
+        return kernel.getAttribute(name);
+    }
+
+    public Map<String, String> getAttributes() {
+        return kernel.getAttributes();
     }
 }
