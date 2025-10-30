@@ -663,11 +663,19 @@ public class Connectors {
      * Returns true if the token character is valid according to rfc7230
      */
     public static boolean isValidTokenCharacter(byte c) {
-        return ALLOWED_TOKEN_CHARACTERS[c];
+        if (c < 0 || c > ALLOWED_TOKEN_CHARACTERS.length - 1) {
+            return false;
+        } else {
+            return ALLOWED_TOKEN_CHARACTERS[c];
+        }
     }
 
     public static boolean isValidSchemeCharacter(byte c) {
-        return ALLOWED_SCHEME_CHARACTERS[c];
+        if (c < 0 || c > ALLOWED_SCHEME_CHARACTERS.length - 1) {
+            return false;
+        } else {
+            return ALLOWED_SCHEME_CHARACTERS[c];
+        }
     }
 
 
