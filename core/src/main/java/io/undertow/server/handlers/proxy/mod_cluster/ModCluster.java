@@ -59,6 +59,7 @@ public class ModCluster {
     private final String rankedAffinityDelimiter;
 
     private final boolean reuseXForwarded;
+    private final boolean rewriteHostHeader;
 
     private final String serverID = UUID.randomUUID().toString(); // TODO
 
@@ -79,6 +80,7 @@ public class ModCluster {
         this.useAlias = builder.useAlias;
         this.maxRetries = builder.maxRetries;
         this.reuseXForwarded = builder.reuseXForwarded;
+        this.rewriteHostHeader = builder.rewriteHostHeader;
         this.container = new ModClusterContainer(this, builder.xnioSsl, builder.client, builder.clientOptions);
     }
 
@@ -162,6 +164,7 @@ public class ModCluster {
                 .setMaxRequestTime(maxRequestTime)
                 .setMaxConnectionRetries(maxRetries)
                 .setReuseXForwarded(reuseXForwarded)
+                .setRewriteHostHeader(rewriteHostHeader)
                 .build();
     }
 
@@ -177,6 +180,7 @@ public class ModCluster {
                 .setMaxRequestTime(maxRequestTime)
                 .setMaxConnectionRetries(maxRetries)
                 .setReuseXForwarded(reuseXForwarded)
+                .setRewriteHostHeader(rewriteHostHeader)
                 .build();
     }
     /**
@@ -244,6 +248,7 @@ public class ModCluster {
         private String rankedAffinityDelimiter = ".";
 
         private boolean reuseXForwarded;
+        private boolean rewriteHostHeader;
 
         private Builder(XnioWorker xnioWorker, UndertowClient client, XnioSsl xnioSsl) {
             this.xnioSsl = xnioSsl;
@@ -346,6 +351,11 @@ public class ModCluster {
 
         public Builder setReuseXForwarded(boolean reuseXForwarded) {
             this.reuseXForwarded = reuseXForwarded;
+            return this;
+        }
+
+        public Builder setRewriteHostHeader(boolean rewriteHostHeader) {
+            this.rewriteHostHeader = rewriteHostHeader;
             return this;
         }
     }
