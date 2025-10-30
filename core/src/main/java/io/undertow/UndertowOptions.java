@@ -172,6 +172,11 @@ public class UndertowOptions {
     public static final Option<Boolean> ALWAYS_SET_KEEP_ALIVE = Option.simple(UndertowOptions.class, "ALWAYS_SET_KEEP_ALIVE", Boolean.class);
 
     /**
+     * Default value of {@link #ALWAYS_SET_DATE} option.
+     */
+    public static final boolean DEFAULT_ALWAYS_SET_DATE = true;
+
+    /**
      * If this is true then a Date header will be added to all responses. The HTTP spec says this header should be added to all
      * responses, unless the server does not have an accurate clock.
      * <p>
