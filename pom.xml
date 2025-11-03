@@ -393,6 +393,11 @@
                         <destinationRepository>${nexus.repository.release}</destinationRepository>
                     </configuration>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>${version.shade.plugin}</version>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
