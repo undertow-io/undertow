@@ -556,7 +556,12 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         if (anyAreSet(state, FLAG_CLOSED) || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
+        final long startPosition = source.position();
+        long count = source.size() - source.position();
         final long remainingContentLength = remainingContentLength();
+        if (count > remainingContentLength) {
+            count = remainingContentLength;
+        }
         if (listener == null) {
             if (buffer != null && buffer.position() != 0) {
                 writeBufferBlocking(false);
@@ -564,12 +569,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
             if (channel == null) {
                 channel = servletRequestContext.getExchange().getResponseChannel();
             }
-            long position = source.position();
-            long count = source.size() - position;
-            if (count > remainingContentLength) {
-                count = remainingContentLength;
-            }
-            Channels.transferBlocking(channel, source, position, count);
+            Channels.transferBlocking(channel, source, startPosition, count);
             updateWritten(count);
         } else {
             setFlags(FLAG_WRITE_STARTED);
@@ -577,25 +577,23 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
             long pos = 0;
             try {
-                long size = Math.min (source.size(), remainingContentLength);
-                pos = source.position();
+                long end = pos + count;
+                pos = startPosition;
 
-                while (size - pos > 0) {
-                    long ret = channel.transferFrom(pendingFile, pos, size - pos);
+                while (end - pos > 0) {
+                    long ret = channel.transferFrom(pendingFile, pos, end - pos);
                     if (ret <= 0) {
                         clearFlags(FLAG_READY);
                         pendingFile = source;
-                        source.position(pos);
                         channel.resumeWrites();
                         return;
                     }
                     pos += ret;
                 }
             } finally {
-                updateWrittenAsync(pos - source.position());
+                updateWrittenAsync(pos - startPosition);
             }
         }
-
     }
 
 
@@ -638,7 +636,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
                     if (buffer == null && (contentLength == null || !Methods.HEAD_STRING.equals(servletRequestContext.getOriginalRequest().getMethod()))) {
                         servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, "0");
                     } else if (buffer != null && contentLength == null) {
-                        servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, Integer.toString(buffer.position()));
+                        servletRequestContext.getExchange().getResponseHeaders().put(Headers.CONTENT_LENGTH, buffer.position());
                     }
                 }
             }

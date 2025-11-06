@@ -384,6 +384,28 @@ public class SimpleParserTestCase {
     }
 
     @Test
+    public void testIDLessMatrixParameters() throws BadRequestException {
+        byte[] in = "GET http://localhost:7777/route/v1/driving/13.388860,52.517037;13.397634,52.529407,111;13.428555,52.523219,222?overview=false HTTP/1.1\r\n\r\n".getBytes();
+        ParseState context = new ParseState(10);
+        HttpServerExchange result = new HttpServerExchange(null);
+        OptionMap.Builder builder = OptionMap.builder()
+                .set(UndertowOptions.ALLOW_ENCODED_SLASH, true)
+                .set(UndertowOptions.ALLOW_ID_LESS_MATRIX_PARAMETERS, true);
+        HttpRequestParser.instance(builder.getMap()).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("http://localhost:7777/route/v1/driving/13.388860,52.517037;13.397634,52.529407,111;13.428555,52.523219,222", result.getRequestURI());
+        Assert.assertEquals("/route/v1/driving/13.388860,52.517037", result.getRequestPath());
+        Assert.assertEquals("overview=false", result.getQueryString());
+        Assert.assertEquals("52.529407", result.getPathParameters().get("13.397634").getFirst());
+        Assert.assertEquals("111", result.getPathParameters().get("13.397634").getLast());
+        Assert.assertEquals("52.523219", result.getPathParameters().get("13.428555").getFirst());
+        Assert.assertEquals("222", result.getPathParameters().get("13.428555").getLast());
+        Assert.assertEquals("false", result.getQueryParameters().get("overview").getFirst());
+        Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
+        Assert.assertTrue(result.isHostIncludedInRequestURI());
+    }
+
+    @Test
     public void testFullUrlRootPath() throws BadRequestException {
         byte[] in = "GET http://myurl.com HTTP/1.1\r\n\r\n".getBytes();
 

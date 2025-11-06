@@ -241,16 +241,29 @@ public class UndertowOptions {
     public static final Option<Boolean> ENABLE_SPDY = Option.simple(UndertowOptions.class, "ENABLE_SPDY", Boolean.class);
 
     /**
+     * Default value of {@link #ENABLE_HTTP2} option.
+     */
+    public static final boolean DEFAULT_ENABLE_HTTP2 = false;
+
+    /**
      * If we should attempt to use HTTP2 for HTTPS connections.
+     * <p>
+     * Defaults to {@link #DEFAULT_ENABLE_HTTP2}
      */
     public static final Option<Boolean> ENABLE_HTTP2 = Option.simple(UndertowOptions.class, "ENABLE_HTTP2", Boolean.class);
+
+    /**
+     * Default value of {@link #ENABLE_STATISTICS} option.
+     */
+    public static final boolean DEFAULT_ENABLE_STATISTICS = false;
 
     /**
      * If connector level statistics should be enabled. This has a slight performance impact, but allows statistics such
      * as bytes sent/recevied to be monitored.
      *
      * If this is passed to the client then client statistics will be enabled.
-     *
+     * <p>
+     * Defaults to {@link #DEFAULT_ENABLE_STATISTICS}
      */
     public static final Option<Boolean> ENABLE_STATISTICS = Option.simple(UndertowOptions.class, "ENABLE_STATISTICS", Boolean.class);
 
@@ -262,6 +275,10 @@ public class UndertowOptions {
     @Deprecated(forRemoval = true)
     public static final Option<Boolean> ENABLE_CONNECTOR_STATISTICS = ENABLE_STATISTICS;
 
+    /**
+     * Default value of {@link #ALLOW_UNKNOWN_PROTOCOLS} option.
+     */
+    public static final Boolean DEFAULT_ALLOW_UNKNOWN_PROTOCOLS = false;
 
     /**
      * If unknown protocols should be allowed. The known protocols are:
@@ -272,8 +289,8 @@ public class UndertowOptions {
      * HTTP/2.0
      *
      * If this is false then requests that specify any other protocol will be rejected with a 400
-     *
-     * Defaults to false
+     * <p>
+     * Defaults to {@link #DEFAULT_ALLOW_UNKNOWN_PROTOCOLS}
      */
     public static final Option<Boolean> ALLOW_UNKNOWN_PROTOCOLS = Option.simple(UndertowOptions.class, "ALLOW_UNKNOWN_PROTOCOLS", Boolean.class);
 
@@ -344,7 +361,14 @@ public class UndertowOptions {
     public static final Option<Integer> MAX_CONCURRENT_REQUESTS_PER_CONNECTION = Option.simple(UndertowOptions.class, "MAX_CONCURRENT_REQUESTS_PER_CONNECTION", Integer.class);
 
     /**
-     * The maximum number of buffers that will be used before reads are paused in framed protocols. Defaults to 10
+     * Default value of {@link #MAX_QUEUED_READ_BUFFERS} option.
+     */
+    public static final int DEFAULT_MAX_QUEUED_READ_BUFFERS = 16;
+
+    /**
+     * The maximum number of buffers that will be used before reads are paused in framed protocols.
+     * <p>
+     * Defaults to {@link #DEFAULT_MAX_QUEUED_READ_BUFFERS}
      */
     public static final Option<Integer> MAX_QUEUED_READ_BUFFERS = Option.simple(UndertowOptions.class, "MAX_QUEUED_READ_BUFFERS", Integer.class);
 
@@ -365,10 +389,15 @@ public class UndertowOptions {
      */
     public static final Option<Integer> MAX_CACHED_HEADER_SIZE = Option.simple(UndertowOptions.class, "MAX_CACHED_HEADER_SIZE", Integer.class);
 
+    /**
+     * Default value of {@link #HTTP_HEADERS_CACHE_SIZE} option.
+     */
     public static final int DEFAULT_HTTP_HEADERS_CACHE_SIZE = 15;
 
     /**
-     * The maximum number of headers that are cached per connection. Defaults to 15. If this is set to zero the cache is disabled.
+     * The maximum number of headers that are cached per connection. If this is set to zero the cache is disabled.
+     * <p>
+     * Defaults to {@link #DEFAULT_HTTP_HEADERS_CACHE_SIZE}
      */
     public static final Option<Integer> HTTP_HEADERS_CACHE_SIZE = Option.simple(UndertowOptions.class, "HTTP_HEADERS_CACHE_SIZE", Integer.class);
 
@@ -384,6 +413,11 @@ public class UndertowOptions {
      * The option can be useful when connecting via IP but want to set a SNI hostname value.
      */
     public static final Option<String> SSL_SNI_HOSTNAME = Option.simple(UndertowOptions.class, "SSL_SNI_HOSTNAME", String.class);
+
+    /**
+     * Default value of {@link #ALLOW_UNESCAPED_CHARACTERS_IN_URL} option.
+     */
+    public static final boolean DEFAULT_ALLOW_UNESCAPED_CHARACTERS_IN_URL = false;
 
     public static final Option<Boolean> ALLOW_UNESCAPED_CHARACTERS_IN_URL = Option.simple(UndertowOptions.class,"ALLOW_UNESCAPED_CHARACTERS_IN_URL", Boolean.class);
 
@@ -403,10 +437,15 @@ public class UndertowOptions {
     public static final Option<String> ENDPOINT_IDENTIFICATION_ALGORITHM = Option.simple(UndertowOptions.class, "ENDPOINT_IDENTIFICATION_ALGORITHM", String.class);
 
     /**
+     * Default value of {@link #QUEUED_FRAMES_HIGH_WATER_MARK} option.
+     */
+    public static final int DEFAULT_QUEUED_FRAMES_HIGH_WATER_MARK = 50;
+
+    /**
      * The maximum numbers of frames that can be queued before reads are suspended. Once this number is hit then reads will not be resumed until {@link #QUEUED_FRAMES_LOW_WATER_MARK}
      * is hit.
-     *
-     * Defaults to 50
+     * <p>
+     * Defaults to {@link #DEFAULT_QUEUED_FRAMES_HIGH_WATER_MARK}
      */
     public static final Option<Integer> QUEUED_FRAMES_HIGH_WATER_MARK = Option.simple(UndertowOptions.class, "QUEUED_FRAMES_HIGH_WATER_MARK", Integer.class);
 
@@ -484,6 +523,20 @@ public class UndertowOptions {
      * a successful write taking place, the socket's next write will throw a {@link WriteTimeoutException}.
      */
     public static final Option<Integer> WEB_SOCKETS_WRITE_TIMEOUT = Option.simple(Options.class, "WEB_SOCKETS_WRITE_TIMEOUT", Integer.class);
+
+    /**
+     * Specify if matrix parameters without ID should be allowed or not. If set to 'true' '/test;param1,param2/next-path-segment' will be acceptable.
+     * (spec compliant '/test;PARAM_ID=param1,param2/next-path-segment')
+     *
+     * If this is not specified it will be the same as {@link #DEFAULT_ALLOW_ID_LESS_MATRIX_PARAMETERS}.
+     */
+    public static final Option<Boolean> ALLOW_ID_LESS_MATRIX_PARAMETERS = Option.simple(UndertowOptions.class, "ALLOW_ID_LESS_MATRIX_PARAMETERS", Boolean.class);
+
+    /**
+     * Default value of allow ID-less matrix parameters - false. We should comply with spec.
+     */
+    public static final boolean DEFAULT_ALLOW_ID_LESS_MATRIX_PARAMETERS = false;
+
 
     private UndertowOptions() {
 

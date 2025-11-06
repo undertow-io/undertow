@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2025 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,85 +20,154 @@ package io.undertow.server.handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
-import io.undertow.util.PathTemplate;
-import io.undertow.util.PathTemplateMatcher;
-
+import io.undertow.util.PathTemplateParser;
+import io.undertow.util.PathTemplateRouter;
+import io.undertow.util.PathTemplateRouteResult;
+import io.undertow.util.PathTemplateRouterFactory;
+import java.util.function.Supplier;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * A handler that matches URI templates
+ * A drop-in substitute for the old PathTemplateHandler class. Ideally, one should use {@link PathTemplateRouterHandler} by
+ * instantiating it with a {@link PathTemplateRouterFactory}. This class implements all of the methods from the original
+ * PathTemplateHandler to provide backwards compatibility.
  *
- * @author Stuart Douglas
- * @see PathTemplateMatcher
+ * @author Dirk Roets. This class was originally written by Stuart Douglas. After the introduction of
+ * {@link PathTemplateRouterFactory}, it was rewritten against the original interface and tests.
  */
 public class PathTemplateHandler implements HttpHandler {
-
-    private final boolean rewriteQueryParameters;
-
-    private final HttpHandler next;
 
     /**
      * @see io.undertow.util.PathTemplateMatch#ATTACHMENT_KEY
      */
     @Deprecated
-    public static final AttachmentKey<PathTemplateMatch> PATH_TEMPLATE_MATCH = AttachmentKey.create(PathTemplateMatch.class);
+    public static final AttachmentKey<PathTemplateHandler.PathTemplateMatch> PATH_TEMPLATE_MATCH = AttachmentKey.
+            create(PathTemplateHandler.PathTemplateMatch.class);
 
-    private final PathTemplateMatcher<HttpHandler> pathTemplateMatcher = new PathTemplateMatcher<>();
+    private final boolean rewriteQueryParameters;
+    private final PathTemplateRouterFactory.SimpleBuilder<HttpHandler> builder;
+    private final Object lock = new Object();
+    private volatile PathTemplateRouter<HttpHandler> router;
 
+    /**
+     * Default constructor. Uses {@link ResponseCodeHandler#HANDLE_404} as the next (default) handler and sets
+     * 'rewriteQueryParameters' to 'true'.
+     */
     public PathTemplateHandler() {
         this(true);
     }
 
-    public PathTemplateHandler(boolean rewriteQueryParameters) {
+    /**
+     * Uses {@link ResponseCodeHandler#HANDLE_404} as the next (default) handler.
+     *
+     * @param rewriteQueryParameters Path parameters that are returned by the underlying router will be added as query
+     * parameters to the exchange if this flag is 'true'.
+     */
+    public PathTemplateHandler(final boolean rewriteQueryParameters) {
         this(ResponseCodeHandler.HANDLE_404, rewriteQueryParameters);
     }
 
-    public PathTemplateHandler(HttpHandler next) {
+    /**
+     * Sets 'rewriteQueryParameters' to 'true'.
+     *
+     * @param next The next (default) handler to use when requests do not match any of the specified templates.
+     */
+    public PathTemplateHandler(final HttpHandler next) {
         this(next, true);
     }
 
-    public PathTemplateHandler(HttpHandler next, boolean rewriteQueryParameters) {
+    /**
+     * @param next The next (default) handler to use when requests do not match any of the specified templates.
+     * @param rewriteQueryParameters Path parameters that are returned by the underlying router will be added as query
+     * parameters to the exchange if this flag is 'true'.
+     */
+    public PathTemplateHandler(final HttpHandler next, final boolean rewriteQueryParameters) {
+        Objects.requireNonNull(next);
+
         this.rewriteQueryParameters = rewriteQueryParameters;
-        this.next = next;
+        builder = PathTemplateRouterFactory.SimpleBuilder.newBuilder(next);
+        router = builder.build();
     }
 
-    @Override
-    public void handleRequest(HttpServerExchange exchange) throws Exception {
-        PathTemplateMatcher.PathMatchResult<HttpHandler> match = pathTemplateMatcher.match(exchange.getRelativePath());
-        if (match == null) {
-            next.handleRequest(exchange);
-            return;
-        }
-        exchange.putAttachment(PATH_TEMPLATE_MATCH, new PathTemplateMatch(match.getMatchedTemplate(), match.getParameters()));
-        exchange.putAttachment(io.undertow.util.PathTemplateMatch.ATTACHMENT_KEY, new io.undertow.util.PathTemplateMatch(match.getMatchedTemplate(), match.getParameters()));
-        if (rewriteQueryParameters) {
-            for (Map.Entry<String, String> entry : match.getParameters().entrySet()) {
-                exchange.addQueryParam(entry.getKey(), entry.getValue());
-            }
-        }
-        match.getValue().handleRequest(exchange);
-    }
-
+    /**
+     * Adds a template and handler to the underlying router.
+     *
+     * @param uriTemplate The URI path template.
+     * @param handler The handler to use for requests that match the specified template.
+     *
+     * @return Reference to this handler.
+     */
     public PathTemplateHandler add(final String uriTemplate, final HttpHandler handler) {
-        pathTemplateMatcher.add(uriTemplate, handler);
+        Objects.requireNonNull(uriTemplate);
+        Objects.requireNonNull(handler);
+
+        // PathTemplateRouter builders are not thread-safe, so we need to synchronize.
+        synchronized (lock) {
+            builder.addTemplate(uriTemplate, handler);
+            router = builder.build();
+        }
+
         return this;
     }
 
+    /**
+     * Removes a template from the underlying router.
+     *
+     * @param uriTemplate The URI path template.
+     *
+     * @return Reference to this handler.
+     */
     public PathTemplateHandler remove(final String uriTemplate) {
-        pathTemplateMatcher.remove(uriTemplate);
+        Objects.requireNonNull(uriTemplate);
+
+        // PathTemplateRouter builders are not thread-safe, so we need to synchronize.
+        synchronized (lock) {
+            builder.removeTemplate(uriTemplate);
+            router = builder.build();
+        }
+
         return this;
     }
 
     @Override
     public String toString() {
-        Set<PathTemplate> paths = pathTemplateMatcher.getPathTemplates();
-        if (paths.size() == 1) {
-            return "path-template( " + paths.toArray()[0] + " )";
+        final List<PathTemplateParser.PathTemplatePatternEqualsAdapter<PathTemplateParser.PathTemplate<Supplier<HttpHandler>>>> templates
+                = new ArrayList<>(builder.getBuilder().getTemplates().keySet());
+
+        final StringBuilder sb = new StringBuilder();
+        sb.append("path-template( ");
+        if (templates.size() == 1) {
+            sb.append(templates.get(0).getPattern().getPathTemplate()).append(" )");
         } else {
-            return "path-template( {" + paths.stream().map(s -> s.getTemplateString().toString()).collect(Collectors.joining(", ")) + "} )";
+            sb.append('{').append(
+                    // Creates a ", " separated string of all patterns in this handler.
+                    templates.stream().map(s -> s.getPattern().getPathTemplate()).collect(Collectors.joining(", "))
+            ).append("} )");
         }
+        return sb.toString();
+    }
+
+    @Override
+    public void handleRequest(final HttpServerExchange exchange) throws Exception {
+        final PathTemplateRouteResult<HttpHandler> routeResult = router.route(exchange.getRelativePath());
+        if (routeResult.getPathTemplate().isEmpty()) {
+            // This is the default handler, therefore it doesn't contain path parameters.
+            routeResult.getTarget().handleRequest(exchange);
+            return;
+        }
+
+        exchange.putAttachment(PATH_TEMPLATE_MATCH, new PathTemplateMatch(routeResult));
+        exchange.putAttachment(io.undertow.util.PathTemplateMatch.ATTACHMENT_KEY, routeResult);
+        if (rewriteQueryParameters) {
+            for (Map.Entry<String, String> entry : routeResult.getParameters().entrySet()) {
+                exchange.addQueryParam(entry.getKey(), entry.getValue());
+            }
+        }
+        routeResult.getTarget().handleRequest(exchange);
     }
 
     /**
@@ -107,20 +176,26 @@ public class PathTemplateHandler implements HttpHandler {
     @Deprecated
     public static final class PathTemplateMatch {
 
-        private final String matchedTemplate;
-        private final Map<String, String> parameters;
+        private final io.undertow.util.PathTemplateMatch pathTemplateMatch;
 
-        public PathTemplateMatch(String matchedTemplate, Map<String, String> parameters) {
-            this.matchedTemplate = matchedTemplate;
-            this.parameters = parameters;
+        PathTemplateMatch(
+                final io.undertow.util.PathTemplateMatch pathTemplateMatch
+        ) {
+            this.pathTemplateMatch = Objects.requireNonNull(pathTemplateMatch);
+        }
+
+        public PathTemplateMatch(final String matchedTemplate, final Map<String, String> parameters) {
+            this(
+                    new io.undertow.util.PathTemplateMatch(matchedTemplate, parameters)
+            );
         }
 
         public String getMatchedTemplate() {
-            return matchedTemplate;
+            return pathTemplateMatch.getMatchedTemplate();
         }
 
         public Map<String, String> getParameters() {
-            return parameters;
+            return pathTemplateMatch.getParameters();
         }
     }
 }

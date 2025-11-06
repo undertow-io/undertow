@@ -25,8 +25,11 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
+
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
@@ -242,4 +245,99 @@ public class PredicatedHandlersTestCase {
         }
     }
 
+    @Test @ProxyIgnore
+    public void testReasonPhrase() throws IOException {
+        DefaultServer.setRootHandler(
+                Handlers.predicates(
+
+                        PredicatedHandlersParser.parse(
+                                "path('/test') -> reason-phrase('test-my-patience');response-code(480)", getClass().getClassLoader()), new HttpHandler() {
+                            @Override
+                            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                exchange.getResponseSender().send(exchange.getRelativePath());
+                            }
+                        }));
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test");
+
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals("test-my-patience", result.getStatusLine().getReasonPhrase());
+            Assert.assertEquals(480, result.getStatusLine().getStatusCode());
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+
+    }
+
+    @Test @ProxyIgnore
+    public void testDefaultResponse() throws IOException {
+        DefaultServer.setRootHandler(
+                Handlers.predicates(
+                        PredicatedHandlersParser.parse(
+                                "path('/test') -> response(code='208', reason='test-my-patience', body='Dont-Touch')", getClass().getClassLoader()), new HttpHandler() {
+                            @Override
+                            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                exchange.getResponseSender().send(exchange.getRelativePath());
+                            }
+                        }));
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test");
+
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals("test-my-patience", result.getStatusLine().getReasonPhrase());
+            Assert.assertEquals(208, result.getStatusLine().getStatusCode());
+            final String body = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("Dont-Touch", body);
+            Header[] hdrs = result.getHeaders("Content-Length");
+            Assert.assertNotNull(hdrs);
+            Assert.assertEquals(1, hdrs.length);
+            Assert.assertNotNull(hdrs[0]);
+            Assert.assertEquals(hdrs[0].getValue(), ""+"Dont-Touch".length());
+            hdrs = result.getHeaders("Content-Type");
+            Assert.assertNotNull(hdrs);
+            Assert.assertEquals(1, hdrs.length);
+            Assert.assertNotNull(hdrs[0]);
+            Assert.assertEquals(hdrs[0].getValue(), "text/html");
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test @ProxyIgnore
+    public void testCustomTypeResponse() throws IOException {
+        DefaultServer.setRootHandler(
+                Handlers.predicates(
+                        PredicatedHandlersParser.parse(
+                                "path('/test') -> response(code='208', reason='test-my-patience', body='Dont-Touch', type='text/plain')", getClass().getClassLoader()), new HttpHandler() {
+                            @Override
+                            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                exchange.getResponseSender().send(exchange.getRelativePath());
+                            }
+                        }));
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test");
+
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals("test-my-patience", result.getStatusLine().getReasonPhrase());
+            Assert.assertEquals(208, result.getStatusLine().getStatusCode());
+            final String body = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("Dont-Touch", body);
+            Header[] hdrs = result.getHeaders("Content-Length");
+            Assert.assertNotNull(hdrs);
+            Assert.assertEquals(1, hdrs.length);
+            Assert.assertNotNull(hdrs[0]);
+            Assert.assertEquals(hdrs[0].getValue(), ""+"Dont-Touch".length());
+            hdrs = result.getHeaders("Content-Type");
+            Assert.assertNotNull(hdrs);
+            Assert.assertEquals(1, hdrs.length);
+            Assert.assertNotNull(hdrs[0]);
+            Assert.assertEquals(hdrs[0].getValue(), "text/plain");
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 }

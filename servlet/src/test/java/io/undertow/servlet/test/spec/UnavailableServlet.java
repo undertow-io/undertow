@@ -45,4 +45,8 @@ public class UnavailableServlet implements Servlet {
     public void destroy() {
 
     }
+
+    public static void reset() {
+        first = true;
+    }
 }

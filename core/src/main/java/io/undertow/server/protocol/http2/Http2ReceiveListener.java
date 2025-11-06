@@ -103,7 +103,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         } else {
             this.encoding = null;
         }
-        this.allowUnescapedCharactersInUrl = undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
+        this.allowUnescapedCharactersInUrl = undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, UndertowOptions.DEFAULT_ALLOW_UNESCAPED_CHARACTERS_IN_URL);
     }
 
     @Override

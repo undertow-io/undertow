@@ -655,4 +655,24 @@ public interface UndertowMessages {
     @Message(id = 210, value = "Buffer content underflow for exchange '%s', buffer '%s'")
     IOException bufferUnderflow(HttpServerExchange exchange, ByteBuffer buf);
 
+    @Message(id = 211, value = "Exchange '%s' already has body or is blocking.")
+    IOException exchangeBlockingOrBlocking(HttpServerExchange e);
+
+    @Message(id = 212, value = "Failed to encode query string '%s' with '%s' encoding.")
+    IllegalArgumentException failedToEncodeQueryString(String q, String e);
+
+    @Message(id = 213, value = "Wild cards are only supported at the end of a template path")
+    IllegalArgumentException wildCardsOnlyAtEndOfTemplate();
+
+    @Message(id = 214, value = "Illegal character '%s' is contained in the URL path segment '%s' at position %s")
+    IllegalArgumentException illegalCharacterInPathSegment(char character, String segment, int position);
+
+    @Message(id = 215, value = "updateDefaultTargetFactory cannot be called after having added templates")
+    IllegalStateException defaultTargetUpdatedAfterTemplatesAdded();
+
+    @Message(id = 216, value = "The builder already contains a template with the same pattern for '%s'")
+    IllegalArgumentException duplicateUrlPathTemplate(String template);
+
+    @Message(id = 217, value = "The 'defaultTargetFactory' must be set before calling 'build'")
+    IllegalStateException defaultTargetFactoryMustBeSetBeforeBuild();
 }

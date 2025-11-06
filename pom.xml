@@ -28,7 +28,7 @@
 
     <groupId>io.undertow</groupId>
     <artifactId>undertow-parent</artifactId>
-    <version>2.4.0.Beta1-SNAPSHOT</version>
+    <version>2.5.0.Alpha1-SNAPSHOT</version>
 
     <name>Undertow</name>
     <description>Undertow</description>
@@ -130,7 +130,7 @@
         <version.easymock>4.3</version.easymock>
         <version.jakarta.annotation.jakarta-annotation-api>2.1.1</version.jakarta.annotation.jakarta-annotation-api>
         <version.jakarta.servlet.jakarta-servlet-api>6.1.0</version.jakarta.servlet.jakarta-servlet-api>
-        <version.jakarta.websocket.jakarta-websocket-api>2.1.0</version.jakarta.websocket.jakarta-websocket-api>
+        <version.jakarta.websocket.jakarta-websocket-api>2.1.1</version.jakarta.websocket.jakarta-websocket-api>
         <version.junit>4.13.2</version.junit>
         <version.netty>4.1.82.Final</version.netty>
         <version.org.apache.directory.server>2.0.0.AM26</version.org.apache.directory.server>
@@ -167,7 +167,7 @@
         <version.com.twitter.hpack>1.0.2</version.com.twitter.hpack>
 
         <!-- Non-default maven plugin versions and configuration -->
-        <version.org.wildfly.openssl>2.2.1.Final</version.org.wildfly.openssl>
+        <version.org.wildfly.openssl>2.2.5.Final</version.org.wildfly.openssl>
         <version.bundle.plugin>5.1.1</version.bundle.plugin>
 
         <version.jmh>1.21</version.jmh>
@@ -232,7 +232,6 @@
             <plugin>
                 <groupId>org.zanata</groupId>
                 <artifactId>zanata-maven-plugin</artifactId>
-                <version>${version.zanata.plugin}</version>
                 <configuration>
                     <!-- Process sub-modules separately, sharing parent config -->
                     <enableModules>true</enableModules>

@@ -7,8 +7,9 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.junit.Before;
+import org.junit.After;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -25,8 +26,8 @@ import static io.undertow.servlet.Servlets.servlet;
 public class UnavailableServletTestCase {
 
 
-    @BeforeClass
-    public static void setup() throws ServletException {
+    @Before
+    public void setup() throws ServletException {
         DeploymentUtils.setupServlet(
                 servlet("p", UnavailableServlet.class)
                         .addInitParam(UnavailableServlet.PERMANENT, "1")
@@ -34,6 +35,11 @@ public class UnavailableServletTestCase {
                 servlet("t", UnavailableServlet.class)
                         .addMapping("/t"));
 
+    }
+
+    @After
+    public void teardown() {
+        UnavailableServlet.reset();
     }
 
     @Test

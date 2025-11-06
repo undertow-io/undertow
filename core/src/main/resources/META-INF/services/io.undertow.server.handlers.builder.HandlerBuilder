@@ -43,3 +43,5 @@ io.undertow.server.handlers.HttpContinueAcceptingHandler$Builder
 io.undertow.server.handlers.form.EagerFormParsingHandler$Builder
 io.undertow.server.handlers.SameSiteCookieHandler$Builder
 io.undertow.server.handlers.SetErrorHandler$Builder
+io.undertow.server.handlers.builder.ReasonPhraseHandlerBuilder
+io.undertow.server.handlers.builder.ResponseHandlerBuilder
