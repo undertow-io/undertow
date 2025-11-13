@@ -210,16 +210,6 @@ public class UndertowOptions {
     public static final Option<Boolean> ALLOW_EQUALS_IN_COOKIE_VALUE = Option.simple(UndertowOptions.class, "ALLOW_EQUALS_IN_COOKIE_VALUE", Boolean.class);
 
     /**
-     * If this is true then Undertow will disable RFC6265 compliant cookie parsing for Set-Cookie header instead of legacy backward compatible behavior.
-     * <p>
-     * default is {@code false}
-     * </p>
-     */
-    public static final Option<Boolean> DISABLE_RFC6265_COOKIE_PARSING = Option.simple(UndertowOptions.class, "DISABLE_RFC6265_COOKIE_PARSING", Boolean.class);
-
-    public static final boolean DEFAULT_DISABLE_RFC6265_COOKIE_PARSING = false;
-
-    /**
      * If this is true then Undertow will enable RFC6265 compliant cookie validation for Set-Cookie header instead of legacy backward compatible behavior.
      *
      * default is false
