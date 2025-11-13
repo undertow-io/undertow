@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Class that contains utility methods for dealing with cookies.
@@ -44,6 +46,7 @@ public class Cookies {
     public static final String DOMAIN = "$Domain";
     public static final String VERSION = "$Version";
     public static final String PATH = "$Path";
+    private static final Pattern QUOTED_NUMBER_PATTERN = Pattern.compile("\"([0-9]+)\"");
 
 
     /**
@@ -321,13 +324,14 @@ public class Cookies {
                     //extract quoted value
                     if (c == '"') {
                         if (!rfc6265ParsingDisabled && inQuotes) {
+                            // RFC 6265 requires quoted values to remain quoted
                             start = start - 1;
-                            inQuotes = false;
                             i++;
                             cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         } else {
                             cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         }
+                        inQuotes = false;
                         state = 0;
                         start = i + 1;
                     } else if (c == ';' || (commaIsSeperator && c == ',')) {
@@ -373,7 +377,14 @@ public class Cookies {
             }
             String version = additional.get(VERSION);
             if (version != null) {
-                c.setVersion(Integer.parseInt(version));
+                // In RFC 2109 and RFC 2965 the value for a version should be surrounded in quotes; $Version="1". We
+                // need to check for the quotes and if found, remove them before we parse the version into an integer.
+                final Matcher matcher = QUOTED_NUMBER_PATTERN.matcher(version);
+                if (matcher.matches()) {
+                    c.setVersion(Integer.parseInt(matcher.group(1)));
+                } else {
+                    c.setVersion(Integer.parseInt(version));
+                }
             }
             String path = additional.get(PATH);
             if (path != null) {
