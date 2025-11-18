@@ -992,6 +992,10 @@ public class ServletContextImpl implements ServletContext {
                     if (session != null) {
                         httpSession = SecurityActions.forSession(session, this, false);
                         exchange.putAttachment(sessionAttachmentKey, httpSession);
+                    } else {
+                        // If an existing session can't be found, allow the exception to bubble up so that the underlying
+                        // exception condition can be properly handled/reported.
+                        throw e;
                     }
                 }
             }
