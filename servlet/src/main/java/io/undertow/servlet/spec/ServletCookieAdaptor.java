@@ -179,7 +179,7 @@ public class ServletCookieAdaptor implements Cookie {
             UndertowServletLogger.REQUEST_LOGGER.tracef("Setting SameSite mode to [%s] for cookie [%s]", m, this.getName());
            cookie.setAttribute(SAME_SITE, m);
         } else {
-            UndertowServletLogger.REQUEST_LOGGER.warnf(UndertowMessages.MESSAGES.invalidSameSiteMode(mode, Arrays.toString(CookieSameSiteMode.values())), "Ignoring specified SameSite mode [%s] for cookie [%s]", mode, this.getName());
+            UndertowServletLogger.REQUEST_LOGGER.ignoreSameSiteCookieMode(UndertowMessages.MESSAGES.invalidSameSiteMode(mode, Arrays.toString(CookieSameSiteMode.values())), mode, this.getName());
         }
         return this;
     }
