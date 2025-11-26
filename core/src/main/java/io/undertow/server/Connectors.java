@@ -491,7 +491,7 @@ public class Connectors {
         boolean slashDecodingFlag = URLUtils.getSlashDecodingFlag(options);
         setExchangeRequestPath(exchange, encodedPath,
                 options.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name()),
-                options.get(UndertowOptions.DECODE_URL, true),
+                options.get(UndertowOptions.DECODE_URL, UndertowOptions.DEFAULT_DECODE_URL),
                 slashDecodingFlag,
                 decodeBuffer,
                 options.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS));

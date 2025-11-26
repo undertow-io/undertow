@@ -71,7 +71,7 @@ public class URLDecodingHandler implements HttpHandler {
     // Returns true if the exchange should be decoded.  This method updates the ALREADY_DECODED
     // attachment so that subsequent invocations will always return false.
     private static boolean shouldDecode(final HttpServerExchange exchange) {
-        return !exchange.getConnection().getUndertowOptions().get(UndertowOptions.DECODE_URL, true)
+        return !exchange.getConnection().getUndertowOptions().get(UndertowOptions.DECODE_URL, UndertowOptions.DEFAULT_DECODE_URL)
                 && exchange.putAttachment(ALREADY_DECODED, Boolean.TRUE) == null;
     }
 
