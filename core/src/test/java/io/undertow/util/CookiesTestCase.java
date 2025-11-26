@@ -518,22 +518,15 @@ public class CookiesTestCase {
     @Test
     public void testMultipleRFC6265() {
         final MultiValueHashListStorage<String, Cookie> parsedCookies = new MultiValueHashListStorage<>();
-        //NOTE undertow does not allow duplicates and RFC6265 treat stray RFC 2109 entities like cookies on its own.
-        final List<String> toParse = Arrays.asList("CUSTOMER=JOE; CUSTOMER=MONICA; $Path=/");
+        final List<String> toParse = Arrays.asList("CUSTOMER=JOE; CUSTOMER=MONICA");
         Cookies.parseRequestCookies(4, false, toParse,parsedCookies);
-        Assert.assertEquals(2, parsedCookies.size());
+        Assert.assertEquals(1, parsedCookies.size());
         List<Cookie> lst = parsedCookies.get("CUSTOMER");
         Assert.assertEquals(1, lst.size());
         Cookie cookie = lst.get(0);
         Assert.assertEquals(null, cookie.getPath());
         Assert.assertEquals("CUSTOMER", cookie.getName());
         Assert.assertEquals("MONICA", cookie.getValue());
-        lst = parsedCookies.get("$Path");
-        Assert.assertEquals(1, lst.size());
-        cookie = lst.get(0);
-        Assert.assertEquals(null, cookie.getPath());
-        Assert.assertEquals("$Path", cookie.getName());
-        Assert.assertEquals("/", cookie.getValue());
     }
 
     @Test
@@ -541,7 +534,7 @@ public class CookiesTestCase {
         final MultiValueHashListStorage<String, Cookie> parsedCookies = new MultiValueHashListStorage<>();
         final List<String> toParse = Arrays.asList("$Version=1; CUSTOMER=JOE; $Path=/acme; CUSTOMER=MONICA; $Path=/; $Domain=my_oh_my; NO=META");
         Cookies.parseRequestCookies(8, false, toParse,parsedCookies);
-        Assert.assertEquals(""+parsedCookies,6, parsedCookies.size());
+        Assert.assertEquals(""+parsedCookies,3, parsedCookies.size());
         List<Cookie> lst = parsedCookies.get("CUSTOMER");
         Assert.assertEquals(2, lst.size());
         Cookie cookie = lst.get(0);
@@ -556,25 +549,6 @@ public class CookiesTestCase {
         Assert.assertEquals("my_oh_my", cookie.getDomain());
         Assert.assertEquals("CUSTOMER", cookie.getName());
         Assert.assertEquals("MONICA", cookie.getValue());
-        lst = parsedCookies.get("$Path");
-        //1 - cause undertow does not allow duplicates, so first instance of $Path will be removed
-        Assert.assertEquals(1, lst.size());
-        cookie = lst.get(0);
-        Assert.assertEquals(null, cookie.getPath());
-        Assert.assertEquals("$Path", cookie.getName());
-        Assert.assertEquals("/", cookie.getValue());
-        lst = parsedCookies.get("$Version");
-        Assert.assertEquals(1, lst.size());
-        cookie = lst.get(0);
-        Assert.assertEquals(null, cookie.getPath());
-        Assert.assertEquals("$Version", cookie.getName());
-        Assert.assertEquals("1", cookie.getValue());
-        lst = parsedCookies.get("$Domain");
-        Assert.assertEquals(1, lst.size());
-        cookie = lst.get(0);
-        Assert.assertEquals(null, cookie.getPath());
-        Assert.assertEquals("$Domain", cookie.getName());
-        Assert.assertEquals("my_oh_my", cookie.getValue());
         lst = parsedCookies.get("NO");
         Assert.assertEquals(1, lst.size());
         cookie = lst.get(0);
