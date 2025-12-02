@@ -733,6 +733,7 @@ public final class ProxyHandler implements HttpHandler {
             final HeaderMap inboundResponseHeaders = response.getResponseHeaders();
             final HeaderMap outboundResponseHeaders = exchange.getResponseHeaders();
             exchange.setStatusCode(response.getResponseCode());
+            exchange.setReasonPhrase(response.getStatus());
             copyHeaders(exchange, outboundResponseHeaders, inboundResponseHeaders);
 
             if (exchange.isUpgrade()) {
