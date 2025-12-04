@@ -123,20 +123,21 @@ public class HostHeaderHandler implements HttpHandler {
                 //TODO: should we fake Host till we make it?
                 next.handleRequest(exchange);
                 return;
-            }//else {
+            }
+            //else {
                 //clients want to be good citizens and send it anyway.
                 //fall through to below, first check will be false, but rest is the same as for HTTP1.1+
             //}
         }
 
-            if (headerValues == null || headerValues.size() == 0 || headerValues.getFirst().isEmpty()) {
-                // isEmpty - we assume http/https ? so authority is defined for this type, it cant be empty?
-                terminate(exchange, STATUS_NO_HOST_HEADER);
-                return;
-            } else if (headerValues.size() > 1) {
-                terminate(exchange, STATUS_TOO_MANY_HOST_HEADERS);
-                return;
-            }
+        if (headerValues == null || headerValues.size() == 0) {
+            // isEmpty - we assume http/https ? so authority is defined for this type, it cant be empty?
+            terminate(exchange, STATUS_NO_HOST_HEADER);
+            return;
+        } else if (headerValues.size() > 1) {
+            terminate(exchange, STATUS_TOO_MANY_HOST_HEADERS);
+            return;
+        }
 
 
         // parsing time.
@@ -264,6 +265,9 @@ public class HostHeaderHandler implements HttpHandler {
         // we need only to check if Host header value is contained within URI if its absolute or authority
         if (exchange.isHostIncludedInRequestURI()) {
             if (!exchange.getRequestURI().contains(hostHeaderURI)) {
+                terminate(exchange, STATUS_HOST_NO_MATCH);
+                return;
+            } else if (hostHeaderURI.isEmpty()) {
                 terminate(exchange, STATUS_HOST_NO_MATCH);
                 return;
             }
