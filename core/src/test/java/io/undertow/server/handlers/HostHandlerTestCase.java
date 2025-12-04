@@ -225,6 +225,20 @@ public class HostHandlerTestCase {
                 new HttpHost(DefaultServer.getHostAddress(), DefaultServer.getHostPort()), 200, null);
     }
 
+    @Test
+    public void testEmptyHost() throws Exception {
+        // test userinfo presence?
+        test(new String[] { "" },
+                null, 200, null);
+    }
+
+    @Test
+    public void testEmptyHost2() throws Exception {
+        // test userinfo presence?
+        test(new String[] { "" },
+                new HttpHost(DefaultServer.getHostAddress(), DefaultServer.getHostPort()), 400, HostHeaderHandler.STATUS_HOST_NO_MATCH);
+    }
+
     public void test(final String[] headers, final HttpHost proxy, final int resultCode, final String statusMessage)
             throws ClientProtocolException, IOException {
         TestHttpClient client = new TestHttpClient();
