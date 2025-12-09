@@ -28,7 +28,7 @@ import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.servlet.util.ConstructorInstanceFactory;
 import io.undertow.servlet.util.ImmediateInstanceHandle;
 import io.undertow.servlet.websockets.ServletWebSocketHttpExchange;
-import io.undertow.util.CopyOnWriteMap;
+import io.undertow.util.WeakCopyOnWriteMap;
 import io.undertow.util.PathTemplate;
 import io.undertow.util.StatusCodes;
 import io.undertow.websockets.WebSocketExtension;
@@ -104,7 +104,7 @@ public class ServerWebSocketContainer implements ServerContainer, Closeable {
 
     private final ClassIntrospecter classIntrospecter;
 
-    private final Map<Class<?>, ConfiguredClientEndpoint> clientEndpoints = new CopyOnWriteMap<>();
+    private final Map<Class<?>, ConfiguredClientEndpoint> clientEndpoints = new WeakCopyOnWriteMap<>();
 
     private final List<ConfiguredServerEndpoint> configuredServerEndpoints = new ArrayList<>();
     private final Set<Class<?>> annotatedEndpointClasses = new HashSet<>();
