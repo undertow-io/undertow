@@ -48,9 +48,9 @@ public class Certificates {
     private static String toPem(final byte[] encodedCertificate) {
         final StringBuilder builder = new StringBuilder();
         builder.append(BEGIN_CERT);
-        builder.append('\n');
+        builder.append("\r\n");
         builder.append(FlexBase64.encodeString(encodedCertificate, true));
-        builder.append('\n');
+        builder.append("\r\n");
         builder.append(END_CERT);
         return builder.toString();
     }
