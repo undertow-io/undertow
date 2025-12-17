@@ -1,6 +1,6 @@
 /*
  * JBoss, Home of Professional Open Source.
- * Copyright 2014 Red Hat, Inc., and individual contributors
+ * Copyright 2025 Red Hat, Inc., and individual contributors
  * as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,23 +16,10 @@
  *  limitations under the License.
  */
 
-package io.undertow.annotationprocessor;
+package io.undertow.client.http;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
-/**
- *
- * If this annotation is applied to a class it will be replaced with a generated HTTP parser.
- *
- * @author Stuart Douglas
- */
-@Retention(RetentionPolicy.SOURCE)
-@Target(ElementType.TYPE)
-public @interface HttpParserConfig {
-    String[] methods();
-    String[] protocols();
-    String[] headers();
+final class HttpResponseParseException extends RuntimeException {
+    HttpResponseParseException(final String message) {
+        super(message);
+    }
 }

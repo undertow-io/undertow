@@ -474,7 +474,7 @@ public final class ProxyHandler implements HttpHandler {
                 if (headerValue == null || headerValue.isEmpty()) {
                     outboundRequestHeaders.remove(entry.getKey());
                 } else {
-                    outboundRequestHeaders.put(entry.getKey(), headerValue.replace('\n', ' '));
+                    outboundRequestHeaders.put(entry.getKey(), headerValue.replace("\n", "\n "));
                 }
             }
             final String remoteHost;
