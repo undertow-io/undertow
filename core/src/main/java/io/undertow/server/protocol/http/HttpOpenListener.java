@@ -65,7 +65,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
 
     private volatile OptionMap undertowOptions;
 
-    private volatile HttpRequestParser parser;
+    private volatile RequestParser parser;
 
     private volatile boolean statisticsEnabled;
     private final ConnectorStatisticsImpl connectorStatistics;
@@ -90,7 +90,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         PooledByteBuffer buf = pool.allocate();
         this.bufferSize = buf.getBuffer().remaining();
         buf.close();
-        parser = HttpRequestParser.instance(undertowOptions);
+        parser = RequestParser.instance(undertowOptions);
         connectorStatistics = new ConnectorStatisticsImpl();
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
@@ -183,7 +183,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
             throw UndertowMessages.MESSAGES.argumentCannotBeNull("undertowOptions");
         }
         this.undertowOptions = undertowOptions;
-        this.parser = HttpRequestParser.instance(undertowOptions);
+        this.parser = RequestParser.instance(undertowOptions);
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
 

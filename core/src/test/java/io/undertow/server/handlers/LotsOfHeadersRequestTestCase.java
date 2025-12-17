@@ -123,7 +123,7 @@ public class LotsOfHeadersRequestTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             // add request headers more than MAX_HEADERS
-            for (int i = 0; i < (getDefaultMaxHeaders() + 1); ++i) {
+            for (int i = 0; i <= (getDefaultMaxHeaders() + 1); ++i) {
                 get.addHeader(HEADER + i, MESSAGE + i);
             }
             HttpResponse result = client.execute(get);
@@ -162,7 +162,7 @@ public class LotsOfHeadersRequestTestCase {
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             // add request headers more than MAX_HEADERS
-            for (int i = 0; i < (getTestMaxHeaders() + 1); ++i) {
+            for (int i = 0; i <= (getTestMaxHeaders() + 1); ++i) {
                 get.addHeader(HEADER + i, MESSAGE + i);
             }
             DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_HEADERS, TEST_MAX_HEADERS));
