@@ -175,7 +175,7 @@ public class Http2UpgradeHandler implements HttpHandler {
                     }
                 }, undertowOptions, exchange.getConnection().getBufferSize(), null);
                 channel.getReceiveSetter().set(receiveListener);
-                // don't decode requests from upgrade, they are already decoded by the parser for protocol HTTP 1.1 (HttpRequestParser)
+                // don't decode requests from upgrade, they are already decoded by the parser for protocol HTTP 1.1 (RequestParser)
                 receiveListener.handleInitialRequest(exchange, channel, data);
                 channel.resumeReceives();
             }

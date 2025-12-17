@@ -33,7 +33,6 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
-import io.undertow.server.protocol.http.HttpRequestParser;
 import io.undertow.util.BadRequestException;
 import io.undertow.util.ConduitFactory;
 import io.undertow.util.HeaderMap;
@@ -62,6 +61,7 @@ import static io.undertow.protocols.http2.Http2Channel.AUTHORITY;
 import static io.undertow.protocols.http2.Http2Channel.METHOD;
 import static io.undertow.protocols.http2.Http2Channel.PATH;
 import static io.undertow.protocols.http2.Http2Channel.SCHEME;
+import static io.undertow.util.ParserUtils.isRequestTargetChar;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 /**
@@ -330,7 +330,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         // verify content of request pseudo-headers. Each header should only have a single value.
         if (headers.contains(PATH) && !allowUnescapedCharactersInUrl) {
             for (byte b: headers.get(PATH).getFirst().getBytes(ISO_8859_1)) {
-                if (!HttpRequestParser.isTargetCharacterAllowed((char)b)){
+                if (!isRequestTargetChar(b)){
                     return false;
                 }
             }
@@ -346,7 +346,7 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
         if (headers.contains(AUTHORITY)) {
             for (byte b: headers.get(AUTHORITY).getFirst().getBytes(ISO_8859_1)) {
-                if (!HttpRequestParser.isTargetCharacterAllowed((char)b)){
+                if (!isRequestTargetChar(b)){
                     return false;
                 }
             }

@@ -29,8 +29,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * NOTE: if you add a new header here you must also add it to {@link io.undertow.server.protocol.http.HttpRequestParser}
- *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class Headers {
