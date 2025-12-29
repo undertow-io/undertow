@@ -227,14 +227,13 @@ public class Cookies {
     static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator) {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0);
     }
-
-    static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
+    static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0, boolean rfc6265ParsingDisabled){
         if (cookies == null) {
             return new TreeMap<>();
         }
         final Set<Cookie> parsedCookies = new HashSet<>();
         for (String cookie : cookies) {
-            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0, true);
+            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0, rfc6265ParsingDisabled);
         }
 
         final Map<String, Cookie> retVal = new TreeMap<>();
@@ -242,6 +241,9 @@ public class Cookies {
             retVal.put(cookie.getName(), cookie);
         }
         return retVal;
+    }
+    static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
+        return parseRequestCookies(maxCookies, allowEqualInValue, cookies, commaIsSeperator, allowHttpSepartorsV0, true);
     }
 
     static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
@@ -321,13 +323,41 @@ public class Cookies {
                 case 3: {
                     //extract quoted value
                     if (c == '"') {
+                        int index = i;
                         if (!rfc6265ParsingDisabled && inQuotes) {
                             // RFC 6265 requires quoted values to remain quoted
                             start = start - 1;
                             i++;
-                            cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                        }
+                        inQuotes = false;
+                        final boolean existed = cookies.containsKey(name);
+                        cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                       //if there is more, make sure next is separator
+                        if (index + 1 < cookie.length() && (cookie.charAt(index + 1) == ';'      // Cookie: key="\"; key2=...
+                                || (commaIsSeperator && cookie.charAt(index + 1) == ','))    // Cookie: key="\", key2=...
+                                || index+1 == cookie.length()) {  //end of cookie
+                            //adjust position to delimiter and let state == 0 spin again whole thing
+                           i++;
                         } else {
-                            cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
+                            if(UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
+                                UndertowLogger.REQUEST_LOGGER.trace("Ignoring invalid cookies in header " + cookie);
+                            }
+                            if(!existed) {
+                                //RN we dont add copy, so lets not remove proper cookie that we stored
+                                //prior to this one
+                                cookies.remove(name);
+                            }
+                            additional.remove(name);
+                            //seek next separator
+                            while(i<cookie.length()) {
+                                char seeker = cookie.charAt(i);
+                                if(!(seeker == ';'      // Cookie: key="\"; key2=...
+                                        || (commaIsSeperator && seeker == ','))) {
+                                    i++;
+                                } else {
+                                    break;
+                                }
+                            }
                         }
                         inQuotes = false;
                         state = 0;
