@@ -671,7 +671,7 @@ public class DeploymentManagerImpl implements DeploymentManager {
 
     @Override
     public void undeploy() {
-        if(deployment.getDeploymentState() == State.DEPLOYED) {
+        if( deployment.getDeploymentState() == State.DEPLOYED || deployment.getDeploymentState() == State.STARTED) {
             //NOTE: this can happen if deployment isnt full and attempt is made to roll it back.
             try {
                 deployment.createThreadSetupAction(new ThreadSetupHandler.Action<Void, Object>() {
