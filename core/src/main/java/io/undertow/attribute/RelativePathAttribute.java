@@ -21,6 +21,13 @@ package io.undertow.attribute;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.QueryParameterUtils;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 /**
  * The relative path
  *
@@ -32,6 +39,8 @@ public class RelativePathAttribute implements ExchangeAttribute {
     public static final String RELATIVE_PATH = "%{RELATIVE_PATH}";
 
     public static final ExchangeAttribute INSTANCE = new RelativePathAttribute();
+
+    private static final String SLASH = "/";
 
     private RelativePathAttribute() {
 
@@ -45,34 +54,45 @@ public class RelativePathAttribute implements ExchangeAttribute {
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
         int pos = newValue.indexOf('?');
-        if (pos == -1) {
-            exchange.setRelativePath(newValue);
-            String requestURI = exchange.getResolvedPath() + newValue;
-            if(requestURI.contains("%")) {
-                //as the request URI is supposed to be encoded we need to replace
-                //percent characters with their encoded form, otherwise we can run into issues
-                //where the percent will be taked to be a encoded character
-                //TODO: should we fully encode this? It seems like it also has the potential to cause issues, and encoding the percent character is probably enough
-                exchange.setRequestURI(requestURI.replaceAll("%", "%25"));
-            } else {
-                exchange.setRequestURI(requestURI);
-            }
-            exchange.setRequestPath(requestURI);
-        } else {
-            final String path = newValue.substring(0, pos);
-            exchange.setRelativePath(path);
-            String requestURI = exchange.getResolvedPath() + path;
-            if(requestURI.contains("%")) {
-                exchange.setRequestURI(requestURI.replaceAll("%", "%25"));
-            } else {
-                exchange.setRequestURI(requestURI);
-            }
-            exchange.setRequestPath(requestURI);
+        String encoding = QueryParameterUtils.getQueryParamEncoding(exchange);
+        final String path = pos == -1 ? newValue : newValue.substring(0, pos);
+        final String decoded = decode(path, encoding);
+        exchange.setRelativePath(decoded);
+        final String requestURI = decode(exchange.getResolvedPath(), encoding) + decoded;
+        exchange.setRequestURI(reencode(requestURI));
+        exchange.setRequestPath(requestURI);
 
+        if (pos != -1) {
             final String newQueryString = newValue.substring(pos);
             exchange.setQueryString(newQueryString);
             exchange.getQueryParameters().putAll(QueryParameterUtils.parseQueryString(newQueryString.substring(1), QueryParameterUtils.getQueryParamEncoding(exchange)));
         }
+    }
+
+    // the path might have inconsistent encoding so we try to decode it segment by segment
+    private static String decode(String path, String encoding) {
+        if (encoding == null) {
+            return path;
+        }
+        return Arrays.stream(path.split(SLASH)).map(segment -> {
+            try {
+                return URLDecoder.decode(segment, encoding);
+            } catch (IllegalArgumentException | UnsupportedEncodingException e) {
+                return segment;
+            }
+        }).collect(Collectors.joining(SLASH));
+    }
+
+    // re-encode the previously decoded path, this ensures the segments aren't encoded twice
+    private static String reencode(String decodedPath) {
+        return Arrays.stream(decodedPath.split(SLASH)).map(segment -> {
+            try {
+                // URI.toASCIIString does percent-encoding " " -> "%20", whereas URIEncoder does " " -> "+"
+                return new URI(null, null, segment, null).toASCIIString();
+            } catch (URISyntaxException e) {
+                return segment;
+            }
+        }).collect(Collectors.joining(SLASH));
     }
 
     @Override
