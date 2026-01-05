@@ -105,6 +105,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.TreeMap;
@@ -652,16 +653,16 @@ public class DeploymentManagerImpl implements DeploymentManager {
         ServletSessionConfig sc = deploymentInfo.getServletSessionConfig();
         if (sc != null) {
             sessionCookieConfig.setName(sc.getName());
-            sessionCookieConfig.setComment(sc.getComment());
-            sessionCookieConfig.setDomain(sc.getDomain());
-            sessionCookieConfig.setHttpOnly(sc.isHttpOnly());
-            sessionCookieConfig.setMaxAge(sc.getMaxAge());
+            for(Entry<String, String> entry: sc.getAttributes().entrySet()) {
+                sessionCookieConfig.setAttribute(entry.getKey(), entry.getValue());
+            }
+
             if(sc.getPath() != null) {
                 sessionCookieConfig.setPath(sc.getPath());
             } else {
                 sessionCookieConfig.setPath(deploymentInfo.getContextPath());
             }
-            sessionCookieConfig.setSecure(sc.isSecure());
+
             if (sc.getSessionTrackingModes() != null) {
                 servletContext.setDefaultSessionTrackingModes(new HashSet<>(sc.getSessionTrackingModes()));
             }
