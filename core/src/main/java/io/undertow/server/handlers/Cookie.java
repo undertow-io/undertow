@@ -29,6 +29,16 @@ import java.util.Map;
  */
 public interface Cookie extends Comparable {
 
+    String COOKIE_COMMENT_ATTR = "Comment";
+    String COOKIE_DOMAIN_ATTR = "Domain";
+    String COOKIE_MAX_AGE_ATTR = "Max-Age";
+    String COOKIE_PATH_ATTR = "Path";
+    String COOKIE_SECURE_ATTR = "Secure";
+    String COOKIE_HTTP_ONLY_ATTR = "HttpOnly";
+    String COOKIE_SAME_SITE_ATTR = "SameSite";
+    String COOKIE_DISCARD_ATTR = "Discard";
+    String COOKIE_EXPIRES_ATTR = "Expires";
+
     String getName();
 
     String getValue();
@@ -75,6 +85,7 @@ public interface Cookie extends Comparable {
         return false;
     }
 
+    @Deprecated(forRemoval = true)
     default Cookie setSameSite(final boolean sameSite) {
         throw new UnsupportedOperationException("Not implemented");
     }
@@ -101,6 +112,7 @@ public interface Cookie extends Comparable {
     /**
      * Sets an attribute for the cookie. If the value is {@code null}, the attribute is removed. If the value is not
      * {@code null}, the attribute is added to the attributes for this cookie.
+     * If name match pre-existing attribute, like "{@link Cookie#COOKIE_PATH_ATTR}" it will override that value
      *
      * @param name  the name of the attribute
      * @param value the value of the attribute or {@code null} to remove it
