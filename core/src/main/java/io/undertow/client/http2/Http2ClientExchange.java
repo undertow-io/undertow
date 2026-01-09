@@ -36,6 +36,7 @@ import io.undertow.protocols.http2.Http2StreamSourceChannel;
 import io.undertow.util.AbstractAttachable;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Protocols;
+import io.undertow.util.StatusCodes;
 
 /**
  * @author Stuart Douglas
@@ -140,6 +141,6 @@ public class Http2ClientExchange extends AbstractAttachable implements ClientExc
         final String status = result.getHeaders().getFirst(Http2Channel.STATUS);
         int statusCode = Integer.parseInt(status);
         headers.remove(Http2Channel.STATUS);
-        return new ClientResponse(statusCode, status.substring(3), Protocols.HTTP_2_0, headers);
+        return new ClientResponse(statusCode, StatusCodes.getReason(statusCode), Protocols.HTTP_2_0, headers);
     }
 }
