@@ -253,8 +253,6 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 } else {
                     throw UndertowMessages.MESSAGES.failedToAllocateResource();
                 }
-            } catch (MalformedMessageException e) {
-                throw new IOException(e);
             }
             return exchange.getAttachment(FORM_DATA);
         }
@@ -323,15 +321,16 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 throw UndertowMessages.MESSAGES.maxFileSizeExceeded(this.maxIndividualFileSize);
             }
             if (file == null && fileSizeThreshold < this.currentFileSize && (fileName != null || this.currentFileSize > fieldSizeThreshold)) {
-                try {
-                    createdFiles.add(createFile());
+                createdFiles.add(createFile());
 
-                    FileOutputStream fileOutputStream = new FileOutputStream(file.toFile());
+                FileOutputStream fileOutputStream = new FileOutputStream(file.toFile());
+                try {
                     contentBytes.writeTo(fileOutputStream);
 
                     fileChannel = fileOutputStream.getChannel();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+                } catch (IOException ioe) {
+                    fileOutputStream.close();
+                    throw ioe;
                 }
             }
 
