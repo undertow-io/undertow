@@ -17,6 +17,11 @@
  */
 package io.undertow.predicate.ip;
 
+import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
+import io.undertow.util.NetworkUtils;
+import org.xnio.Bits;
+
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
@@ -26,12 +31,6 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
 
-import org.xnio.Bits;
-
-import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
-import io.undertow.util.NetworkUtils;
-
 /**
  * Base class for IP related matching.
  *
@@ -39,6 +38,7 @@ import io.undertow.util.NetworkUtils;
  * @author baranowb
  */
 public abstract class IPMatchBase<T extends IPMatchBase>{
+
     /**
      * Standard IP address
      */
@@ -47,12 +47,12 @@ public abstract class IPMatchBase<T extends IPMatchBase>{
     /**
      * Standard IP address, with some octets replaced by a '*'
      */
-    protected static final Pattern IP4_WILDCARD = Pattern.compile("(?:(?:\\d{1,3}|\\*)\\.){3}(?:\\d{1,3}|\\*)");
+    protected static final Pattern IP4_WILDCARD = Pattern.compile("(?:(?:"+NetworkUtils.IP4_SEGMENT+"|\\*)\\.){3}(?:"+NetworkUtils.IP4_SEGMENT+"|\\*)");
 
     /**
      * IPv4 address with subnet specified via slash notation
      */
-    protected static final Pattern IP4_SLASH = Pattern.compile("(?:\\d{1,3}\\.){3}\\d{1,3}\\/\\d\\d?");
+    protected static final Pattern IP4_SLASH = Pattern.compile("(?:"+NetworkUtils.IP4_SEGMENT+"\\.){3}(?:"+NetworkUtils.IP4_SEGMENT+")\\/\\d\\d?");
 
     /**
      * Standard full IPv6 address
@@ -62,12 +62,12 @@ public abstract class IPMatchBase<T extends IPMatchBase>{
     /**
      * Standard full IPv6 address, with some parts replaced by a '*'
      */
-    protected static final Pattern IP6_WILDCARD = Pattern.compile("(?:(?:[a-zA-Z0-9]{1,4}|\\*):){7}(?:[a-zA-Z0-9]{1,4}|\\*)");
+    protected static final Pattern IP6_WILDCARD = Pattern.compile("(?:(?:"+NetworkUtils.IP6_SEGMENT+"|\\*):){7}(?:"+NetworkUtils.IP6_SEGMENT+"|\\*)");
 
     /**
      * Standard full IPv6 address with subnet specified via slash notation
      */
-    protected static final Pattern IP6_SLASH = Pattern.compile("(?:[a-zA-Z0-9]{1,4}:){7}[a-zA-Z0-9]{1,4}\\/\\d{1,3}");
+    protected static final Pattern IP6_SLASH = Pattern.compile("(?:"+NetworkUtils.IP6_SEGMENT+":){7}"+NetworkUtils.IP6_SEGMENT+"\\/\\d{1,3}");
 
     protected static final boolean traceEnabled;
     protected static final boolean debugEnabled;
