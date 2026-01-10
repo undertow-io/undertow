@@ -20,7 +20,7 @@
             <Class name="io.undertow.client.http.HttpResponseParser$$generated"/>
             <Class name="io.undertow.server.protocol.http.HttpRequestParser$$generated"/>
             <!-- Ignore checking for generated JMH benchmarking classes -->
-            <Package name="io.undertow.benchmarks.generated"/>
+            <Package name="io.undertow.benchmarks.jmh_generated"/>
         </Or>
     </Match>
 
