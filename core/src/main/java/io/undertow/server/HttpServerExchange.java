@@ -73,7 +73,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -141,8 +144,8 @@ public final class HttpServerExchange extends AbstractAttachable {
     private Map<String, Deque<String>> queryParameters;
     private Map<String, Deque<String>> pathParameters;
 
-    private DelegatingIterable<Cookie> requestCookies;
-    private DelegatingIterable<Cookie> responseCookies;
+    private DelegatingIterable<String, Cookie> requestCookies;
+    private DelegatingIterable<String, Cookie> responseCookies;
 
     private Map<String, Cookie> deprecatedRequestCookies;
     private Map<String, Cookie> deprecatedResponseCookies;
@@ -1236,7 +1239,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     @Deprecated(since="2.2.0", forRemoval=true)
     public Map<String, Cookie> getRequestCookies() {
         if (deprecatedRequestCookies == null) {
-            deprecatedRequestCookies = new MapDelegatingToSet((Set<Cookie>)((DelegatingIterable<Cookie>)requestCookies()).getDelegate());
+            deprecatedRequestCookies = new MapDelegatingToMultiValueStorage(((DelegatingIterable<String,Cookie>)requestCookies()).getDelegate());
         }
         return deprecatedRequestCookies;
     }
@@ -1259,7 +1262,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 Rfc6265CookieSupport.validateDomain(cookie.getDomain());
             }
         }
-        ((Set<Cookie>)((DelegatingIterable<Cookie>)requestCookies()).getDelegate()).add(cookie);
+        ((DelegatingIterable<String,Cookie>)requestCookies()).getDelegate().put(cookie.getName(),cookie);
         return this;
     }
 
@@ -1276,13 +1279,41 @@ public final class HttpServerExchange extends AbstractAttachable {
         return null;
     }
 
+    public List<Cookie> getRequestCookies(final String name) {
+        if (name == null) return Collections.emptyList();
+        requestCookies();
+        final List<Cookie> modifiableList = (List<Cookie>) requestCookies.getDelegate().get(name);
+        return  Collections.unmodifiableList(modifiableList);
+    }
+
+    public List<String> getRequestCookieNames() {
+        requestCookies();
+        //This will produce collapsed set of keys
+        final Set<String> modifiableList = requestCookies.getDelegate().keySet();
+        return  Collections.unmodifiableList(new ArrayList<String>(modifiableList));
+    }
+
+    public List<Cookie> getResponseCookies(final String name) {
+        if (name == null) return Collections.emptyList();
+        responseCookies();
+        final List<Cookie> modifiableList = (List<Cookie>) responseCookies.getDelegate().get(name);
+        return  Collections.unmodifiableList(modifiableList);
+    }
+
+    public List<String> getResponseCookieNames() {
+        responseCookies();
+        //This will produce collapsed set of keys
+        final Set<String> modifiableList = responseCookies.getDelegate().keySet();
+        return Collections.unmodifiableList(new ArrayList<String>(modifiableList));
+    }
+
     /**
      * Returns unmodifiable enumeration of request cookies.
      * @return A read-only enumeration of request cookies
      */
     public Iterable<Cookie> requestCookies() {
         if (requestCookies == null) {
-            Set<Cookie> requestCookiesParam = new OverridableTreeSet<>();
+            MultiValueHashListStorage<String,Cookie> requestCookiesParam = new MultiValueHashListStorage<String, Cookie>();
             requestCookies = new DelegatingIterable<>(requestCookiesParam);
             Cookies.parseRequestCookies(
                     getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, UndertowOptions.DEFAULT_MAX_COOKIES),
@@ -1310,7 +1341,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 Rfc6265CookieSupport.validateDomain(cookie.getDomain());
             }
         }
-        ((Set<Cookie>)((DelegatingIterable<Cookie>)responseCookies()).getDelegate()).add(cookie);
+        ((DelegatingIterable<String,Cookie>)responseCookies()).getDelegate().put(cookie.getName(),cookie);
         return this;
     }
 
@@ -1321,7 +1352,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     @Deprecated(since="2.2.0", forRemoval=true)
     public Map<String, Cookie> getResponseCookies() {
         if (deprecatedResponseCookies == null) {
-            deprecatedResponseCookies = new MapDelegatingToSet((Set<Cookie>)((DelegatingIterable<Cookie>)responseCookies()).getDelegate());
+            deprecatedResponseCookies = new MapDelegatingToMultiValueStorage(((DelegatingIterable<String,Cookie>)responseCookies()).getDelegate());
         }
         return deprecatedResponseCookies;
     }
@@ -1332,7 +1363,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public Iterable<Cookie> responseCookies() {
         if (responseCookies == null) {
-            responseCookies = new DelegatingIterable<>(new OverridableTreeSet<>());
+            responseCookies = new DelegatingIterable<>(new MultiValueHashListStorage<String,Cookie>());
         }
         return responseCookies;
     }
