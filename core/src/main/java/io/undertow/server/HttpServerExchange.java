@@ -613,7 +613,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @deprecated use {@link #getQueryString()} instead
      */
-    @Deprecated(forRemoval = true, since="2.3.20.Final")
+    @Deprecated(forRemoval = true, since="2.3.21.Final")
     public String getNonDecodedQueryString() {
         return getQueryString();
     }
@@ -628,7 +628,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      *
      * @deprecated Use #setQueryString instead
      */
-    @Deprecated(forRemoval = true, since="2.3.20.Final")
+    @Deprecated(forRemoval = true, since="2.3.21.Final")
     public HttpServerExchange setNonDecodedQueryString(String unencodedQueryString) {
         return setQueryString(unencodedQueryString);
     }
