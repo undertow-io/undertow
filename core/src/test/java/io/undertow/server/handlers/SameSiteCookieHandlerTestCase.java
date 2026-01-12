@@ -108,7 +108,7 @@ public class SameSiteCookieHandlerTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
+            Assert.assertEquals("foo=bar; Secure; SameSite=None", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
         } finally {
             client.getConnectionManager().shutdown();
@@ -338,7 +338,7 @@ public class SameSiteCookieHandlerTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
+            Assert.assertEquals("foo=bar; Secure; SameSite=None", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
         } finally {
             client.getConnectionManager().shutdown();
@@ -365,7 +365,7 @@ public class SameSiteCookieHandlerTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
+            Assert.assertEquals("foo=bar; Secure; SameSite=None", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
         } finally {
             client.getConnectionManager().shutdown();
@@ -400,7 +400,7 @@ public class SameSiteCookieHandlerTestCase {
             HttpResponse result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("foo=bar; secure; SameSite=None", header.getValue());
+            Assert.assertEquals("foo=bar; Secure; SameSite=None", header.getValue());
             FileUtils.readFile(result.getEntity().getContent());
         } finally {
             client.getConnectionManager().shutdown();

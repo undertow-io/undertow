@@ -41,8 +41,13 @@ import org.xnio.conduits.ConduitStreamSinkChannel;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+
+import static io.undertow.server.HttpServerExchange.ENABLE_RFC6265_COOKIE_VALIDATION;
 
 /**
  * This class provides the connector part of the {@link HttpServerExchange} API.
@@ -57,6 +62,7 @@ public class Connectors {
 
     private static final boolean[] ALLOWED_TOKEN_CHARACTERS = new boolean[256];
     private static final boolean[] ALLOWED_SCHEME_CHARACTERS = new boolean[256];
+    private static final Set<String> KNOWN_ATTRIBUTE_NAMES = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 
     static {
         for(int i = 0; i < ALLOWED_TOKEN_CHARACTERS.length; ++i) {
@@ -108,6 +114,16 @@ public class Connectors {
                 }
             }
         }
+
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_PATH_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_DOMAIN_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_DISCARD_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_SECURE_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_HTTP_ONLY_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_MAX_AGE_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_EXPIRES_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_COMMENT_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_SAME_SITE_ATTR);
     }
     /**
      * Flattens the exchange cookie map into the response header map. This should be called by a
@@ -116,9 +132,8 @@ public class Connectors {
      * @param exchange The server exchange
      */
     public static void flattenCookies(final HttpServerExchange exchange) {
-        boolean enableRfc6265Validation = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION);
         for (Cookie cookie : exchange.responseCookies()) {
-            exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(cookie, enableRfc6265Validation));
+            exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(cookie, ENABLE_RFC6265_COOKIE_VALIDATION));
         }
     }
 
@@ -130,8 +145,7 @@ public class Connectors {
      * @param cookie   The cookie
      */
     public static void addCookie(final HttpServerExchange exchange, Cookie cookie) {
-        boolean enableRfc6265Validation = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION);
-        exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(cookie, enableRfc6265Validation));
+        exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(cookie, ENABLE_RFC6265_COOKIE_VALIDATION));
     }
 
     /**
@@ -224,9 +238,6 @@ public class Connectors {
             header.append("; Domain=");
             header.append(cookie.getDomain());
         }
-        if (cookie.isDiscard()) {
-            header.append("; Discard");
-        }
         if (cookie.isSecure()) {
             header.append("; Secure");
         }
@@ -234,7 +245,10 @@ public class Connectors {
             header.append("; HttpOnly");
         }
         if (cookie.getMaxAge() != null) {
-            if (cookie.getMaxAge() >= 0) {
+            // TODO (jrp) Per the TCK test "RFC 6265 - server should only send +ve values for Max-Age"
+            // TODO (jrp) This is possibly per https://datatracker.ietf.org/doc/html/rfc6265#section-5.2.2, however
+            // TODO (jrp) I'm not sure not adding the value is correct.
+            if (cookie.getMaxAge() > 0) {
                 header.append("; Max-Age=");
                 header.append(cookie.getMaxAge());
             }
@@ -270,6 +284,7 @@ public class Connectors {
                 header.append(cookie.getSameSiteMode());
             }
         }
+        appendAttributes(cookie, header);
         return header.toString();
     }
 
@@ -298,7 +313,10 @@ public class Connectors {
             header.append("; Expires=");
             header.append(DateUtils.toOldCookieDateString(cookie.getExpires()));
         } else if (cookie.getMaxAge() != null) {
-            if (cookie.getMaxAge() >= 0) {
+            // TODO (jrp) Per the TCK test "RFC 6265 - server should only send +ve values for Max-Age"
+            // TODO (jrp) This is possibly per https://datatracker.ietf.org/doc/html/rfc6265#section-5.2.2, however
+            // TODO (jrp) I'm not sure not adding the value is correct.
+            if (cookie.getMaxAge() > 0) {
                 header.append("; Max-Age=");
                 header.append(cookie.getMaxAge());
             }
@@ -320,6 +338,7 @@ public class Connectors {
                 header.append(cookie.getSameSiteMode());
             }
         }
+        appendAttributes(cookie, header);
         return header.toString();
 
     }
@@ -350,7 +369,10 @@ public class Connectors {
             header.append("; HttpOnly");
         }
         if (cookie.getMaxAge() != null) {
-            if (cookie.getMaxAge() >= 0) {
+            // TODO (jrp) Per the TCK test "RFC 6265 - server should only send +ve values for Max-Age"
+            // TODO (jrp) This is possibly per https://datatracker.ietf.org/doc/html/rfc6265#section-5.2.2, however
+            // TODO (jrp) I'm not sure not adding the value is correct.
+            if (cookie.getMaxAge() > 0) {
                 header.append("; Max-Age=");
                 header.append(cookie.getMaxAge());
             }
@@ -386,6 +408,7 @@ public class Connectors {
                 header.append(cookie.getSameSiteMode());
             }
         }
+        appendAttributes(cookie, header);
         return header.toString();
     }
 
@@ -663,5 +686,19 @@ public class Connectors {
             return false;
         }
         return true;
+    }
+
+    private static void appendAttributes(final Cookie cookie, final StringBuilder header) {
+        for (Map.Entry<String, String> entry : cookie.getAttributes().entrySet()) {
+            if (KNOWN_ATTRIBUTE_NAMES.contains(entry.getKey())) {
+                continue;
+            }
+            header.append("; ")
+                    .append(entry.getKey());
+            if (!entry.getValue().isBlank()) {
+                header.append('=')
+                        .append(entry.getValue());
+            }
+        }
     }
 }

@@ -20,6 +20,7 @@ package io.undertow.servlet.api;
 
 import java.util.Set;
 
+import io.undertow.server.session.CookieAttributes;
 import jakarta.servlet.SessionTrackingMode;
 
 /**
@@ -28,19 +29,18 @@ import jakarta.servlet.SessionTrackingMode;
  *
  * @author Stuart Douglas
  */
-public class ServletSessionConfig {
+public class ServletSessionConfig extends CookieAttributes<ServletSessionConfig>{
 
     public static final String DEFAULT_SESSION_ID = "JSESSIONID";
 
     private Set<SessionTrackingMode> sessionTrackingModes;
 
     private String name = DEFAULT_SESSION_ID;
-    private String path;
-    private String domain;
-    private boolean secure;
-    private boolean httpOnly;
-    private int maxAge = -1;
-    private String comment;
+
+    public ServletSessionConfig() {
+        super();
+        super.kernel.setPath(null);//this is to mimic original code which indicates it can be null
+    }
 
     public String getName() {
         return name;
@@ -48,60 +48,6 @@ public class ServletSessionConfig {
 
     public ServletSessionConfig setName(final String name) {
         this.name = name;
-        return this;
-    }
-
-    public String getDomain() {
-        return domain;
-    }
-
-    public ServletSessionConfig setDomain(final String domain) {
-        this.domain = domain;
-        return this;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public ServletSessionConfig setPath(final String path) {
-        this.path = path;
-        return this;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public ServletSessionConfig setComment(final String comment) {
-        this.comment = comment;
-        return this;
-    }
-
-    public boolean isHttpOnly() {
-        return httpOnly;
-    }
-
-    public ServletSessionConfig setHttpOnly(final boolean httpOnly) {
-        this.httpOnly = httpOnly;
-        return this;
-    }
-
-    public boolean isSecure() {
-        return secure;
-    }
-
-    public ServletSessionConfig setSecure(final boolean secure) {
-        this.secure = secure;
-        return this;
-    }
-
-    public int getMaxAge() {
-        return maxAge;
-    }
-
-    public ServletSessionConfig setMaxAge(final int maxAge) {
-        this.maxAge = maxAge;
         return this;
     }
 
