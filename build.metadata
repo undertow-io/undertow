@@ -1,0 +1,15 @@
+# Created by buildmetadata-maven-plugin 1.7.0 ( SHA: 6f444cae ) 
+build.artifactId=undertow-websockets-jsr
+build.groupId=io.undertow
+build.java.compiler=HotSpot 64-Bit Tiered Compilers
+build.java.runtime.name=OpenJDK Runtime Environment
+build.java.runtime.version=1.8.0_422-b05
+build.java.vendor=Red Hat, Inc.
+build.java.vm=OpenJDK 64-Bit Server VM
+build.maven.execution.cmdline=-Djavax.net.ssl.trustStore\=/home/aogburn/bin/builder/maven.truststore -Djavax.net.ssl.trustStorePassword\=rhmaven -s /home/aogburn/bin/builder/eap-build-settings.xml clean install -DskipTests
+build.maven.version=3.9.6
+build.scmRevision.date=17.09.2024
+build.scmRevision.id=aaa36f6ad214aecd7d0d611cad582aa058f3a3e8
+build.scmRevision.url=scm\:git\://github.com/undertow-io/undertow.git/undertow-websockets-jsr
+build.version=2.2.33.SP2-redhat-00001
+build.version.full=2.2.33.SP2-redhat-00001raaa36f6ad214aecd7d0d611cad582aa058f3a3e8

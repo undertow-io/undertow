@@ -33,29 +33,46 @@ import java.util.List;
  */
 public class NetworkUtils {
 
-    public static final String IP4_EXACT = "(?:\\d{1,3}\\.){3}\\d{1,3}";
+    /**
+     * IPv4Segment: (25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])
+     */
+    public static final String IP4_SEGMENT = "(25[0-5]|(?:2[0-4]|(?:(1{0,1}[0-9]))){0,1}(?:([0-9])))";
+    /**
+     * ?: - unnamed groups are used for performance reasons.
+     * IPv4Segment: 25[0-5]|((2[0-4]|1){0,1}[0-9]){0,1}[0-9])  -extra () is not needed but makes it clear for OR
+     * IPv4Address: (IPv4Segment\.){3,3}IPv4Segment
+     */
+    public static final String IP4_EXACT = "(?:"+IP4_SEGMENT+"\\.){3,3}(?:"+IP4_SEGMENT+")";
 
+    /**
+     * IPv6Segment: ([0-9a-fA-F]{1,4}) - 1 to 4 hex digits
+     */
+    public static final String IP6_SEGMENT = "([0-9a-fA-F]{1,4})";
     /**
      * IPV6 match. ?: - unnamed groups are used for performance reasons.
      * Requirements:
      * - match full or partial IPV6 ( sliding '::')
      * - match end to start - ^$ to ensure it does not match part of some random (\d:){n,m}
      * - IPv4-Embedded IPv6 Address
+     * - TODO: special types of addresses ?
+     * Explanation:
+     * IPv6Segment: ([0-9a-fA-F]{1,4}) - 1 to 4 hex digits
+     * IPv6Address: (IPv6Segment:){1,n}IPv6Segment or (IPv6Segment:){1,x}(:IPv6Segment){1,y} where x+y&lt;8
+     * ^ shift of segments ~left to right with qualifiers
+     * Above is just general form for pure IPv6 without any spices
      *
-     * NO:
-     * - IPv4 mapped/translated into IPv6
-     *
-     * ^(?:([0-9a-fA-F]{1,4}:){7,7}(?:[0-9a-fA-F]){1,4}                   - full address
-     * |(?:([0-9a-fA-F]{1,4}:)){1,7}(?:(:))                               - last compressed
-     * |(?:([0-9a-fA-F]{1,4}:)){1,6}(?:(:[0-9a-fA-F]){1,4})               - second to last
-     * |(?:([0-9a-fA-F]{1,4}:)){1,5}(?:(:[0-9a-fA-F]{1,4})){1,2}          - etc
-     * |(?:([0-9a-fA-F]{1,4}:)){1,4}(?:(:[0-9a-fA-F]{1,4})){1,3}
-     * |(?:([0-9a-fA-F]{1,4}:)){1,3}(?:(:[0-9a-fA-F]{1,4})){1,4}
-     * |(?:([0-9a-fA-F]{1,4}:)){1,2}(?:(:[0-9a-fA-F]{1,4})){1,5}
-     * |(?:([0-9a-fA-F]{1,4}:))(?:(:[0-9a-fA-F]{1,4})){1,6}
-     * |(?:(:))(?:((:[0-9a-fA-F]{1,4}){1,7}|(?:(:)))))$                  - all the way compressed
+     * ^(?:([0-9a-fA-F]{1,4}:){7,7}(?:[0-9a-fA-F]){1,4}                   - 1:2:3:4:5:6:7:8
+     * |(?:([0-9a-fA-F]{1,4}:)){1,7}(?:(:))                               - 1::                    1:2:3:4:5:6:7::
+     * |(?:([0-9a-fA-F]{1,4}:)){1,6}(?:(:[0-9a-fA-F]){1,4})               - 1::8                   1:2:3:4:5:6::8
+     * |(?:([0-9a-fA-F]{1,4}:)){1,5}(?:(:[0-9a-fA-F]{1,4})){1,2}          - 1::7:8                 1:2:3:4:5::8
+     * |(?:([0-9a-fA-F]{1,4}:)){1,4}(?:(:[0-9a-fA-F]{1,4})){1,3}          - 1::6:7:8               1:2:3:4::8
+     * |(?:([0-9a-fA-F]{1,4}:)){1,3}(?:(:[0-9a-fA-F]{1,4})){1,4}          - 1::5:6:7:8             1:2:3::8
+     * |(?:([0-9a-fA-F]{1,4}:)){1,2}(?:(:[0-9a-fA-F]{1,4})){1,5}          - 1::4:5:6:7:8           1:2::8
+     * |(?:([0-9a-fA-F]{1,4}:))(?:(:[0-9a-fA-F]{1,4})){1,6}               - 1::3:4:5:6:7:8         1::8
+     * |(?:(:))(?:((:[0-9a-fA-F]{1,4}){1,7}|(?:(:))))                     - ::2:3:4:5:6:7:8        ::8       ::
+     * |(?:([0-9a-fA-F]{1,4}:)){1,4}(?:(:IPv4Address)))$                  - 1.2.3.4::192.168.1.1   1::192.168.1.1
      */
-    public static final String IP6_EXACT = "^(?:([0-9a-fA-F]{1,4}:){7,7}(?:[0-9a-fA-F]){1,4}|(?:([0-9a-fA-F]{1,4}:)){1,7}(?:(:))|(?:([0-9a-fA-F]{1,4}:)){1,6}(?:(:[0-9a-fA-F]){1,4})|(?:([0-9a-fA-F]{1,4}:)){1,5}(?:(:[0-9a-fA-F]{1,4})){1,2}|(?:([0-9a-fA-F]{1,4}:)){1,4}(?:(:[0-9a-fA-F]{1,4})){1,3}|(?:([0-9a-fA-F]{1,4}:)){1,3}(?:(:[0-9a-fA-F]{1,4})){1,4}|(?:([0-9a-fA-F]{1,4}:)){1,2}(?:(:[0-9a-fA-F]{1,4})){1,5}|(?:([0-9a-fA-F]{1,4}:))(?:(:[0-9a-fA-F]{1,4})){1,6}|(?:(:))(?:((:[0-9a-fA-F]{1,4}){1,7}|(?:(:)))))$";
+    public static final String IP6_EXACT = "^(?:([0-9a-fA-F]{1,4}:){7,7}(?:[0-9a-fA-F]){1,4}|(?:([0-9a-fA-F]{1,4}:)){1,7}(?:(:))|(?:([0-9a-fA-F]{1,4}:)){1,6}(?:(:[0-9a-fA-F]){1,4})|(?:([0-9a-fA-F]{1,4}:)){1,5}(?:(:[0-9a-fA-F]{1,4})){1,2}|(?:([0-9a-fA-F]{1,4}:)){1,4}(?:(:[0-9a-fA-F]{1,4})){1,3}|(?:([0-9a-fA-F]{1,4}:)){1,3}(?:(:[0-9a-fA-F]{1,4})){1,4}|(?:([0-9a-fA-F]{1,4}:)){1,2}(?:(:[0-9a-fA-F]{1,4})){1,5}|(?:([0-9a-fA-F]{1,4}:))(?:(:[0-9a-fA-F]{1,4})){1,6}|(?:(:))(?:((:[0-9a-fA-F]{1,4}){1,7}|(?:(:))))|(?:([0-9a-fA-F]{1,4}:)){1,4}(?:(:"+IP4_EXACT+")))$";
 
     public static String formatPossibleIpv6Address(String address) {
         if (address == null) {

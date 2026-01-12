@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import io.undertow.UndertowOptions;
 import io.undertow.io.IoCallback;
 import io.undertow.io.Sender;
 import io.undertow.server.HttpHandler;
@@ -44,6 +45,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
 
 /**
  * @author Stuart Douglas
@@ -57,6 +59,7 @@ public class SimpleBlockingServerTestCase {
     public static void setup() {
         final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
+
         blockingHandler.setRootHandler(new HttpHandler() {
             @Override
             public void handleRequest(final HttpServerExchange exchange) {
@@ -110,6 +113,16 @@ public class SimpleBlockingServerTestCase {
                 }
             }
         });
+    }
+
+    @DefaultServer.BeforeServerStarts
+    public static void setupServer() {
+        DefaultServer.setServerOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, -1L));
+    }
+
+    @DefaultServer.AfterServerStops
+    public static void cleanup() {
+        DefaultServer.setServerOptions(OptionMap.EMPTY);
     }
 
     @Test

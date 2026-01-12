@@ -449,7 +449,7 @@ public final class ProxyHandler implements HttpHandler {
             }
             requestURI.append(targetURI);
 
-            String qs = exchange.getNonDecodedQueryString();
+            String qs = exchange.getQueryString();
             if (qs != null && !qs.isEmpty()) {
                 requestURI.append('?');
                 requestURI.append(qs);

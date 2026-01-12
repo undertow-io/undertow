@@ -59,12 +59,12 @@ public class IPAddressAccessControlHandler implements HttpHandler {
     /**
      * Standard IP address, with some octets replaced by a '*'
      */
-    private static final Pattern IP4_WILDCARD = Pattern.compile("(?:(?:\\d{1,3}|\\*)\\.){3}(?:\\d{1,3}|\\*)");
+    private static final Pattern IP4_WILDCARD = Pattern.compile("(?:(?:"+NetworkUtils.IP4_SEGMENT+"|\\*)\\.){3}(?:"+NetworkUtils.IP4_SEGMENT+"|\\*)");
 
     /**
      * IPv4 address with subnet specified via slash notation
      */
-    private static final Pattern IP4_SLASH = Pattern.compile("(?:\\d{1,3}\\.){3}\\d{1,3}\\/\\d\\d?");
+    private static final Pattern IP4_SLASH = Pattern.compile("(?:"+NetworkUtils.IP4_SEGMENT+"\\.){3}(?:"+NetworkUtils.IP4_SEGMENT+")\\/\\d\\d?");
 
     /**
      * Standard full IPv6 address
@@ -74,12 +74,12 @@ public class IPAddressAccessControlHandler implements HttpHandler {
     /**
      * Standard full IPv6 address, with some parts replaced by a '*'
      */
-    private static final Pattern IP6_WILDCARD = Pattern.compile("(?:(?:[a-zA-Z0-9]{1,4}|\\*):){7}(?:[a-zA-Z0-9]{1,4}|\\*)");
+    private static final Pattern IP6_WILDCARD = Pattern.compile("(?:(?:"+NetworkUtils.IP6_SEGMENT+"|\\*):){7}(?:"+NetworkUtils.IP6_SEGMENT+"|\\*)");
 
     /**
      * Standard full IPv6 address with subnet specified via slash notation
      */
-    private static final Pattern IP6_SLASH = Pattern.compile("(?:[a-zA-Z0-9]{1,4}:){7}[a-zA-Z0-9]{1,4}\\/\\d{1,3}");
+    private static final Pattern IP6_SLASH = Pattern.compile("(?:"+NetworkUtils.IP6_SEGMENT+":){7}"+NetworkUtils.IP6_SEGMENT+"\\/\\d{1,3}");
 
     private volatile HttpHandler next;
     private volatile boolean defaultAllow = false;

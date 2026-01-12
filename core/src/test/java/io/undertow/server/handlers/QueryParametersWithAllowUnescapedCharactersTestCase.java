@@ -59,16 +59,21 @@ public class QueryParametersWithAllowUnescapedCharactersTestCase extends Abstrac
     public static void setQueryStringsArray() {
         // format is: {queryString, expected result}
         queryStrings = new String[][] { new String[] { "/path?unicode=Iñtërnâtiônàližætiøn",
-                "unicode=Iñtërnâtiônàližætiøn{unicode=>Iñtërnâtiônàližætiøn}" },
-                new String[] { "/path?a=b&value=bb%20bb", "a=b&value=bb bb{a=>b,value=>bb bb}" },
+                //"unicode=Iñtërnâtiônàližætiøn{unicode=>Iñtërnâtiônàližætiøn}" },
+                "unicode=I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n{unicode=>Iñtërnâtiônàližætiøn}" },
+                //new String[] { "/path?a=b&value=bb%20bb", "a=b&value=bb bb{a=>b,value=>bb bb}" },
+                new String[] { "/path?a=b&value=bb%20bb", "a=b&value=bb%20bb{a=>b,value=>bb bb}" },
                 new String[] { "/path?a=b&value=bb&value=cc", "a=b&value=bb&value=cc{a=>b,value=>[bb,cc]}" },
                 new String[] { "/path?&a=b&value=bb&&value=cc", "&a=b&value=bb&&value=cc{a=>b,value=>[bb,cc]}" },
-                // Specifing some query parameters with empty by intentional for the test purpose. These should be ignored.
+                // Specifying some query parameters with empty by intentional for the test purpose. These should be ignored.
                 new String[] { "/path?a=b&value=bb&value=cc&s%20&t%20",
-                        "a=b&value=bb&value=cc&s &t {a=>b,s =>,t =>,value=>[bb,cc]}" },
+                        //"a=b&value=bb&value=cc&s &t {a=>b,s =>,t =>,value=>[bb,cc]}" },
+                        "a=b&value=bb&value=cc&s%20&t%20{a=>b,s =>,t =>,value=>[bb,cc]}" },
                 new String[] { "/path?a=b&value=bb&value=cc&s%20&t%20&",
-                        "a=b&value=bb&value=cc&s &t &{a=>b,s =>,t =>,value=>[bb,cc]}" },
+                        //"a=b&value=bb&value=cc&s &t &{a=>b,s =>,t =>,value=>[bb,cc]}" },
+                        "a=b&value=bb&value=cc&s%20&t%20&{a=>b,s =>,t =>,value=>[bb,cc]}" },
                 new String[] { "/path?a=b&value=bb&value=cc&s%20&t%20&u",
-                        "a=b&value=bb&value=cc&s &t &u{a=>b,s =>,t =>,u=>,value=>[bb,cc]}" } };
+                        //"a=b&value=bb&value=cc&s &t &u{a=>b,s =>,t =>,u=>,value=>[bb,cc]}" } };
+                        "a=b&value=bb&value=cc&s%20&t%20&u{a=>b,s =>,t =>,u=>,value=>[bb,cc]}" } };
     }
 }
