@@ -95,15 +95,6 @@ import static org.xnio.Bits.intBitMask;
  */
 public final class HttpServerExchange extends AbstractAttachable {
 
-    private static final String ENABLE_RFC6265_COOKIE_VALIDATION_PROPERTY_NAME = "io.undertow.server.enable-rfc6265-cookie-validation";
-    /**
-     * If this is true then Undertow will enable RFC6265 compliant cookie validation for Set-Cookie header instead of legacy backward compatible behavior.
-     *
-     * default is {@code true}
-     */
-    static final Boolean ENABLE_RFC6265_COOKIE_VALIDATION = System.getProperty("io.undertow.server.enable-rfc6265-cookie-validation") == null? true : Boolean.getBoolean(ENABLE_RFC6265_COOKIE_VALIDATION_PROPERTY_NAME);
-
-
     // immutable state
 
     private static final Logger log = Logger.getLogger(HttpServerExchange.class);
@@ -1256,7 +1247,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public HttpServerExchange setRequestCookie(final Cookie cookie) {
         if (cookie == null) return this;
-        if (ENABLE_RFC6265_COOKIE_VALIDATION) {
+        if (getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION)) {
             if (cookie.getValue() != null && !cookie.getValue().isEmpty()) {
                 Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
             }
@@ -1307,7 +1298,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public HttpServerExchange setResponseCookie(final Cookie cookie) {
         if (cookie == null) return this;
-        if (ENABLE_RFC6265_COOKIE_VALIDATION) {
+        if (getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION)) {
             if (cookie.getValue() != null && !cookie.getValue().isEmpty()) {
                 Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
             }
