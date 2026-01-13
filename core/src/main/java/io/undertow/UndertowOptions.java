@@ -210,6 +210,26 @@ public class UndertowOptions {
     public static final Option<Boolean> ALLOW_EQUALS_IN_COOKIE_VALUE = Option.simple(UndertowOptions.class, "ALLOW_EQUALS_IN_COOKIE_VALUE", Boolean.class);
 
     /**
+     * If this is true then Undertow will disable RFC6265 compliant cookie parsing for Set-Cookie header instead of legacy backward compatible behavior.
+     * <p>
+     * default is {@code false}
+     * </p>
+     */
+    public static final Option<Boolean> DISABLE_RFC6265_COOKIE_PARSING = Option.simple(UndertowOptions.class, "DISABLE_RFC6265_COOKIE_PARSING", Boolean.class);
+
+    public static final boolean DEFAULT_DISABLE_RFC6265_COOKIE_PARSING = false;
+
+    /**
+     * If this is true then Undertow will enable RFC6265 compliant cookie validation for Set-Cookie header instead of legacy backward compatible behavior.
+     *
+     * default is false
+     */
+    public static final Option<Boolean> ENABLE_RFC6265_COOKIE_VALIDATION = Option.simple(UndertowOptions.class, "ENABLE_RFC6265_COOKIE_VALIDATION", Boolean.class);
+
+    // As of Jakarta 6.1, RFC 6265 is used for the cookie specification https://github.com/jakartaee/servlet/issues/37
+    public static final boolean DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION = true;
+
+    /**
      * If we should attempt to use SPDY for HTTPS connections.
      *
      * SPDY is no longer supported, use HTTP/2 instead

@@ -47,8 +47,6 @@ import java.util.TreeSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
-import static io.undertow.server.HttpServerExchange.ENABLE_RFC6265_COOKIE_VALIDATION;
-
 /**
  * This class provides the connector part of the {@link HttpServerExchange} API.
  * <p>
@@ -132,8 +130,9 @@ public class Connectors {
      * @param exchange The server exchange
      */
     public static void flattenCookies(final HttpServerExchange exchange) {
+        boolean enableRfc6265Validation = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION);
         for (Cookie cookie : exchange.responseCookies()) {
-            exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(cookie, ENABLE_RFC6265_COOKIE_VALIDATION));
+            exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(cookie, enableRfc6265Validation));
         }
     }
 
@@ -145,7 +144,8 @@ public class Connectors {
      * @param cookie   The cookie
      */
     public static void addCookie(final HttpServerExchange exchange, Cookie cookie) {
-        exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(cookie, ENABLE_RFC6265_COOKIE_VALIDATION));
+        boolean enableRfc6265Validation = exchange.getConnection().getUndertowOptions().get(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, UndertowOptions.DEFAULT_ENABLE_RFC6265_COOKIE_VALIDATION);
+        exchange.getResponseHeaders().add(Headers.SET_COOKIE, getCookieString(cookie, enableRfc6265Validation));
     }
 
     /**
