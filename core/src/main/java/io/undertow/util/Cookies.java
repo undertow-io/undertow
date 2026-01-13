@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.regex.Pattern;
 
 /**
  * Class that contains utility methods for dealing with cookies.
@@ -45,11 +44,6 @@ public class Cookies {
     public static final String DOMAIN = "$Domain";
     public static final String VERSION = "$Version";
     public static final String PATH = "$Path";
-    private static final Pattern OBSOLETE_COOKIE_PATTERN = Pattern.compile(
-            Pattern.quote(VERSION) + "|" +
-                    Pattern.quote(DOMAIN) + "|" +
-                    Pattern.quote(PATH),
-            Pattern.CASE_INSENSITIVE);
 
 
     /**
@@ -218,8 +212,13 @@ public class Cookies {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, LegacyCookieSupport.COMMA_IS_SEPARATOR);
     }
 
+    @Deprecated(since = "2.4.0", forRemoval=true)
     public static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies) {
-        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, LegacyCookieSupport.COMMA_IS_SEPARATOR, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0);
+        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, LegacyCookieSupport.COMMA_IS_SEPARATOR, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0, false);
+    }
+
+    public static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean rfc6265ParsingDisabled) {
+        parseRequestCookies(maxCookies, allowEqualInValue, cookies, parsedCookies, LegacyCookieSupport.COMMA_IS_SEPARATOR, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0, rfc6265ParsingDisabled);
     }
 
     @Deprecated
@@ -243,10 +242,10 @@ public class Cookies {
         return retVal;
     }
 
-    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0) {
+    static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, Set<Cookie> parsedCookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0, boolean rfc6265ParsingDisabled) {
         if (cookies != null) {
             for (String cookie : cookies) {
-                parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0, isObsoleteCookie(cookie));
+                parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0, rfc6265ParsingDisabled);
             }
         }
     }
@@ -321,14 +320,13 @@ public class Cookies {
                     //extract quoted value
                     if (c == '"') {
                         if (!rfc6265ParsingDisabled && inQuotes) {
-                            // RFC 6265 requires quoted values to remain quoted
                             start = start - 1;
+                            inQuotes = false;
                             i++;
                             cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         } else {
                             cookieCount = createCookie(name, containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(start, i)) : cookie.substring(start, i), maxCookies, cookieCount, cookies, additional);
                         }
-                        inQuotes = false;
                         state = 0;
                         start = i + 1;
                     } else if (c == ';' || (commaIsSeperator && c == ',')) {
@@ -434,10 +432,6 @@ public class Cookies {
             dest++;
         }
         return new String(tmp, 0, dest);
-    }
-
-    private static boolean isObsoleteCookie(final String cookie) {
-        return OBSOLETE_COOKIE_PATTERN.matcher(cookie).find();
     }
 
     private static final String CRUMB_SEPARATOR = "; ";
