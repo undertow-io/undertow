@@ -27,8 +27,7 @@ import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.util.BadRequestException;
 import io.undertow.util.ParameterLimitException;
 import io.undertow.util.QueryParameterUtils;
-import java.util.Deque;
-import java.util.Map;
+
 import javax.servlet.ServletException;
 
 import static javax.servlet.AsyncContext.ASYNC_CONTEXT_PATH;
@@ -241,11 +240,7 @@ public final class DispatchUtils {
         }
         // both forward and include merge parameters by spec
         if (!fake.getDecodedQueryString().isEmpty()) {
-            final Map<String, Deque<String>> merged = QueryParameterUtils.mergeQueryParameters(fake.getQueryParameters(), exchange.getQueryParameters());
-            requestImpl.setQueryParameters(null);
-            exchange.getQueryParameters().clear();
-            exchange.getQueryParameters().putAll(merged);
-            requestImpl.getQueryParameters();
+            requestImpl.setQueryParameters(QueryParameterUtils.mergeQueryParameters(fake.getQueryParameters(), requestImpl.getQueryParameters()));
         }
         return newRequestPath;
     }
