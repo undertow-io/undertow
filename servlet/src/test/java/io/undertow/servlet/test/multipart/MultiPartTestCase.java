@@ -47,9 +47,7 @@ import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.xnio.OptionMap;
 
-import static io.undertow.UndertowOptions.MULTIPART_MAX_ENTITY_SIZE;
 import static io.undertow.servlet.Servlets.multipartConfig;
 import static io.undertow.servlet.Servlets.servlet;
 
@@ -81,16 +79,6 @@ public class MultiPartTestCase {
                 servlet("mp3", MultiPartServlet.class)
                         .addMapping("/3")
                         .setMultipartConfig(multipartConfig(null, 3, 0, 0)));
-    }
-
-    @DefaultServer.BeforeServerStarts
-    public static void setupServer() {
-        DefaultServer.setServerOptions(OptionMap.create(MULTIPART_MAX_ENTITY_SIZE, -1L));
-    }
-
-    @DefaultServer.AfterServerStops
-    public static void cleanup() {
-        DefaultServer.setServerOptions(OptionMap.EMPTY);
     }
 
     @Test
