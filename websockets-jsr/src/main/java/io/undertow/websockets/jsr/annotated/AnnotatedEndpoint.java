@@ -115,11 +115,16 @@ public class AnnotatedEndpoint extends Endpoint {
                 params.put(method.getMessageType(), partialMessage);
                 params.put(boolean.class, last);
                 final Object result;
+                final ClassLoader oldCL = Thread.currentThread().getContextClassLoader();
                 try {
-                    result = method.invoke(instance.getInstance(), params);
+                    Object invokeTarget = instance.getInstance();
+                    Thread.currentThread().setContextClassLoader(invokeTarget.getClass().getClassLoader());
+                    result = method.invoke(invokeTarget, params);
                 } catch (Throwable e) {
                     AnnotatedEndpoint.this.onError(session, e);
                     return;
+                } finally {
+                    Thread.currentThread().setContextClassLoader(oldCL);
                 }
                 sendResult(result, session);
             }
@@ -138,11 +143,16 @@ public class AnnotatedEndpoint extends Endpoint {
                 params.put(Map.class, session.getPathParameters());
                 params.put(method.getMessageType(), partialMessage);
                 final Object result;
+                final ClassLoader oldCL = Thread.currentThread().getContextClassLoader();
                 try {
-                    result = method.invoke(instance.getInstance(), params);
+                    Object invokeTarget = instance.getInstance();
+                    Thread.currentThread().setContextClassLoader(invokeTarget.getClass().getClassLoader());
+                    result = method.invoke(invokeTarget, params);
                 } catch (Exception e) {
                     AnnotatedEndpoint.this.onError(session, e);
                     return;
+                } finally {
+                    Thread.currentThread().setContextClassLoader(oldCL);
                 }
                 sendResult(result, session);
             }
