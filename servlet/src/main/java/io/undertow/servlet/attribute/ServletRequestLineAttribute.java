@@ -57,9 +57,9 @@ public class ServletRequestLineAttribute implements ExchangeAttribute {
         if (query != null && !query.isEmpty()) {
             sb.append('?');
             sb.append(query);
-        } else if (!exchange.getQueryString().isEmpty()) {
+        } else if (!exchange.getDecodedQueryString().isEmpty()) {
             sb.append('?');
-            sb.append(exchange.getQueryString());
+            sb.append(exchange.getDecodedQueryString());
         }
         sb.append(' ')
                 .append(exchange.getProtocol().toString()).toString();

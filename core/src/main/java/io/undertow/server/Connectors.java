@@ -113,15 +113,15 @@ public class Connectors {
             }
         }
 
-        KNOWN_ATTRIBUTE_NAMES.add("Path");
-        KNOWN_ATTRIBUTE_NAMES.add("Domain");
-        KNOWN_ATTRIBUTE_NAMES.add("Discard");
-        KNOWN_ATTRIBUTE_NAMES.add("Secure");
-        KNOWN_ATTRIBUTE_NAMES.add("HttpOnly");
-        KNOWN_ATTRIBUTE_NAMES.add("Max-Age");
-        KNOWN_ATTRIBUTE_NAMES.add("Expires");
-        KNOWN_ATTRIBUTE_NAMES.add("Comment");
-        KNOWN_ATTRIBUTE_NAMES.add("SameSite");
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_PATH_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_DOMAIN_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_DISCARD_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_SECURE_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_HTTP_ONLY_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_MAX_AGE_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_EXPIRES_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_COMMENT_ATTR);
+        KNOWN_ATTRIBUTE_NAMES.add(Cookie.COOKIE_SAME_SITE_ATTR);
     }
     /**
      * Flattens the exchange cookie map into the response header map. This should be called by a
@@ -569,10 +569,9 @@ public class Connectors {
                 }
                 if(requiresDecode && allowUnescapedCharactersInUrl) {
                     final String decodedQS = URLUtils.decode(qs, charset, decodeSlashFlag,false, decodeBuffer);
-                    exchange.setQueryString(decodedQS);
-                } else {
-                    exchange.setQueryString(qs);
+                    exchange.setDecodedQueryString(decodedQS);
                 }
+                exchange.setQueryString(qs);
 
                 URLUtils.parseQueryString(qs, exchange, charset, decodeQueryString, maxParameters);
                 return;

@@ -30,49 +30,35 @@ import io.undertow.server.handlers.CookieImpl;
  * @author Stuart Douglas
  * @author <a href="mailto:ropalka@redhat.com">Richard Opalka</a>
  */
-public class SessionCookieConfig implements SessionConfig {
+public class SessionCookieConfig extends CookieAttributes<SessionCookieConfig> implements SessionConfig {
 
     public static final String DEFAULT_SESSION_ID = "JSESSIONID";
-
+    public static final String DEFAULT_PATH = "/";
     private String cookieName = DEFAULT_SESSION_ID;
-    private String path = "/";
-    private String domain;
-    private boolean discard;
-    private boolean secure;
-    private boolean httpOnly;
-    private int maxAge = -1;
-    private String comment;
-
 
     @Override
     public String rewriteUrl(final String originalUrl, final String sessionId) {
         return originalUrl;
     }
 
+    public SessionCookieConfig() {
+        super();
+        //NOTE some client dont consider lack of path as "/"...
+        super.kernel.setPath(DEFAULT_PATH);
+    }
+
     @Override
     public void setSessionId(final HttpServerExchange exchange, final String sessionId) {
-        Cookie cookie = new CookieImpl(cookieName, sessionId)
-                .setPath(path)
-                .setDomain(domain)
-                .setDiscard(discard)
-                .setSecure(secure)
-                .setHttpOnly(httpOnly)
-                .setComment(comment);
-        if (maxAge > 0) {
-            cookie.setMaxAge(maxAge);
-        }
+
+        Cookie cookie = new CookieImpl(cookieName, sessionId, super.kernel);
+
         exchange.setResponseCookie(cookie);
         UndertowLogger.SESSION_LOGGER.tracef("Setting session cookie session id %s on %s", sessionId, exchange);
     }
 
     @Override
     public void clearSession(final HttpServerExchange exchange, final String sessionId) {
-        Cookie cookie = new CookieImpl(cookieName, sessionId)
-                .setPath(path)
-                .setDomain(domain)
-                .setDiscard(discard)
-                .setSecure(secure)
-                .setHttpOnly(httpOnly)
+        Cookie cookie = new CookieImpl(cookieName, sessionId, super.kernel)
                 .setMaxAge(0);
         exchange.setResponseCookie(cookie);
         UndertowLogger.SESSION_LOGGER.tracef("Clearing session cookie session id %s on %s", sessionId, exchange);
@@ -99,69 +85,6 @@ public class SessionCookieConfig implements SessionConfig {
 
     public SessionCookieConfig setCookieName(final String cookieName) {
         this.cookieName = cookieName;
-        return this;
-    }
-
-    public String getPath() {
-        return path;
-    }
-
-    public SessionCookieConfig setPath(final String path) {
-        this.path = path;
-        return this;
-    }
-
-    public String getDomain() {
-        return domain;
-    }
-
-    public SessionCookieConfig setDomain(final String domain) {
-        this.domain = domain;
-        return this;
-    }
-
-    public boolean isDiscard() {
-        return discard;
-    }
-
-    public SessionCookieConfig setDiscard(final boolean discard) {
-        this.discard = discard;
-        return this;
-    }
-
-    public boolean isSecure() {
-        return secure;
-    }
-
-    public SessionCookieConfig setSecure(final boolean secure) {
-        this.secure = secure;
-        return this;
-    }
-
-    public boolean isHttpOnly() {
-        return httpOnly;
-    }
-
-    public SessionCookieConfig setHttpOnly(final boolean httpOnly) {
-        this.httpOnly = httpOnly;
-        return this;
-    }
-
-    public int getMaxAge() {
-        return maxAge;
-    }
-
-    public SessionCookieConfig setMaxAge(final int maxAge) {
-        this.maxAge = maxAge;
-        return this;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public SessionCookieConfig setComment(final String comment) {
-        this.comment = comment;
         return this;
     }
 }

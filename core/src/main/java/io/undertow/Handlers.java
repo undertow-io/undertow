@@ -32,6 +32,7 @@ import io.undertow.server.handlers.DateHandler;
 import io.undertow.server.handlers.DisableCacheHandler;
 import io.undertow.server.handlers.ExceptionHandler;
 import io.undertow.server.handlers.GracefulShutdownHandler;
+import io.undertow.server.handlers.HostHeaderHandler;
 import io.undertow.server.handlers.HttpContinueAcceptingHandler;
 import io.undertow.server.handlers.HttpContinueReadHandler;
 import io.undertow.server.handlers.HttpTraceHandler;
@@ -610,6 +611,17 @@ public class Handlers {
      */
     public static LearningPushHandler learningPushHandler(int maxEntries, HttpHandler next) {
         return new LearningPushHandler(maxEntries, -1, next);
+    }
+
+    /**
+     * Creates a handler that automatically vets Host header content/absence/presence according to
+     * https://datatracker.ietf.org/doc/html/rfc7230#section-5.4 and related
+     *
+     * @param next The next handler
+     * @return A host header handler
+     */
+    public static HostHeaderHandler hostHeaderHandler(HttpHandler next) {
+        return new HostHeaderHandler(next);
     }
 
     private Handlers() {

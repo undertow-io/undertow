@@ -48,7 +48,7 @@ public final class RequestStatistics {
     }
 
     public String getQueryString() {
-        return exchange.getQueryString();
+        return exchange.getDecodedQueryString();
     }
 
     public String getUri() {

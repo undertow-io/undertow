@@ -54,9 +54,14 @@ public class UndertowOptions {
     public static final Option<Long> MULTIPART_MAX_ENTITY_SIZE = Option.simple(UndertowOptions.class, "MULTIPART_MAX_ENTITY_SIZE", Long.class);
 
     /**
-     * We do not have a default upload limit
+     * Default maximum upload size 2MB
      */
-    public static final long DEFAULT_MAX_ENTITY_SIZE = -1;
+    public static final long DEFAULT_MAX_ENTITY_SIZE = 2097152;
+
+    /**
+     * Default maximum multipart upload size 2MB
+     */
+    public static final long DEFAULT_MULTIPART_MAX_ENTITY_SIZE = 2097152;
 
     /**
      * If we should buffer pipelined requests. Defaults to false.

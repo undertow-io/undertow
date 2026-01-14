@@ -49,9 +49,9 @@ public class HttpTraceHandler implements HttpHandler {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "message/http");
             StringBuilder body = new StringBuilder("TRACE ");
             body.append(exchange.getRequestURI());
-            if(!exchange.getQueryString().isEmpty()) {
+            if(!exchange.getDecodedQueryString().isEmpty()) {
                 body.append('?');
-                body.append(exchange.getQueryString());
+                body.append(exchange.getDecodedQueryString());
             }
             body.append(' ');
             body.append(exchange.getProtocol().toString());

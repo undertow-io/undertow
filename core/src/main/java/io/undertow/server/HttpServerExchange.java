@@ -73,7 +73,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
 import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -141,8 +144,8 @@ public final class HttpServerExchange extends AbstractAttachable {
     private Map<String, Deque<String>> queryParameters;
     private Map<String, Deque<String>> pathParameters;
 
-    private DelegatingIterable<Cookie> requestCookies;
-    private DelegatingIterable<Cookie> responseCookies;
+    private DelegatingIterable<String, Cookie> requestCookies;
+    private DelegatingIterable<String, Cookie> responseCookies;
 
     private Map<String, Cookie> deprecatedRequestCookies;
     private Map<String, Cookie> deprecatedResponseCookies;
@@ -208,13 +211,14 @@ public final class HttpServerExchange extends AbstractAttachable {
     private String resolvedPath = "";
 
     /**
-     * the query string - percent encoded
+     * the unencoded query string (i.e. percent encoded), in its original form as it appears in the received request.
      */
     private String queryString = "";
+
     /**
-     * the non-decoded query string. Set only when query string goes through decoding
+     * the decoded query string, if there was any decoding done
      */
-    private String nonDecodedQueryString = null;
+    private String decodedQueryString = null;
 
     private int requestWrapperCount = 0;
     private ConduitWrapper<StreamSourceConduit>[] requestWrappers; //we don't allocate these by default, as for get requests they are not used
@@ -581,24 +585,25 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
+     * Returns the query string for this request.
      *
-     * @return The query string, without the leading ?
+     * @return The query string as originally appeared in the request, without the leading ?
      */
     public String getQueryString() {
-        return queryString;
+        return this.queryString;
     }
 
     /**
-     * Set query string.  Leading {@code '?'} char will be removed automatically.
+     * Sets the query string, unencoded and in its original form as it appears in the received request.
+     * Leading {@code '?'} char will be removed automatically.<p>
      *
+     * @param queryString the query string as originally contained in the request, without any decoding
      * @return this http server exchange
      */
     public HttpServerExchange setQueryString(final String queryString) {
-        // Clean leading ?
-        if( queryString.length() > 0 && queryString.charAt(0) == '?' ) {
-            this.queryString = queryString.substring(1);
-        } else {
-            this.queryString = queryString;
+        this.queryString = cleanQueryString(queryString);
+        if (this.queryString == null) {
+            this.queryString = "";
         }
         return this;
     }
@@ -608,9 +613,12 @@ public final class HttpServerExchange extends AbstractAttachable {
      * The returned string does not contain the leading {@code '?'} char.
      *
      * @return The request query string, without the leading {@code '?'}, non-decoded.
+     *
+     * @deprecated use {@link #getQueryString()} instead
      */
+    @Deprecated(forRemoval = true, since="2.3.20.Final")
     public String getNonDecodedQueryString() {
-        return this.nonDecodedQueryString == null? this.queryString: this.nonDecodedQueryString;
+        return getQueryString();
     }
 
     /**
@@ -618,17 +626,50 @@ public final class HttpServerExchange extends AbstractAttachable {
      * Must be invoked only if the {@link #getQueryString() query string} has gone through decoding. In such case, we expect
      * that both forms of the query string will be set in the exchange: {@link #setQueryString decoded} and non-decoded.
      *
-     * @param nonDecodedQueryString the query string as originally contained in the request, without any decoding
+     * @param unencodedQueryString the query string as originally contained in the request, without any decoding
+     * @return this http server exchange
+     *
+     * @deprecated Use #setQueryString instead
+     */
+    @Deprecated(forRemoval = true, since="2.3.20.Final")
+    public HttpServerExchange setNonDecodedQueryString(String unencodedQueryString) {
+        return setQueryString(unencodedQueryString);
+    }
+
+    /**
+     * Returns the query string in its decoded form if available, which will depend on configs such as
+     * {@link UndertowOptions#ALLOW_UNESCAPED_CHARACTERS_IN_URL}.
+     * If unavailable, the decoded query string is just the same as {@link #getQueryString}
+     *
+     * @return The request query string, without the leading {@code '?'}, post parsing, decoded.
+     */
+    public String getDecodedQueryString() {
+        return this.decodedQueryString != null && this.decodedQueryString.length() > 0 ? this.decodedQueryString : this.queryString;
+    }
+
+    /**
+     * Sets the decoded query string.
+     * Leading {@code '?'} char will be removed automatically.<p>
+     * Must be invoked only if the {@link #getQueryString() query string} has gone through decoding. In such case, we expect
+     * that both forms of the query string will be set in the exchange: decoded and {@link #setQueryString non-decoded}
+     *
+     * @param decodedQueryString the request query string, without the leading {@code '?'}, post parsing, decoded.
      * @return this http server exchange
      */
-    public HttpServerExchange setNonDecodedQueryString(String nonDecodedQueryString) {
-        // Clean leading ?
-        if( nonDecodedQueryString.length() > 0 && nonDecodedQueryString.charAt(0) == '?' ) {
-            this.nonDecodedQueryString = nonDecodedQueryString.substring(1);
-        } else {
-            this.nonDecodedQueryString = nonDecodedQueryString;
-        }
+    public HttpServerExchange setDecodedQueryString(String decodedQueryString) {
+        this.decodedQueryString = cleanQueryString(decodedQueryString);
         return this;
+    }
+
+    private String cleanQueryString(String queryString) {
+        // Clean leading ?
+        if (queryString == null) {
+            return queryString;
+        } else if( queryString.length() > 0 && queryString.charAt(0) == '?' ) {
+            return queryString.substring(1);
+        } else {
+            return queryString;
+        }
     }
 
     /**
@@ -1198,7 +1239,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     @Deprecated(since="2.2.0", forRemoval=true)
     public Map<String, Cookie> getRequestCookies() {
         if (deprecatedRequestCookies == null) {
-            deprecatedRequestCookies = new MapDelegatingToSet((Set<Cookie>)((DelegatingIterable<Cookie>)requestCookies()).getDelegate());
+            deprecatedRequestCookies = new MapDelegatingToMultiValueStorage(((DelegatingIterable<String,Cookie>)requestCookies()).getDelegate());
         }
         return deprecatedRequestCookies;
     }
@@ -1221,7 +1262,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 Rfc6265CookieSupport.validateDomain(cookie.getDomain());
             }
         }
-        ((Set<Cookie>)((DelegatingIterable<Cookie>)requestCookies()).getDelegate()).add(cookie);
+        ((DelegatingIterable<String,Cookie>)requestCookies()).getDelegate().put(cookie.getName(),cookie);
         return this;
     }
 
@@ -1238,13 +1279,41 @@ public final class HttpServerExchange extends AbstractAttachable {
         return null;
     }
 
+    public List<Cookie> getRequestCookies(final String name) {
+        if (name == null) return Collections.emptyList();
+        requestCookies();
+        final List<Cookie> modifiableList = (List<Cookie>) requestCookies.getDelegate().get(name);
+        return  Collections.unmodifiableList(modifiableList);
+    }
+
+    public List<String> getRequestCookieNames() {
+        requestCookies();
+        //This will produce collapsed set of keys
+        final Set<String> modifiableList = requestCookies.getDelegate().keySet();
+        return  Collections.unmodifiableList(new ArrayList<String>(modifiableList));
+    }
+
+    public List<Cookie> getResponseCookies(final String name) {
+        if (name == null) return Collections.emptyList();
+        responseCookies();
+        final List<Cookie> modifiableList = (List<Cookie>) responseCookies.getDelegate().get(name);
+        return  Collections.unmodifiableList(modifiableList);
+    }
+
+    public List<String> getResponseCookieNames() {
+        responseCookies();
+        //This will produce collapsed set of keys
+        final Set<String> modifiableList = responseCookies.getDelegate().keySet();
+        return Collections.unmodifiableList(new ArrayList<String>(modifiableList));
+    }
+
     /**
      * Returns unmodifiable enumeration of request cookies.
      * @return A read-only enumeration of request cookies
      */
     public Iterable<Cookie> requestCookies() {
         if (requestCookies == null) {
-            Set<Cookie> requestCookiesParam = new OverridableTreeSet<>();
+            MultiValueHashListStorage<String,Cookie> requestCookiesParam = new MultiValueHashListStorage<String, Cookie>();
             requestCookies = new DelegatingIterable<>(requestCookiesParam);
             Cookies.parseRequestCookies(
                     getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, UndertowOptions.DEFAULT_MAX_COOKIES),
@@ -1272,7 +1341,7 @@ public final class HttpServerExchange extends AbstractAttachable {
                 Rfc6265CookieSupport.validateDomain(cookie.getDomain());
             }
         }
-        ((Set<Cookie>)((DelegatingIterable<Cookie>)responseCookies()).getDelegate()).add(cookie);
+        ((DelegatingIterable<String,Cookie>)responseCookies()).getDelegate().put(cookie.getName(),cookie);
         return this;
     }
 
@@ -1283,7 +1352,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     @Deprecated(since="2.2.0", forRemoval=true)
     public Map<String, Cookie> getResponseCookies() {
         if (deprecatedResponseCookies == null) {
-            deprecatedResponseCookies = new MapDelegatingToSet((Set<Cookie>)((DelegatingIterable<Cookie>)responseCookies()).getDelegate());
+            deprecatedResponseCookies = new MapDelegatingToMultiValueStorage(((DelegatingIterable<String,Cookie>)responseCookies()).getDelegate());
         }
         return deprecatedResponseCookies;
     }
@@ -1294,7 +1363,7 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     public Iterable<Cookie> responseCookies() {
         if (responseCookies == null) {
-            responseCookies = new DelegatingIterable<>(new OverridableTreeSet<>());
+            responseCookies = new DelegatingIterable<>(new MultiValueHashListStorage<String,Cookie>());
         }
         return responseCookies;
     }

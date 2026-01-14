@@ -204,7 +204,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
         } catch (WebSocketException e) {
             //the data was corrupt
             //send a close message
-            WebSockets.sendClose(new CloseMessage(CloseMessage.WRONG_CODE, e.getMessage()).toByteBuffer(), this, null);
+            WebSockets.sendClose(new CloseMessage(CloseMessage.PROTOCOL_ERROR, e.getMessage()).toByteBuffer(), this, null);
             markReadsBroken(e);
             if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
                 WebSocketLogger.REQUEST_LOGGER.debugf(e, "receive failed due to Exception");
@@ -268,10 +268,10 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
             getFramePriority().immediateCloseFrame();
             WebSockets.sendClose(new CloseMessage(CloseMessage.MSG_CONTAINS_INVALID_DATA, e.getMessage()).toByteBuffer(), this, null);
         } else if (e instanceof WebSocketInvalidCloseCodeException) {
-            WebSockets.sendClose(new CloseMessage(CloseMessage.WRONG_CODE, e.getMessage()).toByteBuffer(), this, null);
+            WebSockets.sendClose(new CloseMessage(CloseMessage.PROTOCOL_ERROR, e.getMessage()).toByteBuffer(), this, null);
         } else if (e instanceof WebSocketFrameCorruptedException) {
             getFramePriority().immediateCloseFrame();
-            WebSockets.sendClose(new CloseMessage(CloseMessage.WRONG_CODE, e.getMessage()).toByteBuffer(), this, null);
+            WebSockets.sendClose(new CloseMessage(CloseMessage.PROTOCOL_ERROR, e.getMessage()).toByteBuffer(), this, null);
         }
     }
 
