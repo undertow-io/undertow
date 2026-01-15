@@ -25,7 +25,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
+
 import org.xnio.OptionMap;
 
 import io.undertow.UndertowMessages;
@@ -180,7 +183,10 @@ public class QueryParameterUtils {
               } else {
                   final Deque<String> newValues = newParams.get(entry.getKey());
                   final Deque<String> oldValues = entry.getValue();
-                  oldValues.stream().filter(v -> !newValues.contains(v)).forEach(v-> newValues.add(v));
+                  final Set<String> mergedValues = new LinkedHashSet<>(newValues.size() + oldValues.size());
+                  mergedValues.addAll(newValues);
+                  mergedValues.addAll(oldValues);
+                  newParams.put(entry.getKey(), new ArrayDeque<>(mergedValues));
               }
           }
           return newParams;
