@@ -75,6 +75,7 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
+
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
@@ -1267,16 +1268,60 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     public Cookie getRequestCookie(final String name) {
+        return getRequestCookie(name, null);
+    }
+
+    public Cookie getRequestCookie(final String name, final String path) {
         if (name == null) return null;
+        final List<Cookie> optionsToMatch = new ArrayList<>();
         for (Cookie cookie : requestCookies()) {
             if (name.equals(cookie.getName())) {
-                // TODO: QUESTION: Shouldn't we check instead of just name also
-                // TODO  requestPath (stored in this exchange request path) and
-                // TODO: domain (stored in Host HTTP header).
-                return cookie;
+                optionsToMatch.add(cookie);
             }
         }
-        return null;
+        return matchCookieDetails(optionsToMatch, path);
+    }
+
+    /**
+     * Match path and domain of cookies to those present in request. This method will match cookies against exchange request path
+     * and once potential pool is identified it will try to find best match based either on supplied 'path' argument
+     * @param optionsToMatch
+     * @param path - prefix of request path that will be a base for match( or request path). May be <b>null</b>.
+     */
+    private Cookie matchCookieDetails(final List<Cookie> optionsToMatch, String path) {
+        //NOTE: https://www.rfc-editor.org/rfc/rfc6265#section-5.1.4
+        //NOTE: https://www.rfc-editor.org/rfc/rfc6265#section-5.1.3
+        //NOTE: Its possible to receive request "/sub" with cookies "/" and "/sub" -
+        //we should return longest match if path is not directly specified
+        //NOTE: order in request is not guaranteed by UA
+        final String requestPath = this.getRequestPath();
+        if(path == null) {
+            path = requestPath;
+        } else {
+            //path must be a prefix or match request
+            if(!requestPath.startsWith(path)) {
+                return null;
+            }
+        }
+        Cookie potentialReturn = null;
+        for (final Cookie c : optionsToMatch) {
+            if (cookiePathMatch(c, path) && cookieDomainMatch(c)) {
+                if(potentialReturn == null) {
+                    potentialReturn = c;
+                } else {
+                    // at this point length of path is a factor only
+                    if (computeCookiePath(c).length() > computeCookiePath(potentialReturn).length()) {
+                        potentialReturn = c;
+                    }
+                }
+
+                if(computeCookiePath(potentialReturn).equals(path)) {
+                    //it wont get better
+                    return potentialReturn;
+                }
+            }
+        }
+        return potentialReturn;
     }
 
     public List<Cookie> getRequestCookies(final String name) {
@@ -1305,6 +1350,38 @@ public final class HttpServerExchange extends AbstractAttachable {
         //This will produce collapsed set of keys
         final Set<String> modifiableList = responseCookies.getDelegate().keySet();
         return Collections.unmodifiableList(new ArrayList<String>(modifiableList));
+    }
+
+    private String computeCookiePath(final Cookie c) {
+        //NOTE: this is shady, seems like default is used if no value is present, though UAs should not send cookies to wrong url:
+        //5.2 https://www.ietf.org/rfc/rfc2109.txt
+        if (c.getPath() != null) {
+            return c.getPath();
+        } else {
+            // NOTE: assume no Path == '/'
+            // NOTE: possibly compute as UA would
+            return "/";
+        }
+    }
+
+    private boolean cookiePathMatch(final Cookie c, final String requestPath) {
+        final String cookiePath = computeCookiePath(c);
+        if(requestPath == null) {
+            return false;
+        }
+        if( requestPath.equals(cookiePath)) {
+            return true;
+        }
+
+        if(requestPath.startsWith(cookiePath) && (cookiePath.charAt(cookiePath.length()-1) == '/' || requestPath.charAt(cookiePath.length()) == '/')) {
+            return true;
+        }
+        return false;
+    }
+
+    private boolean cookieDomainMatch(Cookie c) {
+        //TODO: https://issues.redhat.com/browse/UNDERTOW-2261
+        return true;
     }
 
     /**
