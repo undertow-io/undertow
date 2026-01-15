@@ -331,6 +331,11 @@ public class UndertowOptions {
     public static final Option<Integer> HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE", Integer.class);
 
     /**
+     * Default value of {@link #HTTP2_PADDING_SIZE} option.
+     */
+    public static final int DEFAULT_HTTP2_PADDING_SIZE = 0;
+
+    /**
      * The maximum amount of padding to send in a HTTP/2 frame. Actual amount will be randomly determined, defaults to Zero. <br>UNIT: Bytes.
      */
     public static final Option<Integer> HTTP2_PADDING_SIZE = Option.simple(UndertowOptions.class, "HTTP2_PADDING_SIZE", Integer.class);
