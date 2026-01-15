@@ -311,7 +311,6 @@ public class Cookies {
 
     public static void parseCookie(final String cookie, final MultiValueHashListStorage<String,Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator, boolean allowHttpSepartorsV0, boolean rfc6265ParsingDisabled) {
 
-        boolean containsEscapedQuotes = false;
         CookieJar cookieJar = new CookieJar();
         cookieJar.rfc6265ParsingDisabled = rfc6265ParsingDisabled;
         cookieJar.parsedCookies = parsedCookies;
@@ -352,7 +351,7 @@ public class Cookies {
                         cookieJar.state = 0;
                         cookieJar.start = i + 1;
                     } else if (c == '"' && cookieJar.start == i) { //only process the " if it is the first character
-                        containsEscapedQuotes = false;
+                        cookieJar.containsEscapedQuotes = false;
                         cookieJar.inQuotes = true;
                         cookieJar.state = 3;
                         cookieJar.start = i + 1;
@@ -378,21 +377,45 @@ public class Cookies {
                     if (c == '"') {
                         if (!rfc6265ParsingDisabled && cookieJar.inQuotes) {
                             cookieJar.start = cookieJar.start - 1;
-                            i++;
-                            createCookie(containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(cookieJar.start, i)) : cookie.substring(cookieJar.start, i), cookieJar);
+                            //i++;
+                            createCookie(cookieJar.containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(cookieJar.start, i + 1)) : cookie.substring(cookieJar.start, i + 1), cookieJar);
                         } else {
-                            createCookie(containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(cookieJar.start, i)) : cookie.substring(cookieJar.start, i), cookieJar);
+                            createCookie(cookieJar.containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(cookieJar.start, i)) : cookie.substring(cookieJar.start, i), cookieJar);
                         }
                         cookieJar.inQuotes = false;
-                        cookieJar.state = 0;
-                        cookieJar.start = i + 1;
+                      //if there is more, make sure next is separator
+                        if (i + 1 < cookie.length() && (cookie.charAt(i + 1) == ';'      // Cookie: key="\"; key2=...
+                                || (commaIsSeperator && cookie.charAt(i + 1) == ','))    // Cookie: key="\", key2=...
+                                || i+1 == cookie.length()) {  //end of cookie
+                           //spin around, its ok.
 
+                        } else {
+                            // Cookie: key="\" SOMEMORE; key2=...
+                            if(UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
+                                UndertowLogger.REQUEST_LOGGER.trace("Ignoring invalid cookies in header '" + cookie+"', cookie: '"+cookieJar.currentCookie.getName()+"'");
+                            }
+                            //this is enough, it wont be added in th end.
+                            cookieJar.currentCookie = null;
+                            //seek next separator
+                            int seekIndex = i + 1;
+                            while(seekIndex<cookie.length()) {
+                                final char seeker = cookie.charAt(seekIndex);
+                                if(!(seeker == ';'      // Cookie: key="\"; key2=...
+                                        || (commaIsSeperator && seeker == ','))) {
+                                    seekIndex++;
+                                } else {
+                                    break;
+                                }
+                            }
+                            cookieJar.start = seekIndex;
+                            i = seekIndex-1;
+                            //this will fall into state == 3 and below if
+                        }
                     } else if (c == ';' || (commaIsSeperator && c == ',')) {
                         cookieJar.state = 0;
                         cookieJar.start = i + 1;
-                    }
-                    // Skip the next double quote char '"' when it is escaped by backslash '\' (i.e. \") inside the quoted value
-                    if (c == '\\' && (i + 1 < cookie.length()) && cookie.charAt(i + 1) == '"') {
+                    } else if (c == '\\' && (i + 1 < cookie.length()) && cookie.charAt(i + 1) == '"') {
+                        // Skip the next double quote char '"' when it is escaped by backslash '\' (i.e. \") inside the quoted value
                         // But..., do not skip at the following conditions
                         if (i + 2 == cookie.length()) { // Cookie: key="\" or Cookie: key="...\"
                             break;
@@ -403,7 +426,7 @@ public class Cookies {
                         }
                         // Skip the next double quote char ('"' behind '\') in the cookie value
                         i++;
-                        containsEscapedQuotes = true;
+                        cookieJar.containsEscapedQuotes = true;
                         cookieJar.inQuotes = false;
                     }
                     break;
@@ -435,6 +458,14 @@ public class Cookies {
     private static void createCookie(final String value, final CookieJar cookieJar) {
         if (cookieJar.parsedCookies.size() > cookieJar.maxCookies) {
             throw UndertowMessages.MESSAGES.tooManyCookies(cookieJar.maxCookies);
+        }
+
+        if(cookieJar.name == null) {
+            if(UndertowLogger.REQUEST_LOGGER.isTraceEnabled()) {
+                UndertowLogger.REQUEST_LOGGER.trace("Unexpected input detected, corrupted parse.");
+            }
+
+            return;
         }
 
         if (!cookieJar.name.isEmpty() && cookieJar.name.charAt(0) == '$') {
@@ -585,6 +616,7 @@ public class Cookies {
         int maxCookies;
         int version = -1;
         boolean inQuotes = false;
+        boolean containsEscapedQuotes = false;
         int state = 0;
         String name = null;
         int start = 0;
