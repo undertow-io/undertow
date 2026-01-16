@@ -23,3 +23,9 @@ Notifying Security Relevant Bugs
 If you find a bug that has a security impact, please notify us sending an email to Red Hat SecAlert <secalert@redhat.com> with a copy to Flavia Rainone <frainone@redhat.com>. This will ensure the bug is properly handled without causing unnecessary negative impacts for the Undertow's user base.
 
 You can find more information about the security procedures at [this page](https://access.redhat.com/security/team/contact "Security Contacts and Procedures").
+
+On Version Discrepancies
+------------------------
+
+You may notice that the last version on this project is v2.31.21.Final, while Renovate and other dependency bots urge you to upgrade to v2.31.22.Final, or newer.
+The reason that the official source repository lags behind is that __________
