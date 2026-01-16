@@ -109,9 +109,11 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                     nextListener.proceed();
                 }
             });
-            Long sizeLimit = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MULTIPART_MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MULTIPART_MAX_ENTITY_SIZE );
-            if(sizeLimit != null && sizeLimit > 0) { // do not overwrite the entity size with sizeLimit that is <= 0
-                exchange.setMaxEntitySize(sizeLimit);
+            if (exchange.getMaxEntitySize() <= 0) {
+                Long sizeLimit = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MULTIPART_MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MULTIPART_MAX_ENTITY_SIZE );
+                if(sizeLimit != null && sizeLimit > 0) { // do not overwrite the entity size with sizeLimit that is <= 0
+                    exchange.setMaxEntitySize(sizeLimit);
+                }
             }
             UndertowLogger.REQUEST_LOGGER.tracef("Created multipart parser for %s", exchange);
 
