@@ -641,6 +641,10 @@ public class Connectors {
         exchange.updateBytesSent(bytes);
     }
 
+    public static void updateRequestBytesRead(HttpServerExchange exchange, long bytes) {
+        exchange.updateBytesRead(bytes);
+    }
+
     public static ConduitStreamSinkChannel getConduitSinkChannel(HttpServerExchange exchange) {
         return exchange.getConnection().getSinkChannel();
     }

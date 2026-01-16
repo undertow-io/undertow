@@ -270,6 +270,11 @@ public final class HttpServerExchange extends AbstractAttachable {
      */
     private long responseBytesSent = 0;
 
+    /**
+     * The number of bytes that have been read from remote client. This does not include headers,
+     * only the entity body, and does not take any transfer or content encoding into account.
+     */
+    private long requestBytesRead = 0;
 
     private static final int MASK_RESPONSE_CODE = intBitMask(0, 9);
 
@@ -838,6 +843,14 @@ public final class HttpServerExchange extends AbstractAttachable {
     }
 
     /**
+     *
+     * @return numbers of bytes read from request body
+     */
+    public long getRequestBytesRead() {
+        return this.requestBytesRead;
+    }
+
+    /**
      * Updates the number of response bytes sent. Used when compression is in use
      * @param bytes The number of bytes to increase the response size by. May be negative
      */
@@ -845,6 +858,10 @@ public final class HttpServerExchange extends AbstractAttachable {
         if(Connectors.isEntityBodyAllowed(this) && !getRequestMethod().equals(Methods.HEAD)) {
             responseBytesSent += bytes;
         }
+    }
+
+    void updateBytesRead(long bytes) {
+        requestBytesRead += bytes;
     }
 
     public HttpServerExchange setPersistent(final boolean persistent) {

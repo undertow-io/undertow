@@ -8,6 +8,7 @@ io.undertow.attribute.RequestMethodAttribute$Builder
 io.undertow.attribute.QueryStringAttribute$Builder
 io.undertow.attribute.RequestLineAttribute$Builder
 io.undertow.attribute.BytesSentAttribute$Builder
+io.undertow.attribute.BytesReadAttribute$Builder
 io.undertow.attribute.DateTimeAttribute$Builder
 io.undertow.attribute.RemoteUserAttribute$Builder
 io.undertow.attribute.RequestURLAttribute$Builder
