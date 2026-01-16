@@ -35,6 +35,7 @@ import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.servlet.UndertowServletLogger;
 import io.undertow.servlet.UndertowServletMessages;
 
 /**
@@ -196,14 +197,21 @@ public class ServletInputStreamImpl extends ServletInputStream {
 
     private void readIntoBuffer() throws IOException {
         if (pooled == null && !anyAreSet(state, FLAG_FINISHED)) {
-            pooled = bufferPool.allocate();
+             try {
+                pooled = bufferPool.allocate();
 
-            int res = Channels.readBlocking(channel, pooled.getBuffer());
-            pooled.getBuffer().flip();
-            if (res == -1) {
-                setFlags(FLAG_FINISHED);
-                pooled.close();
-                pooled = null;
+                int res = Channels.readBlocking(channel, pooled.getBuffer());
+                pooled.getBuffer().flip();
+                if (res == -1) {
+                    setFlags(FLAG_FINISHED);
+                    pooled.close();
+                    pooled = null;
+                }
+            } catch(NullPointerException npe) {
+                //UNDERTOW-2298 - this will happen in small window when read is happening and timeout happens
+                if (!(anyAreSet(state, FLAG_CLOSED) || isFinished())) {
+                    UndertowServletLogger.ROOT_LOGGER.ioOperationDesynchronization(npe);
+                }
             }
         }
     }
