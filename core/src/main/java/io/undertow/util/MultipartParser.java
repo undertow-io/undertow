@@ -384,11 +384,7 @@ public class MultipartParser {
             try {
                 do {
                     buf.clear();
-                    try {
-                        decoder.decode(rawData, buf);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                    decoder.decode(rawData, buf);
                     buf.flip();
                     handler.data(buf);
                 } while (rawData.hasRemaining());
