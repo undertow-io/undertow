@@ -21,6 +21,7 @@ import io.undertow.testutils.DefaultServer;
 import org.xnio.OptionMap;
 
 import static io.undertow.UndertowOptions.DECODE_URL;
+import static io.undertow.UndertowOptions.DEFAULT_DECODE_URL;
 
 /**
  * Test parsing of requests containing redirect uri parameters with {@link io.undertow.UndertowOptions#DECODE_URL} enabled.
@@ -31,7 +32,7 @@ public class RedirectURIParseWithDecodeURLTestCase extends AbstractRedirectURIPa
 
     @DefaultServer.BeforeServerStarts
     public static void setup() {
-        DefaultServer.setServerOptions(OptionMap.create(DECODE_URL, true));
+        DefaultServer.setServerOptions(OptionMap.create(DECODE_URL, DEFAULT_DECODE_URL));
     }
 
     @DefaultServer.AfterServerStops

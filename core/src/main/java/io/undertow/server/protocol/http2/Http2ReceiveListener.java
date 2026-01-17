@@ -95,10 +95,10 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
         this.connectorStatistics = connectorStatistics;
         this.maxEntitySize = undertowOptions.get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.slashDecodingFlag = URLUtils.getSlashDecodingFlag(undertowOptions);
-        this.decode = undertowOptions.get(UndertowOptions.DECODE_URL, true);
+        this.decode = undertowOptions.get(UndertowOptions.DECODE_URL, UndertowOptions.DEFAULT_DECODE_URL);
         this.maxParameters = undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS);
         this.recordRequestStartTime = undertowOptions.get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
-        if (undertowOptions.get(UndertowOptions.DECODE_URL, true)) {
+        if (undertowOptions.get(UndertowOptions.DECODE_URL, UndertowOptions.DEFAULT_DECODE_URL)) {
             this.encoding = undertowOptions.get(UndertowOptions.URL_CHARSET, StandardCharsets.UTF_8.name());
         } else {
             this.encoding = null;
