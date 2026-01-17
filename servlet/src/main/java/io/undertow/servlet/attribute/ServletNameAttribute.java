@@ -35,6 +35,7 @@ public class ServletNameAttribute implements ExchangeAttribute {
 
     public static final ExchangeAttribute INSTANCE = new ServletNameAttribute();
     public static final String NAME = "Servlet Name";
+    public static final String UNDEFINED = "No-Servlet";
 
     private ServletNameAttribute() {
 
@@ -43,7 +44,11 @@ public class ServletNameAttribute implements ExchangeAttribute {
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
         ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        return src.getCurrentServlet().getManagedServlet().getServletInfo().getName();
+        if (src != null) {
+            return src.getCurrentServlet().getManagedServlet().getServletInfo().getName();
+        } else {
+            return UNDEFINED;
+        }
     }
 
     @Override
