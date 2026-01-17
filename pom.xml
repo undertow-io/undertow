@@ -127,7 +127,7 @@
             For example: <version.org.jboss.as.console>
          -->
         <version.com.h2database>2.1.214</version.com.h2database>
-        <version.easymock>4.3</version.easymock>
+        <version.mockito>5.11.0</version.mockito>
         <version.jakarta.annotation.jakarta-annotation-api>2.1.1</version.jakarta.annotation.jakarta-annotation-api>
         <version.jakarta.servlet.jakarta-servlet-api>6.1.0</version.jakarta.servlet.jakarta-servlet-api>
         <version.jakarta.websocket.jakarta-websocket-api>2.1.1</version.jakarta.websocket.jakarta-websocket-api>
@@ -469,9 +469,9 @@
             </dependency>
 
             <dependency>
-                <groupId>org.easymock</groupId>
-                <artifactId>easymock</artifactId>
-                <version>${version.easymock}</version>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>${version.mockito}</version>
                 <scope>test</scope>
             </dependency>
 
