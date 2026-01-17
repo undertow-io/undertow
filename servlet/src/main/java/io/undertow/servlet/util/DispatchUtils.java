@@ -44,9 +44,6 @@ import static jakarta.servlet.RequestDispatcher.INCLUDE_QUERY_STRING;
 import static jakarta.servlet.RequestDispatcher.INCLUDE_REQUEST_URI;
 import static jakarta.servlet.RequestDispatcher.INCLUDE_SERVLET_PATH;
 
-import java.util.Deque;
-import java.util.Map;
-
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.servlet.handlers.ServletPathMatch;
@@ -248,11 +245,7 @@ public final class DispatchUtils {
         }
         // both forward and include merge parameters by spec
         if (!fake.getDecodedQueryString().isEmpty()) {
-            final Map<String, Deque<String>> merged = QueryParameterUtils.mergeQueryParameters(fake.getQueryParameters(), exchange.getQueryParameters());
-            requestImpl.setQueryParameters(null);
-            exchange.getQueryParameters().clear();
-            exchange.getQueryParameters().putAll(merged);
-            requestImpl.getQueryParameters();
+            requestImpl.setQueryParameters(QueryParameterUtils.mergeQueryParameters(fake.getQueryParameters(), requestImpl.getQueryParameters()));
         }
         return newRequestPath;
     }
