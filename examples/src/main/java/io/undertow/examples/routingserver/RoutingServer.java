@@ -48,6 +48,11 @@ public class RoutingServer {
                     exchange.setStatusCode(404);
                     exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
                     exchange.getResponseSender().send("Page Not Found");
+                })
+                .post("/*", exchange -> {
+                    exchange.setStatusCode(404);
+                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
+                    exchange.getResponseSender().send("Page Not Found");
                 });
 
         Undertow server = Undertow.builder()
