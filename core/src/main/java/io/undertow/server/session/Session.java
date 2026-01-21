@@ -33,18 +33,7 @@ import io.undertow.server.HttpServerExchange;
  *
  * @author Stuart Douglas
  */
-public interface Session {
-
-    /**
-     * Returns a string containing the unique identifier assigned
-     * to this session. The identifier is assigned
-     * by the servlet container and is implementation dependent.
-     *
-     * @return a string specifying the identifier
-     *         assigned to this session
-     */
-    String getId();
-
+public interface Session extends SessionReference {
 
     /**
      * Called when a request is done with the session.
@@ -191,10 +180,10 @@ public interface Session {
     boolean isInvalid();
 
     /**
-     * Returns a detached view of this session for use outside of request scope.
-     * @return a detached view of this session for use outside of request scope.
+     * Returns a reference to this session for use outside of request scope.
+     * @return a reference to this session for use outside of request scope.
      */
-    default Session detach() {
+    default SessionReference getReference() {
         return this;
     }
 }
