@@ -478,4 +478,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = WARN)
     @Message(id = 5107, value = "Failed to set web socket timeout.")
     void failedToSetWSTimeout(@Cause Exception e);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5108, value = "Configuration option is no longer supported: %s.")
+    void configurationNotSupported(String string);
 }

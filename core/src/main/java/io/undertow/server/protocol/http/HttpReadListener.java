@@ -27,12 +27,11 @@ import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.HostHeaderHandler;
 import io.undertow.server.protocol.ParseTimeoutUpdater;
 import io.undertow.server.protocol.http2.Http2ReceiveListener;
 import io.undertow.util.ClosingChannelExceptionHandler;
 import io.undertow.util.ConnectionUtils;
-import io.undertow.util.HeaderValues;
-import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.Methods;
 import io.undertow.util.Protocols;
@@ -78,7 +77,6 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     private final long maxEntitySize;
     private final boolean recordRequestStartTime;
     private final boolean allowUnknownProtocols;
-    private final boolean requireHostHeader;
 
     //0 = new request ok, reads resumed
     //1 = request running, new request not ok
@@ -98,7 +96,6 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.recordRequestStartTime = connection.getUndertowOptions().get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
-        this.requireHostHeader = connection.getUndertowOptions().get(UndertowOptions.REQUIRE_HOST_HTTP11, true);
         this.allowUnknownProtocols = connection.getUndertowOptions().get(UndertowOptions.ALLOW_UNKNOWN_PROTOCOLS, false);
         int requestParseTimeout = connection.getUndertowOptions().get(UndertowOptions.REQUEST_PARSE_TIMEOUT, -1);
         int requestIdleTimeout = connection.getUndertowOptions().get(UndertowOptions.NO_REQUEST_TIMEOUT, -1);
@@ -109,6 +106,11 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             connection.addCloseListener(parseTimeoutUpdater);
         }
         state = new ParseState(connection.getUndertowOptions().get(UndertowOptions.HTTP_HEADERS_CACHE_SIZE, UndertowOptions.DEFAULT_HTTP_HEADERS_CACHE_SIZE));
+
+
+        if (connection.getUndertowOptions().contains(UndertowOptions.REQUIRE_HOST_HTTP11)) {
+            UndertowLogger.ROOT_LOGGER.configurationNotSupported("REQUIRE_HOST_HTTP11");
+        }
     }
 
     public void newRequest() {
@@ -247,22 +249,13 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 channel.suspendReads();
             }
 
-            HeaderValues host = httpServerExchange.getRequestHeaders().get(Headers.HOST);
-            if(host != null && host.size() > 1) {
-                sendBadRequestAndClose(connection.getChannel(), UndertowMessages.MESSAGES.moreThanOneHostHeader());
-                return;
-            }
-            if(requireHostHeader && httpServerExchange.getProtocol().equals(Protocols.HTTP_1_1)) {
-                if(host == null || host.size() ==0 || host.getFirst().isEmpty()) {
-                    sendBadRequestAndClose(connection.getChannel(), UndertowMessages.MESSAGES.noHostInHttp11Request());
-                    return;
-                }
-            }
             if(!Connectors.areRequestHeadersValid(httpServerExchange.getRequestHeaders())) {
                 sendBadRequestAndClose(connection.getChannel(), UndertowMessages.MESSAGES.invalidHeaders());
                 return;
             }
-            Connectors.executeRootHandler(connection.getRootHandler(), httpServerExchange);
+
+            //TODO: make this configurable/dynamic, to either allow users provide their own here or in chain
+            Connectors.executeRootHandler(HostHeaderHandler.WRAPPER.wrap(connection.getRootHandler()), httpServerExchange);
         } catch (Throwable t) {
             sendBadRequestAndClose(connection.getChannel(), t);
             return;
