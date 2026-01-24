@@ -72,6 +72,7 @@ public class ByteRangeTestCase {
         Assert.assertNull(ByteRange.parse("bytes=a-"));
         Assert.assertNull(ByteRange.parse("foobarbaz"));
         Assert.assertNull(ByteRange.parse("bytes=--1"));
+        Assert.assertNull(ByteRange.parse("bytes=-0"));
 
         Assert.assertEquals(1, ByteRange.parse("bytes=2-").getRanges());
         Assert.assertEquals(1, ByteRange.parse("bytes=-20").getRanges());
