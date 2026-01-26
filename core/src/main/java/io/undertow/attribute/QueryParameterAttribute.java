@@ -19,6 +19,7 @@
 package io.undertow.attribute;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.QueryParameterUtils;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -65,6 +66,7 @@ public class QueryParameterAttribute implements ExchangeAttribute {
         final ArrayDeque<String> value = new ArrayDeque<>();
         value.add(newValue);
         exchange.getQueryParameters().put(parameter, value);
+        exchange.setQueryString(QueryParameterUtils.buildQueryString(exchange.getQueryParameters(), QueryParameterUtils.getQueryParamEncoding(exchange)));
     }
 
     @Override
