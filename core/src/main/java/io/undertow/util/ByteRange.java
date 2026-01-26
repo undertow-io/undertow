@@ -132,9 +132,15 @@ public class ByteRange {
         long end = getEnd(0);
         long rangeLength;
         if(ifRange != null && !ifRange.isEmpty()) {
+            // RFC 9110 requires strong comparison for If-Range
+            // Weak ETags (W/"...") should not match
+            if(ifRange.length() > 2 && ifRange.startsWith("W/")){
+                return null;
+            }
+
             if(ifRange.charAt(0) == '"') {
                 //entity tag
-                if(eTag != null && !eTag.equals(ifRange)) {
+                if(eTag == null || !eTag.equals(ifRange)) {
                     return null;
                 }
             } else {
