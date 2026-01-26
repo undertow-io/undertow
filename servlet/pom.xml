@@ -39,6 +39,7 @@
         <proxy>false</proxy>
         <dump>false</dump>
         <test.ipv6>false</test.ipv6>
+        <test.long.runners>true</test.long.runners>
         <bufferSize>8192</bufferSize>
     </properties>
 
@@ -204,6 +205,7 @@
                         <test.openssl>${openssl}</test.openssl>
                         <test.dump>${dump}</test.dump>
                         <test.bufferSize>${bufferSize}</test.bufferSize>
+                        <test.long.runners>${test.long.runners}</test.long.runners>
                         <default.server.address>localhost</default.server.address>
                         <default.server.port>7777</default.server.port>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
@@ -219,7 +221,17 @@
     </build>
 
     <profiles>
-
+      <profile>
+          <id>disable.long.runners</id>
+          <activation>
+                <property>
+                    <name>dlr</name>
+                </property>
+            </activation>
+          <properties>
+              <test.long.runners>false</test.long.runners>
+          </properties>
+        </profile>
         <profile>
             <id>mac</id>
             <activation>
