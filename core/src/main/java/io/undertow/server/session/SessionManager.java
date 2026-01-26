@@ -132,4 +132,12 @@ public interface SessionManager {
      * Returns the statistics for this session manager, or null, if statistics are not supported.
      */
     SessionManagerStatistics getStatistics();
+
+    /**
+     * Indicates whether the sessions created by this manager are available to other JVMs.
+     * @return true, if the sessions created by this manager are available to other JVMs.
+     */
+    default boolean isDistributed() {
+        return false;
+    }
 }
