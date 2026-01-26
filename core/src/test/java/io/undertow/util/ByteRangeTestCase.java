@@ -237,5 +237,11 @@ public class ByteRangeTestCase {
         ByteRange byteRange = new ByteRange(new ArrayList<>());
         Assert.assertNull(byteRange.getResponseResult(0, "1",
                 new Date(1559820153000L), "foo"));
+        Assert.assertNull(byteRange.getResponseResult(0,
+                "\"1\"", new Date(1559820153000L), null));
+        Assert.assertNull(byteRange.getResponseResult(0,
+                "W/\"1\"", new Date(1559820153000L), "W/\"1\""));
+        Assert.assertNull(byteRange.getResponseResult(0,
+                "W/\"1\"", new Date(1559820153000L), "\"1\""));
     }
 }
