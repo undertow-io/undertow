@@ -94,6 +94,7 @@ class AjpRequestParseState {
     public String sslCipher;
     public String sslCert;
     public String sslKeySize;
+    public String secureProtocol;
     boolean badRequest;
     public boolean containsUnencodedUrlCharacters;
 
@@ -125,7 +126,7 @@ class AjpRequestParseState {
             }
         }
         try {
-            return new BasicSSLSessionInfo(sessionId, cypher, cert, keySize);
+            return new BasicSSLSessionInfo(sessionId, cypher, cert, keySize, secureProtocol);
         } catch (CertificateException e) {
             return null;
         } catch (javax.security.cert.CertificateException e) {
