@@ -111,6 +111,22 @@ public class SetAttributeTestCase {
         } finally {
             client.getConnectionManager().shutdown();
         }
+
+        DefaultServer.setRootHandler(
+                rewrite("regex['/oldPath']", "/newPath?baz=qux", getClass().getClassLoader(),
+                        path().addPrefixPath("/", new InfoHandler()))
+        );
+        client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/oldPath?foo=bar");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("URI: /newPath relative: /newPath QS:baz=qux baz: qux", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 
     private class InfoHandler implements HttpHandler {
