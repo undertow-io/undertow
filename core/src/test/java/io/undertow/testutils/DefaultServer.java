@@ -207,6 +207,7 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
     private static final boolean single = Boolean.getBoolean("test.single");
     private static final boolean openssl = Boolean.getBoolean("test.openssl");
     private static final boolean ipv6 = Boolean.getBoolean("test.ipv6");
+    private static final boolean testLongRunners = Boolean.getBoolean("test.long.runners");
     private static final int runs = Integer.getInteger("test.runs", 1);
 
     private static final DelegatingHandler rootHandler = new DelegatingHandler();
@@ -721,6 +722,18 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
             if (method.getAnnotation(IPv6Only.class) != null ||
                     method.getMethod().getDeclaringClass().isAnnotationPresent(IPv6Only.class) ||
                     getTestClass().getJavaClass().isAnnotationPresent(IPv6Only.class)) {
+                notifier.fireTestIgnored(describeChild(method));
+                return;
+            }
+        }
+
+        if(!testLongRunners) {
+            IgnoreLongRunning ignoreLongRunners = method.getAnnotation(IgnoreLongRunning.class);
+            if (ignoreLongRunners == null) {
+                ignoreLongRunners = method.getMethod().getDeclaringClass().getAnnotation(IgnoreLongRunning.class);
+            }
+
+            if(ignoreLongRunners != null) {
                 notifier.fireTestIgnored(describeChild(method));
                 return;
             }
