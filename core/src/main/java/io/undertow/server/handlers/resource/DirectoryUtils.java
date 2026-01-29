@@ -60,12 +60,12 @@ public class DirectoryUtils {
         String type = null;
         String etag = null;
         String quotedEtag = null;
-        if ("css".equals(exchange.getQueryString())) {
+        if ("css".equals(exchange.getDecodedQueryString())) {
             buffer = Blobs.FILE_CSS_BUFFER.duplicate();
             type = "text/css";
             etag = Blobs.FILE_CSS_ETAG;
             quotedEtag = Blobs.FILE_CSS_ETAG_QUOTED;
-        } else if ("js".equals(exchange.getQueryString())) {
+        } else if ("js".equals(exchange.getDecodedQueryString())) {
             buffer = Blobs.FILE_JS_BUFFER.duplicate();
             type = "application/javascript";
             etag = Blobs.FILE_JS_ETAG;

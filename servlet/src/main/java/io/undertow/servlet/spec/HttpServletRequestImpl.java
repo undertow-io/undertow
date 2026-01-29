@@ -309,7 +309,7 @@ public final class HttpServletRequestImpl implements HttpServletRequest {
 
     @Override
     public String getQueryString() {
-        return exchange.getQueryString().isEmpty() ? null : exchange.getQueryString();
+        return exchange.getDecodedQueryString().isEmpty() ? null : exchange.getDecodedQueryString();
     }
 
     @Override

@@ -546,10 +546,9 @@ public class Connectors {
                 }
                 if(requiresDecode && allowUnescapedCharactersInUrl) {
                     final String decodedQS = URLUtils.decode(qs, charset, decodeSlashFlag,false, decodeBuffer);
-                    exchange.setQueryString(decodedQS);
-                } else {
-                    exchange.setQueryString(qs);
+                    exchange.setDecodedQueryString(decodedQS);
                 }
+                exchange.setQueryString(qs);
 
                 URLUtils.parseQueryString(qs, exchange, charset, decodeQueryString, maxParameters);
                 return;

@@ -77,12 +77,12 @@ public class LearningPushHandler implements HttpHandler {
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         String fullPath;
         String requestPath;
-        if(exchange.getQueryString().isEmpty()) {
+        if(exchange.getDecodedQueryString().isEmpty()) {
             fullPath = exchange.getRequestURL();
             requestPath = exchange.getRequestPath();
         } else{
-            fullPath = exchange.getRequestURL() + "?" + exchange.getQueryString();
-            requestPath = exchange.getRequestPath() + "?" + exchange.getQueryString();
+            fullPath = exchange.getRequestURL() + "?" + exchange.getDecodedQueryString();
+            requestPath = exchange.getRequestPath() + "?" + exchange.getDecodedQueryString();
         }
 
         doPush(exchange, fullPath);
