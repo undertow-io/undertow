@@ -44,9 +44,12 @@ public class UndertowOptions {
     public static final Option<Long> MAX_ENTITY_SIZE = Option.simple(UndertowOptions.class, "MAX_ENTITY_SIZE", Long.class);
 
     /**
-     * The default maximum size of the HTTP entity body when using the multipart parser. Generally this will be larger than {@link #MAX_ENTITY_SIZE}.
-     *
-     * If this is not specified, it will default to {@link #DEFAULT_MULTIPART_MAX_ENTITY_SIZE}.
+     * Configures the maximum allowed size of the HTTP entity body for multipart requests.
+     * Generally, this should be set larger than {@link #MAX_ENTITY_SIZE}.
+     * <p>
+     * If a limit is already set on the current {@code HttpServerExchange}, that value will override this option.
+     * <p>
+     * If not specified, this defaults to {@link #DEFAULT_MULTIPART_MAX_ENTITY_SIZE}.
      */
     public static final Option<Long> MULTIPART_MAX_ENTITY_SIZE = Option.simple(UndertowOptions.class, "MULTIPART_MAX_ENTITY_SIZE", Long.class);
 
