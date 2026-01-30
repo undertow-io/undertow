@@ -177,4 +177,17 @@ public class PathHandler implements HttpHandler {
         pathMatcher.clearPaths();
         return this;
     }
+
+    public synchronized boolean containsPath(final String path) {
+        return containsPrefixPath(path);
+    }
+
+    public synchronized boolean containsPrefixPath(final String path) {
+        return pathMatcher.getPathMatchesSet().contains(path);
+    }
+
+    public synchronized boolean containsExactPath(final String path) {
+        return pathMatcher.getExactPathMatchesSet().contains(path);
+    }
+
 }
