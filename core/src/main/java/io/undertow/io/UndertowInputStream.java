@@ -19,6 +19,7 @@
 package io.undertow.io;
 
 import io.undertow.UndertowMessages;
+import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
@@ -49,6 +50,7 @@ public class UndertowInputStream extends InputStream {
     private final StreamSourceChannel channel;
     private final ByteBufferPool bufferPool;
     private final int readTimeout;
+    private final HttpServerExchange exchange;
 
     /**
      * If this stream is ready for a read
@@ -60,6 +62,7 @@ public class UndertowInputStream extends InputStream {
     private PooledByteBuffer pooled;
 
     public UndertowInputStream(final HttpServerExchange exchange) {
+        this.exchange = exchange;
         if (exchange.isRequestChannelAvailable()) {
             this.channel = exchange.getRequestChannel();
         } else {
@@ -123,6 +126,7 @@ public class UndertowInputStream extends InputStream {
             pooled.close();
             pooled = null;
         }
+        Connectors.updateRequestBytesRead(exchange, copied);
         return copied;
     }
 

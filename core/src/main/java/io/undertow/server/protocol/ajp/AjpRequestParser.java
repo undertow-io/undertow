@@ -121,6 +121,8 @@ public class AjpRequestParser {
 
     public static final String AJP_REMOTE_PORT = "AJP_REMOTE_PORT";
 
+    public static final String AJP_SSL_PROTOCOL = "AJP_SSL_PROTOCOL";
+
     static {
         HTTP_METHODS = new HttpString[28];
         HTTP_METHODS[1] = OPTIONS;
@@ -503,6 +505,8 @@ public class AjpRequestParser {
                         state.sslCert = finalResult;
                     } else if (state.currentAttribute.equals(SSL_KEY_SIZE)) {
                         state.sslKeySize = finalResult;
+                    } else if (state.currentAttribute.equals(AJP_SSL_PROTOCOL)) {
+                        state.secureProtocol = finalResult;
                     } else {
                         // other attributes
                         if (state.attributes == null) {

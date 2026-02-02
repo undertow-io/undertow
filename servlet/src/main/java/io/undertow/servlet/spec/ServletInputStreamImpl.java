@@ -35,6 +35,7 @@ import org.xnio.channels.EmptyStreamSourceChannel;
 import org.xnio.channels.StreamSourceChannel;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
+import io.undertow.server.Connectors;
 import io.undertow.servlet.UndertowServletMessages;
 
 /**
@@ -191,6 +192,7 @@ public class ServletInputStreamImpl extends ServletInputStream {
                 readIntoBufferNonBlocking();
             }
         }
+        Connectors.updateRequestBytesRead(request.getExchange(), copied);
         return copied;
     }
 
