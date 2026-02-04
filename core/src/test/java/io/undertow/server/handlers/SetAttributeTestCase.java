@@ -18,7 +18,6 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
@@ -37,6 +36,7 @@ import java.util.Map;
 
 import static io.undertow.Handlers.path;
 import static io.undertow.Handlers.rewrite;
+import static io.undertow.Handlers.setAttribute;
 
 
 /**
@@ -49,7 +49,7 @@ public class SetAttributeTestCase {
 
     @Test
     public void testSettingHeader() throws IOException {
-        DefaultServer.setRootHandler(Handlers.setAttribute(ResponseCodeHandler.HANDLE_200, "%{o,Foo}", "%U-%{q,p1}", SetAttributeHandler.class.getClassLoader()));
+        DefaultServer.setRootHandler(setAttribute(ResponseCodeHandler.HANDLE_200, "%{o,Foo}", "%U-%{q,p1}", SetAttributeHandler.class.getClassLoader()));
 
         TestHttpClient client = new TestHttpClient();
         try {
@@ -81,10 +81,10 @@ public class SetAttributeTestCase {
     @Test
     public void testRewrite() throws IOException {
         DefaultServer.setRootHandler(
-                rewrite("regex['/somePath/(.*)']", "/otherPath/$1", getClass().getClassLoader(), path()
+                rewrite("regex('/somePath/(.*)')", "/otherPath/$1", getClass().getClassLoader(), path()
                         .addPrefixPath("/otherPath", new InfoHandler())
                         .addPrefixPath("/relative",
-                                rewrite("path-template['/foo/{bar}/{woz}']", "/foo?bar=${bar}&woz=${woz}", getClass().getClassLoader(), new InfoHandler()))
+                                rewrite("path-template('/foo/{bar}/{woz}')", "/foo?bar=${bar}&woz=${woz}", getClass().getClassLoader(), new InfoHandler()))
                 ));
 
         TestHttpClient client = new TestHttpClient();
@@ -107,7 +107,53 @@ public class SetAttributeTestCase {
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("URI: /otherPath/foo relative: /foo QS:a=b a: b", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
 
+    @Test
+    public void testRewriteWithEncoding() throws IOException {
+        DefaultServer.setRootHandler(
+                rewrite("true", "/otherPath%{REQUEST_URL}", getClass().getClassLoader(), path()
+                        .addPrefixPath("/otherPath", new InfoHandler())));
+
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foobar");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("URI: /otherPath/foobar relative: /foobar QS:", response);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo%20bar");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("URI: /otherPath/foo%20bar relative: /foo bar QS:", response);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testRewriteWithEncodingNoPathMatching() throws IOException {
+        DefaultServer.setRootHandler(
+                rewrite("true", "/other%%Path%{REQUEST_URL}", getClass().getClassLoader(),  new InfoHandler()));
+
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foobar");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("URI: /other%25Path/foobar relative: /other%Path/foobar QS:", response);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo%20bar");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("URI: /other%25Path/foo%20bar relative: /other%Path/foo bar QS:", response);
         } finally {
             client.getConnectionManager().shutdown();
         }
