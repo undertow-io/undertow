@@ -38,6 +38,7 @@ public class ServletCookieAdaptor implements Cookie {
     private static final String SAME_SITE = "SameSite";
 
     private final jakarta.servlet.http.Cookie cookie;
+    private boolean sameSite = false;
 
     public ServletCookieAdaptor(final jakarta.servlet.http.Cookie cookie) {
         this.cookie = cookie;
@@ -158,12 +159,12 @@ public class ServletCookieAdaptor implements Cookie {
 
     @Override
     public boolean isSameSite() {
-        return cookie.getAttribute(SAME_SITE) != null;
+        return sameSite;
     }
 
     @Override
     public Cookie setSameSite(final boolean sameSite) {
-        cookie.setAttribute(SAME_SITE, CookieSameSiteMode.LAX.toString());
+        this.sameSite = sameSite;
         return this;
     }
 
