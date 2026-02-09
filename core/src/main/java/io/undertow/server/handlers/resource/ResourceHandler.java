@@ -33,6 +33,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowMessages;
 import io.undertow.io.IoCallback;
 import io.undertow.predicate.Predicate;
 import io.undertow.predicate.Predicates;
@@ -116,6 +117,8 @@ public class ResourceHandler implements HttpHandler {
      */
     private final HttpHandler next;
 
+    private HttpHandler unsupportedMethodHandler;
+
     public ResourceHandler(ResourceManager resourceSupplier) {
         this(resourceSupplier, ResponseCodeHandler.HANDLE_404);
     }
@@ -124,6 +127,7 @@ public class ResourceHandler implements HttpHandler {
         this.resourceSupplier = new DefaultResourceSupplier(resourceManager);
         this.resourceManager = resourceManager;
         this.next = next;
+        this.unsupportedMethodHandler = new UnsupportedMethodHandler( KNOWN_METHODS );
     }
 
     public ResourceHandler(ResourceSupplier resourceSupplier) {
@@ -133,8 +137,8 @@ public class ResourceHandler implements HttpHandler {
     public ResourceHandler(ResourceSupplier resourceManager, HttpHandler next) {
         this.resourceSupplier = resourceManager;
         this.next = next;
+	    this.unsupportedMethodHandler = new UnsupportedMethodHandler( KNOWN_METHODS );
     }
-
 
     /**
      * You should use {@link ResourceHandler(ResourceManager)} instead.
@@ -152,14 +156,7 @@ public class ResourceHandler implements HttpHandler {
         } else if (exchange.getRequestMethod().equals(Methods.HEAD)) {
             serveResource(exchange, false);
         } else {
-            if (KNOWN_METHODS.contains(exchange.getRequestMethod())) {
-                exchange.setStatusCode(StatusCodes.METHOD_NOT_ALLOWED);
-                exchange.getResponseHeaders().add(Headers.ALLOW,
-                        String.join(", ", Methods.GET_STRING, Methods.HEAD_STRING, Methods.POST_STRING));
-            } else {
-                exchange.setStatusCode(StatusCodes.NOT_IMPLEMENTED);
-            }
-            exchange.endExchange();
+			this.unsupportedMethodHandler.handleRequest( exchange );
         }
     }
 
@@ -458,7 +455,19 @@ public class ResourceHandler implements HttpHandler {
         return this;
     }
 
-    public boolean isCanonicalizePaths() {
+	public HttpHandler getUnsupportedMethodHandler() {
+		return unsupportedMethodHandler;
+	}
+
+	public void setUnsupportedMethodHandler(HttpHandler unsupportedMethodHandler) {
+    	if ( unsupportedMethodHandler == null ) {
+		    throw UndertowMessages.MESSAGES.argumentCannotBeNull("unsupportedMethodHandler");
+	    }
+
+		this.unsupportedMethodHandler = unsupportedMethodHandler;
+	}
+
+	public boolean isCanonicalizePaths() {
         return canonicalizePaths;
     }
 
