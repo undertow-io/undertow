@@ -265,6 +265,16 @@ public class RangeRequestTestCase {
                 response = EntityUtils.toString(result.getEntity());
                 Assert.assertEquals("0123456789", response);
                 Assert.assertNull(result.getFirstHeader(Headers.CONTENT_RANGE_STRING));
+
+                // Test weak ETag in If-Range - should return full content (RFC 9110 requires strong comparison)
+                get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
+                get.addHeader(Headers.RANGE_STRING, "bytes=2-3");
+                get.addHeader(Headers.IF_RANGE_STRING, "W/\"someetag\"");
+                result = client.execute(get);
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("0123456789", response);
+                Assert.assertNull(result.getFirstHeader(Headers.CONTENT_RANGE_STRING));
             }
         } finally {
             client.getConnectionManager().shutdown();
