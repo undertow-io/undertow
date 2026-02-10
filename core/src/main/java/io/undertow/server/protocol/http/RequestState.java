@@ -60,7 +60,8 @@ final class RequestState {
 
     int position;
     int count;
-    boolean urlDecodeRequired = false;
+    boolean urlDecodeRequired;
+    boolean paramDecodeRequired;
     final StringBuilder parsedData = new StringBuilder();
     final StringBuilder decodedData = new StringBuilder();
     final StringBuilder canonicalPath = new StringBuilder();
@@ -81,6 +82,7 @@ final class RequestState {
         position = 0;
         count = 0;
         urlDecodeRequired = false;
+        paramDecodeRequired = false;
         decodedData.setLength(0);
         parsedData.setLength(0);
         canonicalPath.setLength(0);
@@ -93,6 +95,7 @@ final class RequestState {
     void setNext(final byte newState) {
         setNext(newState, SCHEME);
         urlDecodeRequired = false;
+        paramDecodeRequired = false;
     }
 
     void setNext(final byte newState, final byte newSubstate) {
