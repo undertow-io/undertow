@@ -85,7 +85,7 @@ public class ByteRange {
                     //represents the last N bytes
                     //internally we represent this using a -1 as the start position
                     long val = Long.parseLong(part.substring(1));
-                    if(val < 0) {
+                    if(val <= 0) {
                         UndertowLogger.REQUEST_LOGGER.debugf("Invalid range spec %s", rangeHeader);
                         return null;
                     }
