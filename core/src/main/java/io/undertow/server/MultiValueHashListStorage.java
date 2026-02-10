@@ -113,7 +113,7 @@ public final class MultiValueHashListStorage<K, V> {
     @SuppressWarnings("unchecked")
     public V remove(final Object key, final Object value) {
         final ArrayList<V> values = storage.get(key);
-        if (values.contains(value)) {
+        if (values != null && values.contains(value)) {
             values.remove(value);
             if (values.size() == 0) {
                 storage.remove(key);
