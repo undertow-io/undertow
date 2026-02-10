@@ -579,17 +579,20 @@ final class RequestParser {
                 state.paramName = decode(sb.substring(state.position), state.urlDecodeRequired, state, true, true);
                 sb.append(nextChar);
                 state.position = sb.length();
+                state.paramDecodeRequired = false;
             } else if (nextByte == COMMA) {
                 // path parameter value read complete
                 addParam(state, builder);
                 sb.append(nextChar);
                 state.position = sb.length();
+                state.paramDecodeRequired = state.urlDecodeRequired = decode;
             } else if (nextByte == SEMICOLON) {
                 // path parameter value read complete
                 addParam(state, builder);
                 sb.append(nextChar);
                 state.position = sb.length();
                 state.paramName = null;
+                state.paramDecodeRequired = false;
             } else if (isPathSegmentChar(nextByte)) {
                 // path parameters data continues
                 sb.append(nextChar);
@@ -644,18 +647,20 @@ final class RequestParser {
             } else if (nextByte == PLUS) {
                 // encoded space
                 sb.append(nextChar);
-                state.urlDecodeRequired = decode;
+                state.paramDecodeRequired = state.urlDecodeRequired = decode;
             } else if (nextByte == EQUALS && state.paramName == null) {
                 // query parameter key read complete
                 state.paramName = decode(sb.substring(state.position), state.urlDecodeRequired, state, true, true);
                 sb.append(nextChar);
                 state.position = sb.length();
+                state.paramDecodeRequired = false;
             } else if (nextByte == AMPERSAND) {
                 // query parameter value read complete
                 addParam(state, builder);
                 sb.append(nextChar);
                 state.position = sb.length();
                 state.paramName = null;
+                state.paramDecodeRequired = false;
             } else if (isPathSegmentChar(nextByte) || nextByte == SLASH || nextByte == QUESTION) {
                 // query parameters data continues
                 sb.append(nextChar);
@@ -678,6 +683,7 @@ final class RequestParser {
         if (!isHexDigitChar(state.previousByte) && nextByte == PERCENT) {
             // percent encoded sequence start
             state.urlDecodeRequired = decode;
+            if (state.substate == PATH_PARAMS || state.substate == QUERY_PARAMS) state.paramDecodeRequired = decode;
             state.previousByte = nextByte;
         } else if (state.previousByte == PERCENT && isHexDigitChar(nextByte)) {
             // percent encoded sequence continues
@@ -737,7 +743,7 @@ final class RequestParser {
             else throw UndertowMessages.MESSAGES.tooManyPathParameters(maxParameters);
         }
 
-        final String decodedValue = decode(state.parsedData.substring(state.position), state.urlDecodeRequired, state, true, true);
+        final String decodedValue = decode(state.parsedData.substring(state.position), state.paramDecodeRequired, state, true, true);
         final String name = state.paramName == null ? decodedValue : state.paramName;
         final String value = state.paramName == null ? "" : decodedValue;
         if (isQueryParam) {
@@ -749,11 +755,11 @@ final class RequestParser {
 
     private void addQuery(final RequestState state, final HttpServerExchange exchange) throws BadRequestException {
         String queryString = state.parsedData.toString();
-        if (state.urlDecodeRequired && this.allowUnescapedCharactersInUrl) {
-            exchange.setNonDecodedQueryString(queryString);
-            queryString = decode(queryString, state.urlDecodeRequired, state, slashDecodingFlag, false);
-        }
         exchange.setQueryString(queryString);
+        if (state.urlDecodeRequired && this.allowUnescapedCharactersInUrl) {
+            queryString = decode(queryString, state.urlDecodeRequired, state, slashDecodingFlag, false);
+            exchange.setDecodedQueryString(queryString);
+        }
     }
 
     private void addHeader(final RequestState state, final HttpServerExchange builder, final String headerValue) throws BadRequestException {
