@@ -159,6 +159,30 @@ public class ProxyHandlerXForwardedForTestCase {
     }
 
     @Test
+    public void testReuseXForwardedHeaderSanitization() throws Exception {
+        setProxyHandler(false, true);
+        TestHttpClient client = new TestHttpClient();
+
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/x-forwarded");
+            String testString = "1.1.1.1\r\nTest";
+            get.addHeader(Headers.X_FORWARDED_FOR.toString(), testString);
+            HttpResponse result = client.execute(get);
+
+            if (result.getStatusLine().getStatusCode() == StatusCodes.OK) {
+                String value = result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue();
+
+                Assert.assertFalse("CRLF characters found in header",
+                    value.contains("\r") || value.contains("\n"));
+            } else {
+                Assert.assertEquals(StatusCodes.BAD_REQUEST, result.getStatusLine().getStatusCode());
+            }
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
     public void testRewriteHostHeader() throws Exception {
         setProxyHandler(true, false);
         TestHttpClient client = new TestHttpClient();
