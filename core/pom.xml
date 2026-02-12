@@ -42,6 +42,7 @@
         <https>false</https>
         <openssl>false</openssl>
         <test.ipv6>false</test.ipv6>
+        <test.long.runners>true</test.long.runners>
         <bufferSize>8192</bufferSize>
         <libraryPath></libraryPath>
         <java.library.path></java.library.path>
@@ -102,7 +103,7 @@
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
-        
+
         <dependency>
             <groupId>org.apache.directory.server</groupId>
             <artifactId>apacheds-test-framework</artifactId>
@@ -245,6 +246,7 @@
                         <test.https>${https}</test.https>
                         <test.openssl>${openssl}</test.openssl>
                         <test.bufferSize>${bufferSize}</test.bufferSize>
+                        <test.long.runners>${test.long.runners}</test.long.runners>
                         <default.server.address>localhost</default.server.address>
                         <default.server.port>7777</default.server.port>
                         <java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
@@ -260,7 +262,17 @@
     </build>
 
     <profiles>
-
+      <profile>
+          <id>disable.long.runners</id>
+          <activation>
+                <property>
+                    <name>dlr</name>
+                </property>
+            </activation>
+          <properties>
+              <test.long.runners>false</test.long.runners>
+          </properties>
+      </profile>
         <profile>
             <id>mac</id>
             <activation>
