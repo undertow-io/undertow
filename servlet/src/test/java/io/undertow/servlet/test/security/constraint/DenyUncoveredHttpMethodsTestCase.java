@@ -34,15 +34,14 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FlexBase64;
 import jakarta.servlet.ServletException;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpOptions;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.client.methods.HttpTrace;
+import org.apache.hc.client5.http.classic.methods.HttpDelete;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpOptions;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.classic.methods.HttpPut;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -130,172 +129,153 @@ public class DenyUncoveredHttpMethodsTestCase {
         DefaultServer.setRootHandler(root);
     }
 
+    // TRACE is omitted since HttpClient doesn't allow it to have an Authorization header
     @Test
     public void testVanillaSecurityConstraint() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        final String url = DefaultServer.getDefaultServerURL() + "/servletContext/vanilla";
-        try {
-            testAccessible(()->new HttpGet(url), client, false);
-            testAccessible(()->new HttpPost(url), client, false);
-            testForbidden(()->new HttpPut(url), client);
-            testForbidden(()->new HttpDelete(url), client);
-            testForbidden(()->new HttpOptions(url), client);
-            testForbidden(()->new HttpTrace(url), client);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            final String url = DefaultServer.getDefaultServerURL() + "/servletContext/vanilla";
+            testAccessible(() -> new HttpGet(url), client, false);
+            testAccessible(() -> new HttpPost(url), client, false);
+            testForbidden(() -> new HttpPut(url), client);
+            testForbidden(() -> new HttpDelete(url), client);
+            testForbidden(() -> new HttpOptions(url), client);
         }
     }
 
     @Test
     public void testFullyCoveredConstraint() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        final String url = DefaultServer.getDefaultServerURL() + "/servletContext/fully-covered";
-        try {
-            testAccessible(()->new HttpGet(url), client, false);
-            testAccessible(()->new HttpPost(url), client, false);
-            testAccessible(()->new HttpPut(url), client, false);
-            testAccessible(()->new HttpDelete(url), client, false);
-            testAccessible(()->new HttpOptions(url), client, false);
-            testAccessible(()->new HttpTrace(url), client, false);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            final String url = DefaultServer.getDefaultServerURL() + "/servletContext/fully-covered";
+            testAccessible(() -> new HttpGet(url), client, false);
+            testAccessible(() -> new HttpPost(url), client, false);
+            testAccessible(() -> new HttpPut(url), client, false);
+            testAccessible(() -> new HttpDelete(url), client, false);
+            testAccessible(() -> new HttpOptions(url), client, false);
         }
     }
 
     @Test
     public void testFullyCoveredPermitNoRoleConstraint() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        final String url = DefaultServer.getDefaultServerURL() + "/servletContext/fully-covered-permit-no-role";
-        try {
-            testAccessible(()->new HttpGet(url), client, false);
-            testAccessible(()->new HttpPost(url), client, false);
-            testAccessible(()->new HttpPut(url), client, false);
-            testAccessible(()->new HttpDelete(url), client, false);
-            testAccessible(()->new HttpOptions(url), client, false);
-            testAccessible(()->new HttpTrace(url), client, false);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            final String url = DefaultServer.getDefaultServerURL() + "/servletContext/fully-covered-permit-no-role";
+            testAccessible(() -> new HttpGet(url), client, false);
+            testAccessible(() -> new HttpPost(url), client, false);
+            testAccessible(() -> new HttpPut(url), client, false);
+            testAccessible(() -> new HttpDelete(url), client, false);
+            testAccessible(() -> new HttpOptions(url), client, false);
         }
     }
 
     @Test
     public void testFullyCoveredDenyNoRoleConstraint() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        final String url = DefaultServer.getDefaultServerURL() + "/servletContext/fully-covered-deny-no-role";
-        try {
-            testAccessible(()->new HttpGet(url), client, false);
-            testAccessible(()->new HttpPost(url), client, false);
-            testAccessible(()->new HttpPut(url), client, false);
-            testAccessible(()->new HttpDelete(url), client, false);
-            testAccessible(()->new HttpOptions(url), client, false);
-            testAccessible(()->new HttpTrace(url), client, false);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            final String url = DefaultServer.getDefaultServerURL() + "/servletContext/fully-covered-deny-no-role";
+            testAccessible(() -> new HttpGet(url), client, false);
+            testAccessible(() -> new HttpPost(url), client, false);
+            testAccessible(() -> new HttpPut(url), client, false);
+            testAccessible(() -> new HttpDelete(url), client, false);
+            testAccessible(() -> new HttpOptions(url), client, false);
         }
     }
 
     @Test
     public void testOmittedMethods() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        String url = DefaultServer.getDefaultServerURL() + "/servletContext/omitted-methods";
-        try {
-            testForbidden(()->new HttpGet(url), client);
-            testAccessible(()->new HttpPost(url), client, true);
-            testAccessible(()->new HttpPut(url), client, true);
-            testAccessible(()->new HttpDelete(url), client, true);
-            testAccessible(()->new HttpOptions(url), client, true);
-            testAccessible(()->new HttpTrace(url), client, true);
-        } finally {
-            client.getConnectionManager().shutdown();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            String url = DefaultServer.getDefaultServerURL() + "/servletContext/omitted-methods";
+            testForbidden(() -> new HttpGet(url), client);
+            testAccessible(() -> new HttpPost(url), client, true);
+            testAccessible(() -> new HttpPut(url), client, true);
+            testAccessible(() -> new HttpDelete(url), client, true);
+            testAccessible(() -> new HttpOptions(url), client, true);
         }
     }
 
     @Test
     public void testOmittedMethodsDenyEmptyRole() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        String url = DefaultServer.getDefaultServerURL() + "/servletContext/omitted-methods-deny-empty-role";
-        try {
-            testForbidden(()->new HttpGet(url), client);
-            testForbidden(()->new HttpPost(url), client);
-            testForbidden(()->new HttpPut(url), client);
-            testForbidden(()->new HttpDelete(url), client);
-            testForbidden(()->new HttpOptions(url), client);
-            testForbidden(()->new HttpTrace(url), client);
-        } finally {
-            client.getConnectionManager().shutdown();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            String url = DefaultServer.getDefaultServerURL() + "/servletContext/omitted-methods-deny-empty-role";
+            testForbidden(() -> new HttpGet(url), client);
+            testForbidden(() -> new HttpPost(url), client);
+            testForbidden(() -> new HttpPut(url), client);
+            testForbidden(() -> new HttpDelete(url), client);
+            testForbidden(() -> new HttpOptions(url), client);
         }
     }
 
-    public void testAccessible(Supplier<org.apache.http.client.methods.HttpRequestBase> newRequest, TestHttpClient client, boolean noRolePermitted) throws IOException {
-        HttpRequestBase request = newRequest.get();
+    public void testAccessible(Supplier<HttpUriRequestBase> newRequest, CloseableHttpClient client, boolean noRolePermitted) throws IOException {
+        HttpUriRequestBase request = newRequest.get();
         request.addHeader("ExpectedMechanism", "None");
         request.addHeader("ExpectedUser", "None");
-        HttpResponse result = client.execute(request);
-        if (noRolePermitted) {
-            assertEquals(OK, result.getStatusLine().getStatusCode());
-        } else {
-            assertEquals(UNAUTHORIZED, result.getStatusLine().getStatusCode());
-            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-            assertEquals(1, values.length);
-            assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
-        }
-        HttpClientUtils.readResponse(result);
+        client.execute(request, result -> {
+            if (noRolePermitted) {
+                assertEquals(OK, result.getCode());
+            } else {
+                assertEquals(UNAUTHORIZED, result.getCode());
+                Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+                assertEquals(1, values.length);
+                assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
+            }
+            return HttpClientUtils.readResponse(result);
+        });
 
         request = newRequest.get();
         request.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user:password".getBytes(), false));
         request.addHeader("ExpectedMechanism", "BASIC");
         request.addHeader("ExpectedUser", "user");
-        result = client.execute(request);
-        assertEquals(OK, result.getStatusLine().getStatusCode());
-        String response = HttpClientUtils.readResponse(result);
-        assertEquals(HELLO_WORLD, response);
+        client.execute(request, result -> {
+            assertEquals(OK, result.getCode());
+            String response = HttpClientUtils.readResponse(result);
+            assertEquals(HELLO_WORLD, response);
+            return null;
+        });
 
         request = newRequest.get();
         request.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("unauthorized-user:password".getBytes(), false));
         request.addHeader("ExpectedMechanism", "BASIC");
         request.addHeader("ExpectedUser", "unauthorized-user");
-        result = client.execute(request);
-        if (noRolePermitted) {
-            assertEquals(OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            assertEquals(HELLO_WORLD, response);
-        } else {
-            assertEquals(FORBIDDEN, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        }
+        client.execute(request, result -> {
+            if (noRolePermitted) {
+                assertEquals(OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                assertEquals(HELLO_WORLD, response);
+            } else {
+                assertEquals(FORBIDDEN, result.getCode());
+                HttpClientUtils.readResponse(result);
+            }
+            return null;
+        });
     }
 
 
-    public void testForbidden(Supplier<HttpRequestBase> newRequest, TestHttpClient client) throws IOException {
-        HttpRequestBase request = newRequest.get();
-        HttpResponse result = client.execute(request);
-        assertEquals(FORBIDDEN, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        assertEquals(0, values.length);
-        HttpClientUtils.readResponse(result);
+    public void testForbidden(Supplier<HttpUriRequestBase> newRequest, CloseableHttpClient client) throws IOException {
+        HttpUriRequestBase request = newRequest.get();
+        client.execute(request, result -> {
+            assertEquals(FORBIDDEN, result.getCode());
+            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+            assertEquals(0, values.length);
+            return HttpClientUtils.readResponse(result);
+        });
 
         request = newRequest.get();
         request.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user:password".getBytes(), false));
         request.addHeader("ExpectedMechanism", "BASIC");
         request.addHeader("ExpectedUser", "user");
-        result = client.execute(request);
-        assertEquals(FORBIDDEN, result.getStatusLine().getStatusCode());
-        values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        assertEquals(0, values.length);
-        HttpClientUtils.readResponse(result);
+        client.execute(request, result -> {
+            assertEquals(FORBIDDEN, result.getCode());
+            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+            assertEquals(0, values.length);
+            return HttpClientUtils.readResponse(result);
+        });
 
         request = newRequest.get();
         request.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("unauthorized-user:password".getBytes(), false));
         request.addHeader("ExpectedMechanism", "BASIC");
         request.addHeader("ExpectedUser", "user");
-        result = client.execute(request);
-        assertEquals(FORBIDDEN, result.getStatusLine().getStatusCode());
-        values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        assertEquals(0, values.length);
-        HttpClientUtils.readResponse(result);
+        client.execute(request, result -> {
+            assertEquals(FORBIDDEN, result.getCode());
+            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+            assertEquals(0, values.length);
+            return HttpClientUtils.readResponse(result);
+        });
     }
 }

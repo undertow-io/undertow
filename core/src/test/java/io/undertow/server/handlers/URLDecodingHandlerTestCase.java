@@ -20,14 +20,13 @@ package io.undertow.server.handlers;
 
 import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.RoutingHandler;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.PathTemplateMatch;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -47,27 +46,10 @@ public class URLDecodingHandlerTestCase {
         // If this is enabled, the URLDecodingHandler should no-op
         Undertow undertow = Undertow.builder()
                 .addHttpListener(PORT, "0.0.0.0")
-                .setHandler(new URLDecodingHandler(new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        exchange.getResponseSender().send(exchange.getRelativePath());
-                    }
-                }, "UTF-8"))
+                .setHandler(new URLDecodingHandler(exchange ->
+                        exchange.getResponseSender().send(exchange.getRelativePath()), "UTF-8"))
                 .build();
-        undertow.start();
-        try {
-            TestHttpClient client = new TestHttpClient();
-            // '%253E' decodes to '%3E', which would decode to '>' if decoded twice
-            try (CloseableHttpResponse response = client.execute(new HttpGet("http://localhost:" + PORT + "/%253E"))) {
-                Assert.assertEquals("/%3E", getResponseString(response));
-            }
-        } finally {
-            undertow.stop();
-            // sleep 1 s to prevent BindException (Address already in use) when restarting the server
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException ignore) {}
-        }
+        testHandler(undertow, "http://localhost:" + PORT + "/%253E", "/%3E");
     }
 
     @Test
@@ -76,27 +58,10 @@ public class URLDecodingHandlerTestCase {
         Undertow undertow = Undertow.builder()
                 .setServerOption(UndertowOptions.DECODE_URL, false)
                 .addHttpListener(PORT, "0.0.0.0")
-                .setHandler(new URLDecodingHandler(new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        exchange.getResponseSender().send(exchange.getRelativePath());
-                    }
-                }, "UTF-8"))
+                .setHandler(new URLDecodingHandler(exchange ->
+                        exchange.getResponseSender().send(exchange.getRelativePath()), "UTF-8"))
                 .build();
-        undertow.start();
-        try {
-            TestHttpClient client = new TestHttpClient();
-            // '%253E' decodes to '%3E', which would decode to '>' if decoded twice
-            try (CloseableHttpResponse response = client.execute(new HttpGet("http://localhost:" + PORT + "/%253E"))) {
-                Assert.assertEquals("/%3E", getResponseString(response));
-            }
-        } finally {
-            undertow.stop();
-            // sleep 1 s to prevent BindException (Address already in use) when restarting the server
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException ignore) {}
-        }
+        testHandler(undertow, "http://localhost:" + PORT + "/%253E", "/%3E");
     }
 
     @Test
@@ -106,30 +71,13 @@ public class URLDecodingHandlerTestCase {
                 .setServerOption(UndertowOptions.DECODE_URL, false)
                 .addHttpListener(PORT, "0.0.0.0")
                 .setHandler(new RoutingHandler().get("/api/{pathParam}/tail",
-                        new URLDecodingHandler(new HttpHandler() {
-                            @Override
-                            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                String matched = exchange.getAttachment(PathTemplateMatch.ATTACHMENT_KEY)
-                                        .getParameters().get("pathParam");
-                                exchange.getResponseSender().send(matched);
-                            }
+                        new URLDecodingHandler(exchange -> {
+                            String matched = exchange.getAttachment(PathTemplateMatch.ATTACHMENT_KEY)
+                                    .getParameters().get("pathParam");
+                            exchange.getResponseSender().send(matched);
                         }, "UTF-8")))
                 .build();
-        undertow.start();
-        try {
-            TestHttpClient client = new TestHttpClient();
-            // '%253E' decodes to '%3E', which would decode to '>' if decoded twice
-            try (CloseableHttpResponse response = client.execute(
-                    new HttpGet("http://localhost:" + PORT + "/api/test%2Ftest+test%2Btest%20test/tail"))) {
-                Assert.assertEquals("test/test+test+test test", getResponseString(response));
-            }
-        } finally {
-            undertow.stop();
-            // sleep 1 s to prevent BindException (Address already in use) when restarting the server
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException ignore) {}
-        }
+        testHandler(undertow, "http://localhost:" + PORT + "/api/test%2Ftest+test%2Btest%20test/tail", "test/test+test+test test");
     }
 
     @Test
@@ -138,31 +86,32 @@ public class URLDecodingHandlerTestCase {
         Undertow undertow = Undertow.builder()
                 .setServerOption(UndertowOptions.DECODE_URL, false)
                 .addHttpListener(PORT, "0.0.0.0")
-                .setHandler(new URLDecodingHandler(new URLDecodingHandler(new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        exchange.getResponseSender().send(exchange.getRelativePath());
-                    }
-                }, "UTF-8"), "UTF-8"))
+                .setHandler(new URLDecodingHandler(new URLDecodingHandler(exchange ->
+                        exchange.getResponseSender().send(exchange.getRelativePath()), "UTF-8"), "UTF-8"))
                 .build();
+        testHandler(undertow, "http://localhost:" + PORT + "/%253E", "/%3E");
+    }
+
+    private static String getResponseString(CloseableHttpResponse response) throws IOException {
+        Assert.assertEquals(200, response.getCode());
+        return HttpClientUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8);
+    }
+
+    private void testHandler(Undertow undertow, String uri, String expectedDesponse) throws IOException {
         undertow.start();
-        try {
-            TestHttpClient client = new TestHttpClient();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             // '%253E' decodes to '%3E', which would decode to '>' if decoded twice
-            try (CloseableHttpResponse response = client.execute(new HttpGet("http://localhost:" + PORT + "/%253E"))) {
-                Assert.assertEquals("/%3E", getResponseString(response));
-            }
+            client.execute(new HttpGet(uri), response -> {
+                Assert.assertEquals(expectedDesponse, getResponseString((CloseableHttpResponse) response));
+                return null;
+            });
         } finally {
             undertow.stop();
             // sleep 1 s to prevent BindException (Address already in use) when restarting the server
             try {
                 Thread.sleep(1000);
-            } catch (InterruptedException ignore) {}
+            } catch (InterruptedException ignore) {
+            }
         }
-    }
-
-    private static String getResponseString(CloseableHttpResponse response) throws IOException {
-        Assert.assertEquals(200, response.getStatusLine().getStatusCode());
-        return HttpClientUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8);
     }
 }

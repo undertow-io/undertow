@@ -24,14 +24,15 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import jakarta.servlet.ServletException;
+
 import java.io.IOException;
 
 /**
@@ -48,55 +49,60 @@ public class MappingTestCase {
                         .addMapping("*.ext")
                         .addMapping("")
                         .addMapping("/"));
-
     }
 
     @Test
     public void testGetMapping() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path/foo");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Mapping match:PATH\n" +
-                    "Match value:foo\n" +
-                    "Pattern:/path/*\nServlet:path", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Mapping match:PATH\n" +
+                        "Match value:foo\n" +
+                        "Pattern:/path/*\nServlet:path", response);
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo.ext");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Mapping match:EXTENSION\n" +
-                    "Match value:foo\n" +
-                    "Pattern:*.ext\nServlet:path", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Mapping match:EXTENSION\n" +
+                        "Match value:foo\n" +
+                        "Pattern:*.ext\nServlet:path", response);
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Mapping match:CONTEXT_ROOT\n" +
-                    "Match value:\n" +
-                    "Pattern:\nServlet:path", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Mapping match:CONTEXT_ROOT\n" +
+                        "Match value:\n" +
+                        "Pattern:\nServlet:path", response);
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/doesnotexist");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Mapping match:DEFAULT\n" +
-                    "Match value:\n" +
-                    "Pattern:/\nServlet:path", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Mapping match:DEFAULT\n" +
+                        "Match value:\n" +
+                        "Pattern:/\nServlet:path", response);
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/exact");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Mapping match:EXACT\n" +
-                    "Match value:exact\n" +
-                    "Pattern:/exact\nServlet:path", response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Mapping match:EXACT\n" +
+                        "Match value:exact\n" +
+                        "Pattern:/exact\nServlet:path", response);
+                return null;
+            });
         }
     }
 }

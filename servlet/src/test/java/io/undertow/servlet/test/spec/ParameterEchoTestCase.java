@@ -19,6 +19,7 @@
 package io.undertow.servlet.test.spec;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,13 +36,13 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.message.BasicNameValuePair;
 import io.undertow.testutils.TestHttpClient;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.classic.methods.HttpPut;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -80,124 +81,117 @@ public class ParameterEchoTestCase {
 
     @Test
     public void testPostInUrl() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/aaa?param1=1&param2=2&param3=3");
             final List<NameValuePair> values = new ArrayList<>();
-            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
+            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, StandardCharsets.UTF_8);
             post.setEntity(data);
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(RESPONSE, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(RESPONSE, response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testPostInStream() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/aaa");
             final List<NameValuePair> values = new ArrayList<>();
             values.add(new BasicNameValuePair("param1", "1"));
             values.add(new BasicNameValuePair("param2", "2"));
             values.add(new BasicNameValuePair("param3", "3"));
-            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
+            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, StandardCharsets.UTF_8);
             post.setEntity(data);
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(RESPONSE, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(RESPONSE, response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testPostBoth() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/aaa?param1=1&param2=2");
             final List<NameValuePair> values = new ArrayList<>();
             values.add(new BasicNameValuePair("param3", "3"));
-            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
+            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, StandardCharsets.UTF_8);
             post.setEntity(data);
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(RESPONSE, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(RESPONSE, response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testPutBothValues() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpPut put = new HttpPut(DefaultServer.getDefaultServerURL() + "/servletContext/aaa?param1=1&param2=2");
             final List<NameValuePair> values = new ArrayList<>();
             values.add(new BasicNameValuePair("param3", "3"));
-            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
+            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, StandardCharsets.UTF_8);
             put.setEntity(data);
-            HttpResponse result = client.execute(put);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(RESPONSE, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(put, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(RESPONSE, response);
+                return null;
+            });
         }
     }
 
 
     @Test
     public void testPutNames() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpPut put = new HttpPut(DefaultServer.getDefaultServerURL() + "/servletContext/aaa?type=names");
             final List<NameValuePair> values = new ArrayList<>();
             values.add(new BasicNameValuePair("param1", "1"));
             values.add(new BasicNameValuePair("param2", "2"));
             values.add(new BasicNameValuePair("param3", "3"));
-            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
+            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, StandardCharsets.UTF_8);
             put.setEntity(data);
-            HttpResponse result = client.execute(put);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            List<String> resList = Arrays.asList(HttpClientUtils.readResponse(result).split(","));
-            Assert.assertEquals(4, resList.size());
-            Assert.assertTrue(resList.contains("type"));
-            Assert.assertTrue(resList.contains("param1"));
-            Assert.assertTrue(resList.contains("param2"));
-            Assert.assertTrue(resList.contains("param3"));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(put, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                List<String> resList = Arrays.asList(HttpClientUtils.readResponse(result).split(","));
+                Assert.assertEquals(4, resList.size());
+                Assert.assertTrue(resList.contains("type"));
+                Assert.assertTrue(resList.contains("param1"));
+                Assert.assertTrue(resList.contains("param2"));
+                Assert.assertTrue(resList.contains("param3"));
+                return null;
+            });
         }
     }
 
     @Test
     public void testPutMap() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpPut put = new HttpPut(DefaultServer.getDefaultServerURL() + "/servletContext/aaa?type=map");
             final List<NameValuePair> values = new ArrayList<>();
             values.add(new BasicNameValuePair("param1", "1"));
             values.add(new BasicNameValuePair("param2", "2"));
             values.add(new BasicNameValuePair("param3", "3"));
-            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
+            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, StandardCharsets.UTF_8);
             put.setEntity(data);
-            HttpResponse result = client.execute(put);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            List<String> resList = Arrays.asList(HttpClientUtils.readResponse(result).split(";"));
-            Assert.assertEquals(4, resList.size());
-            Assert.assertTrue(resList.contains("type=map"));
-            Assert.assertTrue(resList.contains("param1=1"));
-            Assert.assertTrue(resList.contains("param2=2"));
-            Assert.assertTrue(resList.contains("param3=3"));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(put, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                List<String> resList = Arrays.asList(HttpClientUtils.readResponse(result).split(";"));
+                Assert.assertEquals(4, resList.size());
+                Assert.assertTrue(resList.contains("type=map"));
+                Assert.assertTrue(resList.contains("param1=1"));
+                Assert.assertTrue(resList.contains("param2=2"));
+                Assert.assertTrue(resList.contains("param3=3"));
+                return null;
+            });
         }
     }
-
 }

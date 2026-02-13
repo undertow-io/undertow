@@ -18,15 +18,6 @@
 
 package io.undertow.servlet.test.defaultservlet;
 
-import java.io.IOException;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
-
-import jakarta.servlet.DispatcherType;
-import jakarta.servlet.ServletException;
-
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.resource.CachingResourceManager;
@@ -38,16 +29,18 @@ import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.path.ServletPathMappingTestCase;
-import io.undertow.servlet.test.util.PathTestServlet;
 import io.undertow.servlet.test.util.MessageFilter;
+import io.undertow.servlet.test.util.PathTestServlet;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FileUtils;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.ServletException;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -56,6 +49,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.BufferAllocator;
+
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <p>Same test case than DefaultServletCachingTestCase but enabling the
@@ -76,7 +75,7 @@ public class DefaultServletCachingListenerTestCase {
 
     @Before
     public void before() {
-        for(Object k : dataCache.getAllKeys()) {
+        for (Object k : dataCache.getAllKeys()) {
             dataCache.remove(k);
         }
     }
@@ -104,7 +103,7 @@ public class DefaultServletCachingListenerTestCase {
                 .setResourceManager(new CachingResourceManager(100, MAX_FILE_SIZE, dataCache, new PathResourceManager(tmpDir, 10485760, false, false, true), -1));
 
         builder.addServlet(new ServletInfo("DefaultTestServlet", PathTestServlet.class)
-                .addMapping("/path/default"))
+                        .addMapping("/path/default"))
                 .addFilter(Servlets.filter("message", MessageFilter.class).addInitParam(MessageFilter.MESSAGE, "FILTER_TEXT "))
                 .addFilterUrlMapping("message", "*.txt", DispatcherType.REQUEST);
 
@@ -116,27 +115,27 @@ public class DefaultServletCachingListenerTestCase {
     }
 
     @AfterClass
-    public static void after() throws IOException{
+    public static void after() throws IOException {
         FileUtils.deleteRecursive(tmpDir);
     }
 
-    private static boolean waitUntilRefreshed(TestHttpClient client, String uri, int expectedStatus)
+    private static boolean waitUntilRefreshed(CloseableHttpClient client, String uri, int expectedStatus)
             throws IOException, InterruptedException {
         return waitUntilRefreshed(client, uri, expectedStatus, null);
     }
 
-    private static boolean waitUntilRefreshed(TestHttpClient client, String uri, int expectedStatus, String expectedResponse)
+    private static boolean waitUntilRefreshed(CloseableHttpClient client, String uri, int expectedStatus, String expectedResponse)
             throws IOException, InterruptedException {
         boolean ok = false;
         long startTime = System.currentTimeMillis();
         while (!ok && System.currentTimeMillis() - startTime < MAX_WAIT_TIME) {
             HttpGet get = new HttpGet(uri);
-            HttpResponse result = client.execute(get);
-            String response = HttpClientUtils.readResponse(result);
-            if (result.getStatusLine().getStatusCode() == expectedStatus &&
-                    (expectedResponse == null || expectedResponse.equals(response))) {
-                ok = true;
-            } else {
+            ok = client.execute(get, result -> {
+                String response = HttpClientUtils.readResponse(result);
+                return result.getCode() == expectedStatus &&
+                        (expectedResponse == null || expectedResponse.equals(response));
+            });
+            if (!ok) {
                 TimeUnit.MILLISECONDS.sleep(WAIT_TIME);
             }
         }
@@ -145,13 +144,13 @@ public class DefaultServletCachingListenerTestCase {
 
     @Test
     public void testFileExistanceCheckCached() throws IOException, InterruptedException {
-        TestHttpClient client = new TestHttpClient();
         String fileName = new SecureRandomSessionIdGenerator().createSessionId() + ".html";
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.NOT_FOUND, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             Path f = tmpDir.resolve(fileName);
             Files.write(f, "hello".getBytes());
@@ -160,24 +159,23 @@ public class DefaultServletCachingListenerTestCase {
                     waitUntilRefreshed(client, DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName, StatusCodes.OK, "hello"));
 
             Files.delete(f);
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testFileContentsCached() throws IOException, InterruptedException {
-        TestHttpClient client = new TestHttpClient();
         String fileName = "hello.html";
         Path f = tmpDir.resolve(fileName);
         Files.write(f, "hello".getBytes());
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             for (int i = 0; i < 10; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-                HttpResponse result = client.execute(get);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                String response = HttpClientUtils.readResponse(result);
-                Assert.assertEquals("hello", response);
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    String response = HttpClientUtils.readResponse(result);
+                    Assert.assertEquals("hello", response);
+                    return null;
+                });
             }
             Files.write(f, "hello world".getBytes());
 
@@ -185,24 +183,23 @@ public class DefaultServletCachingListenerTestCase {
                     waitUntilRefreshed(client, DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName, StatusCodes.OK, "hello world"));
 
             Files.delete(f);
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testFileContentsCachedWithFilter() throws IOException, InterruptedException {
-        TestHttpClient client = new TestHttpClient();
         String fileName = "hello.txt";
         Path f = tmpDir.resolve(fileName);
         Files.write(f, "hello".getBytes());
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             for (int i = 0; i < 10; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-                HttpResponse result = client.execute(get);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                String response = HttpClientUtils.readResponse(result);
-                Assert.assertEquals("FILTER_TEXT hello", response);
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    String response = HttpClientUtils.readResponse(result);
+                    Assert.assertEquals("FILTER_TEXT hello", response);
+                    return null;
+                });
             }
             Files.write(f, "hello world".getBytes());
 
@@ -210,64 +207,59 @@ public class DefaultServletCachingListenerTestCase {
                     waitUntilRefreshed(client, DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName, StatusCodes.OK, "FILTER_TEXT hello world"));
 
             Files.delete(f);
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testRangeRequest() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             String fileName = "range.html";
             Path f = tmpDir.resolve(fileName);
             Files.write(f, "hello".getBytes());
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/range.html");
             get.addHeader("range", "bytes=2-3");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("ll", response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("ll", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testRangeRequestFileNotInCache() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             String fileName = "range_not_in_cache.html";
             Path f = tmpDir.resolve(fileName);
             Files.write(f, "hello world and once again hello world".getBytes());
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/range_not_in_cache.html");
             get.addHeader("range", "bytes=2-3");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("ll", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("ll", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testWelcomePages() throws IOException, InterruptedException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             String fileName = "index.html";
             String content = "<html></html>";
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.NOT_FOUND, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
             Path f = tmpDir.resolve(fileName);
             Files.write(f, content.getBytes());
 
@@ -282,8 +274,6 @@ public class DefaultServletCachingListenerTestCase {
                     waitUntilRefreshed(client, DefaultServer.getDefaultServerURL() + "/servletContext/" + fileName, StatusCodes.NOT_FOUND));
             Assert.assertTrue("File was not refreshed in " + MAX_WAIT_TIME + "ms",
                     waitUntilRefreshed(client, DefaultServer.getDefaultServerURL() + "/servletContext/", StatusCodes.FORBIDDEN));
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 }

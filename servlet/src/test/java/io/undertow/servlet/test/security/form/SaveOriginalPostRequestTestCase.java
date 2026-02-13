@@ -33,24 +33,26 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.ProtocolException;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultRedirectStrategy;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.HttpContext;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.impl.DefaultRedirectStrategy;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.HttpRequest;
+import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.ProtocolException;
+import org.apache.hc.core5.http.io.HttpClientResponseHandler;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
+import org.apache.hc.core5.http.protocol.HttpContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -75,35 +77,35 @@ public class SaveOriginalPostRequestTestCase {
         final ServletContainer container = ServletContainer.Factory.newInstance();
 
         ServletInfo securedRequestDumper = new ServletInfo("SecuredRequestDumperServlet", RequestDumper.class)
-                                           .setServletSecurityInfo(new ServletSecurityInfo()
-                                                                   .addRoleAllowed("role1"))
-                                           .addMapping("/secured/dumpRequest");
+                .setServletSecurityInfo(new ServletSecurityInfo()
+                        .addRoleAllowed("role1"))
+                .addMapping("/secured/dumpRequest");
 
         ServletInfo securedIndexRequestDumper = new ServletInfo("SecuredIndexRequestDumperServlet", RequestDumper.class)
                 .setServletSecurityInfo(new ServletSecurityInfo()
                         .addRoleAllowed("role1"))
                 .addMapping("/index.html");
         ServletInfo unsecuredRequestDumper = new ServletInfo("UnsecuredRequestDumperServlet", RequestDumper.class)
-                                             .addMapping("/dumpRequest");
+                .addMapping("/dumpRequest");
         ServletInfo loginFormServlet = new ServletInfo("loginPage", FormLoginServlet.class)
-                         .setServletSecurityInfo(new ServletSecurityInfo()
-                                                 .addRoleAllowed("group1"))
-                         .addMapping("/FormLoginServlet");
+                .setServletSecurityInfo(new ServletSecurityInfo()
+                        .addRoleAllowed("group1"))
+                .addMapping("/FormLoginServlet");
 
         ServletIdentityManager identityManager = new ServletIdentityManager();
 
         identityManager.addUser("user1", "password1", "role1");
 
         DeploymentInfo builder = new DeploymentInfo()
-                                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
-                                 .setContextPath("/servletContext")
-                                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
-                                 .setDeploymentName("servletContext.war")
-                                 .setIdentityManager(identityManager)
-                                 .addWelcomePage("index.html")
-                                 .setResourceManager(new TestResourceLoader(SaveOriginalPostRequestTestCase.class))
-                                 .setLoginConfig(new LoginConfig("FORM", "Test Realm", "/FormLoginServlet", "/error.html"))
-                                 .addServlets(securedRequestDumper, unsecuredRequestDumper, loginFormServlet, securedIndexRequestDumper);
+                .setClassLoader(SimpleServletTestCase.class.getClassLoader())
+                .setContextPath("/servletContext")
+                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
+                .setDeploymentName("servletContext.war")
+                .setIdentityManager(identityManager)
+                .addWelcomePage("index.html")
+                .setResourceManager(new TestResourceLoader(SaveOriginalPostRequestTestCase.class))
+                .setLoginConfig(new LoginConfig("FORM", "Test Realm", "/FormLoginServlet", "/error.html"))
+                .addServlets(securedRequestDumper, unsecuredRequestDumper, loginFormServlet, securedIndexRequestDumper);
 
         DeploymentManager manager = container.addDeployment(builder);
 
@@ -116,71 +118,83 @@ public class SaveOriginalPostRequestTestCase {
 
     @Test
     public void testParametersFromOriginalPostRequest() throws IOException {
-        TestHttpClient client = createHttpClient();
+        CloseableHttpClient client = createHttpClient();
 
         // let's test if a usual POST request have its parameters dumped in the response
-        HttpResponse result = executePostRequest(client, "/servletContext/dumpRequest", new BasicNameValuePair("param1", "param1Value"), new BasicNameValuePair("param2", "param2Value"));
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-        String response = HttpClientUtils.readResponse(result);
-        assertTrue(response.contains("param1=param1Value"));
-        assertTrue(response.contains("param2=param2Value"));
+        HttpClientResponseHandler<Void> handler = result -> {
+            assertEquals(StatusCodes.OK, result.getCode());
+            String response = HttpClientUtils.readResponse(result);
+            assertTrue(response.contains("param1=param1Value"));
+            assertTrue(response.contains("param2=param2Value"));
+            return null;
+        };
+        executePostRequest(client, handler, "/servletContext/dumpRequest", new BasicNameValuePair("param1", "param1Value"), new BasicNameValuePair("param2", "param2Value"));
 
         // this request should be saved and the client redirect to the login form.
-        result = executePostRequest(client, "/servletContext/secured/dumpRequest", new BasicNameValuePair("securedParam1", "securedParam1Value"), new BasicNameValuePair("securedParam2", "securedParam2Value"));
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-        Assert.assertTrue(HttpClientUtils.readResponse(result).startsWith("j_security_check"));
+        handler = result -> {
+            assertEquals(StatusCodes.OK, result.getCode());
+            Assert.assertTrue(HttpClientUtils.readResponse(result).startsWith("j_security_check"));
+            return null;
+        };
+        executePostRequest(client, handler, "/servletContext/secured/dumpRequest", new BasicNameValuePair("securedParam1", "securedParam1Value"), new BasicNameValuePair("securedParam2", "securedParam2Value"));
 
         // let's perform a successful authentication and get the request restored
-        result = executePostRequest(client, "/servletContext/j_security_check", new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1"));
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-        response = HttpClientUtils.readResponse(result);
+        handler = result -> {
+            assertEquals(StatusCodes.OK, result.getCode());
+            String response = HttpClientUtils.readResponse(result);
 
-        // let's check if the original request was saved, including its parameters.
-        assertTrue(response.contains("securedParam1=securedParam1Value"));
-        assertTrue(response.contains("securedParam2=securedParam2Value"));
+            // let's check if the original request was saved, including its parameters.
+            assertTrue(response.contains("securedParam1=securedParam1Value"));
+            assertTrue(response.contains("securedParam2=securedParam2Value"));
+            return null;
+        };
+        executePostRequest(client, handler, "/servletContext/j_security_check", new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1"));
     }
 
     @Test
     public void testSavedRequestWithWelcomeFile() throws IOException {
-        TestHttpClient client = createHttpClient();
+        CloseableHttpClient client = createHttpClient();
 
         // this request should be saved and the client redirect to the login form.
-        HttpResponse result = executePostRequest(client, "/servletContext/", new BasicNameValuePair("securedParam1", "securedParam1Value"), new BasicNameValuePair("securedParam2", "securedParam2Value"));
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-        Assert.assertTrue(HttpClientUtils.readResponse(result).startsWith("j_security_check"));
+        HttpClientResponseHandler<Void> handler = result -> {
+            assertEquals(StatusCodes.OK, result.getCode());
+            Assert.assertTrue(HttpClientUtils.readResponse(result).startsWith("j_security_check"));
+            return null;
+        };
+        executePostRequest(client, handler, "/servletContext/", new BasicNameValuePair("securedParam1", "securedParam1Value"), new BasicNameValuePair("securedParam2", "securedParam2Value"));
 
         // let's perform a successful authentication and get the request restored
-        result = executePostRequest(client, "/servletContext/j_security_check", new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1"));
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-        String response = HttpClientUtils.readResponse(result);
+        handler = result -> {
+            assertEquals(StatusCodes.OK, result.getCode());
+            String response = HttpClientUtils.readResponse(result);
 
-        // let's check if the original request was saved, including its parameters.
-        assertTrue(response.contains("securedParam1=securedParam1Value"));
-        assertTrue(response.contains("securedParam2=securedParam2Value"));
+            // let's check if the original request was saved, including its parameters.
+            assertTrue(response.contains("securedParam1=securedParam1Value"));
+            assertTrue(response.contains("securedParam2=securedParam2Value"));
+            return null;
+        };
+        executePostRequest(client, handler, "/servletContext/j_security_check", new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1"));
     }
 
-    private TestHttpClient createHttpClient() {
-        TestHttpClient client = new TestHttpClient();
-
-        client.setRedirectStrategy(new DefaultRedirectStrategy() {
-            @Override
-            public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
-                if (response.getStatusLine().getStatusCode() == StatusCodes.FOUND) {
-                    return true;
-                }
-                return super.isRedirected(request, response, context);
-            }
-        });
-
-        return client;
+    private CloseableHttpClient createHttpClient() {
+        return TestHttpClient.custom()
+                .setRedirectStrategy(new DefaultRedirectStrategy() {
+                    @Override
+                    public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
+                        if (response.getCode() == StatusCodes.FOUND) {
+                            return true;
+                        }
+                        return super.isRedirected(request, response, context);
+                    }
+                }).build();
     }
 
-    private HttpResponse executePostRequest(TestHttpClient client, String uri, BasicNameValuePair... parameters) throws IOException {
+    private void executePostRequest(CloseableHttpClient client, HttpClientResponseHandler<Void> handler, String uri, BasicNameValuePair... parameters) throws IOException {
         HttpPost request = new HttpPost(DefaultServer.getDefaultServerURL() + uri);
 
         request.setEntity(new UrlEncodedFormEntity(new ArrayList<NameValuePair>(Arrays.asList(parameters))));
 
-        return client.execute(request);
+        client.execute(request, handler);
     }
 
     static class RequestDumper extends HttpServlet {

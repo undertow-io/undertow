@@ -19,8 +19,6 @@
 package io.undertow.server.handlers;
 
 import io.undertow.Handlers;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.cache.DirectBufferCache;
 import io.undertow.server.handlers.resource.CachingResourceManager;
 import io.undertow.server.handlers.resource.PathResourceManager;
@@ -30,9 +28,9 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.DateUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -55,17 +53,14 @@ public class RangeRequestTestCase {
     public static void setup() throws URISyntaxException {
         Path rootPath = Paths.get(RangeRequestTestCase.class.getResource("range.txt").toURI()).getParent();
         PathHandler path = Handlers.path();
-        path.addPrefixPath("/path", new ByteRangeHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.getResponseHeaders().put(Headers.LAST_MODIFIED, DateUtils.toDateString(new Date(10000)));
-                exchange.getResponseHeaders().put(Headers.ETAG, "\"someetag\"");
-                exchange.getResponseSender().send("0123456789");
-            }
+        path.addPrefixPath("/path", new ByteRangeHandler(exchange -> {
+            exchange.getResponseHeaders().put(Headers.LAST_MODIFIED, DateUtils.toDateString(new Date(10000)));
+            exchange.getResponseHeaders().put(Headers.ETAG, "\"someetag\"");
+            exchange.getResponseSender().send("0123456789");
         }, true));
-        path.addPrefixPath("/resource",  new ResourceHandler( new PathResourceManager(rootPath, 10485760))
+        path.addPrefixPath("/resource", new ResourceHandler(new PathResourceManager(rootPath, 10485760))
                 .setDirectoryListingEnabled(true));
-        path.addPrefixPath("/cachedresource",  new ResourceHandler(new CachingResourceManager(1000, 1000000, new DirectBufferCache(1000, 10, 10000), new PathResourceManager(rootPath, 10485760), -1))
+        path.addPrefixPath("/cachedresource", new ResourceHandler(new CachingResourceManager(1000, 1000000, new DirectBufferCache(1000, 10, 10000), new PathResourceManager(rootPath, 10485760), -1))
                 .setDirectoryListingEnabled(true));
         DefaultServer.setRootHandler(path);
     }
@@ -80,7 +75,7 @@ public class RangeRequestTestCase {
     }
     @Test
     public void testCachedResourceHandler() throws IOException, InterruptedException {
-        for(int i = 0; i < 10; ++i) {
+        for (int i = 0; i < 10; ++i) {
             runTest("/cachedresource/range.txt", false);
         }
     }
@@ -88,197 +83,234 @@ public class RangeRequestTestCase {
     @Test
     public void testLargeCachedResourceHandler() throws IOException, InterruptedException {
         String path = "/cachedresource/largerange.txt";
-        TestHttpClient client = new TestHttpClient();
+        CloseableHttpClient client = TestHttpClient.defaultClient();
         try {
-            for(int i = 0; i < 3; ++i) {
+            for (int i = 0; i < 3; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
-                HttpResponse result = client.execute(get);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                client.getConnectionManager().shutdown();
-                client = new TestHttpClient();
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    return null;
+                });
+                client.close();
+                client = TestHttpClient.defaultClient();
             }
 
-            for(int i = 0; i < 10; ++i) {
+            for (int i = 0; i < 10; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
                 get.addHeader(Headers.RANGE_STRING, "bytes=10-20");
-                HttpResponse result = client.execute(get);
-                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-                String response = EntityUtils.toString(result.getEntity());
-                Assert.assertEquals("89#2:012345", response);
-                Assert.assertEquals( "bytes 10-20/1034", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                    String response = EntityUtils.toString(result.getEntity());
+                    Assert.assertEquals("89#2:012345", response);
+                    Assert.assertEquals("bytes 10-20/1034", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                    return null;
+                });
 
                 get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
                 get.addHeader(Headers.RANGE_STRING, "bytes=1000-1024");
-                result = client.execute(get);
-                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-                response = EntityUtils.toString(result.getEntity());
-                Assert.assertEquals("3:0123456789#74:012345678", response);
-                Assert.assertEquals( "bytes 1000-1024/1034", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                    String response = EntityUtils.toString(result.getEntity());
+                    Assert.assertEquals("3:0123456789#74:012345678", response);
+                    Assert.assertEquals("bytes 1000-1024/1034", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                    return null;
+                });
 
                 get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
                 get.addHeader(Headers.RANGE_STRING, "bytes=1001-1024");
-                result = client.execute(get);
-                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-                response = EntityUtils.toString(result.getEntity());
-                Assert.assertEquals(":0123456789#74:012345678", response);
-                Assert.assertEquals( "bytes 1001-1024/1034", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                    String response = EntityUtils.toString(result.getEntity());
+                    Assert.assertEquals(":0123456789#74:012345678", response);
+                    Assert.assertEquals("bytes 1001-1024/1034", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                    return null;
+                });
 
                 get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
                 get.addHeader(Headers.RANGE_STRING, "bytes=1025-1030");
-                result = client.execute(get);
-                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-                response = EntityUtils.toString(result.getEntity());
-                Assert.assertEquals("9abcde", response);
-                Assert.assertEquals( "bytes 1025-1030/1034", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                    String response = EntityUtils.toString(result.getEntity());
+                    Assert.assertEquals("9abcde", response);
+                    Assert.assertEquals("bytes 1025-1030/1034", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                    return null;
+                });
             }
         } finally {
-            client.getConnectionManager().shutdown();
+            client.close();
         }
     }
 
     public void runTest(String path, boolean etag) throws IOException, InterruptedException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader(Headers.RANGE_STRING, "bytes=2-3");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-            String response = EntityUtils.toString(result.getEntity());
-            Assert.assertEquals("23", response);
-            Assert.assertEquals( "bytes 2-3/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                String response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("23", response);
+                Assert.assertEquals("bytes 2-3/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader(Headers.RANGE_STRING, "bytes=3-1000");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-            response = EntityUtils.toString(result.getEntity());
-            Assert.assertEquals("3456789", response);
-            Assert.assertEquals( "bytes 3-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                String response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("3456789", response);
+                Assert.assertEquals("bytes 3-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader(Headers.RANGE_STRING, "bytes=3-9");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-            response = EntityUtils.toString(result.getEntity());
-            Assert.assertEquals("3456789", response);
-            Assert.assertEquals( "bytes 3-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                String response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("3456789", response);
+                Assert.assertEquals("bytes 3-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                return null;
+            });
+
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
 
             get.addHeader(Headers.RANGE_STRING, "bytes=0-0");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-            response = EntityUtils.toString(result.getEntity());
-            Assert.assertEquals("0", response);
-            Assert.assertEquals( "bytes 0-0/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                String response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("0", response);
+                Assert.assertEquals("bytes 0-0/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader(Headers.RANGE_STRING, "bytes=1-");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-            response = EntityUtils.toString(result.getEntity());
-            Assert.assertEquals("123456789", response);
-            Assert.assertEquals( "bytes 1-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                String response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("123456789", response);
+                Assert.assertEquals("bytes 1-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader(Headers.RANGE_STRING, "bytes=0-");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-            response = EntityUtils.toString(result.getEntity());
-            Assert.assertEquals("0123456789", response);
-            Assert.assertEquals("bytes 0-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                String response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("0123456789", response);
+                Assert.assertEquals("bytes 0-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader(Headers.RANGE_STRING, "bytes=9-");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-            response = EntityUtils.toString(result.getEntity());
-            Assert.assertEquals("9", response);
-            Assert.assertEquals("bytes 9-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                String response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("9", response);
+                Assert.assertEquals("bytes 9-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader(Headers.RANGE_STRING, "bytes=-1");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-            response = EntityUtils.toString(result.getEntity());
-            Assert.assertEquals("9", response);
-            Assert.assertEquals("bytes 9-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                String response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("9", response);
+                Assert.assertEquals("bytes 9-9/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader(Headers.RANGE_STRING, "bytes=99-100");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE, result.getStatusLine().getStatusCode());
-            response = EntityUtils.toString(result.getEntity());
-            Assert.assertEquals("", response);
-            Assert.assertEquals("bytes */10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE, result.getCode());
+                String response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("", response);
+                Assert.assertEquals("bytes */10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader(Headers.RANGE_STRING, "bytes=2-1");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE, result.getStatusLine().getStatusCode());
-            response = EntityUtils.toString(result.getEntity());
-            Assert.assertEquals("", response);
-            Assert.assertEquals("bytes */10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE, result.getCode());
+                String response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("", response);
+                Assert.assertEquals("bytes */10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader(Headers.RANGE_STRING, "bytes=10-");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE, result.getStatusLine().getStatusCode());
-            response = EntityUtils.toString(result.getEntity());
-            Assert.assertEquals("", response);
-            Assert.assertEquals("bytes */10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.REQUEST_RANGE_NOT_SATISFIABLE, result.getCode());
+                String response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("", response);
+                Assert.assertEquals("bytes */10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader(Headers.RANGE_STRING, "bytes=2-3");
             get.addHeader(Headers.IF_RANGE_STRING, DateUtils.toDateString(new Date(System.currentTimeMillis() + 1000)));
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-            response = EntityUtils.toString(result.getEntity());
-            Assert.assertEquals("23", response);
-            Assert.assertEquals( "bytes 2-3/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                String response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("23", response);
+                Assert.assertEquals("bytes 2-3/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
             get.addHeader(Headers.RANGE_STRING, "bytes=2-3");
             get.addHeader(Headers.IF_RANGE_STRING, DateUtils.toDateString(new Date(0)));
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = EntityUtils.toString(result.getEntity());
-            Assert.assertEquals("0123456789", response);
-            Assert.assertNull(result.getFirstHeader(Headers.CONTENT_RANGE_STRING));
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = EntityUtils.toString(result.getEntity());
+                Assert.assertEquals("0123456789", response);
+                Assert.assertNull(result.getFirstHeader(Headers.CONTENT_RANGE_STRING));
+                return null;
+            });
 
-            if(etag) {
-
+            if (etag) {
                 get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
                 get.addHeader(Headers.RANGE_STRING, "bytes=2-3");
                 get.addHeader(Headers.IF_RANGE_STRING, "\"someetag\"");
-                result = client.execute(get);
-                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-                response = EntityUtils.toString(result.getEntity());
-                Assert.assertEquals("23", response);
-                Assert.assertEquals( "bytes 2-3/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                    String response = EntityUtils.toString(result.getEntity());
+                    Assert.assertEquals("23", response);
+                    Assert.assertEquals("bytes 2-3/10", result.getFirstHeader(Headers.CONTENT_RANGE_STRING).getValue());
+                    return null;
+                });
 
                 get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
                 get.addHeader(Headers.RANGE_STRING, "bytes=2-3");
                 get.addHeader(Headers.IF_RANGE_STRING, "\"otheretag\"");
-                result = client.execute(get);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                response = EntityUtils.toString(result.getEntity());
-                Assert.assertEquals("0123456789", response);
-                Assert.assertNull(result.getFirstHeader(Headers.CONTENT_RANGE_STRING));
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    String response = EntityUtils.toString(result.getEntity());
+                    Assert.assertEquals("0123456789", response);
+                    Assert.assertNull(result.getFirstHeader(Headers.CONTENT_RANGE_STRING));
+                    return null;
+                });
 
                 // Test weak ETag in If-Range - should return full content (RFC 9110 requires strong comparison)
                 get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
                 get.addHeader(Headers.RANGE_STRING, "bytes=2-3");
                 get.addHeader(Headers.IF_RANGE_STRING, "W/\"someetag\"");
-                result = client.execute(get);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                response = EntityUtils.toString(result.getEntity());
-                Assert.assertEquals("0123456789", response);
-                Assert.assertNull(result.getFirstHeader(Headers.CONTENT_RANGE_STRING));
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    String response = EntityUtils.toString(result.getEntity());
+                    Assert.assertEquals("0123456789", response);
+                    Assert.assertNull(result.getFirstHeader(Headers.CONTENT_RANGE_STRING));
+                    return null;
+                });
             }
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
-
 }

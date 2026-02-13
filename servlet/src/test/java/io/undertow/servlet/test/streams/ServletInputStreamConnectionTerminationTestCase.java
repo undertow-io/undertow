@@ -21,20 +21,18 @@ package io.undertow.servlet.test.streams;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
+import jakarta.servlet.ServletException;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import jakarta.servlet.ServletException;
 import java.io.IOException;
 
 /**
@@ -63,20 +61,16 @@ public class ServletInputStreamConnectionTerminationTestCase {
             builder.append(HELLO_WORLD);
         }
         String message = builder.toString();
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             String uri = DefaultServer.getDefaultServerURL() + "/servletContext/term";
             HttpPost post = new HttpPost(uri);
             post.setEntity(new StringEntity(message));
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.fail();
-        } catch (IOException expected) {
-            //expected
-        } finally {
-            client.getConnectionManager().shutdown();
+            try {
+                client.execute(post, r -> null);
+                Assert.fail();
+            } catch (IOException expected) {
+                //expected
+            }
         }
-
     }
 }

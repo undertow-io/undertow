@@ -17,17 +17,7 @@
  */
 package io.undertow.server.handlers;
 
-import java.io.IOException;
-
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import io.undertow.Handlers;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.builder.PredicatedHandlersParser;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -35,6 +25,13 @@ import io.undertow.testutils.IPv6Ignore;
 import io.undertow.testutils.IPv6Only;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import java.io.IOException;
 
 /**
  * @author baranowb
@@ -47,24 +44,19 @@ public class IPMatchPredicateTestCase {
     public void testAllowed1() throws IOException {
         DefaultServer.setRootHandler(
                 Handlers.predicates(
-
                         PredicatedHandlersParser.parse(
                                 "ip-match[default-allow=false, acl={'127.0.0.1 allow'}] -> {set(attribute='%{o,result}', value=ALLOWED)}"
-                                + " else {set(attribute='%{o,result}', value=DENIED)}\n",
-                                getClass().getClassLoader()), new HttpHandler() {
-                            @Override
-                            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                exchange.getResponseSender().send(exchange.getRelativePath());
-                            }
-                        }));
+                                        + " else {set(attribute='%{o,result}', value=DENIED)}\n",
+                                getClass().getClassLoader()), exchange -> exchange.getResponseSender().send(exchange.getRelativePath())));
 
-        try (TestHttpClient client = new TestHttpClient()){
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("ALLOWED", result.getHeaders("result")[0].getValue());
-        } finally {
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("ALLOWED", result.getHeaders("result")[0].getValue());
+                return null;
+            });
         }
     }
 
@@ -73,24 +65,19 @@ public class IPMatchPredicateTestCase {
     public void testAllowed2() throws IOException {
         DefaultServer.setRootHandler(
                 Handlers.predicates(
-
                         PredicatedHandlersParser.parse(
                                 "ip-match[default-allow=true, acl={'137.0.0.0/8 allow'}] -> {set(attribute='%{o,result}', value=ALLOWED)}"
-                                + " else {set(attribute='%{o,result}', value=DENIED)}\n",
-                                getClass().getClassLoader()), new HttpHandler() {
-                            @Override
-                            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                exchange.getResponseSender().send(exchange.getRelativePath());
-                            }
-                        }));
+                                        + " else {set(attribute='%{o,result}', value=DENIED)}\n",
+                                getClass().getClassLoader()), exchange -> exchange.getResponseSender().send(exchange.getRelativePath())));
 
-        try (TestHttpClient client = new TestHttpClient()){
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("ALLOWED", result.getHeaders("result")[0].getValue());
-        } finally {
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("ALLOWED", result.getHeaders("result")[0].getValue());
+                return null;
+            });
         }
     }
 
@@ -99,24 +86,19 @@ public class IPMatchPredicateTestCase {
     public void testDenied1() throws IOException {
         DefaultServer.setRootHandler(
                 Handlers.predicates(
-
                         PredicatedHandlersParser.parse(
                                 "ip-match[default-allow=false, acl={'129.0.0.0/8 allow', '127.0.0.0/8 deny'}] -> {set(attribute='%{o,result}', value=ALLOWED)}"
-                                + " else {set(attribute='%{o,result}', value=DENIED)}\n",
-                                getClass().getClassLoader()), new HttpHandler() {
-                            @Override
-                            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                exchange.getResponseSender().send(exchange.getRelativePath());
-                            }
-                        }));
+                                        + " else {set(attribute='%{o,result}', value=DENIED)}\n",
+                                getClass().getClassLoader()), exchange -> exchange.getResponseSender().send(exchange.getRelativePath())));
 
-        try (TestHttpClient client = new TestHttpClient()){
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("DENIED", result.getHeaders("result")[0].getValue());
-        } finally {
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("DENIED", result.getHeaders("result")[0].getValue());
+                return null;
+            });
         }
     }
 
@@ -125,24 +107,19 @@ public class IPMatchPredicateTestCase {
     public void testDenied2() throws IOException {
         DefaultServer.setRootHandler(
                 Handlers.predicates(
-
                         PredicatedHandlersParser.parse(
                                 "ip-match[default-allow=true, acl={'127.0.0.0/8 deny'}] -> {set(attribute='%{o,result}', value=ALLOWED)}"
-                                + " else {set(attribute='%{o,result}', value=DENIED)}\n",
-                                getClass().getClassLoader()), new HttpHandler() {
-                            @Override
-                            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                exchange.getResponseSender().send(exchange.getRelativePath());
-                            }
-                        }));
+                                        + " else {set(attribute='%{o,result}', value=DENIED)}\n",
+                                getClass().getClassLoader()), exchange -> exchange.getResponseSender().send(exchange.getRelativePath())));
 
-        try (TestHttpClient client = new TestHttpClient()){
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("DENIED", result.getHeaders("result")[0].getValue());
-        } finally {
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("DENIED", result.getHeaders("result")[0].getValue());
+                return null;
+            });
         }
     }
 
@@ -151,24 +128,19 @@ public class IPMatchPredicateTestCase {
     public void testAllowed6_1() throws IOException {
         DefaultServer.setRootHandler(
                 Handlers.predicates(
-
                         PredicatedHandlersParser.parse(
                                 "ip-match[default-allow=false, acl={'::1 allow'}] -> {set(attribute='%{o,result}', value=ALLOWED)}"
-                                + " else {set(attribute='%{o,result}', value=DENIED)}\n",
-                                getClass().getClassLoader()), new HttpHandler() {
-                            @Override
-                            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                exchange.getResponseSender().send(exchange.getRelativePath());
-                            }
-                        }));
+                                        + " else {set(attribute='%{o,result}', value=DENIED)}\n",
+                                getClass().getClassLoader()), exchange -> exchange.getResponseSender().send(exchange.getRelativePath())));
 
-        try (TestHttpClient client = new TestHttpClient()){
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("ALLOWED", result.getHeaders("result")[0].getValue());
-        } finally {
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("ALLOWED", result.getHeaders("result")[0].getValue());
+                return null;
+            });
         }
     }
 
@@ -177,24 +149,19 @@ public class IPMatchPredicateTestCase {
     public void testAllowed6_2() throws IOException {
         DefaultServer.setRootHandler(
                 Handlers.predicates(
-
                         PredicatedHandlersParser.parse(
                                 "ip-match[default-allow=false, acl={'0:0:0:0:0:0:0:1 allow'}] -> {set(attribute='%{o,result}', value=ALLOWED)}"
-                                + " else {set(attribute='%{o,result}', value=DENIED)}\n",
-                                getClass().getClassLoader()), new HttpHandler() {
-                            @Override
-                            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                exchange.getResponseSender().send(exchange.getRelativePath());
-                            }
-                        }));
+                                        + " else {set(attribute='%{o,result}', value=DENIED)}\n",
+                                getClass().getClassLoader()), exchange -> exchange.getResponseSender().send(exchange.getRelativePath())));
 
-        try (TestHttpClient client = new TestHttpClient()){
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("ALLOWED", result.getHeaders("result")[0].getValue());
-        } finally {
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("ALLOWED", result.getHeaders("result")[0].getValue());
+                return null;
+            });
         }
     }
 
@@ -203,24 +170,19 @@ public class IPMatchPredicateTestCase {
     public void testDenied6_1() throws IOException {
         DefaultServer.setRootHandler(
                 Handlers.predicates(
-
                         PredicatedHandlersParser.parse(
                                 "ip-match[default-allow=false, acl={'::1 deny'}] -> {set(attribute='%{o,result}', value=ALLOWED)}"
-                                + " else {set(attribute='%{o,result}', value=DENIED)}\n",
-                                getClass().getClassLoader()), new HttpHandler() {
-                            @Override
-                            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                exchange.getResponseSender().send(exchange.getRelativePath());
-                            }
-                        }));
+                                        + " else {set(attribute='%{o,result}', value=DENIED)}\n",
+                                getClass().getClassLoader()), exchange -> exchange.getResponseSender().send(exchange.getRelativePath())));
 
-        try (TestHttpClient client = new TestHttpClient()){
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("DENIED", result.getHeaders("result")[0].getValue());
-        } finally {
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("DENIED", result.getHeaders("result")[0].getValue());
+                return null;
+            });
         }
     }
 
@@ -229,24 +191,19 @@ public class IPMatchPredicateTestCase {
     public void testDenied_2() throws IOException {
         DefaultServer.setRootHandler(
                 Handlers.predicates(
-
                         PredicatedHandlersParser.parse(
                                 "ip-match[default-allow=false, acl={'0:0:0:0:0:0:0:1 deny'}] -> {set(attribute='%{o,result}', value=ALLOWED)}"
-                                + " else {set(attribute='%{o,result}', value=DENIED)}\n",
-                                getClass().getClassLoader()), new HttpHandler() {
-                            @Override
-                            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                                exchange.getResponseSender().send(exchange.getRelativePath());
-                            }
-                        }));
+                                        + " else {set(attribute='%{o,result}', value=DENIED)}\n",
+                                getClass().getClassLoader()), exchange -> exchange.getResponseSender().send(exchange.getRelativePath())));
 
-        try (TestHttpClient client = new TestHttpClient()){
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo/a/b");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("DENIED", result.getHeaders("result")[0].getValue());
-        } finally {
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("DENIED", result.getHeaders("result")[0].getValue());
+                return null;
+            });
         }
     }
 }

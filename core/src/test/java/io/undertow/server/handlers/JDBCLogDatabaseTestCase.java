@@ -19,14 +19,13 @@
 package io.undertow.server.handlers;
 
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.CompletionLatchHandler;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.h2.jdbcx.JdbcConnectionPool;
 import org.junit.After;
 import org.junit.Assert;
@@ -58,12 +57,7 @@ public class JDBCLogDatabaseTestCase {
     private static final int NUM_THREADS = 10;
     private static final int NUM_REQUESTS = 12;
 
-    private static final HttpHandler HELLO_HANDLER = new HttpHandler() {
-        @Override
-        public void handleRequest(final HttpServerExchange exchange) throws Exception {
-            exchange.getResponseSender().send("Hello");
-        }
-    };
+    private static final HttpHandler HELLO_HANDLER = exchange -> exchange.getResponseSender().send("Hello");
 
     private JdbcConnectionPool ds;
 
@@ -127,27 +121,27 @@ public class JDBCLogDatabaseTestCase {
     }
 
     @Test
-    public void testSingleLogMessageToDatabase() throws IOException, InterruptedException, SQLException {
-
-
+    public void testSingleLogMessageToDatabase() throws IOException, SQLException {
         JDBCLogHandler logHandler = new JDBCLogHandler(HELLO_HANDLER, DefaultServer.getWorker(), "common", ds);
 
         CompletionLatchHandler latchHandler;
         DefaultServer.setRootHandler(latchHandler = new CompletionLatchHandler(logHandler));
-        TestHttpClient client = new TestHttpClient();
-        try {
+
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            HttpResponse result = client.execute(get);
-            latchHandler.await();
-            logHandler.awaitWrittenForTest();
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
+            client.execute(get, result -> {
+                latchHandler.await();
+                try {
+                    logHandler.awaitWrittenForTest();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("Hello", HttpClientUtils.readResponse(result));
+                return null;
+            });
         } finally {
-            Connection conn = null;
-            Statement statement = null;
-            try {
-                conn = ds.getConnection();
-                statement = conn.createStatement();
+            try (Connection conn = ds.getConnection(); Statement statement = conn.createStatement()) {
                 ResultSet resultDatabase = statement.executeQuery("SELECT * FROM PUBLIC.ACCESS;");
                 resultDatabase.next();
                 // for some reason H2 database version 2 is filling in extra blanks in the remote host field. So, even though
@@ -155,14 +149,6 @@ public class JDBCLogDatabaseTestCase {
                 Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), resultDatabase.getString(logHandler.getRemoteHostField()).trim());
                 Assert.assertEquals("5", resultDatabase.getString(logHandler.getBytesField()));
                 Assert.assertEquals("200", resultDatabase.getString(logHandler.getStatusField()));
-                client.getConnectionManager().shutdown();
-            } finally {
-                if (statement != null) {
-                    statement.close();
-                }
-                if (conn != null) {
-                    conn.close();
-                }
             }
         }
     }
@@ -180,23 +166,19 @@ public class JDBCLogDatabaseTestCase {
             final List<Future<?>> futures = new ArrayList<>();
             for (int i = 0; i < NUM_THREADS; ++i) {
                 final int threadNo = i;
-                futures.add(executor.submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        TestHttpClient client = new TestHttpClient();
-                        try {
-                            for (int i = 0; i < NUM_REQUESTS; ++i) {
-                                HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-                                HttpResponse result = client.execute(get);
-                                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                futures.add(executor.submit(() -> {
+                    try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+                        for (int i1 = 0; i1 < NUM_REQUESTS; ++i1) {
+                            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
+                            client.execute(get, result -> {
+                                Assert.assertEquals(StatusCodes.OK, result.getCode());
                                 final String response = HttpClientUtils.readResponse(result);
                                 Assert.assertEquals("Hello", response);
-                            }
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        } finally {
-                            client.getConnectionManager().shutdown();
+                                return null;
+                            });
                         }
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
                 }));
             }
@@ -210,24 +192,11 @@ public class JDBCLogDatabaseTestCase {
         latchHandler.await();
         logHandler.awaitWrittenForTest();
 
-        Connection conn = null;
-        Statement statement = null;
-        try {
-            conn = ds.getConnection();
-            statement = conn.createStatement();
-
+        try (Connection conn = ds.getConnection()) {
             ResultSet resultDatabase = conn.createStatement().executeQuery("SELECT COUNT(*) FROM PUBLIC.ACCESS;");
 
             resultDatabase.next();
             Assert.assertEquals(resultDatabase.getInt(1), NUM_REQUESTS * NUM_THREADS);
-
-        } finally {
-            if (statement != null) {
-                statement.close();
-            }
-            if (conn != null) {
-                conn.close();
-            }
         }
     }
 

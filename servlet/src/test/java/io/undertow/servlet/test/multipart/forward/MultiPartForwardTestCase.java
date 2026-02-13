@@ -31,14 +31,15 @@ import java.util.Arrays;
 import jakarta.servlet.ServletException;
 
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.mime.HttpMultipartMode;
-import org.apache.http.entity.mime.MultipartEntity;
-import org.apache.http.entity.mime.content.StringBody;
-import org.apache.http.message.BasicNameValuePair;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.entity.mime.HttpMultipartMode;
+import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
+import org.apache.hc.client5.http.entity.mime.StringBody;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -98,30 +99,22 @@ public class MultiPartForwardTestCase {
     }
 
     private String sendRequest(String path, HttpEntity postEntity) throws IOException {
-
-        TestHttpClient client = new TestHttpClient();
-        try {
-
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             String uri = DefaultServer.getDefaultServerURL() + "/servletContext" + path;
 
             HttpPost post = new HttpPost(uri);
             post.setEntity(postEntity);
 
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-
-            return HttpClientUtils.readResponse(result).trim();
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            return client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result).trim();
+            });
         }
-
     }
 
-    private MultipartEntity createMultiPartFormPostEntity() throws IOException {
-        MultipartEntity entity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
-        entity.addPart("foo", new StringBody("bar"));
-        return entity;
+    private HttpEntity createMultiPartFormPostEntity() throws IOException {
+        return MultipartEntityBuilder.create().setMode(HttpMultipartMode.LEGACY)
+            .addPart("foo", new StringBody("bar", ContentType.TEXT_PLAIN)).build();
     }
 
     private UrlEncodedFormEntity createUrlEncodedFormPostEntity() throws IOException {

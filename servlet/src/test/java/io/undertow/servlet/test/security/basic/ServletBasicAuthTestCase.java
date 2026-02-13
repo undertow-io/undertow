@@ -39,14 +39,15 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import jakarta.servlet.ServletException;
+
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -111,16 +112,19 @@ public class ServletBasicAuthTestCase {
 
     @Test
     public void testChallengeSent() throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        String url = DefaultServer.getDefaultServerURL() + "/servletContext/secured/username";
-        HttpGet get = new HttpGet(url);
-        HttpResponse result = client.execute(get);
-        HttpClientUtils.readResponse(result);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        assertEquals(1, values.length);
-        String value = values[0].getValue();
-        assertTrue(value.startsWith("Basic"));
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            String url = DefaultServer.getDefaultServerURL() + "/servletContext/secured/username";
+            HttpGet get = new HttpGet(url);
+            client.execute(get, result -> {
+                HttpClientUtils.readResponse(result);
+                assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+                Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+                assertEquals(1, values.length);
+                String value = values[0].getValue();
+                assertTrue(value.startsWith("Basic"));
+                return null;
+            });
+        }
     }
 
     @Test
@@ -142,23 +146,20 @@ public class ServletBasicAuthTestCase {
     }
 
     public void testCall(final String path, final String expectedResponse, Charset charset, String userAgent, String user, String password, int expect) throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             String url = DefaultServer.getDefaultServerURL() + "/servletContext/secured/" + path;
             HttpGet get = new HttpGet(url);
             get = new HttpGet(url);
             get.addHeader(Headers.USER_AGENT_STRING, userAgent);
             get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString((user + ":" + password).getBytes(charset), false));
-            HttpResponse result = client.execute(get);
-            assertEquals(expect, result.getStatusLine().getStatusCode());
-
-            final String response = HttpClientUtils.readResponse(result);
-            if(expect == 200) {
-                assertEquals(expectedResponse, response);
-            }
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                assertEquals(expect, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                if (expect == 200) {
+                    assertEquals(expectedResponse, response);
+                }
+                return null;
+            });
         }
     }
-
 }

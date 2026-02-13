@@ -29,8 +29,8 @@ import java.util.Map;
 
 import jakarta.servlet.ServletException;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -107,28 +107,26 @@ public class ServletContextRolesTestCase {
     public void testRoles() throws Exception {
         final StringBuilder sb = new StringBuilder(40);
         sb.append("dobby:true\n")
-        .append("was:true\n")
-        .append("here:true\n");
+                .append("was:true\n")
+                .append("here:true\n");
         testCall(sb.toString(), StandardCharsets.UTF_8, "Chrome", "user1", "password1", 200);
     }
 
-    public void testCall( final String expectedResponse, Charset charset, String userAgent, String user, String password, int expect) throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        try {
+    public void testCall(final String expectedResponse, Charset charset, String userAgent, String user, String password, int expect) throws Exception {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             String url = DefaultServer.getDefaultServerURL() + "/servletContext/aa";
             HttpGet get = new HttpGet(url);
-            get = new HttpGet(url);
             get.addHeader(Headers.USER_AGENT_STRING, userAgent);
             get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString((user + ":" + password).getBytes(charset), false));
-            HttpResponse result = client.execute(get);
-            assertEquals(expect, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                assertEquals(expect, result.getCode());
 
-            final String response = HttpClientUtils.readResponse(result);
-            if(expect == 200) {
-                assertEquals(expectedResponse, response);
-            }
-        } finally {
-            client.getConnectionManager().shutdown();
+                final String response = HttpClientUtils.readResponse(result);
+                if (expect == 200) {
+                    assertEquals(expectedResponse, response);
+                }
+                return null;
+            });
         }
     }
 }

@@ -18,14 +18,7 @@
 
 package io.undertow.servlet.test.proprietry;
 
-import java.io.IOException;
-
-import jakarta.servlet.ServletException;
-
 import io.undertow.io.IoCallback;
-import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -40,12 +33,15 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import jakarta.servlet.ServletException;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
 
 /**
  * @author Stuart Douglas
@@ -70,19 +66,11 @@ public class BypassServletTestCase {
                                 .addInitParam(MessageServlet.MESSAGE, "This is a servlet")
                 )
                 .addListener(new ListenerInfo(TestListener.class))
-                .addInitialHandlerChainWrapper(new HandlerWrapper() {
-                    @Override
-                    public HttpHandler wrap(final HttpHandler handler) {
-                        return new HttpHandler() {
-                            @Override
-                            public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                                if (exchange.getRelativePath().equals("/async")) {
-                                    exchange.getResponseSender().send("This is not a servlet", IoCallback.END_EXCHANGE);
-                                } else {
-                                    handler.handleRequest(exchange);
-                                }
-                            }
-                        };
+                .addInitialHandlerChainWrapper(handler -> exchange -> {
+                    if (exchange.getRelativePath().equals("/async")) {
+                        exchange.getResponseSender().send("This is not a servlet", IoCallback.END_EXCHANGE);
+                    } else {
+                        handler.handleRequest(exchange);
                     }
                 });
 
@@ -97,32 +85,30 @@ public class BypassServletTestCase {
     @Test
     public void testServletRequest() throws IOException {
         TestListener.init(2);
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("This is a servlet", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("This is a servlet", response);
+                return null;
+            });
             Assert.assertArrayEquals(new String[]{"created REQUEST", "destroyed REQUEST"}, TestListener.results().toArray());
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testServletBypass() throws IOException {
         TestListener.init(0);
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("This is not a servlet", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("This is not a servlet", response);
+                return null;
+            });
             Assert.assertArrayEquals(new String[0], TestListener.results().toArray());
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 }

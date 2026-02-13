@@ -24,7 +24,9 @@ import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.HttpResponse;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -60,35 +62,28 @@ public class DefaultMaxHeaderTestCase {
     @Test
     public void testLargeURL() throws IOException {
         final String message = MESSAGE.repeat(COUNT);
-        try (TestHttpClient client = new TestHttpClient()) {
-            try {
-                final HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/" + message);
-                assertStatus(client.execute(get).getStatusLine().getStatusCode());
-            } finally {
-                client.getConnectionManager().shutdown();
-            }
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            final HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/" + message);
+            assertStatus(client.execute(get, HttpResponse::getCode));
         }
     }
 
     @Test
     public void testLotsOfQueryParameters_MaxParameters_Ok() throws IOException {
         final OptionMap existing = DefaultServer.getUndertowOptions();
-        try (TestHttpClient client = new TestHttpClient()) {
-            try {
-                final StringBuilder qs = new StringBuilder();
-                for (int i = 0; i < UndertowOptions.DEFAULT_MAX_PARAMETERS; ++i) {
-                    qs.append("QUERY").append(i);
-                    qs.append("=");
-                    qs.append(URLEncoder.encode("Hello Query" + i, StandardCharsets.UTF_8));
-                    qs.append("&");
-                }
-                qs.deleteCharAt(qs.length() - 1); // delete last useless '&'
-                final HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path?" + qs);
-                assertStatus(client.execute(get).getStatusLine().getStatusCode());
-            } finally {
-                DefaultServer.setUndertowOptions(existing);
-                client.getConnectionManager().shutdown();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            final StringBuilder qs = new StringBuilder();
+            for (int i = 0; i < UndertowOptions.DEFAULT_MAX_PARAMETERS; ++i) {
+                qs.append("QUERY").append(i);
+                qs.append("=");
+                qs.append(URLEncoder.encode("Hello Query" + i, StandardCharsets.UTF_8));
+                qs.append("&");
             }
+            qs.deleteCharAt(qs.length() - 1); // delete last useless '&'
+            final HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path?" + qs);
+            assertStatus(client.execute(get, HttpResponse::getCode));
+        } finally {
+            DefaultServer.setUndertowOptions(existing);
         }
     }
 

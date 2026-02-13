@@ -39,9 +39,9 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HexConverter;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -50,6 +50,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Map;
+
 import jakarta.servlet.ServletException;
 
 import static io.undertow.util.Headers.AUTHORIZATION;
@@ -96,7 +97,7 @@ public class DigestAuthTestCase {
 
         builder.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection()
-                .addUrlPattern("/secured/*"))
+                        .addUrlPattern("/secured/*"))
                 .addRoleAllowed("role1")
                 .setEmptyRoleSemantic(EmptyRoleSemantic.DENY));
 
@@ -118,26 +119,27 @@ public class DigestAuthTestCase {
     }
 
     public void testCall(final String path, final String expectedResponse) throws Exception {
-        TestHttpClient client = new TestHttpClient();
+        CloseableHttpClient client = TestHttpClient.defaultClient();
         String servletPath = "/servletContext/secured/" + path;
         String url = DefaultServer.getDefaultServerURL() + servletPath;
         HttpGet get = new HttpGet(url);
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        assertEquals(1, values.length);
-        String value = values[0].getValue();
-        assertTrue(value.startsWith(DIGEST.toString()));
-        Map<DigestWWWAuthenticateToken, String> parsedHeader = DigestWWWAuthenticateToken.parseHeader(value.substring(7));
-        assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
-        assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
-        assertTrue(parsedHeader.containsKey(DigestWWWAuthenticateToken.MESSAGE_QOP));
-
-        String nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
+        String nonce = client.execute(get, result -> {
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+            assertEquals(1, values.length);
+            String value = values[0].getValue();
+            assertTrue(value.startsWith(DIGEST.toString()));
+            Map<DigestWWWAuthenticateToken, String> parsedHeader = DigestWWWAuthenticateToken.parseHeader(value.substring(7));
+            assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
+            assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
+            assertTrue(parsedHeader.containsKey(DigestWWWAuthenticateToken.MESSAGE_QOP));
+            return parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
+        });
 
         String clientResponse = createResponse("user1", REALM_NAME, "password1", "GET", servletPath, nonce);
 
-        client = new TestHttpClient();
+        client.close();
+        client = TestHttpClient.defaultClient();
         get = new HttpGet(url);
         StringBuilder sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
@@ -148,11 +150,13 @@ public class DigestAuthTestCase {
         sb.append(DigestAuthorizationToken.RESPONSE.getName()).append("=\"").append(clientResponse).append("\"");
 
         get.addHeader(AUTHORIZATION.toString(), sb.toString());
-        result = client.execute(get);
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-
-        final String response = HttpClientUtils.readResponse(result);
-        assertEquals(expectedResponse, response);
+        client.execute(get, result -> {
+            assertEquals(StatusCodes.OK, result.getCode());
+            final String response = HttpClientUtils.readResponse(result);
+            assertEquals(expectedResponse, response);
+            return null;
+        });
+        client.close();
     }
 
     /**
@@ -161,7 +165,7 @@ public class DigestAuthTestCase {
      * @return The generated Hex encoded MD5 digest based response.
      */
     private String createResponse(final String userName, final String realm, final String password, final String method,
-            final String uri, final String nonce) throws Exception {
+                                  final String uri, final String nonce) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("MD5");
         digest.update(userName.getBytes(UTF_8));
         digest.update((byte) ':');
@@ -185,5 +189,4 @@ public class DigestAuthTestCase {
 
         return HexConverter.convertToHexString(digest.digest());
     }
-
 }

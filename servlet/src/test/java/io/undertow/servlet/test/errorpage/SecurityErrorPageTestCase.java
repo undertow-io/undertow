@@ -32,17 +32,21 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import jakarta.servlet.ServletException;
+
 import java.io.IOException;
+
 import jakarta.servlet.RequestDispatcher;
 import org.hamcrest.CoreMatchers;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * @author Stuart Douglas
@@ -61,7 +65,7 @@ public class SecurityErrorPageTestCase {
         DeploymentInfo builder = new DeploymentInfo();
 
         builder.addServlet(new ServletInfo("secure", SecureServlet.class)
-                .addMapping("/secure"))
+                        .addMapping("/secure"))
                 .addSecurityConstraint(Servlets.securityConstraint().addRoleAllowed("user").addWebResourceCollection(Servlets.webResourceCollection().addUrlPattern("/*")));
 
         builder.addServlet(new ServletInfo("path", PathServlet.class)
@@ -89,33 +93,30 @@ public class SecurityErrorPageTestCase {
 
     @Test
     public void testErrorPages() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             runTest(client, StatusCodes.UNAUTHORIZED, "/401");
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
-    private void runTest(final TestHttpClient client, int statusCode, String expected) throws IOException {
+    private void runTest(final CloseableHttpClient client, int statusCode, String expected) throws IOException {
         final HttpGet get;
-        final HttpResponse result;
-        final String response;
         get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/secure");
-        result = client.execute(get);
-        Assert.assertEquals(statusCode, result.getStatusLine().getStatusCode());
-        response = HttpClientUtils.readResponse(result);
-        Assert.assertThat(response, CoreMatchers.startsWith(expected));
-        // check error attributes
-        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_REQUEST_URI + "=/servletContext/secure"));
-        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_SERVLET_NAME + "=secure"));
-        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_MESSAGE + "=" + StatusCodes.getReason(statusCode)));
-        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=" + statusCode));
-        // check forward attributes
-        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_REQUEST_URI + "=/servletContext/secure"));
-        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_CONTEXT_PATH + "=/servletContext"));
-        // RequestDispatcher.FORWARD_QUERY_STRING is null
-        // RequestDispatcher.FORWARD_PATH_INFO is null
-        Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_SERVLET_PATH + "=/secure"));
+        client.execute(get, result -> {
+            Assert.assertEquals(statusCode, result.getCode());
+            final String response = HttpClientUtils.readResponse(result);
+            assertThat(response, CoreMatchers.startsWith(expected));
+            // check error attributes
+            assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_REQUEST_URI + "=/servletContext/secure"));
+            assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_SERVLET_NAME + "=secure"));
+            assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_MESSAGE + "=" + StatusCodes.getReason(statusCode)));
+            assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=" + statusCode));
+            // check forward attributes
+            assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_REQUEST_URI + "=/servletContext/secure"));
+            assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_CONTEXT_PATH + "=/servletContext"));
+            // RequestDispatcher.FORWARD_QUERY_STRING is null
+            // RequestDispatcher.FORWARD_PATH_INFO is null
+            assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_SERVLET_PATH + "=/secure"));
+            return null;
+        });
     }
 }

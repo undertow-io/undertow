@@ -34,14 +34,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.codec.binary.Hex;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder;
+import org.apache.hc.client5.http.ssl.TlsSocketStrategy;
+import org.apache.hc.client5.http.utils.Hex;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.io.entity.InputStreamEntity;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -229,8 +232,7 @@ public abstract class AbstractServletInputStreamTestCase {
 
 
     public void runTest(final String message, String url, boolean preamble, boolean offIOThread) throws IOException {
-        TestHttpClient client = createClient();
-        try {
+        try (CloseableHttpClient client = createClient()) {
             String uri = getBaseUrl() + "/servletContext/" + url;
             HttpPost post = new HttpPost(uri);
             if (preamble && !message.isEmpty()) {
@@ -240,63 +242,60 @@ public abstract class AbstractServletInputStreamTestCase {
                 post.addHeader("offIoThread", "true");
             }
             post.setEntity(new StringEntity(message));
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(message.length(), response.length());
-            Assert.assertEquals(message, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(message.length(), response.length());
+                Assert.assertEquals(message, response);
+                return null;
+            });
         }
     }
 
     public void runTestParallel(int concurrency, final String message, String url, boolean preamble, boolean offIOThread) throws Exception {
 
-        CloseableHttpClient client = HttpClients.custom()
+        TlsSocketStrategy clientTlsStrategyBuilder = ClientTlsStrategyBuilder.create().setSslContext(DefaultServer.getClientSSLContext()).buildClassic();
+        PoolingHttpClientConnectionManager connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+                .setTlsSocketStrategy(clientTlsStrategyBuilder)
                 .setMaxConnPerRoute(1000)
-                .setSSLContext(DefaultServer.createClientSslContext())
                 .build();
-        byte[] messageBytes = message.getBytes();
-        try {
+
+        try (CloseableHttpClient client = HttpClients.custom()
+                .setConnectionManager(connectionManager)
+                .build()) {
+            byte[] messageBytes = message.getBytes();
             ExecutorService executorService = Executors.newFixedThreadPool(concurrency);
-            Callable task = new Callable<Void>() {
-                @Override
-                public Void call() throws Exception {
-                    String uri = getBaseUrl() + "/servletContext/" + url;
-                    HttpPost post = new HttpPost(uri);
-                    if (preamble && !message.isEmpty()) {
-                        post.addHeader("preamble", Integer.toString(message.length() / 2));
-                    }
-                    if (offIOThread) {
-                        post.addHeader("offIoThread", "true");
-                    }
-                    post.setEntity(new InputStreamEntity(
-                            // Server should wait for events from the client
-                            new RateLimitedInputStream(new ByteArrayInputStream(messageBytes))));
-                    CloseableHttpResponse result = client.execute(post);
-                    try {
-                        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                        final String response = HttpClientUtils.readResponse(result);
-                        Assert.assertEquals(message.length(), response.length());
-                        Assert.assertEquals(message, response);
-                    } finally {
-                        result.close();
-                    }
-                    return null;
+            Callable<Void> task = () -> {
+                String uri = getBaseUrl() + "/servletContext/" + url;
+                HttpPost post = new HttpPost(uri);
+                if (preamble && !message.isEmpty()) {
+                    post.addHeader("preamble", Integer.toString(message.length() / 2));
                 }
+                if (offIOThread) {
+                    post.addHeader("offIoThread", "true");
+                }
+                post.setEntity(new InputStreamEntity(
+                        // Server should wait for events from the client
+                        new RateLimitedInputStream(new ByteArrayInputStream(messageBytes)), ContentType.TEXT_PLAIN));
+                client.execute(post, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    final String response = HttpClientUtils.readResponse(result);
+                    Assert.assertEquals(message.length(), response.length());
+                    Assert.assertEquals(message, response);
+                    return null;
+                });
+                return null;
             };
             List<Future<?>> results = new ArrayList<>();
             for (int i = 0; i < concurrency * 5; i++) {
                 Future<?> future = executorService.submit(task);
                 results.add(future);
             }
-            for(Future<?> i : results) {
+            for (Future<?> i : results) {
                 i.get();
             }
             executorService.shutdown();
             Assert.assertTrue(executorService.awaitTermination(70, TimeUnit.SECONDS));
-        } finally {
-            client.close();
         }
     }
 
@@ -326,8 +325,8 @@ public abstract class AbstractServletInputStreamTestCase {
         }
     }
 
-    protected TestHttpClient createClient() {
-        return new TestHttpClient();
+    protected CloseableHttpClient createClient() {
+        return TestHttpClient.defaultClient();
     }
 
 }

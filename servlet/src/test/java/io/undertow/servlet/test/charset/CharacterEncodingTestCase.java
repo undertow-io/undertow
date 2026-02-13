@@ -28,8 +28,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,21 +61,22 @@ public class CharacterEncodingTestCase {
 
     @Test
     public void testCharacterEncoding() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext?charset=UTF-16BE");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            byte[] response = HttpClientUtils.readRawResponse(result);
-            Assert.assertArrayEquals(UTF16, response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                byte[] response = HttpClientUtils.readRawResponse(result);
+                Assert.assertArrayEquals(UTF16, response);
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext?charset=UTF-8");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readRawResponse(result);
-            Assert.assertArrayEquals(UTF8, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                byte[] response = HttpClientUtils.readRawResponse(result);
+                Assert.assertArrayEquals(UTF8, response);
+                return null;
+            });
         }
     }
 }

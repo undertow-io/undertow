@@ -18,41 +18,41 @@
 
 package io.undertow.server.handlers.form;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.Headers;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 import junit.textui.TestRunner;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.utils.URLEncodedUtils;
-import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.HTTP;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
+import org.apache.hc.core5.net.WWWFormCodec;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Stuart Douglas
@@ -140,7 +140,7 @@ public class FormDataParserTestCase {
         runTestUrlEncoded(new BasicNameValuePair("name", "A Value"));
         runTestUrlEncoded(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("Single-value", null));
         runTestUrlEncoded(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
-        runTestUrlEncoded(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("Single-value", null) , new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
+        runTestUrlEncoded(new BasicNameValuePair("name", "A Value"), new BasicNameValuePair("Single-value", null), new BasicNameValuePair("A/name/with_special*chars", "A $ value&& with=SomeCharacters"));
     }
 
     @Test
@@ -168,12 +168,12 @@ public class FormDataParserTestCase {
         NameValuePair correctPair2 = new BasicNameValuePair("correctName2", "A Value2");
 
         StringBuilder stringBuilder = new StringBuilder();
+        WWWFormCodec.format(stringBuilder, List.of(correctPair), StandardCharsets.ISO_8859_1);
         stringBuilder
-                .append(URLEncodedUtils.format(java.util.Collections.singleton(correctPair), HTTP.DEF_CONTENT_CHARSET))
                 .append("&")
                 .append(wrongPair.getName()).append("=").append(wrongPair.getValue())
-                .append("&")
-                .append(URLEncodedUtils.format(java.util.Collections.singleton(correctPair2), HTTP.DEF_CONTENT_CHARSET));
+                .append("&");
+        WWWFormCodec.format(stringBuilder, List.of(correctPair2), StandardCharsets.ISO_8859_1);
 
         final List<NameValuePair> expectedData = new ArrayList<>();
         expectedData.add(correctPair);
@@ -186,25 +186,24 @@ public class FormDataParserTestCase {
         runTest(data, new UrlEncodedFormEntity(data));
     }
 
-    private void runTest(List<NameValuePair> data, HttpEntity entity) throws  Exception {
+    private void runTest(List<NameValuePair> data, HttpEntity entity) throws Exception {
         DefaultServer.setRootHandler(rootHandler);
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             post.setHeader(Headers.CONTENT_TYPE_STRING, FormEncodedDataDefinition.APPLICATION_X_WWW_FORM_URLENCODED);
             post.setEntity(entity);
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            checkResult(data, result);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                checkResult(data, result);
+                return null;
+            });
         }
     }
 
-    private void checkResult(final List<NameValuePair> data, final HttpResponse result) throws IOException {
+    private void checkResult(final List<NameValuePair> data, final ClassicHttpResponse result) throws IOException {
         Map<String, String> res = new HashMap<>();
         String content = HttpClientUtils.readResponse(result);
-        for(String value : content.split("\n")) {
+        for (String value : content.split("\n")) {
             String[] split = value.split(":");
             res.put(split[0], split.length == 1 ? "" : split[1]);
         }

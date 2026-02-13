@@ -20,6 +20,7 @@ package io.undertow.servlet.test.handlers;
 
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -36,10 +37,9 @@ public class HttpContinueSslServletTestCase extends AbstractHttpContinueServletT
         return DefaultServer.getDefaultServerSSLAddress();
     }
 
-    protected TestHttpClient getClient() {
-        TestHttpClient client = new TestHttpClient();
-        client.setSSLContext(DefaultServer.getClientSSLContext());
-        return client;
+    @Override
+    protected HttpClientBuilder getClientBuilder() {
+        return TestHttpClient.withSSLContext(DefaultServer.getClientSSLContext());
     }
 
     @BeforeClass

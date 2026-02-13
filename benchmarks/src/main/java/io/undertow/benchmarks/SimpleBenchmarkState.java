@@ -25,8 +25,12 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.util.Headers;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder;
+import org.apache.hc.client5.http.ssl.TlsSocketStrategy;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -105,12 +109,18 @@ public class SimpleBenchmarkState {
         undertow = builder.build();
         undertow.start();
 
+        TlsSocketStrategy socketStrategy = ClientTlsStrategyBuilder.create().setSslContext(TLSUtils.newClientContext()).buildClassic();
+
+        PoolingHttpClientConnectionManager connectionManager = PoolingHttpClientConnectionManagerBuilder.create()
+                .setTlsSocketStrategy(socketStrategy)
+                .setMaxConnPerRoute(100)
+                .setMaxConnTotal(100)
+                .build();
+
         client = HttpClients.custom()
                 .disableConnectionState()
                 .disableAutomaticRetries()
-                .setSSLContext(TLSUtils.newClientContext())
-                .setMaxConnPerRoute(100)
-                .setMaxConnTotal(100)
+                .setConnectionManager(connectionManager)
                 .build();
         baseUri = (listenerType == ListenerType.HTTP ? "http" : "https") + "://localhost:" + PORT;
     }

@@ -21,8 +21,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -87,32 +87,33 @@ public class SessionAttributesTestCase {
 
     @Test
     public void testSameSiteAndCustomAttribute() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/attributes");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("1", response);
-            String cookieValue = result.getHeaders("Set-Cookie")[0].getValue();
-            Assert.assertTrue(cookieValue, cookieValue.contains("MySessionCookie"));
-            Assert.assertTrue(cookieValue, cookieValue.contains("/servletContext/aa/"));
-            Assert.assertTrue(cookieValue, cookieValue.contains("SameSite=Strict"));
-            Assert.assertTrue(cookieValue, cookieValue.contains("Space=Above&Beyond"));
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("1", response);
+                String cookieValue = result.getHeaders("Set-Cookie")[0].getValue();
+                Assert.assertTrue(cookieValue, cookieValue.contains("MySessionCookie"));
+                Assert.assertTrue(cookieValue, cookieValue.contains("/servletContext/aa/"));
+                Assert.assertTrue(cookieValue, cookieValue.contains("SameSite=Strict"));
+                Assert.assertTrue(cookieValue, cookieValue.contains("Space=Above&Beyond"));
+                return null;
+            });
             //double back to regular session test thats done by counterparts
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("2", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("2", response);
+                return null;
+            });
 
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("3", response);
-
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("3", response);
+                return null;
+            });
         }
     }
 

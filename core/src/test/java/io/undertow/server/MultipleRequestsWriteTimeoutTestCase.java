@@ -31,13 +31,13 @@ import io.undertow.io.Sender;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.HttpString;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
-import org.apache.http.protocol.HTTP;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.DefaultConnectionKeepAliveStrategy;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.HeaderElements;
 import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.Test;
@@ -115,18 +115,21 @@ public class MultipleRequestsWriteTimeoutTestCase {
                     .setKeepAliveStrategy(DefaultConnectionKeepAliveStrategy.INSTANCE)
                     .build()) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-                get.setHeader(HTTP.CONN_KEEP_ALIVE, "timeout=5");
+                get.setHeader(HeaderElements.KEEP_ALIVE, "timeout=5");
 
                 log.infof("Request 1");
-                CloseableHttpResponse response = client.execute(get);
-                readContent(response);
-
+                client.execute(get, response -> {
+                    readContent(response);
+                    return null;
+                });
                 // Delay a bit. If the write timeout measuring is not reset in between requests, the second request would time out.
                 Thread.sleep(WRITE_TIMEOUT_VALUE * 3L);
 
                 log.infof("Request 2");
-                response = client.execute(get);
-                readContent(response);
+                client.execute(get, response -> {
+                    readContent(response);
+                    return null;
+                });
             }
         }
         assertSuccess();
@@ -184,14 +187,16 @@ public class MultipleRequestsWriteTimeoutTestCase {
                     .setKeepAliveStrategy(DefaultConnectionKeepAliveStrategy.INSTANCE)
                     .build()) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-                CloseableHttpResponse response = client.execute(get);
-                readContent(response);
+                client.execute(get, response -> {
+                    readContent(response);
+                    return null;
+                });
             }
         }
         assertSuccess();
     }
 
-    private void readContent(CloseableHttpResponse response) {
+    private void readContent(ClassicHttpResponse response) {
         byte[] buffer = new byte[512];
         int read;
         try {

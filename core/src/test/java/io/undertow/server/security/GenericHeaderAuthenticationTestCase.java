@@ -26,9 +26,9 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -64,22 +64,25 @@ public class GenericHeaderAuthenticationTestCase extends AuthenticationTestBase 
     }
 
     static void _testGenericHeaderSucess() throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-        HttpClientUtils.readResponse(result);
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
-        get = new HttpGet(DefaultServer.getDefaultServerURL());
-        get.addHeader("user", "userOne");
-        get.addHeader("cookie", "sessionid=passwordOne");
-        result = client.execute(get);
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            get = new HttpGet(DefaultServer.getDefaultServerURL());
+            get.addHeader("user", "userOne");
+            get.addHeader("cookie", "sessionid=passwordOne");
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-        Header[] values = result.getHeaders("ProcessedBy");
-        assertEquals(1, values.length);
-        assertEquals("ResponseHandler", values[0].getValue());
-        HttpClientUtils.readResponse(result);
+                Header[] values = result.getHeaders("ProcessedBy");
+                assertEquals(1, values.length);
+                assertEquals("ResponseHandler", values[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
+        }
     }
 
     @Test
@@ -89,18 +92,21 @@ public class GenericHeaderAuthenticationTestCase extends AuthenticationTestBase 
     }
 
     static void _testBadUserName() throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-        HttpClientUtils.readResponse(result);
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
-        get = new HttpGet(DefaultServer.getDefaultServerURL());
-        get.addHeader("user", "badUser");
-        get.addHeader("cookie", "sessionid=badPassword");
-        result = client.execute(get);
-        assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-        HttpClientUtils.readResponse(result);
+            get = new HttpGet(DefaultServer.getDefaultServerURL());
+            get.addHeader("user", "badUser");
+            get.addHeader("cookie", "sessionid=badPassword");
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
+        }
     }
 
     @Test
@@ -110,18 +116,21 @@ public class GenericHeaderAuthenticationTestCase extends AuthenticationTestBase 
     }
 
     static void _testBadPassword() throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-        HttpClientUtils.readResponse(result);
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
-        get = new HttpGet(DefaultServer.getDefaultServerURL());
-        get.addHeader("user", "userOne");
-        get.addHeader("cookie", "sessionid=badPassword");
-        result = client.execute(get);
-        assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-        HttpClientUtils.readResponse(result);
+            get = new HttpGet(DefaultServer.getDefaultServerURL());
+            get.addHeader("user", "userOne");
+            get.addHeader("cookie", "sessionid=badPassword");
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
+        }
     }
 
 }

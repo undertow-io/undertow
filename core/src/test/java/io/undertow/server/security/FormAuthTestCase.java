@@ -23,7 +23,6 @@ import io.undertow.security.api.AuthenticationMechanism;
 import io.undertow.security.impl.CachedAuthenticatedSessionMechanism;
 import io.undertow.security.impl.FormAuthenticationMechanism;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PredicateHandler;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.SessionAttachmentHandler;
@@ -32,17 +31,18 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.ProtocolException;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultRedirectStrategy;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.HttpContext;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.impl.DefaultRedirectStrategy;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpRequest;
+import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.ProtocolException;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
+import org.apache.hc.core5.http.protocol.HttpContext;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -65,12 +65,8 @@ public class FormAuthTestCase extends AuthenticationTestBase {
 
     @Override
     protected void setRootHandler(HttpHandler current) {
-        final PredicateHandler handler = new PredicateHandler(Predicates.path("/login"), new HttpHandler() {
-            @Override
-            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.getResponseSender().send("Login Page");
-            }
-        }, current);
+        final PredicateHandler handler = new PredicateHandler(Predicates.path("/login"), exchange ->
+                exchange.getResponseSender().send("Login Page"), current);
         super.setRootHandler(new SessionAttachmentHandler(handler, new InMemorySessionManager("test"), new SessionCookieConfig()));
     }
 
@@ -80,31 +76,32 @@ public class FormAuthTestCase extends AuthenticationTestBase {
 
     @Test
     public void testFormAuth() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setRedirectStrategy(new DefaultRedirectStrategy() {
-            @Override
-            public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
-                Header[] locationHeaders = response.getHeaders("Location");
-                if (locationHeaders != null && locationHeaders.length > 0) {
-                    for (Header locationHeader : locationHeaders) {
-                        assertFalse("Location header incorrectly computed resulting in wrong request URI upon redirect, " +
-                                        "failed probably due UNDERTOW-884",
-                                locationHeader.getValue().startsWith(DefaultServer.getDefaultServerURL() + DefaultServer.getDefaultServerURL()));
+        try (CloseableHttpClient client = TestHttpClient.custom()
+                .setRedirectStrategy(new DefaultRedirectStrategy() {
+                    @Override
+                    public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
+                        Header[] locationHeaders = response.getHeaders("Location");
+                        if (locationHeaders != null) {
+                            for (Header locationHeader : locationHeaders) {
+                                assertFalse("Location header incorrectly computed resulting in wrong request URI upon redirect, " +
+                                                "failed probably due UNDERTOW-884",
+                                        locationHeader.getValue().startsWith(DefaultServer.getDefaultServerURL() + DefaultServer.getDefaultServerURL()));
+                            }
+                        }
+                        if (response.getCode() == StatusCodes.FOUND) {
+                            return true;
+                        }
+                        return super.isRedirected(request, response, context);
                     }
-                }
-                if (response.getStatusLine().getStatusCode() == StatusCodes.FOUND) {
-                    return true;
-                }
-                return super.isRedirected(request, response, context);
-            }
-        });
-        try {
+                }).build()) {
             final String uri = DefaultServer.getDefaultServerURL() + "/secured/test";
             HttpGet get = new HttpGet(uri);
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Login Page", response);
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Login Page", response);
+                return null;
+            });
 
             BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "userOne"), new BasicNameValuePair("j_password", "passwordOne")};
             final List<NameValuePair> data = new ArrayList<>();
@@ -113,15 +110,14 @@ public class FormAuthTestCase extends AuthenticationTestBase {
 
             post.setEntity(new UrlEncodedFormEntity(data));
 
-            result = client.execute(post);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(post, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-            Header[] values = result.getHeaders("ProcessedBy");
-            assertEquals(1, values.length);
-            assertEquals("ResponseHandler", values[0].getValue());
-            HttpClientUtils.readResponse(result);
-        } finally {
-            client.getConnectionManager().shutdown();
+                Header[] values = result.getHeaders("ProcessedBy");
+                assertEquals(1, values.length);
+                assertEquals("ResponseHandler", values[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
 

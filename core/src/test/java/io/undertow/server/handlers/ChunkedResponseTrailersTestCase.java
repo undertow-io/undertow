@@ -18,25 +18,22 @@
 
 package io.undertow.server.handlers;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.StringWriteChannelListener;
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpResponseInterceptor;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.io.ChunkedInputStream;
-import org.apache.http.protocol.HttpContext;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.impl.io.ChunkedInputStream;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -71,27 +68,24 @@ public class ChunkedResponseTrailersTestCase {
     public static void setup() {
         final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
-        blockingHandler.setRootHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) {
-                try {
-                    if (connection == null) {
-                        connection = exchange.getConnection();
-                    } else if (!DefaultServer.isAjp()  && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
-                        final OutputStream outputStream = exchange.getOutputStream();
-                        outputStream.write("Connection not persistent".getBytes());
-                        outputStream.close();
-                        return;
-                    }
-                    HeaderMap trailers = new HeaderMap();
-                    exchange.putAttachment(HttpAttachments.RESPONSE_TRAILERS, trailers);
-                    trailers.put(HttpString.tryFromString("foo"), "fooVal");
-                    trailers.put(HttpString.tryFromString("bar"), "barVal");
-                    new StringWriteChannelListener(message).setup(exchange.getResponseChannel());
-
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+        blockingHandler.setRootHandler(exchange -> {
+            try {
+                if (connection == null) {
+                    connection = exchange.getConnection();
+                } else if (!DefaultServer.isAjp() && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
+                    final OutputStream outputStream = exchange.getOutputStream();
+                    outputStream.write("Connection not persistent".getBytes());
+                    outputStream.close();
+                    return;
                 }
+                HeaderMap trailers = new HeaderMap();
+                exchange.putAttachment(HttpAttachments.RESPONSE_TRAILERS, trailers);
+                trailers.put(HttpString.tryFromString("foo"), "fooVal");
+                trailers.put(HttpString.tryFromString("bar"), "barVal");
+                new StringWriteChannelListener(message).setup(exchange.getResponseChannel());
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         });
     }
@@ -101,60 +95,56 @@ public class ChunkedResponseTrailersTestCase {
         Assume.assumeFalse(DefaultServer.isH2()); //this test will still run under h2-upgrade, but will fail
 
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-        TestHttpClient client = new TestHttpClient();
         final AtomicReference<ChunkedInputStream> stream = new AtomicReference<>();
-        client.addResponseInterceptor(new HttpResponseInterceptor() {
 
-            public void process(final HttpResponse response, final HttpContext context) throws IOException {
-                HttpEntity entity = response.getEntity();
-                if (entity != null) {
-                    InputStream instream = entity.getContent();
-                    if (instream instanceof ChunkedInputStream) {
-                        stream.set(((ChunkedInputStream) instream));
+        try (CloseableHttpClient client = TestHttpClient.custom().addResponseInterceptorLast((response, entityDetails, context) -> {
+            HttpEntity entity = ((ClassicHttpResponse) response).getEntity();
+            if (entity != null) {
+                InputStream instream = entity.getContent();
+                if (instream instanceof ChunkedInputStream) {
+                    stream.set(((ChunkedInputStream) instream));
+                }
+            }
+        }).build()) {
+            generateMessage(1);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+
+                Assert.assertEquals(message, HttpClientUtils.readResponse(result));
+
+                Header[] footers = stream.get().getFooters();
+                Assert.assertEquals(2, footers.length);
+                for (final Header header : footers) {
+                    if (header.getName().equals("foo")) {
+                        Assert.assertEquals("fooVal", header.getValue());
+                    } else if (header.getName().equals("bar")) {
+                        Assert.assertEquals("barVal", header.getValue());
+                    } else {
+                        Assert.fail("Unknown header" + header);
                     }
                 }
-            }
-        });
-        try {
-            generateMessage(1);
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-
-            Assert.assertEquals(message, HttpClientUtils.readResponse(result));
-
-            Header[] footers = stream.get().getFooters();
-            Assert.assertEquals(2, footers.length);
-            for (final Header header : footers) {
-                if (header.getName().equals("foo")) {
-                    Assert.assertEquals("fooVal", header.getValue());
-                } else if (header.getName().equals("bar")) {
-                    Assert.assertEquals("barVal", header.getValue());
-                } else {
-                    Assert.fail("Unknown header" + header);
-                }
-            }
+                return null;
+            });
 
             generateMessage(1000);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(message, HttpClientUtils.readResponse(result));
-            footers = stream.get().getFooters();
-            Assert.assertEquals(2, footers.length);
-            for (final Header header : footers) {
-                if (header.getName().equals("foo")) {
-                    Assert.assertEquals("fooVal", header.getValue());
-                } else if (header.getName().equals("bar")) {
-                    Assert.assertEquals("barVal", header.getValue());
-                } else {
-                    Assert.fail("Unknown header" + header);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals(message, HttpClientUtils.readResponse(result));
+                Header[] footers = stream.get().getFooters();
+                Assert.assertEquals(2, footers.length);
+                for (final Header header : footers) {
+                    if (header.getName().equals("foo")) {
+                        Assert.assertEquals("fooVal", header.getValue());
+                    } else if (header.getName().equals("bar")) {
+                        Assert.assertEquals("barVal", header.getValue());
+                    } else {
+                        Assert.fail("Unknown header" + header);
+                    }
                 }
-            }
-        } finally {
-            client.getConnectionManager().shutdown();
+                return null;
+            });
         }
-
     }
-
 
     private static void generateMessage(int repetitions) {
         final StringBuilder builder = new StringBuilder(repetitions * MESSAGE.length());

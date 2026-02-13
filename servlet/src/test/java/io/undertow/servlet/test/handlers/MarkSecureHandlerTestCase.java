@@ -32,15 +32,16 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletException;
+
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 
@@ -77,21 +78,19 @@ public class MarkSecureHandlerTestCase {
 
         DefaultServer.setRootHandler(new MarkSecureHandler(root));
 
-        TestHttpClient client = new TestHttpClient();
-
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/issecure");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            // When MarkSecureHandler is enabled, req.isSecure() should be true
-            Assert.assertEquals("true", result.getHeaders("issecure")[0].getValue());
-            // When SecureCookieHandler is not enabled, secure cookie is not automatically enabled.
-            Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("foo=bar", header.getValue());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(HELLO_WORLD, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                // When MarkSecureHandler is enabled, req.isSecure() should be true
+                Assert.assertEquals("true", result.getHeaders("issecure")[0].getValue());
+                // When SecureCookieHandler is not enabled, secure cookie is not automatically enabled.
+                Header header = result.getFirstHeader("set-cookie");
+                Assert.assertEquals("foo=bar", header.getValue());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(HELLO_WORLD, response);
+                return null;
+            });
         }
     }
 
@@ -120,20 +119,19 @@ public class MarkSecureHandlerTestCase {
 
         DefaultServer.setRootHandler(new MarkSecureHandler(new SecureCookieHandler(root)));
 
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/issecure");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            // When MarkSecureHandler is enabled, req.isSecure() should be true
-            Assert.assertEquals("true", result.getHeaders("issecure")[0].getValue());
-            // When SecureCookieHandler is enabled with MarkSecureHandler, secure cookie is enabled as this channel is treated as secure
-            Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("foo=bar; Secure", header.getValue());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(HELLO_WORLD, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                // When MarkSecureHandler is enabled, req.isSecure() should be true
+                Assert.assertEquals("true", result.getHeaders("issecure")[0].getValue());
+                // When SecureCookieHandler is enabled with MarkSecureHandler, secure cookie is enabled as this channel is treated as secure
+                Header header = result.getFirstHeader("set-cookie");
+                Assert.assertEquals("foo=bar; Secure", header.getValue());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(HELLO_WORLD, response);
+                return null;
+            });
         }
     }
 }

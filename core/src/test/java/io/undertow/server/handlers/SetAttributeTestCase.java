@@ -25,8 +25,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -51,29 +51,31 @@ public class SetAttributeTestCase {
     public void testSettingHeader() throws IOException {
         DefaultServer.setRootHandler(Handlers.setAttribute(ResponseCodeHandler.HANDLE_200, "%{o,Foo}", "%U-%{q,p1}", SetAttributeHandler.class.getClassLoader()));
 
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/a");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/path/a-", result.getHeaders("foo")[0].getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("/path/a-", result.getHeaders("foo")[0].getValue());
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/a?p1=someQp");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/path/a-someQp", result.getHeaders("foo")[0].getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("/path/a-someQp", result.getHeaders("foo")[0].getValue());
+                return null;
+            });
 
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/a?p1=someQp&p1=value2");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/path/a-[someQp, value2]", result.getHeaders("foo")[0].getValue());
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("/path/a-[someQp, value2]", result.getHeaders("foo")[0].getValue());
+                return null;
+            });
         }
     }
 
@@ -87,45 +89,45 @@ public class SetAttributeTestCase {
                                 rewrite("path-template['/foo/{bar}/{woz}']", "/foo?bar=${bar}&woz=${woz}", getClass().getClassLoader(), new InfoHandler()))
                 ));
 
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/relative/foo/a/b");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("URI: /relative/foo relative: /foo QS:bar=a&woz=b bar: a woz: b", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("URI: /relative/foo relative: /foo QS:bar=a&woz=b bar: a woz: b", response);
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somePath/foo/a/b");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("URI: /otherPath/foo/a/b relative: /foo/a/b QS:", response);
-
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("URI: /otherPath/foo/a/b relative: /foo/a/b QS:", response);
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somePath/foo?a=b");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("URI: /otherPath/foo relative: /foo QS:a=b a: b", response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("URI: /otherPath/foo relative: /foo QS:a=b a: b", response);
+                return null;
+            });
         }
 
         DefaultServer.setRootHandler(
                 rewrite("regex['/oldPath']", "/newPath?baz=qux", getClass().getClassLoader(),
                         path().addPrefixPath("/", new InfoHandler()))
         );
-        client = new TestHttpClient();
-        try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/oldPath?foo=bar");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("URI: /newPath relative: /newPath QS:baz=qux baz: qux", response);
 
-        } finally {
-            client.getConnectionManager().shutdown();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/oldPath?foo=bar");
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("URI: /newPath relative: /newPath QS:baz=qux baz: qux", response);
+                return null;
+            });
         }
     }
 
@@ -135,22 +137,22 @@ public class SetAttributeTestCase {
             Handlers.setAttribute(new InfoHandler(), "%{q,baz}", "qux", SetAttributeHandler.class.getClassLoader())
         );
 
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("URI: /test relative: /test QS:baz=qux baz: qux", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("URI: /test relative: /test QS:baz=qux baz: qux", response);
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test?foo=bar");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("URI: /test relative: /test QS:baz=qux&foo=bar baz: qux foo: bar", response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("URI: /test relative: /test QS:baz=qux&foo=bar baz: qux foo: bar", response);
+                return null;
+            });
         }
     }
 

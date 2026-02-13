@@ -18,9 +18,10 @@
 
 package io.undertow.servlet.test.handlers;
 
-import org.junit.runner.RunWith;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.junit.runner.RunWith;
 
 /**
  * @author Stuart Douglas
@@ -32,8 +33,8 @@ public class HttpContinueServletTestCase extends AbstractHttpContinueServletTest
         return DefaultServer.getDefaultServerURL();
     }
 
-    protected TestHttpClient getClient() {
-        return new TestHttpClient();
+    protected HttpClientBuilder getClientBuilder() {
+        return TestHttpClient.custom();
     }
 
 }

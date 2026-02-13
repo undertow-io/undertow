@@ -32,16 +32,17 @@ import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import jakarta.servlet.ServletException;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -86,32 +87,29 @@ public class ProxyForwardedTestCase {
 
     @Test
     public void testForwardedHandler() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
-
+        try (CloseableHttpClient client = TestHttpClient.defaultClient();
+             Socket socket = new Socket()) {
             HttpGet getForwardedHandler = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/forwardedHandler");
             getForwardedHandler.addHeader(Headers.FORWARDED_STRING, "for=192.0.2.43");
             getForwardedHandler.addHeader(Headers.FORWARDED_STRING, "by=203.0.113.60");
             getForwardedHandler.addHeader(Headers.FORWARDED_STRING, "proto=http");
             getForwardedHandler.addHeader(Headers.FORWARDED_STRING, "host=192.0.2.10:8888");
-            HttpResponse result = client.execute(getForwardedHandler);
-            HttpEntity entity = result.getEntity();
-            String results = EntityUtils.toString(entity);
-            Map<String, String> map = convertWithStream(results);
-            Socket socket = new Socket();
-            socket.connect(new InetSocketAddress(DefaultServer.getHostAddress(), PORT));
+            client.execute(getForwardedHandler, result -> {
+                HttpEntity entity = result.getEntity();
+                String results = EntityUtils.toString(entity);
+                Map<String, String> map = convertWithStream(results);
+                socket.connect(new InetSocketAddress(DefaultServer.getHostAddress(), PORT));
 
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(socket.getLocalAddress().getHostAddress(), map.get(GenericServletConstants.LOCAL_ADDR));
-            Assert.assertEquals(socket.getLocalAddress().getHostName(), map.get(GenericServletConstants.LOCAL_NAME));
-            Assert.assertEquals(PORT, Integer.parseInt(map.get(GenericServletConstants.LOCAL_PORT)));
-            Assert.assertEquals("192.0.2.10", map.get(GenericServletConstants.SERVER_NAME));
-            Assert.assertEquals("8888", map.get(GenericServletConstants.SERVER_PORT));
-            Assert.assertEquals("192.0.2.43", map.get(GenericServletConstants.REMOTE_ADDR));
-            Assert.assertEquals("0", map.get(GenericServletConstants.REMOTE_PORT));
-
-        } finally {
-            client.getConnectionManager().shutdown();
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals(socket.getLocalAddress().getHostAddress(), map.get(GenericServletConstants.LOCAL_ADDR));
+                Assert.assertEquals(socket.getLocalAddress().getHostName(), map.get(GenericServletConstants.LOCAL_NAME));
+                Assert.assertEquals(PORT, Integer.parseInt(map.get(GenericServletConstants.LOCAL_PORT)));
+                Assert.assertEquals("192.0.2.10", map.get(GenericServletConstants.SERVER_NAME));
+                Assert.assertEquals("8888", map.get(GenericServletConstants.SERVER_PORT));
+                Assert.assertEquals("192.0.2.43", map.get(GenericServletConstants.REMOTE_ADDR));
+                Assert.assertEquals("0", map.get(GenericServletConstants.REMOTE_PORT));
+                return null;
+            });
         }
     }
 

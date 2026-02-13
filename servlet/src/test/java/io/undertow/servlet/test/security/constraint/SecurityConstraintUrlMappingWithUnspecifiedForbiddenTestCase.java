@@ -35,8 +35,8 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import jakarta.servlet.ServletException;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -152,27 +152,23 @@ public class SecurityConstraintUrlMappingWithUnspecifiedForbiddenTestCase extend
     @Test
     @Override
     public void testUnknown() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/unknown");
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
 
     @Test
     public void testPublic() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/public");
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
 
@@ -180,16 +176,14 @@ public class SecurityConstraintUrlMappingWithUnspecifiedForbiddenTestCase extend
     @Override
     public void testExtensionMatch() throws IOException {
         runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/extension/a.html", "user1:password1", "user2:password2");
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/public/a.html");
             get.addHeader("ExpectedMechanism", "None");
             get.addHeader("ExpectedUser", "None");
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
 }

@@ -25,10 +25,10 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.Methods;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -43,45 +43,43 @@ public class AllowedMethodsTestCase {
 
     @Test
     public void testAllowedMethods() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             final AllowedMethodsHandler handler = new AllowedMethodsHandler(ResponseCodeHandler.HANDLE_200, Methods.POST);
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.METHOD_NOT_ALLOWED, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.METHOD_NOT_ALLOWED, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             post.setEntity(new StringEntity("foo"));
-            result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
 
     @Test
     public void testDisallowedMethods() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             final DisallowedMethodsHandler handler = new DisallowedMethodsHandler(ResponseCodeHandler.HANDLE_200, Methods.GET);
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.METHOD_NOT_ALLOWED, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.METHOD_NOT_ALLOWED, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             post.setEntity(new StringEntity("foo"));
-            result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
 

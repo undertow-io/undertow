@@ -24,23 +24,25 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.mime.MultipartEntity;
-import org.apache.http.entity.mime.content.StringBody;
-import org.apache.http.message.BasicNameValuePair;
+import jakarta.servlet.ServletException;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
+import org.apache.hc.client5.http.entity.mime.StringBody;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.net.URLEncoder;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -61,62 +63,59 @@ public class ParameterCharacterEncodingTestCase {
 
     @Test
     public void testUrlCharacterEncoding() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             String message = "abc (\"čšž\")";
             String charset = "UTF-8";
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext?charset=" + charset + "&message=" + URLEncoder.encode(message, "UTF-8"));
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(message, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(message, response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testUrlPathEncodings() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             String message = "abc(\"čšž\")";
             String charset = "UTF-8";
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + URLEncoder.encode(message, "UTF-8") + "?charset=" + charset);
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(message, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(message, response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testMultipartCharacterEncoding() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             String message = "abcčšž";
             String charset = "UTF-8";
 
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext");
 
-            MultipartEntity multipart = new MultipartEntity();
-            multipart.addPart("charset", new StringBody(charset, Charset.forName(charset)));
-            multipart.addPart("message", new StringBody(message, Charset.forName(charset)));
+            HttpEntity multipart = MultipartEntityBuilder.create()
+                    .addPart("charset", new StringBody(charset, ContentType.create("text/plain", charset)))
+                    .addPart("message", new StringBody(message, ContentType.create("text/plain", charset)))
+                    .build();
             post.setEntity(multipart);
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(message, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(message, response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testFormDataCharacterEncoding() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             String message = "abcčšž";
             String charset = "UTF-8";
 
@@ -124,14 +123,14 @@ public class ParameterCharacterEncodingTestCase {
             final List<NameValuePair> values = new ArrayList<>();
             values.add(new BasicNameValuePair("charset", charset));
             values.add(new BasicNameValuePair("message", message));
-            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, "UTF-8");
+            UrlEncodedFormEntity data = new UrlEncodedFormEntity(values, StandardCharsets.UTF_8);
             post.setEntity(data);
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(message, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(message, response);
+                return null;
+            });
         }
     }
 }

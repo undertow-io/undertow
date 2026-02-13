@@ -27,9 +27,9 @@ import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -70,72 +70,72 @@ public class MaxRequestSizeTestCase {
     @Test
     public void testMaxRequestHeaderSize() throws IOException {
         OptionMap existing = DefaultServer.getUndertowOptions();
-        final TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             post.addHeader(Headers.CONNECTION_STRING, "close");
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             OptionMap maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 10);
             DefaultServer.setUndertowOptions(maxSize);
 
-            try {
-                HttpResponse response = client.execute(post);
-                HttpClientUtils.readResponse(response);
-
-                Assert.assertEquals(StatusCodes.BAD_REQUEST, response.getStatusLine().getStatusCode());
-            } catch (IOException e) {
-                //expected
-            }
+            client.execute(post, response -> {
+                try {
+                    HttpClientUtils.readResponse(response);
+                    Assert.assertEquals(StatusCodes.BAD_REQUEST, response.getCode());
+                } catch (IOException e) {
+                    //expected
+                }
+                return null;
+            });
 
             maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 1000);
             DefaultServer.setUndertowOptions(maxSize);
-            result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         } finally {
             DefaultServer.setUndertowOptions(existing);
-            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testMaxRequestEntitySize() throws IOException {
         OptionMap existing = DefaultServer.getUndertowOptions();
-        final TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             post.addHeader(Headers.CONNECTION_STRING, "close");
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             OptionMap maxSize = OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) A_MESSAGE.length() - 1);
             DefaultServer.setUndertowOptions(maxSize);
 
             post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
-            result = client.execute(post);
-            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 1000);
             DefaultServer.setUndertowOptions(maxSize);
             post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             post.addHeader(Headers.CONNECTION_STRING, "close");
-            result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         } finally {
             DefaultServer.setUndertowOptions(existing);
-            client.getConnectionManager().shutdown();
         }
     }
 }

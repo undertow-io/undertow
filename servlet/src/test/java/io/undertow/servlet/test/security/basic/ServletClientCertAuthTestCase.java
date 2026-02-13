@@ -26,10 +26,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import javax.net.ssl.SSLContext;
+
 import jakarta.servlet.ServletException;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -172,21 +173,17 @@ public class ServletClientCertAuthTestCase {
 
 
     public void testCall(final String path, final String expectedResponse, int expect) throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        client.setSSLContext(clientSSLContext);
-        try {
+        try (CloseableHttpClient client = TestHttpClient.withSSLContext(clientSSLContext).build()) {
             String url = DefaultServer.getDefaultServerSSLAddress() + "/servletContext/secured/" + path;
             HttpGet get = new HttpGet(url);
-            HttpResponse result = client.execute(get);
-            assertEquals(expect, result.getStatusLine().getStatusCode());
-
-            final String response = HttpClientUtils.readResponse(result);
-            if (expect == 200) {
-                assertEquals(expectedResponse, response);
-            }
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                assertEquals(expect, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                if (expect == 200) {
+                    assertEquals(expectedResponse, response);
+                }
+                return null;
+            });
         }
     }
-
 }

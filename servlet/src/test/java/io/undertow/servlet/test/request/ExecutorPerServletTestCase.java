@@ -18,6 +18,22 @@
 
 package io.undertow.servlet.test.request;
 
+import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
+import jakarta.servlet.ServletException;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,23 +41,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import jakarta.servlet.ServletException;
-
-import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 /**
  * @author Stuart Douglas
@@ -89,18 +88,16 @@ public class ExecutorPerServletTestCase {
                 futures.add(executor.submit(new Runnable() {
                     @Override
                     public void run() {
-                        TestHttpClient client = new TestHttpClient();
-                        try {
+                        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
                             for (int i = 0; i < NUM_REQUESTS; ++i) {
                                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext" + path);
-                                HttpResponse result = client.execute(get);
-                                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                                final String response = HttpClientUtils.readResponse(result);
+                                client.execute(get, result -> {
+                                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                                    return HttpClientUtils.readResponse(result);
+                                });
                             }
                         } catch (IOException e) {
                             throw new RuntimeException(e);
-                        } finally {
-                            client.getConnectionManager().shutdown();
                         }
                     }
                 }));
@@ -108,14 +105,12 @@ public class ExecutorPerServletTestCase {
             for (Future<?> future : futures) {
                 future.get();
             }
-            TestHttpClient client = new TestHttpClient();
-            try {
+            try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext" + path);
-                HttpResponse result = client.execute(get);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                return Integer.parseInt(HttpClientUtils.readResponse(result));
-            } finally {
-                client.getConnectionManager().shutdown();
+                return client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    return Integer.parseInt(HttpClientUtils.readResponse(result));
+                });
             }
         } finally {
             executor.shutdown();

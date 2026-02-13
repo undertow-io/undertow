@@ -32,8 +32,10 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletException;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.ClientProtocolException;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.HttpResponse;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -84,22 +86,19 @@ public class DispatchingFilterTestCase {
     public void test() throws InterruptedException, ServletException, IOException {
         final FutureResult<HttpResponse> responseFuture = new FutureResult<>();
         new Thread(() -> {
-            TestHttpClient client = new TestHttpClient();
-            try {
+            try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path/default");
-                responseFuture.setResult(client.execute(get));
-            } catch (org.apache.http.client.ClientProtocolException e) {
+                responseFuture.setResult(client.execute(get, r -> r));
+            } catch (ClientProtocolException e) {
                 e.printStackTrace();
             } catch (IOException e) {
                 responseFuture.setException(e);
-            } finally {
-                client.getConnectionManager().shutdown();
             }
         }).start();
         readyToStop.getIoFuture().await();
         manager.stop();
         final HttpResponse result = responseFuture.getIoFuture().get();
-        final int statusCode = result.getStatusLine().getStatusCode();
+        final int statusCode = result.getCode();
         // the deployment is stopped, we can expect an 500 or 404 (depends on OS)
         Assert.assertTrue(statusCode == StatusCodes.INTERNAL_SERVER_ERROR || statusCode == io.undertow.util.StatusCodes.NOT_FOUND);
     }

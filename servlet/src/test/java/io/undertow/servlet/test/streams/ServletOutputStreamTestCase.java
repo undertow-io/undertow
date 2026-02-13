@@ -18,26 +18,22 @@
 
 package io.undertow.servlet.test.streams;
 
-import java.io.IOException;
-
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-
-import io.undertow.servlet.ServletExtension;
-import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import jakarta.servlet.ServletException;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
 
 /**
  * @author Stuart Douglas
@@ -58,12 +54,7 @@ public class ServletOutputStreamTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
-        DeploymentUtils.setupServlet(new ServletExtension() {
-            @Override
-            public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
-                deploymentInfo.setIgnoreFlush(false);
-            }
-        },
+        DeploymentUtils.setupServlet((deploymentInfo, servletContext) -> deploymentInfo.setIgnoreFlush(false),
                 new ServletInfo(BLOCKING_SERVLET, BlockingOutputStreamServlet.class)
                         .addMapping("/" + BLOCKING_SERVLET),
                 new ServletInfo(ASYNC_SERVLET, AsyncOutputStreamServlet.class)
@@ -77,52 +68,51 @@ public class ServletOutputStreamTestCase {
 
     @Test
     public void testFlushAndCloseWithContentLength() throws Exception {
-        TestHttpClient client = createClient();
-        try {
+        try (CloseableHttpClient client = createClient()) {
             String uri = getBaseUrl() + "/servletContext/" + CONTENT_LENGTH_SERVLET;
 
             HttpGet get = new HttpGet(uri);
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("a", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("a", response);
+                return null;
+            });
 
             get = new HttpGet(uri);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("OK", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("OK", response);
+                return null;
+            });
         }
     }
 
-    protected TestHttpClient createClient() {
-        return new TestHttpClient();
+    protected CloseableHttpClient createClient() {
+        return TestHttpClient.defaultClient();
     }
 
 
     @Test
     public void testResetBuffer() throws Exception {
-        TestHttpClient client = createClient();
-        try {
+        try (CloseableHttpClient client = createClient()) {
             String uri = getBaseUrl() + "/servletContext/" + RESET;
 
             HttpGet get = new HttpGet(uri);
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("hello world", response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("hello world", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testBlockingServletOutputStream() throws IOException {
         Assume.assumeFalse(DefaultServer.isH2upgrade()); // FIXME UNDERTOW-1937 returns 503 instead of 200
-        message = START +  HELLO_WORLD + END;
+        message = START + HELLO_WORLD + END;
         runTest(message, BLOCKING_SERVLET, false, true, 1, true, false, false);
 
         StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
@@ -235,8 +225,7 @@ public class ServletOutputStreamTestCase {
     }
 
     public void runTest(final String message, String url, final boolean flush, final boolean close, int reps, boolean initialFlush, boolean writePreable, boolean offIoThread) throws IOException {
-        TestHttpClient client = createClient();
-        try {
+        try (CloseableHttpClient client = createClient()) {
             ServletOutputStreamTestCase.message = message;
             String uri = getBaseUrl() + "/servletContext/" + url + "?reps=" + reps + "&";
             if (flush) {
@@ -245,33 +234,33 @@ public class ServletOutputStreamTestCase {
             if (close) {
                 uri = uri + "close=true&";
             }
-            if(initialFlush) {
+            if (initialFlush) {
                 uri = uri + "initialFlush=true&";
             }
-            if(writePreable) {
+            if (writePreable) {
                 uri = uri + "preamble=true&";
             }
-            if(offIoThread) {
+            if (offIoThread) {
                 uri += "offIoThread=true&";
             }
             HttpGet get = new HttpGet(uri);
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            StringBuilder builder = new StringBuilder(reps * message.length());
-            for (int j = 0; j < reps; ++j) {
-                builder.append(message);
-            }
-            if(writePreable) {
-                builder.append(builder.toString()); //content gets written twice in this case
-            }
-            final String response = HttpClientUtils.readResponse(result);
-            String expected = builder.toString();
-            Assert.assertTrue("Must start with START", response.startsWith(START));
-            Assert.assertTrue("Must end with END", response.endsWith(END));
-            Assert.assertEquals(expected.length(), response.length());
-            Assert.assertEquals(expected, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                StringBuilder builder = new StringBuilder(reps * message.length());
+                for (int j = 0; j < reps; ++j) {
+                    builder.append(message);
+                }
+                if (writePreable) {
+                    builder.append(builder); //content gets written twice in this case
+                }
+                final String response = HttpClientUtils.readResponse(result);
+                String expected = builder.toString();
+                Assert.assertTrue("Must start with START", response.startsWith(START));
+                Assert.assertTrue("Must end with END", response.endsWith(END));
+                Assert.assertEquals(expected.length(), response.length());
+                Assert.assertEquals(expected, response);
+                return null;
+            });
         }
     }
 

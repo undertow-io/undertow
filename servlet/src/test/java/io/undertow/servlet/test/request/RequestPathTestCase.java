@@ -37,8 +37,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -97,7 +97,7 @@ public class RequestPathTestCase {
         final String hostAddress = DefaultServer.getHostAddress();
 
         //test default servlet mappings
-        runtest("/servletContext/somePath", false, "null", "/somePath", "http://"+ hostAddress + ":" + port + "/servletContext/somePath", "/servletContext/somePath", "");
+        runtest("/servletContext/somePath", false, "null", "/somePath", "http://" + hostAddress + ":" + port + "/servletContext/somePath", "/servletContext/somePath", "");
         runtest("/servletContext/somePath?foo=bar", false, "null", "/somePath", "http://" + hostAddress + ":" + port + "/servletContext/somePath", "/servletContext/somePath", "foo=bar");
         runtest("/servletContext/somePath?foo=b+a+r", false, "null", "/somePath", "http://" + hostAddress + ":" + port + "/servletContext/somePath", "/servletContext/somePath", "foo=b+a+r");
         runtest("/servletContext/some%20path?foo=b+a+r", false, "null", "/some path", "http://" + hostAddress + ":" + port + "/servletContext/some%20path", "/servletContext/some%20path", "foo=b+a+r");
@@ -126,22 +126,21 @@ public class RequestPathTestCase {
     }
 
     private void runtest(String request, boolean filterHeader, String... expectedBody) throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + request);
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
 
-            Assert.assertArrayEquals(expectedBody, split(response));
-            Assert.assertEquals("true", result.getHeaders("all")[0].getValue());
-            if (filterHeader) {
-                Assert.assertEquals("true", result.getHeaders("Filter")[0].getValue());
-            } else {
-                Assert.assertEquals(0, result.getHeaders("Filter").length);
-            }
-        } finally {
-            client.getConnectionManager().shutdown();
+                Assert.assertArrayEquals(expectedBody, split(response));
+                Assert.assertEquals("true", result.getHeaders("all")[0].getValue());
+                if (filterHeader) {
+                    Assert.assertEquals("true", result.getHeaders("Filter")[0].getValue());
+                } else {
+                    Assert.assertEquals(0, result.getHeaders("Filter").length);
+                }
+                return null;
+            });
         }
     }
 

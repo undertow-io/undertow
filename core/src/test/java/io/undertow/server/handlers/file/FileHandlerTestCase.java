@@ -18,14 +18,6 @@
 
 package io.undertow.server.handlers.file;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.handlers.CanonicalPathHandler;
@@ -37,16 +29,24 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpHead;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpHead;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.core5.http.Header;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 /**
  * @author Stuart Douglas
@@ -54,133 +54,122 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class FileHandlerTestCase {
 
-
     @Test
     public void testFileIsServed() throws IOException, URISyntaxException {
-        TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 10485760))
                                     .setDirectoryListingEnabled(true))));
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Header[] headers = result.getHeaders("Content-Type");
-            Assert.assertEquals("text/html", headers[0].getValue());
-            Assert.assertTrue(response, response.contains("A web page"));
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Header[] headers = result.getHeaders("Content-Type");
+                Assert.assertEquals("text/html", headers[0].getValue());
+                Assert.assertTrue(response, response.contains("A web page"));
+                return null;
+            });
         }
     }
 
     @Test
     public void testHeadRequest() throws IOException, URISyntaxException {
-        TestHttpClient client = new TestHttpClient();
         Path file = Paths.get(getClass().getResource("page.html").toURI());
         Path rootPath = file.getParent();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 10485760))
                                     .setDirectoryListingEnabled(true))));
 
             HttpHead get = new HttpHead(DefaultServer.getDefaultServerURL() + "/path/page.html");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(Long.toString(Files.size(file)), result.getHeaders(Headers.CONTENT_LENGTH_STRING)[0].getValue());
-            Header[] headers = result.getHeaders("Content-Type");
-            Assert.assertEquals("text/html", headers[0].getValue());
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals(Long.toString(Files.size(file)), result.getHeaders(Headers.CONTENT_LENGTH_STRING)[0].getValue());
+                Header[] headers = result.getHeaders("Content-Type");
+                Assert.assertEquals("text/html", headers[0].getValue());
+                return null;
+            });
         }
     }
 
     @Test
     public void testDirectoryListing() throws IOException, URISyntaxException {
-        TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 1))
                                     .setDirectoryListingEnabled(true))));
 
-            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path/"))) {
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path/"), result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
                 Assert.assertNotNull(result.getFirstHeader(Headers.CONTENT_TYPE_STRING));
                 MatcherAssert.assertThat(result.getFirstHeader(Headers.CONTENT_TYPE_STRING).getValue(), CoreMatchers.startsWith("text/html"));
                 MatcherAssert.assertThat(HttpClientUtils.readResponse(result), CoreMatchers.containsString("page.html"));
-            }
-            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path/?js"))) {
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                return null;
+            });
+            client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path/?js"), result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
                 Assert.assertNotNull(result.getFirstHeader(Headers.CONTENT_TYPE_STRING));
                 MatcherAssert.assertThat(result.getFirstHeader(Headers.CONTENT_TYPE_STRING).getValue(), CoreMatchers.startsWith("application/javascript"));
                 MatcherAssert.assertThat(HttpClientUtils.readResponse(result), CoreMatchers.containsString("growit()"));
-            }
-            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path/?css"))) {
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                return null;
+            });
+            client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path/?css"), result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
                 Assert.assertNotNull(result.getFirstHeader(Headers.CONTENT_TYPE_STRING));
                 MatcherAssert.assertThat(result.getFirstHeader(Headers.CONTENT_TYPE_STRING).getValue(), CoreMatchers.startsWith("text/css"));
                 MatcherAssert.assertThat(HttpClientUtils.readResponse(result), CoreMatchers.containsString("data:image/png;base64"));
-            }
-        } finally {
-            client.getConnectionManager().shutdown();
+                return null;
+            });
         }
     }
 
     @Test
     public void testNoDirectoryListing() throws IOException, URISyntaxException {
-        TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 1)))));
 
             try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path"))) {
-                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getCode());
             }
             try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path?js"))) {
-                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getCode());
             }
             try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path?css"))) {
-                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getCode());
             }
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testDotSuffix() throws IOException, URISyntaxException {
-        TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 1))
                                     .setDirectoryListingEnabled(true))));
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html.");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.NOT_FOUND, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
 
     @Test
     public void testFileTransfer() throws IOException, URISyntaxException {
-        TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 1))
@@ -188,26 +177,24 @@ public class FileHandlerTestCase {
                                     .setDirectoryListingEnabled(true))));
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Header[] headers = result.getHeaders("Content-Type");
-            Assert.assertEquals("text/html", headers[0].getValue());
-            Assert.assertTrue(response, response.contains("A web page"));
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Header[] headers = result.getHeaders("Content-Type");
+                Assert.assertEquals("text/html", headers[0].getValue());
+                Assert.assertTrue(response, response.contains("A web page"));
+                return null;
+            });
         }
     }
 
     @Test
     public void testFileTransferLargeFile() throws IOException {
-        TestHttpClient client = new TestHttpClient();
         Path tmp = Paths.get("target", "testtmp").toAbsolutePath();
         Files.createDirectories(tmp);
         String message = "Hello World".repeat(100000);
         Path large = Files.createTempFile(tmp, null, ".txt");
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             Files.write(
                     large,
                     message.getBytes(StandardCharsets.UTF_8),
@@ -219,17 +206,18 @@ public class FileHandlerTestCase {
                                     .setDirectoryListingEnabled(true))));
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/" + large.getFileName().toString());
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(
-                    String.format("Failed to get file '%s' with request '%s'", large.toAbsolutePath(), get),
-                    StatusCodes.OK,
-                    result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Header[] headers = result.getHeaders("Content-Type");
-            Assert.assertEquals("text/plain", headers[0].getValue());
-            Assert.assertTrue(response, response.equals(message));
+            client.execute(get, result -> {
+                Assert.assertEquals(
+                        String.format("Failed to get file '%s' with request '%s'", large.toAbsolutePath(), get),
+                        StatusCodes.OK,
+                        result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Header[] headers = result.getHeaders("Content-Type");
+                Assert.assertEquals("text/plain", headers[0].getValue());
+                Assert.assertTrue(response, response.equals(message));
+                return null;
+            });
         } finally {
-            client.getConnectionManager().shutdown();
             try {
                 Files.delete(large);
             } catch (IOException e) {
@@ -240,9 +228,8 @@ public class FileHandlerTestCase {
 
     @Test
     public void testRangeRequests() throws IOException, URISyntaxException {
-        TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 1))
@@ -251,24 +238,25 @@ public class FileHandlerTestCase {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
             get.addHeader("range", "bytes=2-3");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Header[] headers = result.getHeaders("Content-Type");
-            Assert.assertEquals("text/html", headers[0].getValue());
-            Assert.assertEquals("--", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Header[] headers = result.getHeaders("Content-Type");
+                Assert.assertEquals("text/html", headers[0].getValue());
+                Assert.assertEquals("--", response);
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
             get.addHeader("range", "bytes=-7");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            headers = result.getHeaders("Content-Type");
-            Assert.assertEquals("text/html", headers[0].getValue());
-            Assert.assertEquals("</html>", response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.PARTIAL_CONTENT, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Header[] headers = result.getHeaders("Content-Type");
+                Assert.assertEquals("text/html", headers[0].getValue());
+                Assert.assertEquals("</html>", response);
+                return null;
+            });
         }
     }
 

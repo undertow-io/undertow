@@ -19,16 +19,14 @@
 package io.undertow.server.handlers;
 
 import io.undertow.protocols.http2.Http2Channel;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -55,12 +53,9 @@ public class LotsOfHeadersResponseTestCase {
         Assume.assumeNotNull(System.getProperty(Http2Channel.HTTP2_MAX_HEADER_SIZE_PROPERTY));
         final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
-        blockingHandler.setRootHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) {
-                for (int i = 0; i < COUNT; ++i) {
-                    exchange.getResponseHeaders().put(HttpString.tryFromString(HEADER + i), MESSAGE + i);
-                }
+        blockingHandler.setRootHandler(exchange -> {
+            for (int i = 0; i < COUNT; ++i) {
+                exchange.getResponseHeaders().put(HttpString.tryFromString(HEADER + i), MESSAGE + i);
             }
         });
     }
@@ -69,22 +64,19 @@ public class LotsOfHeadersResponseTestCase {
     public void testLotsOfHeadersInResponse() throws IOException {
         // FIXME UNDERTOW-2279
         Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows"));
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            for (int i = 0; i < COUNT; ++i) {
-                Header[] header = result.getHeaders(HEADER + i);
-                if (header.length == 0) {
-                    Assert.fail("Header " + HEADER + i + " not found");
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                for (int i = 0; i < COUNT; ++i) {
+                    Header[] header = result.getHeaders(HEADER + i);
+                    if (header.length == 0) {
+                        Assert.fail("Header " + HEADER + i + " not found");
+                    }
+                    Assert.assertEquals(MESSAGE + i, header[0].getValue());
                 }
-                Assert.assertEquals(MESSAGE + i, header[0].getValue());
-            }
-        } finally {
-            client.getConnectionManager().shutdown();
+                return null;
+            });
         }
     }
-
-
 }

@@ -17,22 +17,18 @@
  */
 package io.undertow.server.handlers;
 
-import java.io.IOException;
-import java.util.concurrent.ExecutionException;
-
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.StatusCodes;
+import java.io.IOException;
 
 @RunWith(DefaultServer.class)
 @HttpOneOnly // Http2 does NOT have way to transfer status: https://httpwg.org/specs/rfc7540.html#rfc.section.8.1.2.4
@@ -43,27 +39,23 @@ public class PreseverStatusTestCase {
     @Before
     public void setup() {
 
-        DefaultServer.setRootHandler(new BlockingHandler(new HttpHandler() {
-
-            @Override
-            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.setStatusCode(StatusCodes.TOO_MANY_REQUESTS);
-                exchange.setReasonPhrase(CUSTOM_REASON);
-            }}));
+        DefaultServer.setRootHandler(new BlockingHandler(exchange -> {
+            exchange.setStatusCode(StatusCodes.TOO_MANY_REQUESTS);
+            exchange.setReasonPhrase(CUSTOM_REASON);
+        }));
     }
 
     @Test
-    public void testWindowSliding() throws ExecutionException, InterruptedException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+    public void testWindowSliding() {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.TOO_MANY_REQUESTS, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(CUSTOM_REASON, result.getStatusLine().getReasonPhrase());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.TOO_MANY_REQUESTS, result.getCode());
+                Assert.assertEquals(CUSTOM_REASON, result.getReasonPhrase());
+                return null;
+            });
         } catch (IOException e) {
             throw new RuntimeException(e);
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 }

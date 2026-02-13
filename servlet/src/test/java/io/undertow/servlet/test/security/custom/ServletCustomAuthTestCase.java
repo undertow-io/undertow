@@ -43,16 +43,17 @@ import java.util.List;
 
 import jakarta.servlet.ServletException;
 
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.ProtocolException;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultRedirectStrategy;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.HttpContext;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.impl.DefaultRedirectStrategy;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.HttpRequest;
+import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.ProtocolException;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
+import org.apache.hc.core5.http.protocol.HttpContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -60,6 +61,7 @@ import org.junit.runner.RunWith;
 
 /**
  * Test case that validates the use of the DeploymentManagerImpl authMechanism override
+ *
  * @author Stuart Douglas
  * @author Anil Saldhana
  */
@@ -108,38 +110,37 @@ public class ServletCustomAuthTestCase {
 
     @Test
     public void testServletCustomFormAuth() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setRedirectStrategy(new DefaultRedirectStrategy() {
+        try (CloseableHttpClient client = TestHttpClient.custom().setRedirectStrategy(new DefaultRedirectStrategy() {
             @Override
             public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
-                if (response.getStatusLine().getStatusCode() == StatusCodes.FOUND) {
+                if (response.getCode() == StatusCodes.FOUND) {
                     return true;
                 }
                 return super.isRedirected(request, response, context);
             }
-        });
-        try {
+        }).build()) {
             final String uri = DefaultServer.getDefaultServerURL() + "/servletContext/secured/test";
             HttpGet get = new HttpGet(uri);
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertTrue(response.startsWith("j_security_check"));
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertTrue(response.startsWith("j_security_check"));
+                return null;
+            });
 
             BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
             final List<NameValuePair> data = new ArrayList<>();
             data.addAll(Arrays.asList(pairs));
-            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/" + CustomAuthenticationMechanism.POST_LOCATION );
+            HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/" + CustomAuthenticationMechanism.POST_LOCATION);
 
             post.setEntity(new UrlEncodedFormEntity(data));
 
-            result = client.execute(post);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("user1", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("user1", response);
+                return null;
+            });
         }
     }
 }

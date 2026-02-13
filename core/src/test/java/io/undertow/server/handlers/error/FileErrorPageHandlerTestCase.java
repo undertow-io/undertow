@@ -24,10 +24,10 @@ import java.nio.file.Paths;
 
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,26 +38,22 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class FileErrorPageHandlerTestCase {
 
-
     @Test
     public void testFileBasedErrorPageIsGenerated() throws IOException, URISyntaxException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             final FileErrorPageHandler handler = new FileErrorPageHandler(Paths.get(getClass().getResource("errorpage.html").toURI()), StatusCodes.NOT_FOUND);
 
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals("text/html", result.getHeaders("Content-Type")[0].getValue());
-            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals("text/html", result.getHeaders("Content-Type")[0].getValue());
+                Assert.assertEquals(StatusCodes.NOT_FOUND, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
 
-            Assert.assertTrue(response, response.contains("Custom Error Page"));
-
-        } finally {
-            client.getConnectionManager().shutdown();
+                Assert.assertTrue(response, response.contains("Custom Error Page"));
+                return null;
+            });
         }
     }
-
 }

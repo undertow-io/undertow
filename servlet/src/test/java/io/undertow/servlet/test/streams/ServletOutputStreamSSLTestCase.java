@@ -17,6 +17,7 @@ package io.undertow.servlet.test.streams;
 
 import java.io.IOException;
 
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.AfterClass;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -40,10 +41,8 @@ public class ServletOutputStreamSSLTestCase extends ServletOutputStreamTestCase 
 
 
     @Override
-    protected TestHttpClient createClient() {
-        TestHttpClient client = super.createClient();
-        client.setSSLContext(DefaultServer.createClientSslContext());
-        return client;
+    protected CloseableHttpClient createClient() {
+        return TestHttpClient.withSSLContext(DefaultServer.createClientSslContext()).build();
     }
 
     @Override

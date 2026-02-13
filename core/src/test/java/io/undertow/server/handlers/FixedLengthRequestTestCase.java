@@ -19,18 +19,16 @@
 package io.undertow.server.handlers;
 
 import io.undertow.UndertowOptions;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpHeaders;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.HttpHeaders;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -58,30 +56,27 @@ public class FixedLengthRequestTestCase {
     public static void setup() {
         final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
-        blockingHandler.setRootHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) {
-                try {
-                    if (connection == null) {
-                        connection = exchange.getConnection();
-                    } else if (!DefaultServer.isAjp()  && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
-                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                        final OutputStream outputStream = exchange.getOutputStream();
-                        outputStream.write("Connection not persistent".getBytes());
-                        outputStream.close();
-                        return;
-                    }
-                    final OutputStream outputStream = exchange.getOutputStream();
-                    final InputStream inputStream =  exchange.getInputStream();
-                    String m = HttpClientUtils.readResponse(inputStream);
-                    Assert.assertEquals(message, m);
-                    inputStream.close();
-                    outputStream.close();
-                } catch (IOException e) {
-                    exchange.getResponseHeaders().put(Headers.CONNECTION, "close");
+        blockingHandler.setRootHandler(exchange -> {
+            try {
+                if (connection == null) {
+                    connection = exchange.getConnection();
+                } else if (!DefaultServer.isAjp() && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
                     exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                    throw new RuntimeException(e);
+                    final OutputStream outputStream = exchange.getOutputStream();
+                    outputStream.write("Connection not persistent".getBytes());
+                    outputStream.close();
+                    return;
                 }
+                final OutputStream outputStream = exchange.getOutputStream();
+                final InputStream inputStream = exchange.getInputStream();
+                String m = HttpClientUtils.readResponse(inputStream);
+                Assert.assertEquals(message, m);
+                inputStream.close();
+                outputStream.close();
+            } catch (IOException e) {
+                exchange.getResponseHeaders().put(Headers.CONNECTION, "close");
+                exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                throw new RuntimeException(e);
             }
         });
     }
@@ -90,23 +85,20 @@ public class FixedLengthRequestTestCase {
     public void testFixedLengthRequest() throws IOException {
         connection = null;
         HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             generateMessage(1);
             post.setEntity(new StringEntity(message));
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             generateMessage(1000);
             post.setEntity(new StringEntity(message));
-            result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        } finally {
-
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
 
@@ -117,26 +109,24 @@ public class FixedLengthRequestTestCase {
         OptionMap existing = DefaultServer.getUndertowOptions();
         HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
         post.setHeader(HttpHeaders.CONNECTION, "close");
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             generateMessage(1);
             post.setEntity(new StringEntity(message));
             DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, 3L));
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
             connection = null;
             DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) message.length()));
-            result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         } finally {
             DefaultServer.setUndertowOptions(existing);
-            client.getConnectionManager().shutdown();
         }
     }
-
 
     private static void generateMessage(int repetitions) {
         final StringBuilder builder = new StringBuilder(repetitions * MESSAGE.length());

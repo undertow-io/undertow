@@ -18,31 +18,28 @@
 
 package io.undertow.server.handlers.encoding;
 
-import java.io.IOException;
-
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import io.undertow.conduits.GzipStreamSourceConduit;
 import io.undertow.conduits.InflatingStreamSourceConduit;
 import io.undertow.io.IoCallback;
-import io.undertow.io.Receiver;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import java.io.IOException;
 
 /**
  * This is not part of the HTTP spec
@@ -60,26 +57,16 @@ public class RequestContentEncodingTestCase2 {
                 .addEncodingHandler("deflate", new DeflateEncodingProvider(), 50)
                 .addEncodingHandler("gzip", new GzipEncodingProvider(), 60);
         final EncodingHandler encode = new EncodingHandler(contentEncodingRepository)
-                .setNext(new HttpHandler() {
-                    @Override
-                    public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
-                        exchange.getResponseSender().send(message, IoCallback.END_EXCHANGE);
-                    }
+                .setNext(exchange -> {
+                    exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
+                    exchange.getResponseSender().send(message, IoCallback.END_EXCHANGE);
                 });
 
-        final HttpHandler decode = new RequestEncodingHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.getRequestReceiver().receiveFullString(new Receiver.FullStringCallback() {
-                    @Override
-                    public void handle(HttpServerExchange exchange, String message) {
-                        Assert.assertTrue(exchange.getRequestContentLength()>0);
-                        exchange.getResponseSender().send(message);
-                    }
-                });
-            }
-        }).addEncoding("deflate", InflatingStreamSourceConduit.WRAPPER)
+        final HttpHandler decode = new RequestEncodingHandler(exchange -> exchange.getRequestReceiver()
+                .receiveFullString((exchange1, message) -> {
+                    Assert.assertTrue(exchange1.getRequestContentLength() > 0);
+                    exchange1.getResponseSender().send(message);
+                })).addEncoding("deflate", InflatingStreamSourceConduit.WRAPPER)
                 .addEncoding("gzip", GzipStreamSourceConduit.WRAPPER);
 
         PathHandler pathHandler = new PathHandler();
@@ -117,26 +104,28 @@ public class RequestContentEncodingTestCase2 {
 
 
     public void runTest(final String theMessage, String encoding) throws IOException {
-        try (CloseableHttpClient client = HttpClientBuilder.create().disableContentCompression().build()){
+        try (CloseableHttpClient client = HttpClientBuilder.create().disableContentCompression().build()) {
             message = theMessage;
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/encode");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, encoding);
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
-            Assert.assertEquals(encoding, header[0].getValue());
-            byte[] body = HttpClientUtils.readRawResponse(result);
+            byte[] body = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
+                Assert.assertEquals(encoding, header[0].getValue());
+                return HttpClientUtils.readRawResponse(result);
+            });
 
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/decode");
-            post.setEntity(new ByteArrayEntity(body));
+            post.setEntity(new ByteArrayEntity(body, ContentType.TEXT_PLAIN));
             post.addHeader(Headers.CONTENT_ENCODING_STRING, encoding);
 
-            result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String sb = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(theMessage.length(), sb.length());
-            Assert.assertEquals(theMessage, sb);
-
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String sb = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(theMessage.length(), sb.length());
+                Assert.assertEquals(theMessage, sb);
+                return null;
+            });
         }
     }
 }

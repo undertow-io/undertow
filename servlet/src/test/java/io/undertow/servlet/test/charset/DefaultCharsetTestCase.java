@@ -18,30 +18,27 @@
 
 package io.undertow.servlet.test.charset;
 
-import static io.undertow.servlet.Servlets.servlet;
-
-import java.io.IOException;
-import java.util.Collections;
-import jakarta.servlet.ServletContext;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
 import jakarta.servlet.ServletException;
-
-import org.apache.http.HttpResponse;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.message.BasicNameValuePair;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.undertow.util.StatusCodes;
-import io.undertow.servlet.ServletExtension;
-import io.undertow.servlet.api.DeploymentInfo;
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+
+import static io.undertow.servlet.Servlets.servlet;
 
 /**
  * @author Stuart Douglas
@@ -52,12 +49,8 @@ public class DefaultCharsetTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
-        DeploymentUtils.setupServlet(new ServletExtension() {
-                                         @Override
-                                         public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
-                                             deploymentInfo.setDefaultEncoding("UTF-8");
-                                         }
-                                     },
+        DeploymentUtils.setupServlet((deploymentInfo, servletContext) ->
+                        deploymentInfo.setDefaultEncoding("UTF-8"),
                 servlet("servlet", DefaultCharsetServlet.class)
                         .addMapping("/writer"),
                 servlet("form", DefaultCharsetFormParserServlet.class)
@@ -76,38 +69,38 @@ public class DefaultCharsetTestCase {
 
     @Test
     public void testCharacterEncodingWriter() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/writer");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            byte[] response = HttpClientUtils.readRawResponse(result);
-            Assert.assertArrayEquals(UTF8, response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                byte[] response = HttpClientUtils.readRawResponse(result);
+                Assert.assertArrayEquals(UTF8, response);
+                return null;
+            });
 
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/writer?array=true");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readRawResponse(result);
-            Assert.assertArrayEquals(UTF8, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                byte[] response = HttpClientUtils.readRawResponse(result);
+                Assert.assertArrayEquals(UTF8, response);
+                return null;
+            });
         }
     }
 
 
     @Test
     public void testCharacterEncodingFormParser() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext/form");
-            post.setEntity(new UrlEncodedFormEntity(Collections.singletonList(new BasicNameValuePair("\u0041\u00A9\u00E9\u0301\u0941\uD835\uDD0A", "\u0041\u00A9\u00E9\u0301\u0941\uD835\uDD0A")), "UTF-8"));
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            byte[] response = HttpClientUtils.readRawResponse(result);
-            Assert.assertArrayEquals(UTF8, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            post.setEntity(new UrlEncodedFormEntity(Collections.singletonList(new BasicNameValuePair("\u0041\u00A9\u00E9\u0301\u0941\uD835\uDD0A", "\u0041\u00A9\u00E9\u0301\u0941\uD835\uDD0A")), StandardCharsets.UTF_8));
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                byte[] response = HttpClientUtils.readRawResponse(result);
+                Assert.assertArrayEquals(UTF8, response);
+                return null;
+            });
         }
     }
 }

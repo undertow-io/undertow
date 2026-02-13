@@ -24,9 +24,11 @@ import io.undertow.server.handlers.builder.PredicatedHandlersParser;
 import io.undertow.server.handlers.resource.DirectoryUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
-import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.ParseException;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,11 +42,10 @@ import java.util.List;
 @RunWith(DefaultServer.class)
 public class FileHandlerWithPredicateTestCase {
     @Test
-    public void testIfHandlerReturnsResourcesWhenItIsInPredicate() throws IOException, URISyntaxException {
-        TestHttpClient client = new TestHttpClient();
-        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
-        try {
-            List<PredicatedHandler> predicatedHandlers = PredicatedHandlersParser.parse("path-prefix(/subdir)-> { set(attribute=%U,value=${remaining}); resource(location='"+ rootPath +"',allow-listing=true) }", FileHandlerWithPredicateTestCase.class.getClassLoader());
+    public void testIfHandlerReturnsResourcesWhenItIsInPredicate() throws IOException, URISyntaxException, ParseException {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
+            List<PredicatedHandler> predicatedHandlers = PredicatedHandlersParser.parse("path-prefix(/subdir)-> { set(attribute=%U,value=${remaining}); resource(location='" + rootPath + "',allow-listing=true) }", FileHandlerWithPredicateTestCase.class.getClassLoader());
             PredicatesHandler predicatesHandler = new PredicatesHandler(new ResponseCodeHandler(200));
             for (PredicatedHandler handler : predicatedHandlers) {
                 predicatesHandler.addPredicatedHandler(handler);
@@ -63,24 +64,24 @@ public class FileHandlerWithPredicateTestCase {
             //Same for css
             CheckResponse(client, "/?css", false, true);
 
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
-    private void CheckResponse(TestHttpClient client, String path, Boolean isJs, Boolean emptyResponseExpected) throws IOException {
+    private void CheckResponse(CloseableHttpClient client, String path, Boolean isJs, Boolean emptyResponseExpected) throws IOException, ParseException {
         //Make sure that we receive a body with the js needed to render the page.
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
-        HttpEntity result = client.execute(get).getEntity();
-
-        if (emptyResponseExpected){
-            Assert.assertEquals("The response is not empty", "", EntityUtils.toString(result));
-        } else {
-            if (isJs){
-                Assert.assertEquals("The returned js code is different or empty", DirectoryUtils.Blobs.FILE_JS, EntityUtils.toString(result));
+        client.execute(get, response -> {
+            HttpEntity result = response.getEntity();
+            if (emptyResponseExpected) {
+                Assert.assertEquals("The response is not empty", "", EntityUtils.toString(result));
             } else {
-                Assert.assertEquals("The returned css code is different or empty", DirectoryUtils.Blobs.FILE_CSS, EntityUtils.toString(result));
+                if (isJs) {
+                    Assert.assertEquals("The returned js code is different or empty", DirectoryUtils.Blobs.FILE_JS, EntityUtils.toString(result));
+                } else {
+                    Assert.assertEquals("The returned css code is different or empty", DirectoryUtils.Blobs.FILE_CSS, EntityUtils.toString(result));
+                }
             }
-        }
+            return null;
+        });
     }
 }

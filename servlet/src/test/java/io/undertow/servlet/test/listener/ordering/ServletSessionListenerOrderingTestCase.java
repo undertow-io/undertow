@@ -35,18 +35,17 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.servlet.test.util.Tracker;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import io.undertow.testutils.TestHttpClient;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
- * @see https://issues.jboss.org/browse/UNDERTOW-23
- *
  * @author Jozef Hartinger
+ * @see https://issues.jboss.org/browse/UNDERTOW-23
  *
  */
 @RunWith(DefaultServer.class)
@@ -77,22 +76,21 @@ public class ServletSessionListenerOrderingTestCase {
 
     @Test
     public void testSimpleSessionUsage() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             Tracker.reset();
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/listener/test");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
 
-            List<String> expected = new ArrayList<>();
-            expected.add(FirstListener.class.getSimpleName());
-            expected.add(SecondListener.class.getSimpleName());
-            expected.add(SecondListener.class.getSimpleName());
-            expected.add(FirstListener.class.getSimpleName());
+                List<String> expected = new ArrayList<>();
+                expected.add(FirstListener.class.getSimpleName());
+                expected.add(SecondListener.class.getSimpleName());
+                expected.add(SecondListener.class.getSimpleName());
+                expected.add(FirstListener.class.getSimpleName());
 
-            Assert.assertEquals(expected, Tracker.getActions());
-        } finally {
-            client.getConnectionManager().shutdown();
+                Assert.assertEquals(expected, Tracker.getActions());
+                return null;
+            });
         }
     }
 }

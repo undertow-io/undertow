@@ -42,6 +42,11 @@ public class RedirectURIParseWithAllowUnescapedCharactersTestCase extends Abstra
         DefaultServer.setServerOptions(OptionMap.EMPTY);
     }
 
+    @Override
+    public String encodeURI(String uri) {
+        return uri;
+    }
+
     @BeforeClass // this is run after the server starts
     public static void disableProxyUnescapedCharactersInURL() {
         // disable it in proxy or else decoded URL is sent to the Undertow server

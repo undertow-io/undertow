@@ -31,13 +31,14 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import jakarta.servlet.ServletException;
+
 import java.io.IOException;
 
 /**
@@ -67,37 +68,37 @@ public class ServletSessionPersistenceTestCase {
             throw new RuntimeException(e);
         }
         DefaultServer.setRootHandler(pathHandler);
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("1", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("1", response);
 
-            String cookieValue = result.getHeaders("Set-Cookie")[0].getValue();
-            Assert.assertTrue(cookieValue, cookieValue.contains("JSESSIONID"));
-            Assert.assertTrue(cookieValue, cookieValue.contains("/servletContext/aa"));
+                String cookieValue = result.getHeaders("Set-Cookie")[0].getValue();
+                Assert.assertTrue(cookieValue, cookieValue.contains("JSESSIONID"));
+                Assert.assertTrue(cookieValue, cookieValue.contains("/servletContext/aa"));
+                return null;
+            });
 
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("2", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("2", response);
+                return null;
+            });
 
             manager.stop();
             manager.undeploy();
             manager.deploy();
             pathHandler.addPrefixPath(builder.getContextPath(), manager.start());
 
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("3", response);
-
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("3", response);
+                return null;
+            });
         }
     }
-
 }

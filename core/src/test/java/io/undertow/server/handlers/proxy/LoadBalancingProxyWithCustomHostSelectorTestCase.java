@@ -10,8 +10,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -56,6 +56,7 @@ public class LoadBalancingProxyWithCustomHostSelectorTestCase {
         LoadBalancingProxyClient.HostSelector hostSelector = new LoadBalancingProxyClient.HostSelector() {
 
             @Override
+            @SuppressWarnings("removal")
             public int selectHost(LoadBalancingProxyClient.Host[] availableHosts) {
                 return 0;
             }
@@ -68,9 +69,9 @@ public class LoadBalancingProxyWithCustomHostSelectorTestCase {
         };
 
         DefaultServer.setRootHandler(ProxyHandler.builder().setProxyClient(new LoadBalancingProxyClient(UndertowClient.getInstance(), null, hostSelector)
-                .setConnectionsPerThread(4)
-                .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1")
-                .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2"))
+                        .setConnectionsPerThread(4)
+                        .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1")
+                        .addHost(new URI("http", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2"))
                 .setMaxRequestTime(10000)
                 .setMaxConnectionRetries(2).build());
     }
@@ -82,7 +83,8 @@ public class LoadBalancingProxyWithCustomHostSelectorTestCase {
         // sleep 1 s to prevent BindException (Address already in use) when running the CI
         try {
             Thread.sleep(1000);
-        } catch (InterruptedException ignore) {}
+        } catch (InterruptedException ignore) {
+        }
     }
 
     // https://issues.jboss.org/browse/UNDERTOW-289
@@ -91,15 +93,14 @@ public class LoadBalancingProxyWithCustomHostSelectorTestCase {
         final StringBuilder resultString = new StringBuilder();
 
         for (int i = 0; i < 6; ++i) {
-            TestHttpClient client = new TestHttpClient();
-            try {
+            try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
-                HttpResponse result = client.execute(get);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                resultString.append(HttpClientUtils.readResponse(result));
-                resultString.append(' ');
-            } finally {
-                client.getConnectionManager().shutdown();
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    resultString.append(HttpClientUtils.readResponse(result));
+                    resultString.append(' ');
+                    return null;
+                });
             }
         }
         Assert.assertTrue(resultString.toString().contains("server1"));

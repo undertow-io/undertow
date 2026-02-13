@@ -28,7 +28,8 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,9 +37,8 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class ActiveRequestTrackerTest {
     @Test
-    public void testRequestTracking() throws InterruptedException {
-        final TestHttpClient client = new TestHttpClient();
-        try {
+    public void testRequestTracking() throws InterruptedException, IOException {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             final CountDownLatch latch = new CountDownLatch(1);
             final ActiveRequestTrackerHandler handler = new ActiveRequestTrackerHandler(new DelayHandler(latch), null);
             DefaultServer.setRootHandler(handler);
@@ -76,14 +76,12 @@ public class ActiveRequestTrackerTest {
             Assert.assertNotSame(0, request.getBytesSent());
             Assert.assertNotSame(0, request.getStartTime());
             Assert.assertNotSame(0, request.getProcessingTime());
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
-    private void makeRequest(TestHttpClient client) {
+    private void makeRequest(CloseableHttpClient client) {
         try {
-            client.execute(new HttpGet(DefaultServer.getDefaultServerURL()));
+            client.execute(new HttpGet(DefaultServer.getDefaultServerURL()), r -> null);
         } catch (IOException e) {
             // ...
         }

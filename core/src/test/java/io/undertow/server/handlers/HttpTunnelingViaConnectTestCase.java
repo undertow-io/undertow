@@ -19,16 +19,13 @@
 package io.undertow.server.handlers;
 
 import io.undertow.Undertow;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.ProxyIgnore;
-import org.apache.http.HttpHost;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.impl.client.ProxyClient;
-import org.apache.http.protocol.HTTP;
-import org.junit.Assert;
+import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
+import org.apache.hc.client5.http.impl.classic.ProxyClient;
+import org.apache.hc.core5.http.HttpHost;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,6 +35,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author Stuart Douglas
@@ -50,21 +48,13 @@ public class HttpTunnelingViaConnectTestCase {
 
     @BeforeClass
     public static void setup() {
-        DefaultServer.setRootHandler(new SetHeaderHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.getResponseSender().send("hi all");
-            }
-        }, "MyHeader", "MyValue"));
+        DefaultServer.setRootHandler(new SetHeaderHandler(exchange ->
+                exchange.getResponseSender().send("hi all"), "MyHeader", "MyValue"));
 
-        server = Undertow.builder().addHttpListener(DefaultServer.getHostPort("default") + 1, DefaultServer.getHostAddress("default"))
-                .setHandler(new ConnectHandler(new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        exchange.setStatusCode(500);
-                    }
-                }))
-        .build();
+        server = Undertow.builder().addHttpListener(DefaultServer.getHostPort("default") + 1,
+                        DefaultServer.getHostAddress("default"))
+                .setHandler(new ConnectHandler(exchange -> exchange.setStatusCode(500)))
+                .build();
         server.start();
     }
 
@@ -75,30 +65,33 @@ public class HttpTunnelingViaConnectTestCase {
         // sleep 1 s to prevent BindException (Address already in use) when running the CI
         try {
             Thread.sleep(1000);
-        } catch (InterruptedException ignore) {}
+        } catch (InterruptedException ignore) {
+        }
     }
 
     @Test
     public void testConnectViaProxy() throws Exception {
 
-        final HttpHost proxy = new HttpHost(DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default") + 1, "http");
-        final HttpHost target = new HttpHost(DefaultServer.getHostAddress("default"), DefaultServer.getHostPort("default"), "http");
+        final HttpHost proxy = new HttpHost("http", DefaultServer.getHostAddress("default"),
+                DefaultServer.getHostPort("default") + 1);
+        final HttpHost target = new HttpHost("http", DefaultServer.getHostAddress("default"),
+                DefaultServer.getHostPort("default"));
         ProxyClient proxyClient = new ProxyClient();
-        Socket socket = proxyClient.tunnel(proxy, target, new UsernamePasswordCredentials("a", "b"));
+        Socket socket = proxyClient.tunnel(proxy, target, new UsernamePasswordCredentials("a", "b".toCharArray()));
         try {
-            Writer out = new OutputStreamWriter(socket.getOutputStream(), HTTP.DEF_CONTENT_CHARSET);
+            Writer out = new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.ISO_8859_1);
             out.write("GET / HTTP/1.1\r\n");
             out.write("Host: " + target.toHostString() + "\r\n");
             out.write("Connection: close\r\n");
             out.write("\r\n");
             out.flush();
             BufferedReader in = new BufferedReader(
-                    new InputStreamReader(socket.getInputStream(), HTTP.DEF_CONTENT_CHARSET));
+                    new InputStreamReader(socket.getInputStream(), StandardCharsets.ISO_8859_1));
             String line = null;
             boolean found = false;
             while ((line = in.readLine()) != null) {
                 System.out.println(line);
-                if(line.equals("MyHeader: MyValue")) {
+                if (line.equals("MyHeader: MyValue")) {
                     found = true;
                 }
             }
@@ -107,5 +100,4 @@ public class HttpTunnelingViaConnectTestCase {
             socket.close();
         }
     }
-
 }

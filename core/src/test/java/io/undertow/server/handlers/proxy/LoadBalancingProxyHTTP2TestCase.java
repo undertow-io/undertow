@@ -18,6 +18,37 @@
 
 package io.undertow.server.handlers.proxy;
 
+import io.undertow.Undertow;
+import io.undertow.UndertowOptions;
+import io.undertow.client.ClientCallback;
+import io.undertow.client.ClientConnection;
+import io.undertow.client.ClientExchange;
+import io.undertow.client.ClientRequest;
+import io.undertow.client.UndertowClient;
+import io.undertow.protocols.ssl.UndertowXnioSsl;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.protocol.http2.Http2ServerConnection;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.HttpString;
+import io.undertow.util.Methods;
+import io.undertow.util.Protocols;
+import io.undertow.util.StatusCodes;
+import io.undertow.util.StringReadChannelListener;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.FutureResult;
+import org.xnio.IoFuture;
+import org.xnio.OptionMap;
+import org.xnio.Options;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -29,38 +60,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.FutureResult;
-import org.xnio.IoFuture;
-import org.xnio.OptionMap;
-import org.xnio.Options;
-import io.undertow.Undertow;
-import io.undertow.UndertowOptions;
-import io.undertow.client.ClientCallback;
-import io.undertow.client.ClientConnection;
-import io.undertow.client.ClientExchange;
-import io.undertow.client.ClientRequest;
-import io.undertow.client.UndertowClient;
-import io.undertow.protocols.ssl.UndertowXnioSsl;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.protocol.http2.Http2ServerConnection;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.HttpString;
-import io.undertow.util.Methods;
-import io.undertow.util.Protocols;
-import io.undertow.util.StatusCodes;
-import io.undertow.util.StringReadChannelListener;
 
 /**
  * Tests the load balancing proxy
@@ -79,15 +78,12 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
-                .setHandler(new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        if (!(exchange.getConnection() instanceof Http2ServerConnection)) {
-                            throw new RuntimeException("Not HTTP2");
-                        }
-                        exchange.getResponseHeaders().add(new HttpString("X-Custom-Header"), "foo");
-                        handler1.handleRequest(exchange);
+                .setHandler(exchange -> {
+                    if (!(exchange.getConnection() instanceof Http2ServerConnection)) {
+                        throw new RuntimeException("Not HTTP2");
                     }
+                    exchange.getResponseHeaders().add(new HttpString("X-Custom-Header"), "foo");
+                    handler1.handleRequest(exchange);
                 })
                 .build();
 
@@ -97,15 +93,12 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setSocketOption(Options.REUSE_ADDRESSES, true)
                 .setServerOption(UndertowOptions.NO_REQUEST_TIMEOUT, IDLE_TIMEOUT)
-                .setHandler(new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        if (!(exchange.getConnection() instanceof Http2ServerConnection)) {
-                            throw new RuntimeException("Not HTTP2");
-                        }
-                        exchange.getResponseHeaders().add(new HttpString("X-Custom-Header"), "foo");
-                        handler2.handleRequest(exchange);
+                .setHandler(exchange -> {
+                    if (!(exchange.getConnection() instanceof Http2ServerConnection)) {
+                        throw new RuntimeException("Not HTTP2");
                     }
+                    exchange.getResponseHeaders().add(new HttpString("X-Custom-Header"), "foo");
+                    handler2.handleRequest(exchange);
                 })
                 .build();
         server1.start();
@@ -114,9 +107,9 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
         UndertowXnioSsl ssl = new UndertowXnioSsl(DefaultServer.getWorker().getXnio(), OptionMap.EMPTY, DefaultServer.SSL_BUFFER_POOL, DefaultServer.createClientSslContext());
 
         DefaultServer.setRootHandler(ProxyHandler.builder().setProxyClient(new LoadBalancingProxyClient()
-                .setConnectionsPerThread(4)
-                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true))
-                .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2", ssl, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)))
+                        .setConnectionsPerThread(4)
+                        .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 1, null, null, null), "s1", ssl, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true))
+                        .addHost(new URI("https", null, DefaultServer.getHostAddress("default"), port + 2, null, null, null), "s2", ssl, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)))
                 .setMaxRequestTime(10000)
                 .setMaxConnectionRetries(2).build());
     }
@@ -130,16 +123,15 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
 
     @Test
     public void testHeadersAreLowercase() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Header header = result.getFirstHeader("x-custom-header");
-            Assert.assertEquals("x-custom-header", header.getName());
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Header header = result.getFirstHeader("x-custom-header");
+                Assert.assertEquals("x-custom-header", header.getName());
+                return null;
+            });
         }
     }
 
@@ -156,47 +148,43 @@ public class LoadBalancingProxyHTTP2TestCase extends AbstractLoadBalancingProxyT
             for (int i = 0; i < 100; ++i) {
                 final FutureResult<String> future = new FutureResult<>();
                 futures.add(future);
-                service.submit(new Callable<String>() {
+                service.submit((Callable<String>) () -> {
+                    ClientRequest cr = new ClientRequest()
+                            .setMethod(Methods.GET)
+                            .setPath("/path")
+                            .setProtocol(Protocols.HTTP_1_1);
+                    connection.sendRequest(cr, new ClientCallback<ClientExchange>() {
+                        @Override
+                        public void completed(ClientExchange result) {
+                            result.setResponseListener(new ClientCallback<ClientExchange>() {
+                                @Override
+                                public void completed(ClientExchange result) {
+                                    new StringReadChannelListener(DefaultServer.getBufferPool()) {
+                                        @Override
+                                        protected void stringDone(String string) {
+                                            future.setResult(string);
+                                        }
 
-                    @Override
-                    public String call() throws Exception {
-                        ClientRequest cr = new ClientRequest()
-                                .setMethod(Methods.GET)
-                                .setPath("/path")
-                                .setProtocol(Protocols.HTTP_1_1);
-                        connection.sendRequest(cr, new ClientCallback<ClientExchange>() {
-                            @Override
-                            public void completed(ClientExchange result) {
-                                result.setResponseListener(new ClientCallback<ClientExchange>() {
-                                    @Override
-                                    public void completed(ClientExchange result) {
-                                        new StringReadChannelListener(DefaultServer.getBufferPool()) {
-                                            @Override
-                                            protected void stringDone(String string) {
-                                                future.setResult(string);
-                                            }
+                                        @Override
+                                        protected void error(IOException e) {
+                                            future.setException(e);
+                                        }
+                                    }.setup(result.getResponseChannel());
+                                }
 
-                                            @Override
-                                            protected void error(IOException e) {
-                                                future.setException(e);
-                                            }
-                                        }.setup(result.getResponseChannel());
-                                    }
+                                @Override
+                                public void failed(IOException e) {
+                                    future.setException(e);
+                                }
+                            });
+                        }
 
-                                    @Override
-                                    public void failed(IOException e) {
-                                        future.setException(e);
-                                    }
-                                });
-                            }
-
-                            @Override
-                            public void failed(IOException e) {
-                                future.setException(e);
-                            }
-                        });
-                        return null;
-                    }
+                        @Override
+                        public void failed(IOException e) {
+                            future.setException(e);
+                        }
+                    });
+                    return null;
                 });
             }
             while (!futures.isEmpty()) {

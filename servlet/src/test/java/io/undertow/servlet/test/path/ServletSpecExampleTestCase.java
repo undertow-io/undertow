@@ -6,8 +6,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -15,6 +15,7 @@ import org.junit.runner.RunWith;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.MappingMatch;
+
 import java.io.IOException;
 
 /**
@@ -90,19 +91,18 @@ public class ServletSpecExampleTestCase {
             String matchValue,
             String pattern,
             String servletName) {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext" + path);
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            String expected = String.format("Mapping match:%s\nMatch value:%s\nPattern:%s\nServlet:%s",
-                    mappingMatch.name(), matchValue, pattern, servletName);
-            Assert.assertEquals(expected, response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                String expected = String.format("Mapping match:%s\nMatch value:%s\nPattern:%s\nServlet:%s",
+                        mappingMatch.name(), matchValue, pattern, servletName);
+                Assert.assertEquals(expected, response);
+                return null;
+            });
         } catch (IOException e) {
             throw new AssertionError(e);
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 }

@@ -35,10 +35,9 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpHead;
-
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpHead;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -79,31 +78,29 @@ public class SimpleServletTestCase {
 
     @Test
     public void testSimpleHttpServlet() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(HELLO_WORLD, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(HELLO_WORLD, response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testSimpleHttpServletHead() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpHead head = new HttpHead(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
-            HttpResponse result = client.execute(head);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("", HttpClientUtils.readResponse(result));
-            Assert.assertNotNull(result.getHeaders(Headers.CONTENT_LENGTH_STRING));
-            Assert.assertEquals(1, result.getHeaders(Headers.CONTENT_LENGTH_STRING).length);
-            Assert.assertEquals(HELLO_WORLD.length(), Integer.parseInt(result.getFirstHeader(Headers.CONTENT_LENGTH_STRING).getValue()));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(head, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("", HttpClientUtils.readResponse(result));
+                Assert.assertNotNull(result.getHeaders(Headers.CONTENT_LENGTH_STRING));
+                Assert.assertEquals(1, result.getHeaders(Headers.CONTENT_LENGTH_STRING).length);
+                Assert.assertEquals(HELLO_WORLD.length(), Integer.parseInt(result.getFirstHeader(Headers.CONTENT_LENGTH_STRING).getValue()));
+                return null;
+            });
         }
     }
 }

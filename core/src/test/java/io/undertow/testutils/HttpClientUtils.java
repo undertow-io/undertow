@@ -18,8 +18,8 @@
 
 package io.undertow.testutils;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.HttpEntity;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -37,11 +37,11 @@ public class HttpClientUtils {
 
     }
 
-    public static String readResponse(final HttpResponse response) throws IOException {
+    public static String readResponse(final ClassicHttpResponse response) throws IOException {
         return readResponse(response, StandardCharsets.UTF_8);
     }
 
-    public static String readResponse(final HttpResponse response, final Charset charset) throws IOException {
+    public static String readResponse(final ClassicHttpResponse response, final Charset charset) throws IOException {
         HttpEntity entity = response.getEntity();
         if(entity == null) {
             return "";
@@ -71,7 +71,7 @@ public class HttpClientUtils {
         return new String(out.toByteArray(), charset);
     }
 
-    public static byte[] readRawResponse(final HttpResponse response) throws IOException {
+    public static byte[] readRawResponse(final ClassicHttpResponse response) throws IOException {
         return readRawResponse(response.getEntity().getContent());
     }
 

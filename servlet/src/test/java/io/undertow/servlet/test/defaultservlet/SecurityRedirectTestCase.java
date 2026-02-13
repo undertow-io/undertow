@@ -18,26 +18,6 @@
 
 package io.undertow.servlet.test.defaultservlet;
 
-import static io.undertow.util.Headers.AUTHORIZATION;
-import static io.undertow.util.Headers.BASIC;
-import static io.undertow.util.Headers.LOCATION;
-import static io.undertow.util.Headers.WWW_AUTHENTICATE;
-import static org.junit.Assert.assertEquals;
-
-import java.io.IOException;
-
-import jakarta.servlet.ServletException;
-
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -53,6 +33,23 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.StatusCodes;
+import jakarta.servlet.ServletException;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import java.io.IOException;
+
+import static io.undertow.util.Headers.AUTHORIZATION;
+import static io.undertow.util.Headers.BASIC;
+import static io.undertow.util.Headers.LOCATION;
+import static io.undertow.util.Headers.WWW_AUTHENTICATE;
+import static org.junit.Assert.assertEquals;
 
 /**
  * TestCase on redirect with or without trailing slash when requesting protected path.
@@ -95,33 +92,34 @@ public class SecurityRedirectTestCase {
     @Test
     public void testSecurityWithWelcomeFileRedirect() throws IOException {
         // disable following redirect
-        HttpClient client = HttpClientBuilder.create().disableRedirectHandling().build();
-        try {
+        try (CloseableHttpClient client = HttpClientBuilder.create().disableRedirectHandling().build()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.FOUND, result.getStatusLine().getStatusCode());
-            Header[] values = result.getHeaders(LOCATION.toString());
-            assertEquals(1, values.length);
-            assertEquals(DefaultServer.getDefaultServerURL() + "/servletContext/", values[0].getValue());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.FOUND, result.getCode());
+                Header[] values = result.getHeaders(LOCATION.toString());
+                assertEquals(1, values.length);
+                assertEquals(DefaultServer.getDefaultServerURL() + "/servletContext/", values[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
 
-            values = result.getHeaders(WWW_AUTHENTICATE.toString());
-            assertEquals(1, values.length);
-            assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
-            HttpClientUtils.readResponse(result);
+                Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+                assertEquals(1, values.length);
+                assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
             get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user1:password1".getBytes(), false));
-            result = client.execute(get);
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertTrue(response.contains("Redirected home page"));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertTrue(response.contains("Redirected home page"));
+                return null;
+            });
         }
     }
 
@@ -129,39 +127,41 @@ public class SecurityRedirectTestCase {
     @Test
     public void testSecurityWithoutWelcomeFileRedirect() throws IOException {
         // disable following redirect
-        HttpClient client = HttpClientBuilder.create().disableRedirectHandling().build();
-        try {
+        try (CloseableHttpClient client = HttpClientBuilder.create().disableRedirectHandling().build()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/filterpath");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/filterpath/");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
 
-            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-            assertEquals(1, values.length);
-            assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
-            HttpClientUtils.readResponse(result);
+                Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+                assertEquals(1, values.length);
+                assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/filterpath");
             get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user1:password1".getBytes(), false));
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.FOUND, result.getStatusLine().getStatusCode());
-            values = result.getHeaders(LOCATION.toString());
-            assertEquals(1, values.length);
-            assertEquals(DefaultServer.getDefaultServerURL() + "/servletContext/filterpath/", values[0].getValue());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.FOUND, result.getCode());
+                Header[] values = result.getHeaders(LOCATION.toString());
+                assertEquals(1, values.length);
+                assertEquals(DefaultServer.getDefaultServerURL() + "/servletContext/filterpath/", values[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/filterpath/filtered.txt");
             get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user1:password1".getBytes(), false));
-            result = client.execute(get);
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertTrue(response.equals("Stuart"));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertTrue(response.equals("Stuart"));
+                return null;
+            });
         }
     }
 

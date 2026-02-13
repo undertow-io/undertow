@@ -60,7 +60,7 @@ public class QueryParametersWithAllowUnescapedCharactersTestCase extends Abstrac
         // format is: {queryString, expected result}
         queryStrings = new String[][] { new String[] { "/path?unicode=Iñtërnâtiônàližætiøn",
                 //"unicode=Iñtërnâtiônàližætiøn{unicode=>Iñtërnâtiônàližætiøn}" },
-                "unicode=I%C3%B1t%C3%ABrn%C3%A2ti%C3%B4n%C3%A0li%C5%BE%C3%A6ti%C3%B8n{unicode=>Iñtërnâtiônàližætiøn}" },
+                "unicode=IÃ±tÃ«rnÃ¢tiÃ´nÃ liÅ¾Ã¦tiÃ¸n{unicode=>Iñtërnâtiônàližætiøn}" },
                 //new String[] { "/path?a=b&value=bb%20bb", "a=b&value=bb bb{a=>b,value=>bb bb}" },
                 new String[] { "/path?a=b&value=bb%20bb", "a=b&value=bb%20bb{a=>b,value=>bb bb}" },
                 new String[] { "/path?a=b&value=bb&value=cc", "a=b&value=bb&value=cc{a=>b,value=>[bb,cc]}" },
@@ -75,5 +75,10 @@ public class QueryParametersWithAllowUnescapedCharactersTestCase extends Abstrac
                 new String[] { "/path?a=b&value=bb&value=cc&s%20&t%20&u",
                         //"a=b&value=bb&value=cc&s &t &u{a=>b,s =>,t =>,u=>,value=>[bb,cc]}" } };
                         "a=b&value=bb&value=cc&s%20&t%20&u{a=>b,s =>,t =>,u=>,value=>[bb,cc]}" } };
+    }
+
+    @Override
+    public String encodeURI(String uri) {
+        return uri;
     }
 }

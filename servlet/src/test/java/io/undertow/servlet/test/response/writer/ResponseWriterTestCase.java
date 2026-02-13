@@ -29,17 +29,17 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FileUtils;
 import io.undertow.util.StatusCodes;
 import jakarta.servlet.ServletException;
-import org.apache.http.Header;
-import org.apache.http.HttpHeaders;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.impl.NoConnectionReuseStrategy;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicHeader;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpHeaders;
+import org.apache.hc.core5.http.impl.NoConnectionReuseStrategy;
+import org.apache.hc.core5.http.io.entity.InputStreamEntity;
+import org.apache.hc.core5.http.message.BasicHeader;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.BeforeClass;
@@ -117,17 +117,15 @@ public class ResponseWriterTestCase {
     }
 
     private void assertContentLengthBasedFlush(String path) throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + path + "?test=" + ResponseWriterServlet.CONTENT_LENGTH_FLUSH);
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String data = FileUtils.readFile(result.getEntity().getContent());
-            assertEquals("first-aaaa", data);
-            assertEquals(0, result.getHeaders("not-header").length);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                String data = FileUtils.readFile(result.getEntity().getContent());
+                assertEquals("first-aaaa", data);
+                assertEquals(0, result.getHeaders("not-header").length);
+                return null;
+            });
         }
     }
 
@@ -142,16 +140,14 @@ public class ResponseWriterTestCase {
     }
 
     private void assertWriterLargeResponse(String path) throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + path);
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String data = FileUtils.readFile(result.getEntity().getContent());
-            assertEquals(LargeResponseWriterServlet.getMessage(), data);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                String data = FileUtils.readFile(result.getEntity().getContent());
+                assertEquals(LargeResponseWriterServlet.getMessage(), data);
+                return null;
+            });
         }
     }
 
@@ -166,15 +162,14 @@ public class ResponseWriterTestCase {
     }
 
     private void assertExceptionResponse(String path) throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + path);
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = FileUtils.readFile(result.getEntity().getContent());
-            MatcherAssert.assertThat(response, CoreMatchers.startsWith("java.lang.Exception: TestException"));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                String response = FileUtils.readFile(result.getEntity().getContent());
+                MatcherAssert.assertThat(response, CoreMatchers.startsWith("java.lang.Exception: TestException"));
+                return null;
+            });
         }
     }
 
@@ -198,20 +193,27 @@ public class ResponseWriterTestCase {
             // anything will do, send the bytecodes of this class just for testing purposes
             final Path rootPath = Paths.get(getClass().getResource(getClass().getSimpleName() + ".class").toURI());
             final SlowInputStream inputStream = new SlowInputStream(new BufferedInputStream(new FileInputStream(rootPath.toFile())));
-            post.setEntity(new InputStreamEntity(inputStream));
-            final HttpResponse result = client.execute(post);
-            // wait til it is fully read
-            boolean fullyRead = inputStream.waitTillIsFullyRead();
-            // check if servlet ran without any exceptions
-            final Throwable exception = ResponseWriterOnPostServlet.getExceptionIfAny();
-            if (exception != null) {
-                throw exception;
-            }
-            assertTrue(fullyRead);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String data = FileUtils.readFile(result.getEntity().getContent());
-            assertEquals("first-aaaa", data);
-            assertEquals(0, result.getHeaders("not-header").length);
+            post.setEntity(new InputStreamEntity(inputStream, ContentType.TEXT_PLAIN));
+            client.execute(post, result -> {
+                // wait til it is fully read
+                boolean fullyRead = false;
+                try {
+                    fullyRead = inputStream.waitTillIsFullyRead();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                // check if servlet ran without any exceptions
+                final Throwable exception = ResponseWriterOnPostServlet.getExceptionIfAny();
+                if (exception != null) {
+                    throw new RuntimeException(exception);
+                }
+                assertTrue(fullyRead);
+                assertEquals(StatusCodes.OK, result.getCode());
+                String data = FileUtils.readFile(result.getEntity().getContent());
+                assertEquals("first-aaaa", data);
+                assertEquals(0, result.getHeaders("not-header").length);
+                return null;
+            });
         }
     }
 

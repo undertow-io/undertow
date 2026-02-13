@@ -19,32 +19,27 @@
 package io.undertow.servlet.test.session;
 
 
-import jakarta.servlet.ServletException;
-
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.server.session.InMemorySessionManager;
-import io.undertow.server.session.SessionManager;
-import io.undertow.servlet.api.Deployment;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 import io.undertow.servlet.api.ServletContainer;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.api.ServletSessionConfig;
-import io.undertow.servlet.api.SessionManagerFactory;
 import io.undertow.servlet.test.SimpleServletTestCase;
 import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
+import jakarta.servlet.ServletException;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  *
@@ -80,12 +75,9 @@ public class CrossContextServletBrokenSessionFactoryTestCase {
                 .setContextPath("/" + name)
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .setDeploymentName(name + ".war")
-                .setSessionManagerFactory(new SessionManagerFactory() {
-                    @Override
-                    public SessionManager createSessionManager(Deployment deployment) {
-                        // mimic broken session factory for all deployments except first
-                        return "1".equals(name) ? sessionManager : null;
-                    }
+                .setSessionManagerFactory(deployment -> {
+                    // mimic broken session factory for all deployments except first
+                    return "1".equals(name) ? sessionManager : null;
                 })
                 .setDefaultSessionTimeout(1 /*second*/)
                 .setServletSessionConfig(new ServletSessionConfig().setPath("/"))
@@ -104,27 +96,29 @@ public class CrossContextServletBrokenSessionFactoryTestCase {
     public void testSharedSessionCookieMultipleDeployments() throws Exception {
         // FIXME UNDERTOW-2716 this test fails on Windows very frequently
         Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows"));
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet direct1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/servlet");
-            HttpResponse result = client.execute(direct1);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(direct1, result -> {
+            Assert.assertEquals(StatusCodes.OK, result.getCode());
             String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("1", response);
+                return null;
+            });
 
-            result = client.execute(direct1);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
+            client.execute(direct1, result -> {
+            Assert.assertEquals(StatusCodes.OK, result.getCode());
+            String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("2", response);
+                return null;
+            });
 
             Thread.sleep(1000); // await session timeout
-            result = client.execute(direct1);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
+            client.execute(direct1, result -> {
+            Assert.assertEquals(StatusCodes.OK, result.getCode());
+            String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("1", response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+                return null;
+            });
         }
     }
 }

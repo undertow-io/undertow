@@ -29,8 +29,8 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -38,6 +38,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import jakarta.servlet.ServletException;
+
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
@@ -82,17 +83,15 @@ public class AsyncListenerOnCompleteTest {
 
     @Test
     public void testOnCompleteWithNoCompleteCalled() throws IOException, InterruptedException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(200, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Hello", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(200, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Hello", response);
+                return null;
+            });
             Assert.assertEquals("onComplete", OnCompleteServlet.QUEUE.poll(10, TimeUnit.SECONDS));
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
-
 }

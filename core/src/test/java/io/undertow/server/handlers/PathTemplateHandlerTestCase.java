@@ -20,13 +20,12 @@ package io.undertow.server.handlers;
 
 import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -43,32 +42,13 @@ public class PathTemplateHandlerTestCase {
     @BeforeClass
     public static void setup() {
         HttpHandler handler = Handlers.pathTemplate()
-                .add("/", new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        exchange.getResponseSender().send("root");
-                    }
-                })
-                .add("/foo", new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        exchange.getResponseSender().send("foo");
-                    }
-                }).add("/foo/", new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        exchange.getResponseSender().send("foo/");
-                    }
-                })
-                .add("/foo/{bar}", new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        exchange.getResponseSender().send("foo-path" + exchange.getQueryParameters().get("bar"));
-                    }
-                });
+                .add("/", exchange -> exchange.getResponseSender().send("root"))
+                .add("/foo", exchange -> exchange.getResponseSender().send("foo"))
+                .add("/foo/", exchange -> exchange.getResponseSender().send("foo/"))
+                .add("/foo/{bar}", exchange -> exchange.getResponseSender()
+                        .send("foo-path" + exchange.getQueryParameters().get("bar")));
         DefaultServer.setRootHandler(Handlers.path(handler).addPrefixPath("/prefix", handler));
     }
-
 
     @Test
     public void testPathTemplateHandler() throws IOException {
@@ -81,31 +61,34 @@ public class PathTemplateHandlerTestCase {
     }
 
     public void runPathTemplateHandlerTest(String prefix) throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix +"/foo");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("foo", HttpClientUtils.readResponse(result));
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix + "/foo");
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("foo", HttpClientUtils.readResponse(result));
+                return null;
+            });
 
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix + "/foo/");
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("foo/", HttpClientUtils.readResponse(result));
+                return null;
+            });
 
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix +"/foo/");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("foo/", HttpClientUtils.readResponse(result));
-
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix +"/foo/a");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("foo-path[a]", HttpClientUtils.readResponse(result));
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix + "/foo/a");
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("foo-path[a]", HttpClientUtils.readResponse(result));
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + prefix);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("root", HttpClientUtils.readResponse(result));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("root", HttpClientUtils.readResponse(result));
+                return null;
+            });
         }
     }
-
 }

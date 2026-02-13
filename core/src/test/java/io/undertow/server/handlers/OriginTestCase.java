@@ -18,18 +18,18 @@
 
 package io.undertow.server.handlers;
 
-import java.io.IOException;
-
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import io.undertow.testutils.TestHttpClient;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
 
 /**
  * Tests that the Origin header is correctly interpreted
@@ -39,59 +39,56 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class OriginTestCase {
 
-    private static final String HEADER = "selected";
-    private static final String MESSAGE = "My HTTP Request!";
-
     /**
      * Tests the Origin header is respected when the strictest options are selected
      *
      */
     @Test
     public void testStrictOrigin() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             final OriginHandler handler = new OriginHandler();
             handler.addAllowedOrigins("http://www.mysite.com:80", "http://mysite.com:80");
             DefaultServer.setRootHandler(handler);
             handler.setNext(ResponseCodeHandler.HANDLE_200);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            HttpResponse result = client.execute(get);
-            //no origin header, we dny by default
-            Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                //no origin header, we dny by default
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ORIGIN_STRING, "http://www.mysite.com:80");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ORIGIN_STRING, "http://www.mysite.com:80");
             get.setHeader(Headers.ORIGIN_STRING, "http://mysite.com:80");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ORIGIN_STRING, "http://www.mysite.com:80");
             get.setHeader(Headers.ORIGIN_STRING, "bogus");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ORIGIN_STRING, "http://www.mysite.com:80");
             get.setHeader(Headers.ORIGIN_STRING, "bogus");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
-
-
 }

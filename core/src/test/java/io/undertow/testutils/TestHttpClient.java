@@ -18,115 +18,71 @@
 
 package io.undertow.testutils;
 
-import org.apache.http.client.HttpRequestRetryHandler;
-import org.apache.http.conn.ClientConnectionManager;
-import org.apache.http.conn.scheme.Scheme;
-import org.apache.http.conn.scheme.SchemeRegistry;
-import org.apache.http.conn.ssl.SSLSocketFactory;
-import org.apache.http.conn.ssl.X509HostnameVerifier;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
-import org.apache.http.params.HttpConnectionParams;
-import org.apache.http.params.HttpParams;
-import org.apache.http.params.SyncBasicHttpParams;
+import org.apache.hc.client5.http.impl.DefaultHttpRequestRetryStrategy;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.ManagedHttpClientConnectionFactory;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder;
+import org.apache.hc.core5.http.config.CharCodingConfig;
+import org.apache.hc.core5.http.io.SocketConfig;
+import org.apache.hc.core5.util.Timeout;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.SSLSocket;
-import java.io.IOException;
-import java.security.cert.X509Certificate;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.nio.charset.Charset;
 
 /**
  * @author Stuart Douglas
  */
-public class TestHttpClient extends DefaultHttpClient {
+public class TestHttpClient {
 
-    private static final X509HostnameVerifier NO_OP_VERIFIER = new X509HostnameVerifier() {
-        @Override
-        public void verify(String host, SSLSocket ssl) throws IOException {
-        }
+    private static final HostnameVerifier NO_OP_VERIFIER = (s, sslSession) -> true;
 
-        @Override
-        public void verify(String host, X509Certificate cert) throws SSLException {
-        }
-
-        @Override
-        public void verify(String host, String[] cns, String[] subjectAlts) throws SSLException {
-        }
-
-        @Override
-        public boolean verify(String s, SSLSession sslSession) {
-            return true;
-        }
-    };
-
-    private static final List<TestHttpClient> instances = new CopyOnWriteArrayList<>();
-
-    public TestHttpClient() {
-        super(preventSocketTimeoutException(null));
-        instances.add(this);
+    public static CloseableHttpClient defaultClient() {
+        return custom().build();
     }
 
-    public TestHttpClient(HttpParams params) {
-        super(preventSocketTimeoutException(params));
-        instances.add(this);
+    public static HttpClientBuilder withSSLContext(SSLContext sslContext) {
+
+        ClientTlsStrategyBuilder clientTlsStrategyBuilder = ClientTlsStrategyBuilder.create().setSslContext(sslContext);
+
+        if (!DefaultServer.getHostAddress(DefaultServer.DEFAULT).equals("localhost")) {
+            clientTlsStrategyBuilder.setHostnameVerifier(NO_OP_VERIFIER);
+        }
+
+        return custom().setConnectionManager(
+                connectionManager()
+                        .setTlsSocketStrategy(clientTlsStrategyBuilder.buildClassic())
+                        .build());
     }
 
-    public TestHttpClient(ClientConnectionManager conman) {
-        super(conman, preventSocketTimeoutException(null));
-        instances.add(this);
+    public static HttpClientBuilder withEncoding(Charset charset) {
+        return custom().setConnectionManager(
+                connectionManager()
+                        .setConnectionFactory(ManagedHttpClientConnectionFactory.builder()
+                                .charCodingConfig(CharCodingConfig.custom()
+                                        .setCharset(charset)
+                                        .build())
+                                .build())
+                        .build());
     }
 
-    public TestHttpClient(ClientConnectionManager conman, HttpParams params) {
-        super(conman, preventSocketTimeoutException(params));
-        instances.add(this);
+    public static HttpClientBuilder custom() {
+        return HttpClients.custom()
+                .setConnectionManager(connectionManager().build())
+                .setRetryStrategy(new DefaultHttpRequestRetryStrategy(0, Timeout.ofSeconds(1)));
     }
 
-    private static HttpParams preventSocketTimeoutException(HttpParams params) {
+    private static PoolingHttpClientConnectionManagerBuilder connectionManager() {
         // UNDERTOW-1929 prevent the SocketTimeoutException that we see recurring
         // in CI when running tests on proxy mode
-        if (DefaultServer.isProxy()) {
-            if (params == null) {
-                params = new SyncBasicHttpParams();
-                setDefaultHttpParams(params);
-            }
-            HttpConnectionParams.setSoTimeout(params, 300000);
-            return params;
-        }
-        return params;
-    }
-
-    @Override
-    protected HttpRequestRetryHandler createHttpRequestRetryHandler() {
-        return new DefaultHttpRequestRetryHandler(0, false);
-    }
-
-    @Override
-    protected HttpParams createHttpParams() {
-        HttpParams params = super.createHttpParams();
-        HttpConnectionParams.setSoTimeout(params, 300000);
-        return params;
-    }
-
-    public void setSSLContext(final SSLContext sslContext) {
-        SchemeRegistry registry = getConnectionManager().getSchemeRegistry();
-        registry.unregister("https");
-        if (DefaultServer.getHostAddress(DefaultServer.DEFAULT).equals("localhost")) {
-            registry.register(new Scheme("https", 443, new SSLSocketFactory(sslContext)));
-            registry.register(new Scheme("https", DefaultServer.getHostSSLPort("default"), new SSLSocketFactory(sslContext)));
-        } else {
-            registry.register(new Scheme("https", 443, new SSLSocketFactory(sslContext, NO_OP_VERIFIER)));
-            registry.register(new Scheme("https", DefaultServer.getHostSSLPort("default"), new SSLSocketFactory(sslContext, NO_OP_VERIFIER)));
-        }
-    }
-
-    public static void afterTest() {
-        for(TestHttpClient i : instances) {
-            i.getConnectionManager().shutdown();
-        }
-        instances.clear();
+        return PoolingHttpClientConnectionManagerBuilder.create()
+                .setTlsSocketStrategy(ClientTlsStrategyBuilder.create()
+                        .buildClassic())
+                .setDefaultSocketConfig(SocketConfig.custom()
+                        .setSoTimeout(Timeout.ofMinutes(5))
+                        .build());
     }
 }

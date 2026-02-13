@@ -18,10 +18,6 @@
 
 package io.undertow.server.handlers.proxy;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CountDownLatch;
-
 import io.undertow.Undertow;
 import io.undertow.UndertowLogger;
 import io.undertow.server.HttpHandler;
@@ -38,9 +34,8 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.AttachmentKey;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DecompressingHttpClient;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -48,6 +43,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.IoUtils;
 import org.xnio.XnioWorker;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CountDownLatch;
 
 import static io.undertow.Handlers.jvmRoute;
 import static io.undertow.Handlers.path;
@@ -97,7 +96,7 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                     // if stop did not shutdown the worker, we need to run the latch to prevent a Address already in use (UNDERTOW-1960)
                     if (worker != null && !worker.isShutdown() && worker != worker1) {
                         worker2 = worker;
-                        countDown ++;
+                        countDown++;
                     }
                 }
             } finally {
@@ -123,15 +122,15 @@ public abstract class AbstractLoadBalancingProxyTestCase {
         final StringBuilder resultString = new StringBuilder();
 
         for (int i = 0; i < 6; ++i) {
-            DecompressingHttpClient client = new DecompressingHttpClient(new TestHttpClient());
-            try {
+            // decompression is automatic
+            try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
-                HttpResponse result = client.execute(get);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                resultString.append(HttpClientUtils.readResponse(result));
-                resultString.append(' ');
-            } finally {
-                client.getConnectionManager().shutdown();
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    resultString.append(HttpClientUtils.readResponse(result));
+                    resultString.append(' ');
+                    return null;
+                });
             }
         }
         Assert.assertTrue(resultString.toString().contains("server1"));
@@ -140,53 +139,51 @@ public abstract class AbstractLoadBalancingProxyTestCase {
 
     @Test
     public void testAbruptClosed() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/close");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.SERVICE_UNAVAILABLE, result.getStatusLine().getStatusCode());
-        } finally {
-            client.getConnectionManager().shutdown();
-        }
-    }
-    @Test
-    public void testUrlEncoding() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/url/foo=bar");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("/url/foo=bar", HttpClientUtils.readResponse(result));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.SERVICE_UNAVAILABLE, result.getCode());
+                return null;
+            });
         }
     }
 
-    @Test @HttpOneOnly
+    @Test
+    public void testUrlEncoding() throws IOException {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/url/foo=bar");
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("/url/foo=bar", HttpClientUtils.readResponse(result));
+                return null;
+            });
+        }
+    }
+
+    @Test
+    @HttpOneOnly
     public void testOldBackend() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
-            for(int i = 0; i < 10; ++i) {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            for (int i = 0; i < 10; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/old");
-                HttpResponse result = client.execute(get);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                Assert.assertEquals(RESPONSE_BODY, HttpClientUtils.readResponse(result));
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    Assert.assertEquals(RESPONSE_BODY, HttpClientUtils.readResponse(result));
+                    return null;
+                });
             }
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testMaxRetries() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/fail");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("/fail:false", HttpClientUtils.readResponse(result));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("/fail:false", HttpClientUtils.readResponse(result));
+                return null;
+            });
         }
     }
 
@@ -195,29 +192,37 @@ public abstract class AbstractLoadBalancingProxyTestCase {
     public void testLoadSharedWithServerShutdown() throws Exception {
         final StringBuilder resultString = new StringBuilder();
 
-        for (int i = 0; i < 6; ++i) {
-            TestHttpClient client = new TestHttpClient();
-            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals("Test failed with i=" + i, StatusCodes.OK, result.getStatusLine().getStatusCode());
-            resultString.append(HttpClientUtils.readResponse(result));
-            resultString.append(' ');
-            server1.stop();
-            Thread.sleep(1200);
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
-            result = client.execute(get);
-            Assert.assertEquals("Test failed with i=" + i, StatusCodes.OK, result.getStatusLine().getStatusCode());
-            resultString.append(HttpClientUtils.readResponse(result));
-            resultString.append(' ');
-            server1.start();
-            server2.stop();
-            Thread.sleep(600);
-            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
-            result = client.execute(get);
-            Assert.assertEquals("Test failed with i=" + i, StatusCodes.OK, result.getStatusLine().getStatusCode());
-            resultString.append(HttpClientUtils.readResponse(result));
-            resultString.append(' ');
-            server2.start();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            for (int i = 0; i < 6; ++i) {
+                int index = i;
+                HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
+                client.execute(get, result -> {
+                    Assert.assertEquals("Test failed with i=" + index, StatusCodes.OK, result.getCode());
+                    resultString.append(HttpClientUtils.readResponse(result));
+                    resultString.append(' ');
+                    return null;
+                });
+                server1.stop();
+                Thread.sleep(1200);
+                get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
+                client.execute(get, result -> {
+                    Assert.assertEquals("Test failed with i=" + index, StatusCodes.OK, result.getCode());
+                    resultString.append(HttpClientUtils.readResponse(result));
+                    resultString.append(' ');
+                    return null;
+                });
+                server1.start();
+                server2.stop();
+                Thread.sleep(600);
+                get = new HttpGet(DefaultServer.getDefaultServerURL() + "/name");
+                client.execute(get, result -> {
+                    Assert.assertEquals("Test failed with i=" + index, StatusCodes.OK, result.getCode());
+                    resultString.append(HttpClientUtils.readResponse(result));
+                    resultString.append(' ');
+                    return null;
+                });
+                server2.start();
+            }
         }
         Assert.assertTrue(resultString.toString().contains("server1"));
         Assert.assertTrue(resultString.toString().contains("server2"));
@@ -226,15 +231,16 @@ public abstract class AbstractLoadBalancingProxyTestCase {
     @Test
     public void testStickySessions() throws IOException {
         int expected = 0;
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             for (int i = 0; i < 6; ++i) {
+                int index = i;
                 try {
                     HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/session");
                     get.addHeader("Connection", "close");
-                    HttpResponse result = client.execute(get);
-                    Assert.assertEquals("Test failed with i=" + i, StatusCodes.OK, result.getStatusLine().getStatusCode());
-                    int count = Integer.parseInt(HttpClientUtils.readResponse(result));
+                    int count = client.execute(get, result -> {
+                        Assert.assertEquals("Test failed with i=" + index, StatusCodes.OK, result.getCode());
+                        return Integer.parseInt(HttpClientUtils.readResponse(result));
+                    });
                     Assert.assertEquals(expected++, count);
                 } catch (AssertionError e) {
                     throw e;
@@ -242,8 +248,6 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                     throw new AssertionError("Test failed with i=" + i, e);
                 }
             }
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
@@ -251,9 +255,9 @@ public abstract class AbstractLoadBalancingProxyTestCase {
     @Test
     public void testDuplicateHeaders() throws IOException {
         int expected = 0;
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             for (int i = 0; i < 6; ++i) {
+                int index = i;
                 try {
                     HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/session");
                     get.addHeader("a", "b");
@@ -265,45 +269,45 @@ public abstract class AbstractLoadBalancingProxyTestCase {
                     get.addHeader("a", "b");
                     get.addHeader("a", "b");
                     get.addHeader("Connection", "close");
-                    HttpResponse result = client.execute(get);
-                    Assert.assertEquals("Test failed with i=" + i, StatusCodes.OK, result.getStatusLine().getStatusCode());
-                    int count = Integer.parseInt(HttpClientUtils.readResponse(result));
-                    Assert.assertEquals("Test failed with i=" + i, expected++, count);
+                    int count = client.execute(get, result -> {
+                        Assert.assertEquals("Test failed with i=" + index, StatusCodes.OK, result.getCode());
+                        return Integer.parseInt(HttpClientUtils.readResponse(result));
+                    });
+                    Assert.assertEquals("Test failed with i=" + index, expected++, count);
                 } catch (AssertionError e) {
                     throw e;
                 } catch (Exception e) {
                     throw new AssertionError("Test failed with i=" + i, e);
                 }
             }
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testConnectionTimeout() throws Exception {
-
-        TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/timeout");
-        get.addHeader("Connection", "close");
-        HttpResponse result = client.execute(get);
-        boolean res = Boolean.parseBoolean(HttpClientUtils.readResponse(result));
-        Assert.assertEquals(false, res);
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/timeout");
+            get.addHeader("Connection", "close");
+            client.execute(get, result -> {
+                boolean res = Boolean.parseBoolean(HttpClientUtils.readResponse(result));
+                Assert.assertFalse(res);
+                return null;
+            });
             for (int i = 0; i < 20; ++i) { //try and make sure that all IO threads have been used, this is not reliable however
-                result = client.execute(get);
-                HttpClientUtils.readResponse(result);
+                client.execute(get, HttpClientUtils::readResponse);
             }
-            result = client.execute(get);
-            res = Boolean.parseBoolean(HttpClientUtils.readResponse(result));
-            //Assert.assertEquals(true, res); //this will fail sometime, unless we make a huge number of requests to make sure all IO threads are utilised
+            client.execute(get, result -> {
+                boolean res = Boolean.parseBoolean(HttpClientUtils.readResponse(result));
+                //Assert.assertTrue(res); //this will fail sometime, unless we make a huge number of requests to make sure all IO threads are utilised
+                return null;
+            });
             Thread.sleep(IDLE_TIMEOUT + 1000);
             UndertowLogger.ROOT_LOGGER.info("Sending timed out request");
-            result = client.execute(get);
-            res = Boolean.parseBoolean(HttpClientUtils.readResponse(result));
-            Assert.assertEquals(false, res);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                boolean res = Boolean.parseBoolean(HttpClientUtils.readResponse(result));
+                Assert.assertFalse(res);
+                return null;
+            });
         }
     }
 
@@ -314,48 +318,29 @@ public abstract class AbstractLoadBalancingProxyTestCase {
         return jvmRoute("JSESSIONID", s1, path()
                 .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(sessionConfig), new InMemorySessionManager(""), sessionConfig))
                 .addPrefixPath("/name", new StringSendHandler(server1))
-                .addPrefixPath("/url", new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        exchange.getResponseSender().send(exchange.getRequestURI());
-                    }
-                })
-                .addPrefixPath("/path", new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        exchange.getResponseSender().send(exchange.getRequestURI());
-                    }
-                })
-                .addPrefixPath("/fail", new HttpHandler() {
-
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        if (firstFail) {
-                            firstFail = false;
-                            IoUtils.safeClose(exchange.getConnection());
-                            return;
-                        }
-                        exchange.getResponseSender().send(exchange.getRequestURI() + ":" + firstFail);
-                    }
-                }).addPrefixPath("/timeout", new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        if (exchange.getConnection().getAttachment(EXISTING) == null) {
-                            exchange.getConnection().putAttachment(EXISTING, true);
-                            exchange.getResponseSender().send("false");
-                        } else {
-                            exchange.getResponseSender().send("true");
-                        }
-                    }
-                }).addPrefixPath("/close", new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                .addPrefixPath("/url", exchange -> exchange.getResponseSender().send(exchange.getRequestURI()))
+                .addPrefixPath("/path", exchange -> exchange.getResponseSender().send(exchange.getRequestURI()))
+                .addPrefixPath("/fail", exchange -> {
+                    if (firstFail) {
+                        firstFail = false;
                         IoUtils.safeClose(exchange.getConnection());
+                        return;
                     }
-                }).addPrefixPath("/old", new HttpHandler() {
+                    exchange.getResponseSender().send(exchange.getRequestURI() + ":" + firstFail);
+                })
+                .addPrefixPath("/timeout", exchange -> {
+                    if (exchange.getConnection().getAttachment(EXISTING) == null) {
+                        exchange.getConnection().putAttachment(EXISTING, true);
+                        exchange.getResponseSender().send("false");
+                    } else {
+                        exchange.getResponseSender().send("true");
+                    }
+                })
+                .addPrefixPath("/close", exchange -> IoUtils.safeClose(exchange.getConnection()))
+                .addPrefixPath("/old", new HttpHandler() {
                     @Override
                     public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        if(exchange.isInIoThread()) {
+                        if (exchange.isInIoThread()) {
                             exchange.dispatch(this);
                             return;
                         }

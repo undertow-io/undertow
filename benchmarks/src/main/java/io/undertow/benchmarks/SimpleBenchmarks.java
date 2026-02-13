@@ -18,12 +18,14 @@
 
 package io.undertow.benchmarks;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.InputStreamEntity;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.io.entity.InputStreamEntity;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -51,40 +53,49 @@ public class SimpleBenchmarks {
 
     @Benchmark
     public void benchmarkBlockingEmptyGet(SimpleBenchmarkState state) throws IOException {
-        try (CloseableHttpResponse response = state.client()
-                .execute(new HttpGet(state.getBaseUri() + "/blocking?size=0"))) {
-            validateLength(response, 0L);
+        try (CloseableHttpClient client = state.client()) {
+            client.execute(new HttpGet(state.getBaseUri() + "/blocking?size=0"), response -> {
+                validateLength((CloseableHttpResponse) response, 0L);
+                return null;
+            });
         }
     }
 
     @Benchmark
     public void benchmarkBlockingLargeGet(SimpleBenchmarkState state) throws IOException {
-        try (CloseableHttpResponse response = state.client()
-                .execute(new HttpGet(state.getBaseUri() + "/blocking?size=256000"))) {
-            validateLength(response, 256000L);
+        try (CloseableHttpClient client = state.client()) {
+            client.execute(new HttpGet(state.getBaseUri() + "/blocking?size=256000"), response -> {
+                validateLength((CloseableHttpResponse) response, 256000L);
+                return null;
+            });
         }
     }
 
     @Benchmark
     public void benchmarkBlockingEmptyPost(SimpleBenchmarkState state) throws IOException {
-        try (CloseableHttpResponse response = state.client()
-                .execute(new HttpPost(state.getBaseUri() + "/blocking"))) {
-            String result = asString(validate(response).getEntity());
-            if (!"0".equals(result)) {
-                throw new IllegalStateException("expected 0, was " + result);
-            }
+        try (CloseableHttpClient client = state.client()) {
+            client.execute(new HttpPost(state.getBaseUri() + "/blocking"), response -> {
+                String result = asString(validate(response).getEntity());
+                if (!"0".equals(result)) {
+                    throw new IllegalStateException("expected 0, was " + result);
+                }
+                return null;
+            });
         }
     }
 
     @Benchmark
     public void benchmarkBlockingLargePost(SimpleBenchmarkState state) throws IOException {
         HttpPost post = new HttpPost(state.getBaseUri() + "/blocking");
-        post.setEntity(new InputStreamEntity(new StubInputStream(256000)));
-        try (CloseableHttpResponse response = state.client().execute(post)) {
-            String result = asString(validate(response).getEntity());
-            if (!"256000".equals(result)) {
-                throw new IllegalStateException("expected 256000, was " + result);
-            }
+        post.setEntity(new InputStreamEntity(new StubInputStream(256000), ContentType.TEXT_PLAIN));
+        try (CloseableHttpClient client = state.client()) {
+            client.execute(post, response -> {
+                String result = asString(validate(response).getEntity());
+                if (!"256000".equals(result)) {
+                    throw new IllegalStateException("expected 256000, was " + result);
+                }
+                return null;
+            });
         }
     }
 
@@ -94,7 +105,7 @@ public class SimpleBenchmarks {
         return baos.toString("UTF-8");
     }
 
-    private void validateLength(HttpResponse response, long expectedLength) throws IOException {
+    private void validateLength(CloseableHttpResponse response, long expectedLength) throws IOException {
         long length = BenchmarkUtils.length(validate(response).getEntity().getContent());
         if (length != expectedLength) {
             throw new IllegalStateException("Unexpected length " + length);
@@ -102,7 +113,7 @@ public class SimpleBenchmarks {
     }
 
     private <T extends HttpResponse> T validate(T response) {
-        int status = response.getStatusLine().getStatusCode();
+        int status = response.getCode();
         if (status != 200) {
             throw new IllegalStateException("Unexpected status code " + status);
         }

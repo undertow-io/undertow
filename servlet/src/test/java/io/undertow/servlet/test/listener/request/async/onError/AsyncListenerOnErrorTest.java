@@ -23,8 +23,8 @@ import java.io.IOException;
 import jakarta.servlet.ServletException;
 
 import io.undertow.testutils.ProxyIgnore;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -104,83 +104,81 @@ public class AsyncListenerOnErrorTest {
 
     @Test
     public void testAsyncListenerOnErrorInvoked1() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async1");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
+                return null;
+            });
             Assert.assertArrayEquals(new String[]{"ERROR", "COMPLETE"}, AsyncEventListener.results(2));
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testAsyncListenerOnErrorInvoked2() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async2");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
+                return null;
+            });
             Assert.assertArrayEquals(new String[]{"ERROR", "COMPLETE"}, AsyncEventListener.results(2));
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testMultiAsyncDispatchError() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async3");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
+                return null;
+            });
             Assert.assertArrayEquals(new String[]{"START", "ERROR", "COMPLETE"}, AsyncEventListener.results(3));
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     /**
      * Regression test for UNDERTOW-1455
-     *
+     * <p>
      * Compared to testAsyncListenerOnErrorInvoked* tests, exception is thrown in
      * entering servlet not in asynchronous dispatch part.
      */
     @Test
     public void testAsyncListenerOnErrorExceptionInFirstServlet() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async4");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(SimpleAsyncListener.MESSAGE, response);
+                return null;
+            });
             Assert.assertArrayEquals(new String[]{"ERROR", "COMPLETE"}, AsyncEventListener.results(2));
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
-    @Test @ProxyIgnore
+    @Test
+    @ProxyIgnore
     // FIXME UNDERTOW-1523
     public void testAsyncErrorOnClientBreakdown() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async5");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            org.apache.http.client.utils.HttpClientUtils.closeQuietly(client);
-
-            Assert.assertArrayEquals(new String[]{"ERROR", "COMPLETE"}, AsyncEventListener.results(3));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                client.close();
+                return null;
+            });
+        } catch (IOException e) {
+            // expected
         }
+
+        Assert.assertArrayEquals(new String[]{"ERROR", "COMPLETE"}, AsyncEventListener.results(3));
     }
 }

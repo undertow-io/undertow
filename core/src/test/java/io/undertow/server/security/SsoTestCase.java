@@ -42,11 +42,9 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.StatusCodes;
-
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -113,54 +111,60 @@ public class SsoTestCase extends AuthenticationTestBase {
 
     @Test
     public void testSsoSuccess() throws IOException {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test1");
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+                Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+                String header = getAuthHeader(BASIC, values);
+                assertEquals(BASIC + " realm=\"Test Realm\"", header);
+                return HttpClientUtils.readResponse(result);
+            });
 
-        TestHttpClient client = new TestHttpClient();
-        client.setCookieStore(new BasicCookieStore());
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test1");
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        String header = getAuthHeader(BASIC, values);
-        assertEquals(BASIC + " realm=\"Test Realm\"", header);
-        HttpClientUtils.readResponse(result);
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test1");
+            get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("userOne:passwordOne".getBytes(), false));
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-        get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test1");
-        get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("userOne:passwordOne".getBytes(), false));
-        result = client.execute(get);
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                Header[] values = result.getHeaders("ProcessedBy");
+                assertEquals(1, values.length);
+                assertEquals("ResponseHandler", values[0].getValue());
+                HttpClientUtils.readResponse(result);
+                assertSingleNotificationType(SecurityNotification.EventType.AUTHENTICATED);
+                return null;
+            });
 
-        values = result.getHeaders("ProcessedBy");
-        assertEquals(1, values.length);
-        assertEquals("ResponseHandler", values[0].getValue());
-        HttpClientUtils.readResponse(result);
-        assertSingleNotificationType(SecurityNotification.EventType.AUTHENTICATED);
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test2");
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
+                Header[] values = result.getHeaders("ProcessedBy");
+                assertEquals(1, values.length);
+                assertEquals("ResponseHandler", values[0].getValue());
+                HttpClientUtils.readResponse(result);
+                assertSingleNotificationType(SecurityNotification.EventType.AUTHENTICATED);
+                return null;
+            });
 
-        get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test2");
-        result = client.execute(get);
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            //now test that logout will invalidate the SSO session
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test1?logout=true");
+            get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("userOne:passwordOne".getBytes(), false));
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-        values = result.getHeaders("ProcessedBy");
-        assertEquals(1, values.length);
-        assertEquals("ResponseHandler", values[0].getValue());
-        HttpClientUtils.readResponse(result);
-        assertSingleNotificationType(SecurityNotification.EventType.AUTHENTICATED);
+                Header[] values = result.getHeaders("ProcessedBy");
+                assertEquals(1, values.length);
+                assertEquals("ResponseHandler", values[0].getValue());
+                HttpClientUtils.readResponse(result);
+                assertNotifiactions(SecurityNotification.EventType.AUTHENTICATED, SecurityNotification.EventType.LOGGED_OUT);
+                return null;
+            });
 
-        //now test that logout will invalidate the SSO session
-        get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test1?logout=true");
-        get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("userOne:passwordOne".getBytes(), false));
-        result = client.execute(get);
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-
-        values = result.getHeaders("ProcessedBy");
-        assertEquals(1, values.length);
-        assertEquals("ResponseHandler", values[0].getValue());
-        HttpClientUtils.readResponse(result);
-        assertNotifiactions(SecurityNotification.EventType.AUTHENTICATED, SecurityNotification.EventType.LOGGED_OUT);
-
-
-        get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test2");
-        result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test2");
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+                return null;
+            });
+        }
     }
 }

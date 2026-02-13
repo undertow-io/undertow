@@ -36,8 +36,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -73,8 +73,8 @@ public class RequestListenerAsyncRequestTestCase {
                 .addMapping("/asynccomplete");
 
         ServletInfo a2 = new ServletInfo("asyncServlet2", AnotherAsyncServlet.class)
-        .setAsyncSupported(true)
-        .addMapping("/async2");
+                .setAsyncSupported(true)
+                .addMapping("/async2");
 
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(SimpleServletTestCase.class.getClassLoader())
@@ -94,51 +94,46 @@ public class RequestListenerAsyncRequestTestCase {
     @Test
     public void testSimpleHttpServlet() throws IOException {
         TestListener.init(4);
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(HELLO_WORLD, response);
-
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(HELLO_WORLD, response);
+                return null;
+            });
             Assert.assertArrayEquals(new String[]{"created REQUEST", "destroyed REQUEST", "created ASYNC", "destroyed ASYNC"}, TestListener.results().toArray());
 
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
+
     @Test
     public void testSimpleHttpServletCompleteInInitialRequest() throws IOException {
         TestListener.init(3);
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/asynccomplete");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("asynccomplete", response);
-
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("asynccomplete", response);
+                return null;
+            });
             Assert.assertArrayEquals(new String[]{"created REQUEST", "onComplete", "destroyed REQUEST"}, TestListener.results().toArray());
-
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testSimpleAsyncHttpServletWithoutDispatch() throws IOException {
         TestListener.init(2);
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async2");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(AnotherAsyncServlet.class.getSimpleName(), response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(AnotherAsyncServlet.class.getSimpleName(), response);
+                return null;
+            });
             Assert.assertArrayEquals(new String[]{"created REQUEST", "destroyed REQUEST", "created REQUEST", "destroyed REQUEST"}, TestListener.results().toArray());
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 

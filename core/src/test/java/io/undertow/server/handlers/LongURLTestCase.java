@@ -19,14 +19,12 @@
 package io.undertow.server.handlers;
 
 import io.undertow.protocols.http2.Http2Channel;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.AjpIgnore;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
@@ -56,12 +54,7 @@ public class LongURLTestCase {
 
         final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
-        blockingHandler.setRootHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) {
-                exchange.getResponseSender().send(exchange.getRelativePath());
-            }
-        });
+        blockingHandler.setRootHandler(exchange -> exchange.getResponseSender().send(exchange.getRelativePath()));
     }
 
     // TODO
@@ -79,15 +72,12 @@ public class LongURLTestCase {
         }
         String message = sb.toString();
 
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/" + message);
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals("/" + message, HttpClientUtils.readResponse(result));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals("/" + message, HttpClientUtils.readResponse(result));
+                return null;
+            });
         }
     }
-
-
 }

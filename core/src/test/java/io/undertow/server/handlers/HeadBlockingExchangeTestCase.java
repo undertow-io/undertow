@@ -23,8 +23,8 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpHead;
+import org.apache.hc.client5.http.classic.methods.HttpHead;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -50,14 +50,13 @@ public class HeadBlockingExchangeTestCase {
     @Test
     public void sendHttpHead() throws IOException {
         HttpHead head = new HttpHead(DefaultServer.getDefaultServerURL());
-        TestHttpClient client = new TestHttpClient();
-        try {
-            HttpResponse result = client.execute(head);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("", HttpClientUtils.readResponse(result));
-            Assert.assertEquals("100", result.getFirstHeader("Content-Length").getValue());
-        } finally {
-            client.getConnectionManager().shutdown();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            client.execute(head, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("", HttpClientUtils.readResponse(result));
+                Assert.assertEquals("100", result.getFirstHeader("Content-Length").getValue());
+                return null;
+            });
         }
     }
 }

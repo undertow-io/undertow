@@ -28,8 +28,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -60,17 +60,15 @@ public class ContentTypeCharsetTestCase {
     }
 
     private void runtest(String contentType, String charset, String expectedContentType, String expectedBody) throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/test?contentType=" + URLEncoder.encode(contentType) + "&charset=" + URLEncoder.encode(charset));
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(expectedContentType, result.getHeaders("Content-Type")[0].getValue());
-            Assert.assertEquals(expectedBody, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(expectedContentType, result.getHeaders("Content-Type")[0].getValue());
+                Assert.assertEquals(expectedBody, response);
+                return null;
+            });
         }
     }
-
 }

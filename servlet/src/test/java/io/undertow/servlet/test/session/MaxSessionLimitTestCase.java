@@ -31,8 +31,8 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import jakarta.servlet.ServletException;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -67,18 +67,22 @@ public class MaxSessionLimitTestCase {
 
     @Test
     public void testMaxSessionHandling() throws Exception {
-        try (TestHttpClient client = new TestHttpClient();
-             TestHttpClient client2 = new TestHttpClient()) {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient();
+             CloseableHttpClient client2 = TestHttpClient.defaultClient()) {
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/maxSession");
 
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("1", HttpClientUtils.readResponse(result));
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("1", HttpClientUtils.readResponse(result));
+                return null;
+            });
 
             // The second request should fail as the first request has maxed out the session limit
-            HttpResponse result2 = client2.execute(get);
-            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result2.getStatusLine().getStatusCode());
+            client2.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getCode());
+                return null;
+            });
         }
     }
 }
