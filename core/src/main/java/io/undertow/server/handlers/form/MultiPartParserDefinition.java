@@ -189,7 +189,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
             this.defaultEncoding = defaultEncoding;
             this.fileSizeThreshold = fileSizeThreshold;
             this.fieldSizeThreshold = fieldSizeThreshold;
-            this.data = new FormData(exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, 1000));
+            this.data = new FormData(exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS,  UndertowOptions.DEFAULT_MAX_PARAMETERS));
             String charset = defaultEncoding;
             String contentType = exchange.getRequestHeaders().getFirst(Headers.CONTENT_TYPE);
             if (contentType != null) {

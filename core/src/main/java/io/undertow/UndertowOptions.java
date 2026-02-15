@@ -92,17 +92,21 @@ public class UndertowOptions {
      */
     public static final Option<Integer> NO_REQUEST_TIMEOUT = Option.simple(UndertowOptions.class, "NO_REQUEST_TIMEOUT", Integer.class);
 
-    public static final int DEFAULT_MAX_PARAMETERS = 1000;
-
     /**
      * The maximum number of parameters that will be parsed. This is used to protect against hash vulnerabilities.
      * <p>
      * This applies to both query parameters, and to POST data, but is not cumulative (i.e. you can potentially have
      * max parameters * 2 total parameters).
      * <p>
-     * Defaults to 1000
+     * Defaults to {@link #DEFAULT_MAX_PARAMETERS}
      */
     public static final Option<Integer> MAX_PARAMETERS = Option.simple(UndertowOptions.class, "MAX_PARAMETERS", Integer.class);
+
+    /**
+     * Default value of {@link #MAX_PARAMETERS} option.
+     */
+    public static final int DEFAULT_MAX_PARAMETERS = 1000;
+
 
     public static final int DEFAULT_MAX_HEADERS = 200;
 
