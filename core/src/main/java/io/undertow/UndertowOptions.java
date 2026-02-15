@@ -155,6 +155,11 @@ public class UndertowOptions {
     public static final Option<Boolean> DECODE_SLASH = Option.simple(UndertowOptions.class, "DECODE_SLASH", Boolean.class);
 
     /**
+     * Default value of {@link #DECODE_URL} option.
+     */
+    public static final boolean DEFAULT_DECODE_URL = true;
+
+    /**
      * If this is true then the parser will decode the URL and query parameters using the selected character encoding (UTF-8 by default). If this is false they will
      * not be decoded. This will allow a later handler to decode them into whatever charset is desired.
      * <p>
