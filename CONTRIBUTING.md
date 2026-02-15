@@ -221,3 +221,12 @@ Only then, you can push it to origin. If you edited a commit that was already in
 ```bash
 git push origin --force UNDERTOW-XXXX-my_cool_feature
 ```
+
+#### Legal
+
+All contributions to this repository are licensed under the Apache License, version 2.0 or later, or, if another license is specified as governing the file or directory being modified, such other license.
+
+All contributions are subject to the Developer Certificate of Origin (DCO). The DCO text is also included verbatim in the dco.txt file in the root directory of the repository.
+Compliance with Laws and Regulations
+
+All contributions must comply with applicable laws and regulations, including U.S. export control and sanctions restrictions. For background, see the Linux Foundation’s guidance: Navigating Global Regulations and Open Source: US OFAC Sanctions.
