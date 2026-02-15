@@ -406,8 +406,14 @@ public class UndertowOptions {
 
     /**
      * If the SSLEngine should prefer the servers cipher version. Only applicable on JDK8+.
+     * Defaults to {@link #DEFAULT_SSL_USER_CIPHER_SUITES_ORDER}.
      */
     public static final Option<Boolean> SSL_USER_CIPHER_SUITES_ORDER = Option.simple(UndertowOptions.class, "SSL_USER_CIPHER_SUITES_ORDER", Boolean.class);
+
+    /**
+     * Default value of {@link #SSL_USER_CIPHER_SUITES_ORDER} option.
+     */
+    public static final boolean DEFAULT_SSL_USER_CIPHER_SUITES_ORDER = false;
 
     /**
      * This option forces {@link io.undertow.protocols.ssl.UndertowXnioSsl} to use a specific
