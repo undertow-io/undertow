@@ -18,21 +18,24 @@
 
 package io.undertow.server;
 
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
+import io.undertow.testutils.ProxyIgnore;
+import io.undertow.util.FileUtils;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.xnio.IoUtils;
 
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.testutils.ProxyIgnore;
-import io.undertow.util.FileUtils;
+import static io.undertow.UndertowOptions.MAX_ENTITY_SIZE;
 
 /**
  * Tests abnormal connection termination
@@ -96,4 +99,15 @@ public class ConnectionTerminationTestCase {
             IoUtils.safeClose(socket);
         }
     }
+
+    @DefaultServer.BeforeServerStarts
+    public static void setupServer() {
+        DefaultServer.setServerOptions(OptionMap.create(MAX_ENTITY_SIZE, -1L));
+    }
+
+    @DefaultServer.AfterServerStops
+    public static void cleanup() {
+        DefaultServer.setServerOptions(OptionMap.EMPTY);
+    }
+
 }

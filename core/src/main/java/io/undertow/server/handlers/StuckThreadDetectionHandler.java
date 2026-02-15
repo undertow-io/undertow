@@ -154,7 +154,7 @@ public class StuckThreadDetectionHandler implements HttpHandler {
         // GC'ing, as the reference is removed from the Map in the finally clause
 
         Long key = Thread.currentThread().getId();
-        MonitoredThread monitoredThread = new MonitoredThread(Thread.currentThread(), exchange.getRequestURI() + exchange.getQueryString());
+        MonitoredThread monitoredThread = new MonitoredThread(Thread.currentThread(), exchange.getRequestURI() + exchange.getDecodedQueryString());
         activeThreads.put(key, monitoredThread);
         if(timerKey == null) {
             synchronized (this) {
