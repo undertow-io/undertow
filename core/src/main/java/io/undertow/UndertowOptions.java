@@ -171,12 +171,22 @@ public class UndertowOptions {
     public static final Option<String> URL_CHARSET = Option.simple(UndertowOptions.class, "URL_CHARSET", String.class);
 
     /**
+     * Default value of {@link #ALWAYS_SET_KEEP_ALIVE} option.
+     */
+    public static final boolean DEFAULT_ALWAYS_SET_KEEP_ALIVE = true;
+
+    /**
      * If this is true then a Connection: keep-alive header will be added to responses, even when it is not strictly required by
      * the specification.
      * <p>
      * Defaults to true
      */
     public static final Option<Boolean> ALWAYS_SET_KEEP_ALIVE = Option.simple(UndertowOptions.class, "ALWAYS_SET_KEEP_ALIVE", Boolean.class);
+
+    /**
+     * Default value of {@link #ALWAYS_SET_DATE} option.
+     */
+    public static final boolean DEFAULT_ALWAYS_SET_DATE = true;
 
     /**
      * If this is true then a Date header will be added to all responses. The HTTP spec says this header should be added to all
@@ -331,6 +341,11 @@ public class UndertowOptions {
      */
     @Deprecated(forRemoval = true)
     public static final Option<Integer> HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE = Option.simple(UndertowOptions.class, "HTTP2_SETTINGS_MAX_HEADER_LIST_SIZE", Integer.class);
+
+    /**
+     * Default value of {@link #HTTP2_PADDING_SIZE} option.
+     */
+    public static final int DEFAULT_HTTP2_PADDING_SIZE = 0;
 
     /**
      * The maximum amount of padding to send in a HTTP/2 frame. Actual amount will be randomly determined, defaults to Zero. <br>UNIT: Bytes.

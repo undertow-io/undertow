@@ -246,7 +246,7 @@ class HttpTransferEncoding {
             if (HttpString.tryFromString(connection).equals(Headers.CLOSE)) {
                 exchange.setPersistent(false);
             }
-        } else if (exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALWAYS_SET_KEEP_ALIVE, true)) {
+        } else if (exchange.getConnection().getUndertowOptions().get(UndertowOptions.ALWAYS_SET_KEEP_ALIVE, UndertowOptions.DEFAULT_ALWAYS_SET_KEEP_ALIVE)) {
             responseHeaders.put(Headers.CONNECTION, Headers.KEEP_ALIVE.toString());
         }
         //according to the HTTP RFC we should ignore content length if a transfer coding is specified
