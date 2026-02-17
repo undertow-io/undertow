@@ -18,6 +18,7 @@
 package io.undertow.websockets.core;
 
 import io.undertow.UndertowLogger;
+import io.undertow.UndertowOptions;
 import io.undertow.conduits.IdleTimeoutConduit;
 import io.undertow.server.protocol.framed.AbstractFramedChannel;
 import io.undertow.server.protocol.framed.AbstractFramedStreamSourceChannel;
@@ -53,16 +54,7 @@ import java.util.Set;
  * @author Stuart Douglas
  */
 public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketChannel, StreamSourceFrameChannel, StreamSinkFrameChannel> {
-    /**
-     * Configure a read timeout for a web socket, in milliseconds. If its present it will override {@link org.xnio.Options.READ_TIMEOUT}. If the given amount of time elapses without
-     * a successful read taking place, the socket's next read will throw a {@link ReadTimeoutException}.
-     */
-    public static final String WEB_SOCKETS_READ_TIMEOUT = "io.undertow.websockets.core.read-timeout";
-    /**
-     * Configure a write timeout for a web socket, in milliseconds. If its present it will override {@link org.xnio.Options.WRITE_TIMEOUT}. If the given amount of time elapses without
-     * a successful write taking place, the socket's next write will throw a {@link WriteTimeoutException}.
-     */
-    public static final String WEB_SOCKETS_WRITE_TIMEOUT = "io.undertow.websockets.core.write-timeout";
+
     private final boolean client;
 
     private final WebSocketVersion version;
@@ -118,19 +110,17 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
         this.hasReservedOpCode = extensionFunction.hasExtensionOpCode();
         this.subProtocol = subProtocol;
         this.peerConnections = peerConnections;
-        final String webSocketReadTimeout = System.getProperty(WEB_SOCKETS_READ_TIMEOUT);
-        if(webSocketReadTimeout != null) {
+        if(options.contains(UndertowOptions.WEB_SOCKETS_READ_TIMEOUT)) {
             try {
-                this.setOption(Options.READ_TIMEOUT, Integer.parseInt(webSocketReadTimeout));
-            } catch (Exception e) {
+                this.setOption(Options.READ_TIMEOUT, options.get(UndertowOptions.WEB_SOCKETS_READ_TIMEOUT));
+            } catch (IOException e) {
                 UndertowLogger.ROOT_LOGGER.failedToSetWSTimeout(e);
             }
         }
-        final String webSocketWriteTimeout = System.getProperty(WEB_SOCKETS_WRITE_TIMEOUT);
-        if(webSocketWriteTimeout != null) {
+        if(options.contains(UndertowOptions.WEB_SOCKETS_WRITE_TIMEOUT)) {
             try {
-                this.setOption(Options.WRITE_TIMEOUT, Integer.parseInt(webSocketWriteTimeout));
-            } catch (Exception e) {
+                this.setOption(Options.WRITE_TIMEOUT, options.get(UndertowOptions.WEB_SOCKETS_WRITE_TIMEOUT));
+            } catch (IOException e) {
                 UndertowLogger.ROOT_LOGGER.failedToSetWSTimeout(e);
             }
         }

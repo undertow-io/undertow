@@ -21,6 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.util.CharsetUtil;
+import io.undertow.UndertowOptions;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
 import io.undertow.util.NetworkUtils;
@@ -58,9 +59,9 @@ public class WebSocketTimeoutTestCase {
     public static void beforeTest() {
         DefaultServer.setServerOptions(OptionMap.builder()
                 .set(Options.READ_TIMEOUT, DEFAULTS_IO_TIMEOUT_VALUE)
-                .set(Options.WRITE_TIMEOUT, DEFAULTS_IO_TIMEOUT_VALUE).getMap());
-        System.setProperty(WebSocketChannel.WEB_SOCKETS_READ_TIMEOUT, "" + TESTABLE_TIMEOUT_VALUE);
-        System.setProperty(WebSocketChannel.WEB_SOCKETS_WRITE_TIMEOUT, "" + NON_TESTABLE_TIMEOUT_VALUE);
+                .set(Options.WRITE_TIMEOUT, DEFAULTS_IO_TIMEOUT_VALUE)
+                .set(UndertowOptions.WEB_SOCKETS_READ_TIMEOUT, TESTABLE_TIMEOUT_VALUE)
+                .set(UndertowOptions.WEB_SOCKETS_WRITE_TIMEOUT, NON_TESTABLE_TIMEOUT_VALUE).getMap());
         SCHEDULER = Executors.newScheduledThreadPool(2);
     }
 

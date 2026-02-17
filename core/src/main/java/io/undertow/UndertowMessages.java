@@ -660,4 +660,6 @@ public interface UndertowMessages {
     @Message(id = 212, value = "Failed to encode query string '%s' with '%s' encoding.")
     IllegalArgumentException failedToEncodeQueryString(String q, String e);
 
+    @Message(id = 218, value = "Failed to schedule access message. Access logger is closing.")
+    IllegalStateException failedToLogAccessOnClose();
 }
