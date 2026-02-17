@@ -21,6 +21,7 @@ package io.undertow.server.handlers.form;
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
+import io.undertow.connector.PooledByteBuffer;
 import io.undertow.server.ExchangeCompletionListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -32,7 +33,6 @@ import io.undertow.util.SameThreadExecutor;
 import io.undertow.util.StatusCodes;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
-import io.undertow.connector.PooledByteBuffer;
 import org.xnio.channels.StreamSourceChannel;
 
 import java.io.ByteArrayOutputStream;
@@ -62,6 +62,14 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
 
 
     public static final String MULTIPART_FORM_DATA = "multipart/form-data";
+
+    /**
+     * Proposed default MINSIZE as 16 KB for content in memory before persisting to disk if file content exceeds
+     * {@link #fileSizeThreshold} and the <i>filename</i> is not specified in the form.
+     * @deprecated : use {@link UndertowOptions#MEMORY_STORAGE_THRESHOLD} instead, this will be removed in a future release
+     */
+    @Deprecated(since = "2.4.0.Final", forRemoval = true) // TODO UNDERTOW-2708
+    private static final long MINSIZE = Long.getLong("io.undertow.multipart.minsize", UndertowOptions.DEFAULT_MEMORY_STORAGE_THRESHOLD);
 
     private Executor executor;
 
@@ -96,7 +104,7 @@ public class MultiPartParserDefinition implements FormParserFactory.ParserDefini
                 UndertowLogger.REQUEST_LOGGER.debugf("Could not find boundary in multipart request with ContentType: %s, multipart data will not be available", mimeType);
                 return null;
             }
-            fieldSizeThreshold = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MEMORY_STORAGE_THRESHOLD, UndertowOptions.DEFAULT_MEMORY_STORAGE_THRESHOLD);
+            fieldSizeThreshold = exchange.getConnection().getUndertowOptions().get(UndertowOptions.MEMORY_STORAGE_THRESHOLD, MINSIZE);
             final MultiPartUploadHandler parser = new MultiPartUploadHandler(exchange, boundary, maxIndividualFileSize, fileSizeThreshold, defaultEncoding, fieldSizeThreshold);
             exchange.addExchangeCompleteListener(new ExchangeCompletionListener() {
                 @Override
