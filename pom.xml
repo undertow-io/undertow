@@ -396,26 +396,6 @@
 
             <dependency>
                 <groupId>io.undertow</groupId>
-                <artifactId>undertow-servlet</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.undertow</groupId>
-                <artifactId>undertow-servlet</artifactId>
-                <version>${project.version}</version>
-                <type>test-jar</type>
-                <scope>test</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>io.undertow</groupId>
-                <artifactId>undertow-websockets-jsr</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.undertow</groupId>
                 <artifactId>undertow-benchmarks</artifactId>
                 <version>${project.version}</version>
             </dependency>
