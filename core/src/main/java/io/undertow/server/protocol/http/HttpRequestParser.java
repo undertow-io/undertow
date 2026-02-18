@@ -215,7 +215,7 @@ public abstract class HttpRequestParser {
         decode = options.get(UndertowOptions.DECODE_URL, UndertowOptions.DEFAULT_DECODE_URL);
         charset = options.get(UndertowOptions.URL_CHARSET, UndertowOptions.DEFAULT_URL_CHARSET);
         maxCachedHeaderSize = options.get(UndertowOptions.MAX_CACHED_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_CACHED_HEADER_SIZE);
-        this.allowUnescapedCharactersInUrl = options.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false);
+        this.allowUnescapedCharactersInUrl = options.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, UndertowOptions.DEFAULT_ALLOW_UNESCAPED_CHARACTERS_IN_URL);
         if(options.contains(UndertowOptions.ALLOW_ID_LESS_MATRIX_PARAMETERS)) {
             this.allowIDLessMatrixParams = options.get(UndertowOptions.ALLOW_ID_LESS_MATRIX_PARAMETERS, UndertowOptions.DEFAULT_ALLOW_ID_LESS_MATRIX_PARAMETERS);
         } else {

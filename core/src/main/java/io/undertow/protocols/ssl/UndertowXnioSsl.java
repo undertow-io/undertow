@@ -317,7 +317,7 @@ public class UndertowXnioSsl extends XnioSsl {
                 }
             }
         }
-        boolean useCipherSuitesOrder = optionMap.get(UndertowOptions.SSL_USER_CIPHER_SUITES_ORDER, false);
+        boolean useCipherSuitesOrder = optionMap.get(UndertowOptions.SSL_USER_CIPHER_SUITES_ORDER, UndertowOptions.DEFAULT_SSL_USER_CIPHER_SUITES_ORDER);
         if (useCipherSuitesOrder) {
             SSLParameters sslParameters = engine.getSSLParameters();
             sslParameters.setUseCipherSuitesOrder(true);

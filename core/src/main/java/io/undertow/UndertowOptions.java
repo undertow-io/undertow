@@ -422,7 +422,13 @@ public class UndertowOptions {
     public static final Option<Integer> HTTP_HEADERS_CACHE_SIZE = Option.simple(UndertowOptions.class, "HTTP_HEADERS_CACHE_SIZE", Integer.class);
 
     /**
+     * Default value of {@link #SSL_USER_CIPHER_SUITES_ORDER} option.
+     */
+    public static final boolean DEFAULT_SSL_USER_CIPHER_SUITES_ORDER = false;
+
+    /**
      * If the SSLEngine should prefer the servers cipher version. Only applicable on JDK8+.
+     * Defaults to {@link #DEFAULT_SSL_USER_CIPHER_SUITES_ORDER}.
      */
     public static final Option<Boolean> SSL_USER_CIPHER_SUITES_ORDER = Option.simple(UndertowOptions.class, "SSL_USER_CIPHER_SUITES_ORDER", Boolean.class);
 
@@ -433,6 +439,11 @@ public class UndertowOptions {
      * The option can be useful when connecting via IP but want to set a SNI hostname value.
      */
     public static final Option<String> SSL_SNI_HOSTNAME = Option.simple(UndertowOptions.class, "SSL_SNI_HOSTNAME", String.class);
+
+    /**
+     * Default value of {@link #ALLOW_UNESCAPED_CHARACTERS_IN_URL} option.
+     */
+    public static final boolean DEFAULT_ALLOW_UNESCAPED_CHARACTERS_IN_URL = false;
 
     public static final Option<Boolean> ALLOW_UNESCAPED_CHARACTERS_IN_URL = Option.simple(UndertowOptions.class,"ALLOW_UNESCAPED_CHARACTERS_IN_URL", Boolean.class);
 
@@ -452,10 +463,15 @@ public class UndertowOptions {
     public static final Option<String> ENDPOINT_IDENTIFICATION_ALGORITHM = Option.simple(UndertowOptions.class, "ENDPOINT_IDENTIFICATION_ALGORITHM", String.class);
 
     /**
+     * Default value of {@link #QUEUED_FRAMES_HIGH_WATER_MARK} option.
+     */
+    public static final int DEFAULT_QUEUED_FRAMES_HIGH_WATER_MARK = 50;
+
+    /**
      * The maximum numbers of frames that can be queued before reads are suspended. Once this number is hit then reads will not be resumed until {@link #QUEUED_FRAMES_LOW_WATER_MARK}
      * is hit.
-     *
-     * Defaults to 50
+     * <p>
+     * Defaults to {@link #DEFAULT_QUEUED_FRAMES_HIGH_WATER_MARK}
      */
     public static final Option<Integer> QUEUED_FRAMES_HIGH_WATER_MARK = Option.simple(UndertowOptions.class, "QUEUED_FRAMES_HIGH_WATER_MARK", Integer.class);
 
@@ -507,6 +523,20 @@ public class UndertowOptions {
      * the server will send a GO_AWAY frame with error code 11 ({@code ENHANCE_YOUR_CALM}) and it will close the connection.
      */
     public static final Option<Integer> MAX_RST_FRAMES_PER_WINDOW = Option.simple(UndertowOptions.class, "MAX_RST_STREAMS_PER_TIME_WINDOW", Integer.class);
+
+    /**
+     * Proposed default minimum size for storing content in memory before persisting to disk.
+     * The default value for {@code MEMORY_STORAGE_THRESHOLD} is 16 KB (16384 bytes).
+     */
+    public static final long DEFAULT_MEMORY_STORAGE_THRESHOLD = 0x4000;
+
+    /**
+     * The minimum size in bytes for storing content in memory before persisting to disk. If the file content exceeds
+     * the specified <i>file size threshold</i> and the <i>filename</i> is not specified in the form, the content will be stored
+     * in memory as long as its size is less than or equal to this minimum size, after which it will be persisted to disk.
+     */
+    public static final Option<Long> MEMORY_STORAGE_THRESHOLD = Option.simple(UndertowOptions.class, "MEMORY_STORAGE_THRESHOLD", Long.class);
+
 
     /**
      * Configure a read timeout for a web socket, in milliseconds. If its present it will override {@link org.xnio.Options.READ_TIMEOUT}. If the given amount of time elapses without
