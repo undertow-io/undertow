@@ -11,8 +11,14 @@ package io.undertow.server.session;
  */
 public interface SessionReference {
     /**
-     * Returns the unique identifier of this object as assigned by the container.
-     * @return the unique identifier of this object as assigned by the container.
+     * Returns the unique identifier of the referenced session.
+     * @return the unique identifier of the referenced session.
      */
     String getId();
+
+    /**
+     * Returns the session manager of the referenced session.
+     * @return the session manager of the referenced session.
+     */
+    SessionManager getSessionManager();
 }
