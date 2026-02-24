@@ -18,7 +18,7 @@
 
 package io.undertow.util;
 
-import io.undertow.server.MultiValueHashListStorage;
+import io.undertow.server.CookieStore;
 import io.undertow.server.handlers.Cookie;
 import io.undertow.testutils.category.UnitTest;
 
@@ -517,7 +517,7 @@ public class CookiesTestCase {
 
     @Test
     public void testMultipleRFC6265() {
-        final MultiValueHashListStorage<String, Cookie> parsedCookies = new MultiValueHashListStorage<>();
+        final CookieStore parsedCookies = new CookieStore();
         final List<String> toParse = Arrays.asList("CUSTOMER=JOE; CUSTOMER=MONICA");
         Cookies.parseRequestCookies(4, false, toParse,parsedCookies);
         Assert.assertEquals(1, parsedCookies.size());
@@ -531,7 +531,7 @@ public class CookiesTestCase {
 
     @Test
     public void testMultipleRFC2109() {
-        final MultiValueHashListStorage<String, Cookie> parsedCookies = new MultiValueHashListStorage<>();
+        final CookieStore parsedCookies = new CookieStore();
         final List<String> toParse = Arrays.asList("$Version=1; CUSTOMER=JOE; $Path=/acme; CUSTOMER=MONICA; $Path=/; $Domain=my_oh_my; NO=META");
         Cookies.parseRequestCookies(8, false, toParse,parsedCookies);
         Assert.assertEquals(""+parsedCookies,3, parsedCookies.size());
