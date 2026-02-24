@@ -3,6 +3,7 @@ package io.undertow.server.handlers.proxy;
 import static io.undertow.Handlers.jvmRoute;
 import static io.undertow.Handlers.path;
 
+import java.net.InetAddress;
 import java.net.URI;
 
 import org.apache.http.HttpResponse;
@@ -197,6 +198,14 @@ public class ProxyHandlerXForwardedForTestCase {
             Assert.assertEquals("http", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
             Assert.assertEquals(String.format("%s:%d", DefaultServer.getHostAddress(), port), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
             Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
+            final String resultHostHeader = result.getFirstHeader(Headers.HOST_STRING).getValue();
+            final int lastInd = resultHostHeader.lastIndexOf(":"); //ipv6 will have more :, we cant split on it.
+            Assert.assertNotEquals(-1, lastInd);
+            final String[] parts = new String[] {resultHostHeader.substring(0,lastInd), resultHostHeader.substring(lastInd+1)};
+            final InetAddress resultAddress = InetAddress.getByName(parts[0]);
+            final InetAddress hostAddress = DefaultServer.getDefaultServerAddress().getAddress();
+            Assert.assertEquals(hostAddress.toString(), resultAddress.toString());
+            Assert.assertEquals(handlerPort+"", parts[1]);
 
         } finally {
             client.getConnectionManager().shutdown();
@@ -240,6 +249,9 @@ public class ProxyHandlerXForwardedForTestCase {
 
             if (exchange.getRequestHeaders().contains(Headers.X_FORWARDED_PORT))
                 exchange.getResponseHeaders().put(Headers.X_FORWARDED_PORT, exchange.getRequestHeaders().getFirst(Headers.X_FORWARDED_PORT));
+
+            if (exchange.getRequestHeaders().contains(Headers.HOST))
+                exchange.getResponseHeaders().put(Headers.HOST, exchange.getRequestHeaders().getFirst(Headers.HOST));
         }
     }
 }
