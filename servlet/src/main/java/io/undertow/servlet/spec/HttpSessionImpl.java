@@ -31,7 +31,6 @@ import jakarta.servlet.http.HttpSession;
 import io.undertow.server.session.SessionReference;
 import io.undertow.server.session.SessionReferenceConfig;
 import io.undertow.server.session.Session;
-import io.undertow.server.session.SessionManager;
 import io.undertow.servlet.UndertowServletMessages;
 import io.undertow.servlet.handlers.ServletRequestContext;
 import io.undertow.servlet.util.IteratorEnumeration;
@@ -181,7 +180,7 @@ public class HttpSessionImpl implements HttpSession {
 
     @Override
     public Accessor getAccessor() {
-        return new SessionReferenceAccessor(this.session.getSessionManager(), this.session.getReference(), this.servletContext);
+        return new SessionReferenceAccessor(this.session.getReference(), this.servletContext);
     }
 
     @SuppressWarnings("removal")
@@ -231,19 +230,17 @@ public class HttpSessionImpl implements HttpSession {
     }
 
     static class SessionReferenceAccessor implements Accessor {
-        private final SessionManager manager;
         private final SessionReference reference;
         private final ServletContext context;
 
-        SessionReferenceAccessor(SessionManager manager, SessionReference reference, ServletContext context) {
-            this.manager = manager;
+        SessionReferenceAccessor(SessionReference reference, ServletContext context) {
             this.reference = reference;
             this.context = context;
         }
 
         @Override
         public void access(Consumer<HttpSession> task) {
-            Session session = (this.reference instanceof Session referenced) ? referenced : this.manager.getSession(null, new SessionReferenceConfig(this.reference));
+            Session session = (this.reference instanceof Session referenced) ? referenced : this.reference.getSessionManager().getSession(null, new SessionReferenceConfig(this.reference));
             if (session == null) {
                 throw UndertowServletMessages.MESSAGES.sessionIsInvalid();
             }

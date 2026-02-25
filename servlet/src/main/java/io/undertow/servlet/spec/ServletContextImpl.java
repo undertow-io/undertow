@@ -26,6 +26,7 @@ import io.undertow.server.session.PathParameterSessionConfig;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionConfig;
 import io.undertow.server.session.SessionManager;
+import io.undertow.server.session.SessionReference;
 import io.undertow.server.session.SessionReferenceConfig;
 import io.undertow.server.session.SslSessionConfig;
 import io.undertow.servlet.UndertowServletLogger;
@@ -907,7 +908,17 @@ public class ServletContextImpl implements ServletContext {
                     final HttpSessionImpl topLevel = originalServletContext.getSession(originalServletContext, exchange, true);
                     //override the session id to just return the same ID as the top level session
 
-                    c = new SessionReferenceConfig(topLevel::getId);
+                    c = new SessionReferenceConfig(new SessionReference() {
+                        @Override
+                        public SessionManager getSessionManager() {
+                            return sessionManager;
+                        }
+
+                        @Override
+                        public String getId() {
+                            return topLevel.getId();
+                        }
+                    });
 
                     //first we check if there is a session with this id already
                     //this can happen with a shared session manager

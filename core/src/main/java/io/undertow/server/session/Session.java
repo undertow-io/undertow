@@ -162,11 +162,6 @@ public interface Session extends SessionReference {
     void invalidate(HttpServerExchange exchange);
 
     /**
-     * @return The session manager that is associated with this session
-     */
-    SessionManager getSessionManager();
-
-    /**
      * Generate a new session id for this session, and return the new id.
      *
      * @return The new session ID
