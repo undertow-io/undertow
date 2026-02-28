@@ -111,6 +111,47 @@ public class SetAttributeTestCase {
         } finally {
             client.getConnectionManager().shutdown();
         }
+
+        DefaultServer.setRootHandler(
+                rewrite("regex['/oldPath']", "/newPath?baz=qux", getClass().getClassLoader(),
+                        path().addPrefixPath("/", new InfoHandler()))
+        );
+        client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/oldPath?foo=bar");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("URI: /newPath relative: /newPath QS:baz=qux baz: qux", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testSetQueryParameter() throws IOException {
+        DefaultServer.setRootHandler(
+            Handlers.setAttribute(new InfoHandler(), "%{q,baz}", "qux", SetAttributeHandler.class.getClassLoader())
+        );
+
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("URI: /test relative: /test QS:baz=qux baz: qux", response);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/test?foo=bar");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("URI: /test relative: /test QS:baz=qux&foo=bar baz: qux foo: bar", response);
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
     }
 
     private class InfoHandler implements HttpHandler {
