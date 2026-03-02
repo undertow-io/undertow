@@ -73,6 +73,7 @@ import org.xnio.channels.StreamSinkChannel;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.Inet6Address;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.Channel;
@@ -580,7 +581,11 @@ public final class ProxyHandler implements HttpHandler {
 
             if(rewriteHostHeader) {
                 InetSocketAddress targetAddress = clientConnection.getConnection().getPeerAddress(InetSocketAddress.class);
-                request.getRequestHeaders().put(Headers.HOST, targetAddress.getHostString() + ":" + targetAddress.getPort());
+                if(targetAddress.getAddress() instanceof Inet6Address) {
+                    request.getRequestHeaders().put(Headers.HOST, NetworkUtils.formatPossibleIpv6Address(targetAddress.getHostString()) + ":" + targetAddress.getPort());
+                } else {
+                    request.getRequestHeaders().put(Headers.HOST, targetAddress.getHostString() + ":" + targetAddress.getPort());
+                }
                 request.getRequestHeaders().put(Headers.X_FORWARDED_HOST, exchange.getRequestHeaders().getFirst(Headers.HOST));
             }
             if(log.isDebugEnabled()) {
