@@ -18,9 +18,9 @@
 
 package io.undertow.util;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -73,14 +73,14 @@ public class FileUtils {
      * Reads the {@link InputStream file} and converting it to {@link String} using <code>charSet</code> encoding.
      */
     public static String readFile(InputStream file, Charset charSet) {
-        try (BufferedInputStream stream = new BufferedInputStream(file)) {
-            byte[] buff = new byte[1024];
-            StringBuilder builder = new StringBuilder();
-            int read;
-            while ((read = stream.read(buff)) != -1) {
-                builder.append(new String(buff, 0, read, charSet));
+        try (InputStreamReader reader = new InputStreamReader(file, charSet)) {
+            StringBuilder result = new StringBuilder();
+            char[] cbuf = new char[8192];
+            int nread;
+            while ((nread = reader.read(cbuf, 0, cbuf.length)) != -1) {
+                result.append(cbuf, 0, nread);
             }
-            return builder.toString();
+            return result.toString();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
