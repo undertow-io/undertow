@@ -106,6 +106,8 @@ jobs:
       run: mvn -v
     - name: Run Tests
       run: mvn -U -B -fae test -Dtest=HTTP2OnListenerTestCase -Pproxy '-Dopenssl=${{ matrix.openssl }} -DfailIfNoTests=false' -pl ${{ matrix.module }}
+    - name: Run Tests
+      run: mvn -U -B -fae test -Dtest=HttpContinueConduitWrappingHandlerBufferLeakTestCase -Pproxy '-Dopenssl=${{ matrix.openssl }} -DfailIfNoTests=false' -pl ${{ matrix.module }}
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
@@ -158,6 +160,8 @@ jobs:
       run: mvn -v
     - name: Run Tests
       run: mvn -U -B -fae test -Dtest=HTTP2OnListenerTestCase ${{ matrix.proxy && '-Pproxy' || '' }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
+    - name: Run Tests 2
+      run: mvn -U -B -fae test -Dtest=HttpContinueConduitWrappingHandlerBufferLeakTestCase ${{ matrix.proxy && '-Pproxy' || '' }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
