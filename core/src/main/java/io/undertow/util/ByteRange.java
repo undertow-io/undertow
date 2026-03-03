@@ -85,7 +85,7 @@ public class ByteRange {
                     //represents the last N bytes
                     //internally we represent this using a -1 as the start position
                     long val = Long.parseLong(part.substring(1));
-                    if(val < 0) {
+                    if(val <= 0) {
                         UndertowLogger.REQUEST_LOGGER.debugf("Invalid range spec %s", rangeHeader);
                         return null;
                     }
@@ -132,9 +132,15 @@ public class ByteRange {
         long end = getEnd(0);
         long rangeLength;
         if(ifRange != null && !ifRange.isEmpty()) {
+            // RFC 9110 requires strong comparison for If-Range
+            // Weak ETags (W/"...") should not match
+            if(ifRange.length() > 2 && ifRange.startsWith("W/")){
+                return null;
+            }
+
             if(ifRange.charAt(0) == '"') {
                 //entity tag
-                if(eTag != null && !eTag.equals(ifRange)) {
+                if(eTag == null || !eTag.equals(ifRange)) {
                     return null;
                 }
             } else {
