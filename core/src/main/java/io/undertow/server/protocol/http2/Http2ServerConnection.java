@@ -88,8 +88,6 @@ import static io.undertow.protocols.http2.Http2Channel.SCHEME;
  */
 public class Http2ServerConnection extends ServerConnection {
 
-    private static final HttpString STATUS = new HttpString(":status");
-
     private final Http2Channel channel;
     private final Http2StreamSourceChannel requestChannel;
     private final Http2DataStreamSinkChannel responseChannel;
@@ -200,7 +198,7 @@ public class Http2ServerConnection extends ServerConnection {
 
                 HeaderMap headers = newExchange.getResponseHeaders();
                 DateUtils.addDateHeaderIfRequired(exchange);
-                headers.add(STATUS, exchange.getStatusCode());
+                headers.add(Http2Channel.STATUS, exchange.getStatusCode());
                 Connectors.flattenCookies(exchange);
                 Http2HeadersStreamSinkChannel sink = new Http2HeadersStreamSinkChannel(channel, requestChannel.getStreamId(), headers);
 
@@ -340,7 +338,7 @@ public class Http2ServerConnection extends ServerConnection {
     protected StreamSinkConduit getSinkConduit(HttpServerExchange exchange, StreamSinkConduit conduit) {
         HeaderMap headers = responseChannel.getHeaders();
         DateUtils.addDateHeaderIfRequired(exchange);
-        headers.add(STATUS, exchange.getStatusCode());
+        headers.add(Http2Channel.STATUS, exchange.getStatusCode());
         Connectors.flattenCookies(exchange);
         if(!Connectors.isEntityBodyAllowed(exchange)) {
             //we are not allowed to send an entity body for some requests
