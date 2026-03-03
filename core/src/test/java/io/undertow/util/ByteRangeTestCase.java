@@ -72,6 +72,7 @@ public class ByteRangeTestCase {
         Assert.assertNull(ByteRange.parse("bytes=a-"));
         Assert.assertNull(ByteRange.parse("foobarbaz"));
         Assert.assertNull(ByteRange.parse("bytes=--1"));
+        Assert.assertNull(ByteRange.parse("bytes=-0"));
 
         Assert.assertEquals(1, ByteRange.parse("bytes=2-").getRanges());
         Assert.assertEquals(1, ByteRange.parse("bytes=-20").getRanges());
@@ -237,5 +238,11 @@ public class ByteRangeTestCase {
         ByteRange byteRange = new ByteRange(new ArrayList<>());
         Assert.assertNull(byteRange.getResponseResult(0, "1",
                 new Date(1559820153000L), "foo"));
+        Assert.assertNull(byteRange.getResponseResult(0,
+                "\"1\"", new Date(1559820153000L), null));
+        Assert.assertNull(byteRange.getResponseResult(0,
+                "W/\"1\"", new Date(1559820153000L), "W/\"1\""));
+        Assert.assertNull(byteRange.getResponseResult(0,
+                "W/\"1\"", new Date(1559820153000L), "\"1\""));
     }
 }
