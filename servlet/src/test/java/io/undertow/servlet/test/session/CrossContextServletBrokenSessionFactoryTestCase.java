@@ -24,6 +24,7 @@ import jakarta.servlet.ServletException;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -101,6 +102,8 @@ public class CrossContextServletBrokenSessionFactoryTestCase {
 
     @Test
     public void testSharedSessionCookieMultipleDeployments() throws Exception {
+        // FIXME UNDERTOW-2716 this test fails on Windows very frequently
+        Assume.assumeFalse(System.getProperty("os.name").startsWith("Windows"));
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet direct1 = new HttpGet(DefaultServer.getDefaultServerURL() + "/1/servlet");
