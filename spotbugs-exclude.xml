@@ -941,4 +941,9 @@
     <Match>
         <Package name="io.undertow.benchmarks"/>
     </Match>
+    <Match>
+        <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
+        <Class name="io.undertow.servlet.spec.ServletInputStreamImpl"/>
+        <Method name="readIntoBuffer"/>
+    </Match>
 </FindBugsFilter>
