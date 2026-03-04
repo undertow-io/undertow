@@ -109,7 +109,15 @@ public final class WriteTimeoutStreamSinkConduit extends AbstractStreamSinkCondu
         long expireTimeVar = expireTime;
         if (expireTimeVar != -1 && currentTime > expireTimeVar) {
             this.expireTime = -1;
+            //shutdown write will call AbstractFramedStreamSinkConduit#queueCloseFrames. In some cases it will schedule
+            //additional packets to adhere to protocol, we need to flush content( this would happen later, if not for
+            //subsequent close
             connection.getSinkChannel().shutdownWrites();
+            try {
+                connection.getSinkChannel().flush();
+            } catch(IOException e) {
+                UndertowLogger.REQUEST_LOGGER.ioException(e);
+            }
             IoUtils.safeClose(connection);
             throw new ClosedChannelException();
         }
