@@ -18,10 +18,7 @@
 
 package io.undertow.server.protocol.http;
 
-import java.io.IOException;
-
 import io.undertow.UndertowLogger;
-import io.undertow.UndertowMessages;
 import io.undertow.UndertowOptions;
 import io.undertow.conduits.ChunkedStreamSinkConduit;
 import io.undertow.conduits.ChunkedStreamSourceConduit;
@@ -64,7 +61,7 @@ class HttpTransferEncoding {
     private HttpTransferEncoding() {
     }
 
-    public static void setupRequest(final HttpServerExchange exchange) throws IOException {
+    public static void setupRequest(final HttpServerExchange exchange) {
         final HeaderMap requestHeaders = exchange.getRequestHeaders();
         final String connectionHeader = requestHeaders.getFirst(Headers.CONNECTION);
         final String transferEncodingHeader = requestHeaders.getLast(Headers.TRANSFER_ENCODING);
@@ -106,7 +103,7 @@ class HttpTransferEncoding {
 
     }
 
-    private static boolean handleRequestEncoding(final HttpServerExchange exchange, String transferEncodingHeader, String contentLengthHeader, HttpServerConnection connection, PipeliningBufferingStreamSinkConduit pipeliningBuffer, boolean persistentConnection) throws IOException {
+    private static boolean handleRequestEncoding(final HttpServerExchange exchange, String transferEncodingHeader, String contentLengthHeader, HttpServerConnection connection, PipeliningBufferingStreamSinkConduit pipeliningBuffer, boolean persistentConnection) {
 
         HttpString transferEncoding = Headers.IDENTITY;
         if (transferEncodingHeader != null) {
@@ -123,15 +120,9 @@ class HttpTransferEncoding {
                 // no content - immediately start the next request, returning an empty stream for this one
                 Connectors.terminateRequest(exchange);
             } else {
-                if (exchange.getMaxEntitySize() > 0 && exchange.getMaxEntitySize() < contentLength && exchange.isResponseChannelAvailable()) {
-                    persistentConnection = false;
-                    Connectors.terminateRequest(exchange);
-                    throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getMaxEntitySize());
-                } else {
-                    // fixed-length content - add a wrapper for a fixed-length stream
-                    ConduitStreamSourceChannel sourceChannel = ((HttpServerConnection) exchange.getConnection()).getChannel().getSourceChannel();
-                    sourceChannel.setConduit(fixedLengthStreamSourceConduitWrapper(contentLength, sourceChannel.getConduit(), exchange));
-                }
+                // fixed-length content - add a wrapper for a fixed-length stream
+                ConduitStreamSourceChannel sourceChannel = ((HttpServerConnection) exchange.getConnection()).getChannel().getSourceChannel();
+                sourceChannel.setConduit(fixedLengthStreamSourceConduitWrapper(contentLength, sourceChannel.getConduit(), exchange));
             }
         } else if (transferEncodingHeader != null) {
             //identity transfer encoding
