@@ -105,7 +105,7 @@ public class DispatcherErrorIncludeServletTestCase extends AttributeComparisonTe
         expectedParams.put("jakarta.servlet.forward.mapping",
                 "match_value=include,pattern=/include,servlet_name=inc,mapping_match=EXACT");
         expectedParams.put("jakarta.servlet.forward.context_path", "/servletContext");
-        //https://jakarta.ee/specifications/servlet/5.0/jakarta-servlet-spec-5.0#request-attributes
+        //https://jakarta.ee/specifications/servlet/6.1/jakarta-servlet-spec-6.1#request-attributes
         //        jakarta.servlet.error.request_uri
         //        jakarta.servlet.error.servlet_name
         //        jakarta.servlet.error.exception_type
@@ -117,6 +117,7 @@ public class DispatcherErrorIncludeServletTestCase extends AttributeComparisonTe
         expectedParams.put("jakarta.servlet.error.exception", "jakarta.servlet.ServletException: HEY");
         expectedParams.put("jakarta.servlet.error.message", "HEY");
         expectedParams.put("jakarta.servlet.error.status_code", "500");
+        expectedParams.put("jakarta.servlet.error.method", "GET");
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/include");
@@ -134,7 +135,7 @@ public class DispatcherErrorIncludeServletTestCase extends AttributeComparisonTe
 
     @Test
     public void testSimpleIncludeWithNoError() throws IOException, InterruptedException {
-        //https://jakarta.ee/specifications/servlet/5.0/jakarta-servlet-spec-5.0#included-request-parameters
+        //https://jakarta.ee/specifications/servlet/6.1/jakarta-servlet-spec-6.1#included-request-parameters
         //        jakarta.servlet.include.request_uri
         //        jakarta.servlet.include.context_path
         //        jakarta.servlet.include.query_string

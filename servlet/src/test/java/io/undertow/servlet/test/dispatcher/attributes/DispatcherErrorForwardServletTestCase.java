@@ -104,19 +104,23 @@ public class DispatcherErrorForwardServletTestCase extends AttributeComparisonTe
         expectedParams.put("jakarta.servlet.forward.context_path", "/servletContext");
         expectedParams.put("jakarta.servlet.forward.mapping",
                 "match_value=forward,pattern=/forward,servlet_name=fwd,mapping_match=EXACT");
-        //https://jakarta.ee/specifications/servlet/5.0/jakarta-servlet-spec-5.0#request-attributes
+        //https://jakarta.ee/specifications/servlet/6.1/jakarta-servlet-spec-6.1#request-attributes
         //        jakarta.servlet.error.request_uri
         //        jakarta.servlet.error.servlet_name
         //        jakarta.servlet.error.exception_type
         //        jakarta.servlet.error.exception
         //        jakarta.servlet.error.message
         //        jakarta.servlet.error.status_code
+        // plus, we have the new jakarta.servlet.error.method as specified in
+        // https://jakarta.ee/specifications/servlet/6.1/jakarta-servlet-spec-6.1#changes-since-jakarta-servlet-6-0 issue
+        // https://github.com/eclipse-ee4j/servlet-api/issues/544
         expectedParams.put("jakarta.servlet.error.request_uri", "/servletContext/forward");
         expectedParams.put("jakarta.servlet.error.servlet_name", "fwd");
         expectedParams.put("jakarta.servlet.error.exception_type", "class jakarta.servlet.ServletException");
         expectedParams.put("jakarta.servlet.error.exception", "jakarta.servlet.ServletException: HEY");
         expectedParams.put("jakarta.servlet.error.message", "HEY");
         expectedParams.put("jakarta.servlet.error.status_code", "500");
+        expectedParams.put("jakarta.servlet.error.method", "GET");
         TestHttpClient client = new TestHttpClient();
         try {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/forward");
@@ -135,7 +139,7 @@ public class DispatcherErrorForwardServletTestCase extends AttributeComparisonTe
     @Test
     public void testSimpleForwardWithNoError() throws IOException, InterruptedException {
         //Expected params:
-        //https://jakarta.ee/specifications/servlet/5.0/jakarta-servlet-spec-5.0#forwarded-request-parameters
+        //https://jakarta.ee/specifications/servlet/6.1/jakarta-servlet-spec-6.1#forwarded-request-parameters
         //Some are missing, since null == omission.
         //        jakarta.servlet.forward.mapping
         //        jakarta.servlet.forward.request_uri
