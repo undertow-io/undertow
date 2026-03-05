@@ -136,7 +136,7 @@
         <version.org.jboss.classfilewriter>1.3.0.Final</version.org.jboss.classfilewriter>
         <version.org.jboss.logging>3.6.2.Final</version.org.jboss.logging>
         <version.org.jboss.logging.processor>3.0.4.Final</version.org.jboss.logging.processor>
-        <version.org.jboss.logmanager>2.1.19.Final</version.org.jboss.logmanager>
+        <version.org.jboss.logmanager>3.1.2.Final</version.org.jboss.logmanager>
         <version.xnio>3.8.16.Final</version.xnio>
         <!-- TODO remove this dependency once xnio upgrades to latest jboss threads -->
         <version.org.jboss.threads>3.7.0.Final</version.org.jboss.threads>
