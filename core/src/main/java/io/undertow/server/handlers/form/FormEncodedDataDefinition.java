@@ -108,7 +108,7 @@ public class FormEncodedDataDefinition implements FormParserFactory.ParserDefini
         private FormEncodedDataParser(final String charset, final HttpServerExchange exchange) {
             this.exchange = exchange;
             this.charset = charset;
-            this.data = new FormData(exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, 1000));
+            this.data = new FormData(exchange.getConnection().getUndertowOptions().get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS));
         }
 
         @Override
