@@ -140,7 +140,7 @@
         <version.xnio>3.8.16.Final</version.xnio>
         <!-- TODO remove this dependency once xnio upgrades to latest jboss threads -->
         <version.org.jboss.threads>3.9.2</version.org.jboss.threads>
-        <version.org.wildfly.common>1.6.0.Final</version.org.wildfly.common>
+        <version.org.wildfly.common>2.0.1</version.org.wildfly.common>
         <version.org.wildfly.client-config>1.0.1.Final</version.org.wildfly.client-config>
 
         <!-- jacoco -->
