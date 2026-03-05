@@ -141,6 +141,7 @@
         <!-- TODO remove this dependency once xnio upgrades to latest jboss threads -->
         <version.org.jboss.threads>3.9.2</version.org.jboss.threads>
         <version.org.wildfly.common>2.0.1</version.org.wildfly.common>
+        <version.io.smallrye.common>2.12.0</version.io.smallrye.common>
         <version.org.wildfly.client-config>1.0.1.Final</version.org.wildfly.client-config>
 
         <!-- jacoco -->
@@ -556,6 +557,18 @@
                 <groupId>org.wildfly.common</groupId>
                 <artifactId>wildfly-common</artifactId>
                 <version>${version.org.wildfly.common}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.smallrye.common</groupId>
+                <artifactId>smallrye-common-constraint</artifactId>
+                <version>${version.io.smallrye.common}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.smallrye.common</groupId>
+                <artifactId>smallrye-common-net</artifactId>
+                <version>${version.io.smallrye.common}</version>
             </dependency>
 
             <dependency>
