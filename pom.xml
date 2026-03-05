@@ -126,8 +126,8 @@
             versions, add the artifactId or other qualifier to the property name.
             For example: <version.org.jboss.as.console>
          -->
-        <version.com.h2database>2.1.214</version.com.h2database>
-        <version.easymock>4.3</version.easymock>
+        <version.com.h2database>2.4.240</version.com.h2database>
+        <version.easymock>5.2.0</version.easymock>
         <version.jakarta.annotation.jakarta-annotation-api>2.1.1</version.jakarta.annotation.jakarta-annotation-api>
         <version.jakarta.servlet.jakarta-servlet-api>6.1.0</version.jakarta.servlet.jakarta-servlet-api>
         <version.jakarta.websocket.jakarta-websocket-api>2.1.1</version.jakarta.websocket.jakarta-websocket-api>
