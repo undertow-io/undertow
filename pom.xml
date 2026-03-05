@@ -169,7 +169,7 @@
 
         <!-- Non-default maven plugin versions and configuration -->
         <version.org.wildfly.openssl>2.2.5.Final</version.org.wildfly.openssl>
-        <version.bundle.plugin>5.1.1</version.bundle.plugin>
+        <version.bundle.plugin>6.0.2</version.bundle.plugin>
 
         <version.jmh>1.21</version.jmh>
         <maven.compiler.release>17</maven.compiler.release>
