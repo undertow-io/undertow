@@ -147,7 +147,7 @@
         <version.org.wildfly.client-config>1.0.1.Final</version.org.wildfly.client-config>
 
         <!-- jacoco -->
-        <version.org.jacoco>0.7.9</version.org.jacoco>
+        <version.org.jacoco>0.8.14</version.org.jacoco>
         <jacoco.agent.argLine></jacoco.agent.argLine>
 
         <!-- Spotbugs properties -->
