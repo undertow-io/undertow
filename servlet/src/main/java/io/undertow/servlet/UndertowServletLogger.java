@@ -140,4 +140,8 @@ public interface UndertowServletLogger extends BasicLogger {
     @Message(id = 15024, value = "Servlet %s init() method in web application %s threw exception")
     void failedToLoad(String servletName, String appName, @Cause Throwable t);
 
+    @LogMessage(level = ERROR)
+    @Message(id = 15025, value = "Ignoring specified SameSite mode [%s] for cookie [%s].")
+    void ignoreSameSiteCookieMode(@Cause Throwable e, String mode, String name);
+
 }

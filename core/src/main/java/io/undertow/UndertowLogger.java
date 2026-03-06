@@ -508,4 +508,25 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = DEBUG)
     @Message(id = 5112, value = "Interruption in close()")
     void closeInterrupted(@Cause InterruptedException ie);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5113, value = "Suspended request was skipped.")
+    void suspendedRequestSkip(@Cause Throwable e);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5114, value = "Ignoring specified SameSite mode [%s] for cookie [%s].")
+    void ignoreSameSiteCookieMode(@Cause Throwable e, String mode, String name);
+
+    @LogMessage(level = INFO)
+    @Message(id = 5115, value = "Starting server: %s.")
+    void startingServer(String version);
+
+    @LogMessage(level = INFO)
+    @Message(id = 5116, value = "Stopping server: %s.")
+    void stoppingServer(String version);
+
+    @LogMessage(level = ERROR)
+    @Message(id = 5117, value = "Missing JSM permissions for path %s")
+    void missingJSMPermissions(@Cause SecurityException e, String path);
+
 }
