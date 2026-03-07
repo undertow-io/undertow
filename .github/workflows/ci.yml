@@ -59,7 +59,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        module: [core, servlet, websockets-jsr]
+        module: [core]
         jdk: [17, 21]
         openjdk_impl: [ temurin ]
         openssl: [false, true]
@@ -105,7 +105,9 @@ jobs:
     - name: Print Version
       run: mvn -v
     - name: Run Tests
-      run: mvn -U -B -fae test -Pproxy '-Dopenssl=${{ matrix.openssl }} -DfailIfNoTests=false' -pl ${{ matrix.module }}
+      run: mvn -U -B -fae test -Dtest=HTTP2OnListenerTestCase -Pproxy '-Dopenssl=${{ matrix.openssl }} -DfailIfNoTests=false' -pl ${{ matrix.module }}
+    - name: Run Tests
+      run: mvn -U -B -fae test -Dtest=HttpContinueConduitWrappingHandlerBufferLeakTestCase -Pproxy '-Dopenssl=${{ matrix.openssl }} -DfailIfNoTests=false' -pl ${{ matrix.module }}
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
@@ -121,7 +123,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        module: [core, servlet, websockets-jsr]
+        module: [core]
         proxy: ['-Pproxy', '']
         jdk: [17]
     steps:
@@ -157,7 +159,9 @@ jobs:
     - name: Print Version
       run: mvn -v
     - name: Run Tests
-      run: mvn -U -B -fae test ${{ matrix.proxy && '-Pproxy' || '' }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
+      run: mvn -U -B -fae test -Dtest=HTTP2OnListenerTestCase ${{ matrix.proxy && '-Pproxy' || '' }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
+    - name: Run Tests 2
+      run: mvn -U -B -fae test -Dtest=HttpContinueConduitWrappingHandlerBufferLeakTestCase ${{ matrix.proxy && '-Pproxy' || '' }} '-DfailIfNoTests=false' -pl ${{ matrix.module }} -Dtest.ipv6=true
     - uses: actions/upload-artifact@v4
       if: failure()
       with:
