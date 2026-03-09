@@ -76,10 +76,10 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.xnio.Bits.allAreSet;
 import static org.xnio.Bits.anyAreClear;
@@ -1349,10 +1349,7 @@ public final class HttpServerExchange extends AbstractAttachable {
     private CookieStore requestCookieStore() {
         if (requestCookieStore == null) {
             requestCookieStore = new CookieStore();
-            Cookies.parseRequestCookies(
-                    getConnection().getUndertowOptions().get(UndertowOptions.MAX_COOKIES, UndertowOptions.DEFAULT_MAX_COOKIES),
-                    getConnection().getUndertowOptions().get(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false),
-                    requestHeaders.get(Headers.COOKIE), requestCookieStore);
+            Cookies.parseRequestCookies(requestHeaders.get(Headers.COOKIE), requestCookieStore, connection.getUndertowOptions());
         }
         return requestCookieStore;
     }
