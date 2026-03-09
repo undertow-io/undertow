@@ -224,7 +224,7 @@ public class Cookies {
 
     @Deprecated
     static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator) {
-        return parseRequestCookies(maxCookies, allowEqualInValue, cookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0, true);
+        return parseRequestCookies(maxCookies, allowEqualInValue, cookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0, false);
     }
 
    public static void parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, MultiValueHashListStorage<String, Cookie> parsedCookies) {
@@ -235,13 +235,13 @@ public class Cookies {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, commaIsSeperator, allowHttpSepartorsV0, true);
     }
 
-    static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator, boolean allowHttpSepartorsV0, final boolean rfc6265ParsingDisabled) {
+    static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator, boolean allowHttpSeparatorsV0, final boolean rfc6265CookieValidationEnabled) {
         if (cookies == null) {
             return new TreeMap<>();
         }
         final MultiValueHashListStorage<String, Cookie> parsedCookies = new MultiValueHashListStorage<>();
         for (String cookie : cookies) {
-            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSepartorsV0, rfc6265ParsingDisabled);
+            parseCookie(cookie, parsedCookies, maxCookies, allowEqualInValue, commaIsSeperator, allowHttpSeparatorsV0, rfc6265CookieValidationEnabled);
         }
 
         final Map<String, Cookie> retVal = new TreeMap<>();
@@ -277,10 +277,10 @@ public class Cookies {
        }
    }
 
-   static void parseCookie(final String cookie, final MultiValueHashListStorage<String,Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator, boolean allowHttpSepartorsV0, boolean rfc6265ParsingDisabled) {
+   static void parseCookie(final String cookie, final MultiValueHashListStorage<String,Cookie> parsedCookies, int maxCookies, boolean allowEqualInValue, boolean commaIsSeperator, boolean allowHttpSeparatorsV0, boolean rfc6265CookieValidationEnabled) {
 
         CookieJar cookieJar = new CookieJar();
-        cookieJar.rfc6265ParsingDisabled = rfc6265ParsingDisabled;
+        cookieJar.rfc6265ParsingEnabled = rfc6265CookieValidationEnabled;
         cookieJar.parsedCookies = parsedCookies;
         cookieJar.maxCookies = maxCookies;
         for (int i = 0; i < cookie.length(); ++i) {
@@ -324,12 +324,12 @@ public class Cookies {
                         cookieJar.state = 3;
                         cookieJar.start = i + 1;
                     } else if (c == '=') {
-                        if (!allowEqualInValue && !allowHttpSepartorsV0) {
+                        if (!allowEqualInValue && !allowHttpSeparatorsV0) {
                             createCookie(cookie.substring(cookieJar.start, i), cookieJar);
                             cookieJar.state = 4;
                             cookieJar.start = i + 1;
                         }
-                    } else if (c != ':' && !allowHttpSepartorsV0 && LegacyCookieSupport.isHttpSeparator(c)) {
+                    } else if (c != ':' && !allowHttpSeparatorsV0 && LegacyCookieSupport.isHttpSeparator(c)) {
                         // http separators are not allowed in V0 cookie value unless io.undertow.legacy.cookie.ALLOW_HTTP_SEPARATORS_IN_V0 is set to true.
                         // However, "<hostcontroller-name>:<server-name>" (e.g. master:node1) is added as jvmRoute (instance-id) by default in WildFly domain mode.
                         // Though ":" is http separator, we allow it by default. Because, when Undertow runs as a proxy server (mod_cluster),
@@ -343,7 +343,7 @@ public class Cookies {
                 case 3: {
                     //extract quoted value
                     if (c == '"') {
-                        if (!rfc6265ParsingDisabled && cookieJar.inQuotes) {
+                        if (rfc6265CookieValidationEnabled && cookieJar.inQuotes) {
                             cookieJar.start = cookieJar.start - 1;
                             //i++;
                             createCookie(cookieJar.containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(cookieJar.start, i + 1)) : cookie.substring(cookieJar.start, i + 1), cookieJar);
@@ -437,47 +437,42 @@ public class Cookies {
         }
 
         if (!cookieJar.name.isEmpty() && cookieJar.name.charAt(0) == '$') {
-            if(cookieJar.name.equals(VERSION)) {
+            if (cookieJar.name.equals(VERSION)) {
                 cookieJar.version = Integer.parseInt(value);
                 //Theoretically this should happen only once at the start
                 applyAdditional(cookieJar, cookieJar.name, value);
             } else if(cookieJar.currentCookie != null) {
                 applyAdditional(cookieJar, cookieJar.name, value);
             }
-            return;
         } else {
             storeCookie(cookieJar);
             cookieJar.currentCookie = new CookieImpl(cookieJar.name, value);
             cookieJar.name = null;
-            return;
         }
     }
 
     private static void applyAdditional( final CookieJar cookieJar, final String name, final String value) {
         // RFC 6265 treats the domain, path and version attributes of an RFC 2109 cookie as a separate cookies
-        if(!cookieJar.rfc6265ParsingDisabled && !name.isEmpty() && name.charAt(0) == '$') {
-            Cookie c = new CookieImpl(name, value);
-            cookieJar.parsedCookies.put(c.getName(), c);
+        if (!name.isEmpty() && name.charAt(0) == '$') {
+            if (!OBSOLETE_COOKIE_PATTERN.matcher(name).find() || cookieJar.rfc6265ParsingEnabled) {
+                Cookie c = new CookieImpl(name, value);
+                cookieJar.parsedCookies.put(name, c);
+            }
         }
         if (cookieJar.version == 1) {
             // rfc2109 - add metadata to
             if (cookieJar.currentCookie != null) {
                 cookieJar.currentCookie.setVersion(cookieJar.version);
-
-                if (name.equals(DOMAIN)) {
-                    cookieJar.currentCookie.setDomain(value);
-                    return;
-                }
-
-                if (name.equals(PATH)) {
-                    cookieJar.currentCookie.setPath(value);
-                    return;
+                switch(name) {
+                    case DOMAIN:
+                        cookieJar.currentCookie.setDomain(value);
+                        break;
+                    case PATH:
+                        cookieJar.currentCookie.setPath(value);
                 }
             }
         }
-        return;
     }
-
 
     private static String unescapeDoubleQuotes(final String value) {
         if (value == null || value.isEmpty()) {
@@ -578,7 +573,7 @@ public class Cookies {
     }
 
     private static class CookieJar {
-        public boolean rfc6265ParsingDisabled;
+        public boolean rfc6265ParsingEnabled;
         //Currently parsed cookie, if V1, all $ will be applied to it, until
         CookieImpl currentCookie;
         int maxCookies;
