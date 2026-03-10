@@ -18,9 +18,16 @@
 
 package io.undertow.server.handlers;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.UndertowLogger;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 
 /**
  * A handler which simply sets a response code.
@@ -62,5 +69,42 @@ public final class ReasonPhraseHandler implements HttpHandler {
     @Override
     public String toString() {
         return "reason-phrase( " + this.reasonPhrase + " )";
+    }
+
+    public static class Builder implements HandlerBuilder {
+        @Override
+        public String name() {
+            return "reason-phrase";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            Map<String, Class<?>> parameters = new HashMap<>();
+            parameters.put("value", String.class);
+            return parameters;
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            final Set<String> req = new HashSet<>();
+            req.add("value");
+            return req;
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "value";
+        }
+
+        @Override
+        public HandlerWrapper build(final Map<String, Object> config) {
+            final String value = (String) config.get("value");
+            return new HandlerWrapper() {
+                @Override
+                public HttpHandler wrap(HttpHandler handler) {
+                    return new ReasonPhraseHandler(handler, value);
+                }
+            };
+        }
     }
 }

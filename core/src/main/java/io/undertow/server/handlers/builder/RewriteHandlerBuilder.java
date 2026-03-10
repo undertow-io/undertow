@@ -18,6 +18,11 @@
 
 package io.undertow.server.handlers.builder;
 
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+
+import io.undertow.UndertowLogger;
 import io.undertow.attribute.ConstantExchangeAttribute;
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
@@ -25,15 +30,13 @@ import io.undertow.attribute.ReadOnlyAttributeException;
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.RewriteHandler;
 import io.undertow.server.handlers.SetAttributeHandler;
-import io.undertow.UndertowLogger;
-
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * @author Stuart Douglas
+ * @see {@link RewriteHandler#Builder}
+ * @Deprecated(since = "2.5.0", forRemoval = true)
  */
 public class RewriteHandlerBuilder implements HandlerBuilder {
     @Override
