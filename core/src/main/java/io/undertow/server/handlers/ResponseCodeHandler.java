@@ -18,9 +18,14 @@
 
 package io.undertow.server.handlers;
 
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.UndertowLogger;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 
 /**
  * A handler which simply sets a response code.
@@ -110,5 +115,44 @@ public final class ResponseCodeHandler implements HttpHandler {
     @Override
     public String toString() {
         return "response-code( " + this.responseCode + " )";
+    }
+
+    public static class Builder implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "response-code";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Map.of("value", Integer.class);
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Set.of("value");
+        }
+
+        @Override
+        public String defaultParameter() {
+            return "value";
+        }
+
+        @Override
+        public HandlerWrapper build(final Map<String, Object> config) {
+            final Integer value = (Integer) config.get("value");
+            return new HandlerWrapper() {
+                @Override
+                public HttpHandler wrap(HttpHandler handler) {
+                    return new ResponseCodeHandler(handler, value);
+                }
+            };
+        }
+
+        @Override
+        public int priority() {
+            return 0;
+        }
     }
 }

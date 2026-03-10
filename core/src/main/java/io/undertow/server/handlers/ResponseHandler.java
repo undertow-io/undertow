@@ -17,10 +17,15 @@
  */
 package io.undertow.server.handlers;
 
+import java.util.Map;
+import java.util.Set;
+
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.builder.HandlerBuilder;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
 
@@ -106,4 +111,49 @@ public class ResponseHandler implements HttpHandler {
                 + ((this.body != null) ? ", type='" + this.type + "', body='" + this.body + "'" : "") + " )";
     }
 
+    public static class Builder  implements HandlerBuilder {
+
+        @Override
+        public String name() {
+            return "response";
+        }
+
+        @Override
+        public Map<String, Class<?>> parameters() {
+            return Map.of("code", Integer.class,"reason", String.class, "type", String.class, "body", String.class);
+        }
+
+        @Override
+        public Set<String> requiredParameters() {
+            return Set.of("code");
+        }
+
+        @Override
+        public String defaultParameter() {
+            // default parameter - name(paramValue) not supported
+            return null;
+        }
+
+        @Override
+        public HandlerWrapper build(final Map<String, Object> config) {
+            final Integer code = (Integer) config.get("code");
+            final String reason = (String) config.get("reason");
+            final String type = (String) config.get("type");
+            final String body = (String) config.get("body");
+            return new HandlerWrapper() {
+                @Override
+                public HttpHandler wrap(HttpHandler handler) {
+                    if (body == null) {
+                        return new ResponseHandler(code, reason);
+                    } else {
+                        if (type == null) {
+                            return new ResponseHandler(code, reason, body);
+                        } else {
+                            return new ResponseHandler(code, reason, body, type);
+                        }
+                    }
+                }
+            };
+        }
+    }
 }
