@@ -448,6 +448,17 @@ public class Cookies {
             storeCookie(cookieJar);
             cookieJar.currentCookie = new CookieImpl(cookieJar.name, value);
             cookieJar.name = null;
+            if (cookieJar.version != -1) {
+                cookieJar.currentCookie.setVersion(cookieJar.version);
+            }
+            if (cookieJar.currentDomain != null) {
+                cookieJar.currentCookie.setDomain(cookieJar.currentDomain);
+                cookieJar.currentDomain = null;
+            }
+            if (cookieJar.currentPath != null) {
+                cookieJar.currentCookie.setPath(cookieJar.currentPath);
+                cookieJar.currentPath = null;
+            }
         }
     }
 
@@ -469,6 +480,14 @@ public class Cookies {
                         break;
                     case PATH:
                         cookieJar.currentCookie.setPath(value);
+                }
+            } else {
+                switch(name) {
+                    case DOMAIN:
+                        cookieJar.currentDomain = value;
+                        break;
+                    case PATH:
+                        cookieJar.currentPath = value;
                 }
             }
         }
@@ -583,6 +602,8 @@ public class Cookies {
         int state = 0;
         String name = null;
         int start = 0;
+        String currentDomain = null;
+        String currentPath = null;
         private MultiValueHashListStorage<String, Cookie> parsedCookies;
     }
 }
