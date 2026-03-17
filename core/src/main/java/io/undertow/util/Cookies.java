@@ -419,6 +419,13 @@ public class Cookies {
         }
     }
 
+    private static String stripQuotes(String value) {
+        if (value.charAt(0) == '"' && value.charAt(value.length() -1) == '"') {
+            return value.substring(1, value.length() -1);
+        }
+        return value;
+    }
+
     private static void createCookie(final String value, final CookieJar cookieJar) {
         if (cookieJar.parsedCookies.size() > cookieJar.maxCookies) {
             throw UndertowMessages.MESSAGES.tooManyCookies(cookieJar.maxCookies);
@@ -433,12 +440,13 @@ public class Cookies {
         }
 
         if (!cookieJar.name.isEmpty() && cookieJar.name.charAt(0) == '$') {
+            final String noQuotesValue = stripQuotes(value);
             if (cookieJar.name.equals(VERSION)) {
-                cookieJar.version = Integer.parseInt(value);
+                cookieJar.version = Integer.parseInt(noQuotesValue);
                 //Theoretically this should happen only once at the start
-                applyAdditional(cookieJar, cookieJar.name, value);
+                applyAdditional(cookieJar, cookieJar.name, noQuotesValue);
             } else if(cookieJar.currentCookie != null) {
-                applyAdditional(cookieJar, cookieJar.name, value);
+                applyAdditional(cookieJar, cookieJar.name, noQuotesValue);
             }
         } else {
             storeCookie(cookieJar);
