@@ -451,7 +451,7 @@ public class CookiesTestCase {
     public void testSimpleJSONObjectInRequestCookies() {
         // allowEqualInValue and allowHttpSepartorsV0 needs to be enabled to handle this cookie
         // Also, commaIsSeperator needs to be set to false
-        OptionMap options = OptionMap.builder().set(UndertowOptions.MAX_COOKIES, 2)
+        OptionMap options = OptionMap.builder().set(UndertowOptions.MAX_COOKIES, 5)
                 .set(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, true)
                 .set(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, false).getMap();
         Map<String, Cookie> cookies = parseRequestCookies(Arrays.asList(
@@ -653,7 +653,7 @@ public class CookiesTestCase {
                 .set(UndertowOptions.ALLOW_EQUALS_IN_COOKIE_VALUE, false)
                 .set(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, false).getMap();
         Cookies.parseRequestCookies(toParse, parsedCookies, options);
-        Assert.assertEquals(""+parsedCookies,3, parsedCookies.size());
+        Assert.assertEquals(""+parsedCookies,6, parsedCookies.size());
         List<Cookie> lst = parsedCookies.get("CUSTOMER");
         Assert.assertEquals(2, lst.size());
         Cookie cookie = lst.get(0);

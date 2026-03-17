@@ -276,7 +276,6 @@ public class Cookies {
     private static void parseCookie(final String cookie, final CookieStore parsedCookies, final int maxCookies, final boolean allowEqualInValue, final boolean commaIsSeperator, final boolean allowHttpSeparatorsV0, final boolean rfc6265CookieValidationEnabled) {
 
         CookieJar cookieJar = new CookieJar();
-        cookieJar.rfc6265ParsingEnabled = rfc6265CookieValidationEnabled;
         cookieJar.parsedCookies = parsedCookies;
         cookieJar.maxCookies = maxCookies;
         for (int i = 0; i < cookie.length(); ++i) {
@@ -468,11 +467,9 @@ public class Cookies {
 
     private static void applyAdditional( final CookieJar cookieJar, final String name, final String value) {
         // RFC 6265 treats the domain, path and version attributes of an RFC 2109 cookie as a separate cookies
-        if (!name.isEmpty() && name.charAt(0) == '$') {
-            if (!OBSOLETE_COOKIE_PATTERN.matcher(name).find() || cookieJar.rfc6265ParsingEnabled) {
-                Cookie c = new CookieImpl(name, value);
-                cookieJar.parsedCookies.add(c);
-            }
+        if (!name.isEmpty() && name.charAt(0) == '$' && OBSOLETE_COOKIE_PATTERN.matcher(name).find()) {
+            Cookie c = new CookieImpl(name, value);
+            cookieJar.parsedCookies.add(c);
         }
         if (cookieJar.version == 1) {
             // rfc2109 - add metadata to
@@ -592,7 +589,6 @@ public class Cookies {
     }
 
     private static class CookieJar {
-        public boolean rfc6265ParsingEnabled;
         //Currently parsed cookie, if V1, all $ will be applied to it, until
         CookieImpl currentCookie;
         int maxCookies;
