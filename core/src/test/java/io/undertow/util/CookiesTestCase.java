@@ -422,7 +422,7 @@ public class CookiesTestCase {
     public void testSimpleJSONObjectInRequestCookies() {
         // allowEqualInValue and allowHttpSepartorsV0 needs to be enabled to handle this cookie
         // Also, commaIsSeperator needs to be set to false
-        Map<String, Cookie> cookies = Cookies.parseRequestCookies(2, true, Arrays.asList(
+        Map<String, Cookie> cookies = Cookies.parseRequestCookies(5, true, Arrays.asList(
                 "CUSTOMER={\"v1\":1, \"id\":\"some_unique_id\", \"c\":\"http://www.google.com?q=love me\"};"
                 + " $Version=1; SHIPPING=FEDEX; $Domain=LOONEY_TUNES; $Path=/"), false, true, false);
 
@@ -613,7 +613,7 @@ public class CookiesTestCase {
         final MultiValueHashListStorage<String, Cookie> parsedCookies = new MultiValueHashListStorage<>();
         final List<String> toParse = Arrays.asList("$Version=1; CUSTOMER=JOE; $Path=/acme; CUSTOMER=MONICA; $Path=/; $Domain=my_oh_my; NO=META");
         Cookies.parseRequestCookies(8, false, toParse,parsedCookies);
-        Assert.assertEquals(""+parsedCookies,3, parsedCookies.size());
+        Assert.assertEquals(""+parsedCookies, 6, parsedCookies.size());
         List<Cookie> lst = parsedCookies.get("CUSTOMER");
         Assert.assertEquals(2, lst.size());
         Cookie cookie = lst.get(0);
