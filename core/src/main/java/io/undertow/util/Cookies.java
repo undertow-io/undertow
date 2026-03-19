@@ -342,7 +342,7 @@ public class Cookies {
                 case 3: {
                     //extract quoted value
                     if (c == '"') {
-                        if (rfc6265CookieValidationEnabled && cookieJar.inQuotes) {
+                        if (cookieJar.inQuotes) {
                             cookieJar.start = cookieJar.start - 1;
                             //i++;
                             createCookie(cookieJar.containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(cookieJar.start, i + 1)) : cookie.substring(cookieJar.start, i + 1), cookieJar);

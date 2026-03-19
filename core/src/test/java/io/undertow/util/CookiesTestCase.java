@@ -220,7 +220,7 @@ public class CookiesTestCase {
         Assert.assertEquals(2, cookies.size());
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertNotNull(cookie);
-        Assert.assertEquals("WILE_E_COYOTE=THE_COYOTE", cookie.getValue());
+        Assert.assertEquals("\"WILE_E_COYOTE=THE_COYOTE\"", cookie.getValue());
         cookie = cookies.get("SHIPPING");
         Assert.assertNotNull(cookie);
         Assert.assertEquals("FEDEX", cookie.getValue());
@@ -233,7 +233,7 @@ public class CookiesTestCase {
         Assert.assertEquals(2, cookies.size());
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertNotNull(cookie);
-        Assert.assertEquals("WILE_E_COYOTE=THE_COYOTE", cookie.getValue());
+        Assert.assertEquals("\"WILE_E_COYOTE=THE_COYOTE\"", cookie.getValue());
         cookie = cookies.get("SHIPPING");
         Assert.assertNotNull(cookie);
         Assert.assertEquals("FEDEX", cookie.getValue());
@@ -246,7 +246,7 @@ public class CookiesTestCase {
         Assert.assertEquals(2, cookies.size());
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertNotNull(cookie);
-        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+        Assert.assertEquals("\"WILE_E_COYOTE\"", cookie.getValue());
         cookie = cookies.get("SHIPPING");
         Assert.assertNotNull(cookie);
         Assert.assertEquals("FEDEX", cookie.getValue());
@@ -256,7 +256,7 @@ public class CookiesTestCase {
         Assert.assertEquals(2, cookies.size());
         cookie = cookies.get("CUSTOMER");
         Assert.assertNotNull(cookie);
-        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+        Assert.assertEquals("\"WILE_E_COYOTE\"", cookie.getValue());
         cookie = cookies.get("SHIPPING");
         Assert.assertNotNull(cookie);
         Assert.assertEquals("FEDEX", cookie.getValue());
@@ -265,7 +265,7 @@ public class CookiesTestCase {
         Assert.assertEquals(2, cookies.size());
         cookie = cookies.get("CUSTOMER");
         Assert.assertNotNull(cookie);
-        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+        Assert.assertEquals("\"WILE_E_COYOTE\"", cookie.getValue());
         cookie = cookies.get("SHIPPING");
         Assert.assertNotNull(cookie);
         Assert.assertEquals("FEDEX", cookie.getValue());
@@ -409,13 +409,13 @@ public class CookiesTestCase {
 
         cookie = cookies.get("SHIPPING");
         Assert.assertEquals("SHIPPING", cookie.getName());
-        Assert.assertEquals("FEDEX\\\\", cookie.getValue()); // backslash escapled backslash in the value
+        Assert.assertEquals("\"FEDEX\\\\\"", cookie.getValue()); // backslash escapled backslash in the value
         Assert.assertEquals("/acme", cookie.getPath());
         Assert.assertEquals(1, cookie.getVersion());
 
         cookie = cookies.get("foo");
         Assert.assertEquals("foo", cookie.getName());
-        Assert.assertEquals("\\", cookie.getValue()); // unescaped backslash exists at the last of the value
+        Assert.assertEquals("\"\\\"", cookie.getValue()); // unescaped backslash exists at the last of the value
     }
 
     @Test
@@ -528,7 +528,7 @@ public class CookiesTestCase {
         Assert.assertEquals(2, cookies.size());
         Cookie cookie = cookies.get("CUSTOMER");
         Assert.assertEquals("CUSTOMER", cookie.getName());
-        Assert.assertEquals("WILE_E_COYOTE", cookie.getValue());
+        Assert.assertEquals("\"WILE_E_COYOTE\"", cookie.getValue());
         cookie = cookies.get("BAD");
         Assert.assertNull(cookie);
         cookie = cookies.get("SHIPPING");
