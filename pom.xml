@@ -706,24 +706,44 @@
         <profile>
             <id>jdk18</id>
             <activation>
-                <jdk>[18,)</jdk>
+                <jdk>[17,24)</jdk>
             </activation>
             <properties>
                 <modular.jdk.props>-Djava.security.manager=allow</modular.jdk.props>
             </properties>
         </profile>
-		<profile>
-			<id>verbose</id>
-			<activation>
-				<property>
-					<name>findbugs</name>
-				</property>
-			</activation>
-			<properties>
-				<maven.javadoc.plugin.quiet>false</maven.javadoc.plugin.quiet>
-				<maven.compiler.showDeprecation>true</maven.compiler.showDeprecation>
-				<maven.compiler.showWarnings>false</maven.compiler.showWarnings>
-			</properties>
-		</profile>
+
+        <profile>
+            <id>verbose</id>
+            <activation>
+                <property>
+                    <name>findbugs</name>
+                </property>
+            </activation>
+            <properties>
+                <maven.javadoc.plugin.quiet>false</maven.javadoc.plugin.quiet>
+                <maven.compiler.showDeprecation>true</maven.compiler.showDeprecation>
+                <maven.compiler.showWarnings>false</maven.compiler.showWarnings>
+            </properties>
+        </profile>
+
+        <profile>
+            <id>jdk23</id>
+            <activation>
+                <jdk>[23,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                                <!-- SE 23+ requires explicit config to turn on annotation processing -->
+                            <compilerArgument>-proc:full</compilerArgument>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
 </project>
