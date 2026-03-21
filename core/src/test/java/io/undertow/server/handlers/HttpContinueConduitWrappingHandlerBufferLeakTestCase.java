@@ -18,20 +18,18 @@
 
 package io.undertow.server.handlers;
 
-import java.io.IOException;
-import java.net.Socket;
-import java.nio.charset.StandardCharsets;
-
+import io.undertow.testutils.DefaultServer;
+import io.undertow.util.StatusCodes;
+import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.util.StatusCodes;
+import java.io.IOException;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author Stuart Douglas
@@ -45,18 +43,15 @@ public class HttpContinueConduitWrappingHandlerBufferLeakTestCase {
         final BlockingHandler blockingHandler = new BlockingHandler();
         final HttpContinueReadHandler handler = new HttpContinueReadHandler(blockingHandler);
         DefaultServer.setRootHandler(handler);
-        blockingHandler.setRootHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) {
-                try {
-                    if (exchange.getQueryParameters().containsKey("reject")) {
-                        exchange.getRequestChannel();
-                        exchange.setStatusCode(StatusCodes.EXPECTATION_FAILED);
-                        exchange.getOutputStream().close();
-                    }
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+        blockingHandler.setRootHandler(exchange -> {
+            try {
+                if (exchange.getQueryParameters().containsKey("reject")) {
+                    exchange.getRequestChannel();
+                    exchange.setStatusCode(StatusCodes.EXPECTATION_FAILED);
+                    exchange.getOutputStream().close();
                 }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         });
     }
@@ -64,6 +59,13 @@ public class HttpContinueConduitWrappingHandlerBufferLeakTestCase {
     @Before
     public void before() {
         Assume.assumeFalse(DefaultServer.isAjp());
+    }
+
+    @After
+    public void after() throws IOException {
+        if (persistentSocket != null) {
+            persistentSocket.close();
+        }
     }
 
     @Test
