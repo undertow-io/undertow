@@ -92,13 +92,9 @@ public class GracefulShutdownHandler implements HttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        boolean rejectDuringShutdown = true;
-
+        // Track Http2 channels to be able to perform the shutdown procedure
+        // defined in RFC9113 using GOAWAY frames.
         if (exchange.getConnection() instanceof Http2ServerConnection) {
-            rejectDuringShutdown = false;
-
-            // Track Http2 channels to be able to perform the shutdown procedure
-            // defined in RFC9113 using GOAWAY frames.
             Http2Channel channel = ((Http2ServerConnection) exchange.getConnection()).getChannel();
 
             if (http2Channels.add(channel)) {
@@ -108,16 +104,16 @@ public class GracefulShutdownHandler implements HttpHandler {
                 channel.addCloseTask(new ChannelListener<Http2Channel>() {
                         @Override
                         public void handleEvent(Http2Channel c) {
-                            http2Channels.remove(c);
-                            decrementActiveAndCheckShutdownComplete();
+                            if (http2Channels.remove(c)) {
+                                decrementActiveAndCheckShutdownComplete();
+                            }
                         }
                     });
             }
-
         }
 
         long snapshot = stateUpdater.updateAndGet(this, incrementActive);
-        if (isShutdown(snapshot) && rejectDuringShutdown) {
+        if (isShutdown(snapshot)) {
             decrementActiveAndCheckShutdownComplete();
             exchange.setStatusCode(StatusCodes.SERVICE_UNAVAILABLE);
             exchange.endExchange();
@@ -147,7 +143,8 @@ public class GracefulShutdownHandler implements HttpHandler {
 
     public void start() {
         synchronized (lock) {
-            stateUpdater.updateAndGet(this, current -> current & ACTIVE_COUNT_MASK);
+            http2Channels.clear();
+            stateUpdater.set(this, 0);
             for (ShutdownListener listener : shutdownListeners) {
                 listener.shutdown(false);
             }
