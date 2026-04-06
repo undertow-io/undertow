@@ -100,7 +100,7 @@ public class AjpOpenListener implements OpenListener {
         PooledByteBuffer buf = pool.allocate();
         this.bufferSize = buf.getBuffer().remaining();
         buf.close();
-        parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, StandardCharsets.UTF_8.name()), undertowOptions.get(DECODE_URL, true), undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS), undertowOptions.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS), URLUtils.getSlashDecodingFlag(undertowOptions), undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false), undertowOptions.get(UndertowOptions.AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN, DEFAULT_AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN));
+        parser = createAjpRequestParser(undertowOptions);
         connectorStatistics = new ConnectorStatisticsImpl();
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
     }
@@ -180,7 +180,24 @@ public class AjpOpenListener implements OpenListener {
         }
         this.undertowOptions = undertowOptions;
         statisticsEnabled = undertowOptions.get(UndertowOptions.ENABLE_CONNECTOR_STATISTICS, false);
-        parser = new AjpRequestParser(undertowOptions.get(URL_CHARSET, StandardCharsets.UTF_8.name()), undertowOptions.get(DECODE_URL, true), undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS), undertowOptions.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS), URLUtils.getSlashDecodingFlag(undertowOptions), undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false));
+        parser = createAjpRequestParser(undertowOptions);
+    }
+
+    /**
+     * Create and return a new AjpRequestParser instance, based on some undertowOptions.
+     * @param undertowOptions The options to use when creating the AjpRequestParser
+     * @return A new AjpRequestParser instance
+     */
+    private AjpRequestParser createAjpRequestParser(final OptionMap undertowOptions) {
+        return new AjpRequestParser(
+            undertowOptions.get(URL_CHARSET, StandardCharsets.UTF_8.name()),
+            undertowOptions.get(DECODE_URL, true),
+            undertowOptions.get(UndertowOptions.MAX_PARAMETERS, UndertowOptions.DEFAULT_MAX_PARAMETERS),
+            undertowOptions.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS),
+            URLUtils.getSlashDecodingFlag(undertowOptions),
+            undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false),
+            undertowOptions.get(UndertowOptions.AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN, DEFAULT_AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN)
+        );
     }
 
     @Override
