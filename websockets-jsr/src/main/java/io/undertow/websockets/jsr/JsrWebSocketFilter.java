@@ -21,11 +21,12 @@ package io.undertow.websockets.jsr;
 import static io.undertow.websockets.jsr.ServerWebSocketContainer.WebSocketHandshakeHolder;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.io.ObjectStreamException;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -35,6 +36,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;
 import javax.websocket.CloseReason;
@@ -132,33 +134,18 @@ public class JsrWebSocketFilter implements Filter {
                     final HttpSessionImpl session = src.getCurrentServletContext().getSession(src.getExchange(), false);
                     facade.upgradeChannel(new HttpUpgradeListener() {
                         @Override
-                        @SuppressWarnings("removal")
                         public void handleUpgrade(StreamConnection streamConnection, HttpServerExchange exchange) {
 
                             WebSocketChannel channel = selected.createChannel(facade, streamConnection, facade.getBufferPool());
                             peerConnections.add(channel);
-                            if(session != null) {
-                                final Session underlying;
-                                if (System.getSecurityManager() == null) {
-                                    underlying = session.getSession();
-                                } else {
-                                    underlying = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
-                                }
-                                List<WebSocketChannel> connections;
-                                synchronized (underlying) {
-                                    connections = (List<WebSocketChannel>) underlying.getAttribute(SESSION_ATTRIBUTE);
-                                    if(connections == null) {
-                                        underlying.setAttribute(SESSION_ATTRIBUTE, connections = new ArrayList<>());
-                                    }
-                                    connections.add(channel);
-                                }
-                                final List<WebSocketChannel> finalConnections = connections;
+                            if (session != null) {
+                                Session unwrappedSession = unwrap(session);
+                                Collection<WebSocketChannel> channels = requireWebSocketChannels(unwrappedSession);
+                                channels.add(channel);
                                 channel.addCloseTask(new ChannelListener<WebSocketChannel>() {
                                     @Override
                                     public void handleEvent(WebSocketChannel channel) {
-                                        synchronized (underlying) {
-                                            finalConnections.remove(channel);
-                                        }
+                                        channels.remove(channel);
                                     }
                                 });
                             }
@@ -178,33 +165,56 @@ public class JsrWebSocketFilter implements Filter {
 
     }
 
+    @SuppressWarnings("removal")
+    static Session unwrap(HttpSession session) {
+        return (System.getSecurityManager() == null) ? ((HttpSessionImpl) session).getSession() : java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
+    }
+
+    static Collection<WebSocketChannel> requireWebSocketChannels(Session session) {
+        Collection<WebSocketChannel> channels = getWebSocketChannels(session);
+        if (channels == null) {
+            // This should not be the case, but handle defensively
+            synchronized (session.getId()) {
+                channels = getWebSocketChannels(session);
+                if (channels == null) {
+                    channels = new WebSocketChannels();
+                    session.setAttribute(SESSION_ATTRIBUTE, channels);
+                }
+            }
+        }
+        return channels;
+    }
+
+    @SuppressWarnings("unchecked")
+    static Collection<WebSocketChannel> getWebSocketChannels(Session session) {
+        return (Collection<WebSocketChannel>) session.getAttribute(SESSION_ATTRIBUTE);
+    }
 
     public static class LogoutListener implements HttpSessionListener {
 
         @Override
-        public void sessionCreated(HttpSessionEvent se) {
-
+        public void sessionCreated(HttpSessionEvent event) {
+            // Avoid the need to instrument putIfAbsent semantics by creating the WebSocketChannel collection on session creation
+            unwrap(event.getSession()).setAttribute(SESSION_ATTRIBUTE, new WebSocketChannels());
         }
 
         @Override
-        @SuppressWarnings("removal")
-        public void sessionDestroyed(HttpSessionEvent se) {
-            HttpSessionImpl session = (HttpSessionImpl) se.getSession();
-            final Session underlying;
-            if (System.getSecurityManager() == null) {
-                underlying = session.getSession();
-            } else {
-                underlying = java.security.AccessController.doPrivileged(new HttpSessionImpl.UnwrapSessionAction(session));
-            }
-            List<WebSocketChannel> connections = (List<WebSocketChannel>) underlying.getAttribute(SESSION_ATTRIBUTE);
-            if(connections != null) {
-                synchronized (underlying) {
-                    for(WebSocketChannel c : connections) {
-                        WebSockets.sendClose(CloseReason.CloseCodes.VIOLATED_POLICY.getCode(), "", c, null);
-                    }
+        public void sessionDestroyed(HttpSessionEvent event) {
+            Collection<WebSocketChannel> channels = getWebSocketChannels(unwrap(event.getSession()));
+            if (channels != null) {
+                for (WebSocketChannel channel : channels) {
+                    WebSockets.sendClose(CloseReason.CloseCodes.VIOLATED_POLICY.getCode(), "", channel, null);
                 }
             }
         }
     }
 
+    public static class WebSocketChannels extends CopyOnWriteArraySet<WebSocketChannel> {
+        private static final long serialVersionUID = 1858641678165439774L;
+
+        private Object writeReplace() throws ObjectStreamException {
+            // WebSocketChannel is not serializable - persist as an empty collection
+            return this.isEmpty() ? this : new WebSocketChannels();
+        }
+    }
 }
