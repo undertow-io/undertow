@@ -566,12 +566,16 @@ public class UndertowOptions {
      * (spec compliant '/test;PARAM_ID=param1,param2/next-path-segment')
      *
      * If this is not specified it will be the same as {@link #DEFAULT_ALLOW_ID_LESS_MATRIX_PARAMETERS}.
+     * @deprecated
      */
+    @Deprecated
     public static final Option<Boolean> ALLOW_ID_LESS_MATRIX_PARAMETERS = Option.simple(UndertowOptions.class, "ALLOW_ID_LESS_MATRIX_PARAMETERS", Boolean.class);
 
     /**
      * Default value of allow ID-less matrix parameters - false. We should comply with spec.
+     * @deprecated
      */
+    @Deprecated
     public static final boolean DEFAULT_ALLOW_ID_LESS_MATRIX_PARAMETERS = false;
 
 

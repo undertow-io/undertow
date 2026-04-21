@@ -581,11 +581,8 @@ final class RequestParser {
                 state.position = sb.length();
                 state.paramDecodeRequired = false;
             } else if (nextByte == COMMA) {
-                // path parameter value read complete
-                addParam(state, builder);
+                // potential path parameter value read complete
                 sb.append(nextChar);
-                state.position = sb.length();
-                state.paramDecodeRequired = state.urlDecodeRequired = decode;
             } else if (nextByte == SEMICOLON) {
                 // path parameter value read complete
                 addParam(state, builder);
@@ -749,7 +746,9 @@ final class RequestParser {
         if (isQueryParam) {
             exchange.addQueryParam(name, value);
         } else {
-            exchange.addPathParam(name, value);
+            for (String v : value.split(",")) {
+                exchange.addPathParam(name, v);
+            }
         }
     }
 
