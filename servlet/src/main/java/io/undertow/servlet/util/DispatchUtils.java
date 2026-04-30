@@ -236,6 +236,9 @@ public final class DispatchUtils {
             if (!fake.getDecodedQueryString().isEmpty()) {
                 exchange.setDecodedQueryString(fake.getDecodedQueryString());
             }
+            if (!fake.getQueryString().isEmpty()) {
+                exchange.setQueryString(fake.getQueryString());
+            }
         }
         // both forward and include merge parameters by spec
         if (!fake.getDecodedQueryString().isEmpty()) {
