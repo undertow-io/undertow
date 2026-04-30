@@ -17,6 +17,7 @@
  */
 package io.undertow.servlet.test.spec;
 
+import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -35,6 +36,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
 
 /**
  * <p>Test for the paths in the HttpServletRequest with different URLs.</p>
@@ -153,6 +155,25 @@ public class PathTestCase {
             final String response = HttpClientUtils.readResponse(result);
             Assert.assertEquals("pathInfo:null queryString:n1=v%251&n2=v%252 servletPath:/other/pa%th.info requestUri:/context/other/pa%25th.info;p1=v%251;p2=v2", response);
         } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testUndecodedQueryString() throws IOException {
+        // UNDERTOW-2609 & UNDERTOW-2757 - getQueryString return should not be decoded with ALLOW_UNESCAPED_CHARACTERS_IN_URL
+        OptionMap existing = DefaultServer.getUndertowOptions();
+        OptionMap unescaped = OptionMap.create(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true);
+        DefaultServer.setUndertowOptions(unescaped);
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/context/path/path-info?n1=v%251&n2=v%252");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals("pathInfo:/path-info queryString:n1=v%251&n2=v%252 servletPath:/path requestUri:/context/path/path-info", response);
+        } finally {
+            DefaultServer.setUndertowOptions(existing);
             client.getConnectionManager().shutdown();
         }
     }
