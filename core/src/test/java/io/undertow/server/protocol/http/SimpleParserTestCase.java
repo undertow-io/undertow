@@ -407,10 +407,8 @@ public class SimpleParserTestCase {
         Assert.assertEquals("http://localhost:7777/route/v1/driving/13.388860,52.517037;13.397634,52.529407,111;13.428555,52.523219,222", result.getRequestURI());
         Assert.assertEquals("/route/v1/driving/13.388860,52.517037", result.getRequestPath());
         Assert.assertEquals("overview=false", result.getQueryString());
-        Assert.assertEquals("52.529407", result.getPathParameters().get("13.397634").getFirst());
-        Assert.assertEquals("111", result.getPathParameters().get("13.397634").getLast());
-        Assert.assertEquals("52.523219", result.getPathParameters().get("13.428555").getFirst());
-        Assert.assertEquals("222", result.getPathParameters().get("13.428555").getLast());
+        Assert.assertTrue(result.getPathParameters().keySet().contains("13.397634,52.529407,111"));
+        Assert.assertTrue(result.getPathParameters().keySet().contains("13.428555,52.523219,222"));
         Assert.assertEquals("false", result.getQueryParameters().get("overview").getFirst());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
         Assert.assertTrue(result.isHostIncludedInRequestURI());
