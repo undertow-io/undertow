@@ -37,7 +37,7 @@ import java.nio.ByteBuffer;
 @Category(UnitTest.class)
 public class ResponseParserResumeTestCase {
 
-    public static final String DATA = "HTTP/1.1 200 OK\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n    value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
+    public static final String DATA = "HTTP/1.1 200 OK\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n \r\n value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
 
     @Test
     public void testMethodSplit() {
@@ -54,31 +54,31 @@ public class ResponseParserResumeTestCase {
     @Test
     public void testOneCharacterAtATime() throws BadRequestException {
         byte[] in = DATA.getBytes();
-        final ResponseParseState context = new ResponseParseState();
+        final ResponseState context = new ResponseState();
         HttpResponseBuilder result = new HttpResponseBuilder();
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(1);
-        while (context.state != ResponseParseState.PARSE_COMPLETE) {
-            HttpResponseParser.INSTANCE.handle(buffer, context, result);
+        while (!context.isComplete()) {
+            ResponseParser.INSTANCE.handle(buffer, context, result);
             buffer.limit(buffer.limit() + 1);
         }
         runAssertions(result, context);
     }
 
     private void testResume(final int split, byte[] in) throws BadRequestException {
-        final ResponseParseState context = new ResponseParseState();
+        final ResponseState context = new ResponseState();
         HttpResponseBuilder result = new HttpResponseBuilder();
         ByteBuffer buffer = ByteBuffer.wrap(in);
         buffer.limit(split);
-        HttpResponseParser.INSTANCE.handle(buffer, context, result);
+        ResponseParser.INSTANCE.handle(buffer, context, result);
         Assert.assertEquals(0, buffer.remaining());
         buffer.limit(buffer.capacity());
-        HttpResponseParser.INSTANCE.handle(buffer,context, result);
+        ResponseParser.INSTANCE.handle(buffer,context, result);
         runAssertions(result, context);
         Assert.assertEquals(4, buffer.remaining());
     }
 
-    private void runAssertions(final HttpResponseBuilder result, final ResponseParseState context) {
+    private void runAssertions(final HttpResponseBuilder result, final ResponseState context) {
         Assert.assertEquals(StatusCodes.OK, result.getStatusCode());
         Assert.assertEquals("OK", result.getReasonPhrase());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
@@ -89,7 +89,7 @@ public class ResponseParserResumeTestCase {
         Assert.assertEquals("a", result.getResponseHeaders().getFirst(new HttpString("Accept-garbage")));
         Assert.assertEquals(4, result.getResponseHeaders().getHeaderNames().size());
 
-        Assert.assertEquals(ResponseParseState.PARSE_COMPLETE, context.state);
+        Assert.assertTrue(context.isComplete());
     }
 
 }

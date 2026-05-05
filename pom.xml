@@ -180,7 +180,6 @@
     </properties>
 
     <modules>
-        <module>parser-generator</module>
         <module>core</module>
         <module>examples</module>
         <module>benchmarks</module>
@@ -390,12 +389,6 @@
             <dependency>
                 <groupId>io.undertow</groupId>
                 <artifactId>undertow-examples</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.undertow</groupId>
-                <artifactId>undertow-parser-generator</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
