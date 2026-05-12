@@ -72,7 +72,7 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
     protected final boolean extensionsSupported;
     protected final ExtensionFunction extensionFunction;
     protected final boolean hasReservedOpCode;
-
+    protected final int maxReadFrames;
     /**
      * an incoming frame that has not been created yet
      */
@@ -110,6 +110,8 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
         this.hasReservedOpCode = extensionFunction.hasExtensionOpCode();
         this.subProtocol = subProtocol;
         this.peerConnections = peerConnections;
+        this.maxReadFrames = AbstractReceiveListener.getMaxReadFrames();
+
         if(options.contains(UndertowOptions.WEB_SOCKETS_READ_TIMEOUT)) {
             try {
                 this.setOption(Options.READ_TIMEOUT, options.get(UndertowOptions.WEB_SOCKETS_READ_TIMEOUT));
