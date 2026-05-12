@@ -25,6 +25,7 @@ import io.undertow.servlet.api.ThreadSetupHandler;
 import io.undertow.servlet.core.ContextClassLoaderSetupAction;
 import io.undertow.servlet.spec.ServletContextImpl;
 import io.undertow.connector.ByteBufferPool;
+import io.undertow.websockets.core.AbstractReceiveListener;
 import io.undertow.websockets.extensions.ExtensionHandshake;
 import org.xnio.XnioWorker;
 
@@ -37,7 +38,11 @@ import jakarta.websocket.DeploymentException;
 import jakarta.websocket.Extension;
 import jakarta.websocket.server.ServerContainer;
 import jakarta.websocket.server.ServerEndpointConfig;
+
+import static java.lang.System.getProperty;
+
 import java.net.InetSocketAddress;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -82,6 +87,8 @@ public class Bootstrap implements ServletExtension {
             extensions.add(new ExtensionImpl(e.getName(), Collections.emptyList()));
         }
         ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), worker, buffers, setup, info.isDispatchToWorkerThread(), bind, info.getReconnectHandler(), extensions);
+        container.setDefaultMaxTextMessageBufferSize(this.getMaxTextBufferSize());
+        container.setDefaultMaxBinaryMessageBufferSize(this.getMaxBinaryBufferSize());
         try {
             for (Class<?> annotation : info.getAnnotatedEndpoints()) {
                 container.addEndpoint(annotation);
@@ -108,6 +115,28 @@ public class Bootstrap implements ServletExtension {
 
             }
         });
+    }
+
+    private  int getMaxBinaryBufferSize( ) {
+        try {
+            return Integer.parseInt(getSystemProperty(AbstractReceiveListener.WEB_SOCKETS_SIZE_BINARY_PROPERTY, Integer.toString(AbstractReceiveListener.DEFAULT_WEB_SOCKETS_MESSAGE_SIZE)));
+        } catch(NumberFormatException nfe) {
+            return AbstractReceiveListener.DEFAULT_WEB_SOCKETS_MESSAGE_SIZE;
+        }
+    }
+
+
+    private int getMaxTextBufferSize() {
+        try {
+            return Integer.parseInt(getSystemProperty(AbstractReceiveListener.WEB_SOCKETS_SIZE_TEXT_PROPERTY, Integer.toString(AbstractReceiveListener.DEFAULT_WEB_SOCKETS_MESSAGE_SIZE)));
+        } catch(NumberFormatException nfe) {
+            return AbstractReceiveListener.DEFAULT_WEB_SOCKETS_MESSAGE_SIZE;
+        }
+    }
+
+    static String getSystemProperty(final String key, final String def) {
+        return System.getSecurityManager() == null ? getProperty(key,def) : java.security.AccessController.doPrivileged(
+                (PrivilegedAction<String>) () -> getProperty(key,def));
     }
 
     private static final class WebSocketListener implements ServletContextListener {

@@ -65,7 +65,7 @@ public class BufferedTextMessage {
         PooledByteBuffer pooled = channel.getWebSocketChannel().getBufferPool().allocate();
         final ByteBuffer buffer = pooled.getBuffer();
         try {
-            for (; ; ) {
+            for (;;) {
                 int res = channel.read(buffer);
                 if (res == -1) {
                     buffer.flip();
@@ -96,8 +96,9 @@ public class BufferedTextMessage {
         final ByteBuffer buffer = pooled.getBuffer();
         try {
             try {
-                for (; ; ) {
+                for (;;) {
                     int res = channel.read(buffer);
+                    checkMaxSize(channel, res);
                     if (res == -1) {
                         this.complete = true;
                         buffer.flip();
@@ -124,8 +125,11 @@ public class BufferedTextMessage {
                                     try {
                                         for (; ; ) {
                                             int res = channel.read(buffer);
+                                            checkMaxSize(channel, res);
+                                            //NOTE below will spin again if buffer has some space left - without write
+                                            //this wont write immediately to data, until res is -1/0 on next spin, but that means we would loose
+                                            //check/increment, so its done immediately.
                                             if (res == -1) {
-                                                checkMaxSize(channel, res);
                                                 buffer.flip();
                                                 data.write(buffer);
                                                 complete = true;
@@ -161,7 +165,7 @@ public class BufferedTextMessage {
                         channel.resumeReads();
                         return;
                     }
-                    checkMaxSize(channel, res);
+
                     if (!buffer.hasRemaining()) {
                         buffer.flip();
                         data.write(buffer);
