@@ -136,10 +136,10 @@ final class ResponseParser {
             if (state.previousByte == 0 && (isVisibleAsciiChar(nextByte) || isSpaceOrTabChar(nextByte) || isObsoleteChar(nextByte))) {
                 // reason phrase data goes on
                 sb.append(nextChar);
-            } else if (state.previousByte == 0 && nextByte == CARRIAGE_RETURN && sb.length() > 0) {
+            } else if (state.previousByte == 0 && nextByte == CARRIAGE_RETURN) {
                 // reason phrase read complete - first separator
                 state.previousByte = nextByte;
-            } else if (state.previousByte == CARRIAGE_RETURN && nextByte == LINE_FEED && sb.length() > 0) {
+            } else if (state.previousByte == CARRIAGE_RETURN && nextByte == LINE_FEED) {
                 // reason phrase read complete - second separator
                 final String reason = sb.toString().trim();
                 if (!reason.isEmpty()) builder.setReasonPhrase(reason);
