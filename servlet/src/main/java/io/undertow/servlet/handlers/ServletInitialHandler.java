@@ -20,6 +20,7 @@ package io.undertow.servlet.handlers;
 
 import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
+import io.undertow.server.Connectors;
 import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -135,6 +136,7 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
     @Override
     public void handleRequest(final HttpServerExchange exchange) throws Exception {
         final String path = exchange.getRelativePath();
+        final long contentLength = exchange.getRequestContentLength();
         if (Paths.isForbidden(path)) {
             exchange.setStatusCode(StatusCodes.NOT_FOUND);
             return;
@@ -152,6 +154,11 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         //set the max request size if applicable
         if (info.getServletChain().getManagedServlet().getMaxRequestSize() > 0 && isMultiPartExchange(exchange)) {
             exchange.setMaxEntitySize(info.getServletChain().getManagedServlet().getMaxRequestSize());
+        }
+        if (contentLength > 0 && exchange.getMaxEntitySize() > 0 && exchange.getMaxEntitySize() < contentLength && exchange.isResponseChannelAvailable()) {
+            exchange.setPersistent(false);
+            Connectors.terminateRequest(exchange);
+            throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getMaxEntitySize());
         }
         exchange.putAttachment(ServletRequestContext.ATTACHMENT_KEY, servletRequestContext);
 
