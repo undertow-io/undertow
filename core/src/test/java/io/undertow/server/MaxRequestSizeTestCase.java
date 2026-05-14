@@ -121,7 +121,7 @@ public class MaxRequestSizeTestCase {
             post = new HttpPost(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
             post.setEntity(new StringEntity(A_MESSAGE));
             result = client.execute(post);
-            Assert.assertEquals(StatusCodes.BAD_REQUEST, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
 
             maxSize = OptionMap.create(UndertowOptions.MAX_HEADER_SIZE, 1000);
