@@ -24,6 +24,21 @@
         </Or>
     </Match>
 
+    <!-- TODO: see UNDERTOW-2766 -->
+    <Match>
+        <Bug pattern="AT_NONATOMIC_64BIT_PRIMITIVE"/>
+    </Match>
+
+    <!-- TODO: see UNDERTOW-2766 -->
+    <Match>
+        <Bug pattern="AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE"/>
+    </Match>
+
+    <!-- TODO: see UNDERTOW-2766 -->
+    <Match>
+        <Bug pattern="AT_STALE_THREAD_WRITE_OF_PRIMITIVE"/>
+    </Match>
+
     <Match>
         <Bug pattern="SS_SHOULD_BE_STATIC"/>
         <Or>
