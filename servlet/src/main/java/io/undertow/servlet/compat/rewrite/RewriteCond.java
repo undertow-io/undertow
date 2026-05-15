@@ -184,12 +184,12 @@ public class RewriteCond {
      * flag is effective only for comparisons between TestString and CondPattern.
      * It has no effect on filesystem and subrequest checks.
      */
-    public boolean nocase = false;
+    private boolean nocase = false;
 
     /**
      * Use this to combine rule conditions with a local OR instead of the implicit AND.
      */
-    public boolean ornext = false;
+    private boolean ornext = false;
 
     /**
      * Evaluate the condition based on the context
