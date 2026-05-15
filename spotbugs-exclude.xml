@@ -22,6 +22,16 @@
     </Match>
 
     <Match>
+        <Bug pattern="SS_SHOULD_BE_STATIC"/>
+        <Or>
+            <And>
+                <!-- False positive - it is OK to have unread field - why should it be static? -->
+                <Class name="io.undertow.security.impl.FormAuthenticationMechanism"/>
+            </And>
+        </Or>
+    </Match>
+
+    <Match>
         <Bug pattern="VSC_VULNERABLE_SECURITY_CHECK_METHODS"/>
         <Or>
             <And>
