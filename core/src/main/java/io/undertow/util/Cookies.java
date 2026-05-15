@@ -230,6 +230,7 @@ public class Cookies {
     static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator) {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, commaIsSeperator, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0, false);
     }
+
     @Deprecated(since="2.4.0", forRemoval=true)
     static Map<String, Cookie> parseRequestCookies(int maxCookies, boolean allowEqualInValue, List<String> cookies, boolean commaIsSeperator, boolean allowHttpSeparatorsV0) {
         return parseRequestCookies(maxCookies, allowEqualInValue, cookies, commaIsSeperator, allowHttpSeparatorsV0, false);
@@ -338,7 +339,7 @@ public class Cookies {
                 case 3: {
                     //extract quoted value
                     if (c == '"') {
-                        if (rfc6265CookieValidationEnabled && cookieJar.inQuotes) {
+                        if (cookieJar.inQuotes) {
                             cookieJar.start = cookieJar.start - 1;
                             //i++;
                             createCookie(cookieJar.containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(cookieJar.start, i + 1)) : cookie.substring(cookieJar.start, i + 1), cookieJar);
