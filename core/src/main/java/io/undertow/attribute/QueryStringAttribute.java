@@ -18,7 +18,10 @@
 
 package io.undertow.attribute;
 
+import io.undertow.UndertowOptions;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.util.URLUtils;
+import org.xnio.OptionMap;
 
 /**
  * The query string
@@ -52,6 +55,16 @@ public class QueryStringAttribute implements ExchangeAttribute {
     @Override
     public void writeAttribute(final HttpServerExchange exchange, final String newValue) throws ReadOnlyAttributeException {
         exchange.setQueryString(newValue);
+        // also set the decoded query string, otherwise getQueryString and getDecodedQueryString will have inconsistencies
+        // because setQueryString does not modify the stored decoded query string and thus the decoded query string will still be the old value
+        OptionMap options = exchange.getConnection().getUndertowOptions();
+        exchange.setDecodedQueryString(
+            URLUtils.decode(
+                newValue,
+                options.get(UndertowOptions.URL_CHARSET, UndertowOptions.DEFAULT_URL_CHARSET),
+                options.get(UndertowOptions.DECODE_SLASH, false),
+                new StringBuilder()
+            ));
     }
 
     @Override
