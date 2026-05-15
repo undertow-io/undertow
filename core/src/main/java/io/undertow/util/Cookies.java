@@ -339,7 +339,7 @@ public class Cookies {
                 case 3: {
                     //extract quoted value
                     if (c == '"') {
-                        if (cookieJar.inQuotes) {
+                        if (cookieJar.inQuotes && !cookieJar.obsolete) {
                             cookieJar.start = cookieJar.start - 1;
                             //i++;
                             createCookie(cookieJar.containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(cookieJar.start, i + 1)) : cookie.substring(cookieJar.start, i + 1), cookieJar);
@@ -347,6 +347,7 @@ public class Cookies {
                             createCookie(cookieJar.containsEscapedQuotes ? unescapeDoubleQuotes(cookie.substring(cookieJar.start, i)) : cookie.substring(cookieJar.start, i), cookieJar);
                         }
                         cookieJar.inQuotes = false;
+                        cookieJar.obsolete = false;
                       //if there is more, make sure next is separator
                         if (i + 1 < cookie.length() && (cookie.charAt(i + 1) == ';'      // Cookie: key="\"; key2=...
                                 || (commaIsSeperator && cookie.charAt(i + 1) == ','))    // Cookie: key="\", key2=...
@@ -471,6 +472,12 @@ public class Cookies {
         if (!name.isEmpty() && name.charAt(0) == '$' && OBSOLETE_COOKIE_PATTERN.matcher(name).find()) {
             Cookie c = new CookieImpl(name, value);
             cookieJar.parsedCookies.add(c);
+            cookieJar.obsolete = true;
+            // mark cookie as obsolete; we remove quotes from cookie value if the cookie is RFC2109
+            if (cookieJar.currentCookie != null && cookieJar.inQuotes) {
+                cookieJar.currentCookie.setValue(stripQuotes(cookieJar.currentCookie.getValue()));
+            }
+
         }
         if (cookieJar.version == 1) {
             // rfc2109 - add metadata to
@@ -595,6 +602,7 @@ public class Cookies {
         int maxCookies;
         int version = -1;
         boolean inQuotes = false;
+        boolean obsolete = false;
         boolean containsEscapedQuotes = false;
         int state = 0;
         String name = null;

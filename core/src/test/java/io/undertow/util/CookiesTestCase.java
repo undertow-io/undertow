@@ -438,7 +438,7 @@ public class CookiesTestCase {
 
         cookie = cookies.get("SHIPPING");
         Assert.assertEquals("SHIPPING", cookie.getName());
-        Assert.assertEquals("\"FEDEX\\\\\"", cookie.getValue()); // backslash escapled backslash in the value
+        Assert.assertEquals("FEDEX\\\\", cookie.getValue()); // backslash escapled backslash in the value
         Assert.assertEquals("/acme", cookie.getPath());
         Assert.assertEquals(1, cookie.getVersion());
 
