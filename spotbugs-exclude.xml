@@ -21,6 +21,11 @@
         </Or>
     </Match>
 
+    <!-- False positive - it is safe to throw an exception from constructors -->
+    <Match>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+
     <!-- Ignore spotbugs reports from incomplete detectors -->
     <Match>
         <Bug pattern="TESTING"/>
