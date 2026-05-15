@@ -58,6 +58,46 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @HttpOneOnly
 public class AbstractWebSocketServerTest {
 
+    private static final long sizeLimitedMaxSize = 1024 * 32;
+    private static final String largeText = "a".repeat((int) sizeLimitedMaxSize + 1024);
+
+    @Test
+    public void testTextSizeLimited() throws Exception {
+        if (getVersion() == WebSocketVersion.V00) {
+            // ignore 00 tests for now
+            return;
+        }
+        final AtomicBoolean connected = new AtomicBoolean(false);
+        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
+            @Override
+            public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
+                connected.set(true);
+                channel.getReceiveSetter().set(new AbstractReceiveListener() {
+                    @Override
+                    protected long getMaxTextBufferSize() {
+                        return sizeLimitedMaxSize;
+                    }
+
+                    @Override
+                    protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) throws IOException {
+                        String string = message.getData();
+                        WebSockets.sendText(string, channel, null);
+                    }
+                });
+                channel.resumeReceives();
+            }
+        }));
+
+        final FutureResult<?> latch = new FutureResult();
+        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/"));
+        client.connect();
+        // we expect a CloseWebSocketFrame on the response with an error about the message being too big
+        CloseMessage expectedClose = new CloseMessage(CloseMessage.MSG_TOO_BIG, WebSocketMessages.MESSAGES.messageToBig(sizeLimitedMaxSize));
+        client.send(new TextWebSocketFrame(Unpooled.copiedBuffer(largeText, CharsetUtil.US_ASCII)), new FrameChecker(CloseWebSocketFrame.class, expectedClose.toByteBuffer().array(), latch));
+        latch.getIoFuture().get();
+        client.destroy();
+    }
+
     @Test
     public void testText() throws Exception {
         if (getVersion() == WebSocketVersion.V00) {
@@ -89,6 +129,55 @@ public class AbstractWebSocketServerTest {
         WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/"));
         client.connect();
         client.send(new TextWebSocketFrame(Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII)), new FrameChecker(TextWebSocketFrame.class, "world".getBytes(CharsetUtil.US_ASCII), latch));
+        latch.getIoFuture().get();
+        client.destroy();
+    }
+
+    @Test
+    public void testBinarySizeLimited() throws Exception {
+        if (getVersion() == WebSocketVersion.V00) {
+            // ignore 00 tests for now
+            return;
+        }
+        final AtomicBoolean connected = new AtomicBoolean(false);
+        DefaultServer.setRootHandler(new WebSocketProtocolHandshakeHandler(new WebSocketConnectionCallback() {
+            @Override
+            public void onConnect(final WebSocketHttpExchange exchange, final WebSocketChannel channel) {
+                connected.set(true);
+                channel.getReceiveSetter().set(new AbstractReceiveListener() {
+                    @Override
+                    protected long getMaxBinaryBufferSize() {
+                        return sizeLimitedMaxSize;
+                    }
+
+                    @Override
+                    protected void onFullBinaryMessage(WebSocketChannel channel, BufferedBinaryMessage message) throws IOException {
+                        final Pooled<ByteBuffer[]> data = message.getData();
+                        WebSockets.sendBinary(data.getResource(), channel, new WebSocketCallback<Void>() {
+                            @Override
+                            public void complete(WebSocketChannel channel, Void context) {
+                                data.close();
+                            }
+
+                            @Override
+                            public void onError(WebSocketChannel channel, Void context, Throwable throwable) {
+                                data.close();
+                            }
+                        });
+                    }
+                });
+                channel.resumeReceives();
+            }
+        }));
+
+        final FutureResult latch = new FutureResult();
+        final byte[] payload = largeText.getBytes();
+
+        WebSocketTestClient client = new WebSocketTestClient(getVersion(), new URI("ws://" + NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")) + ":" + DefaultServer.getHostPort("default") + "/"));
+        client.connect();
+        // we expect a CloseWebSocketFrame on the response with an error about the message being too big
+        CloseMessage expectedClose = new CloseMessage(CloseMessage.MSG_TOO_BIG, WebSocketMessages.MESSAGES.messageToBig(sizeLimitedMaxSize));
+        client.send(new BinaryWebSocketFrame(Unpooled.wrappedBuffer(payload)), new FrameChecker(CloseWebSocketFrame.class, expectedClose.toByteBuffer().array(), latch));
         latch.getIoFuture().get();
         client.destroy();
     }
