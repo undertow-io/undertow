@@ -660,9 +660,20 @@ public interface UndertowMessages {
     @Message(id = 212, value = "Failed to encode query string '%s' with '%s' encoding.")
     IllegalArgumentException failedToEncodeQueryString(String q, String e);
 
-    @Message(id = 213, value = "Too many path parameters, cannot have more than %s path parameters")
-    BadRequestException tooManyPathParameters(int noParams);
+    // 213 placeholder
+
+    // 214 placeholder
+
+    // 215 placeholder
+
+    // 216 placeholder
+
+    // 217 placeholder
 
     @Message(id = 218, value = "Failed to schedule access message. Access logger is closing.")
     IllegalStateException failedToLogAccessOnClose();
+
+    @Message(id = 219, value = "Too many path parameters, cannot have more than %s path parameters")
+    BadRequestException tooManyPathParameters(int noParams);
+
 }
