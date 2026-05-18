@@ -195,9 +195,12 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 parser.handle(buffer, state, httpServerExchange);
                 if (state.isComplete()) {
                     // [UNDERTOW-2082] NOTE: this should be used only for HTTP1.x
-                    if(!Cookies.isCrumbsAssemplyDisabled()) {
+                    // keeping this out for now as this is not present in branch 2.2.x
+                    // leaving the code here as a commented out block in case we ever need it
+                    // it will be easier to spot it than simply deleting this block
+                    /*if(!Cookies.isCrumbsAssemplyDisabled()) {
                         Cookies.assembleCrumbs(httpServerExchange.getRequestHeaders());
-                    }
+                    }*/
                     //TODO: list type headers?
                 }
                 if (buffer.hasRemaining()) {
