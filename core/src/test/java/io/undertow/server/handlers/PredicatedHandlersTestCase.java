@@ -306,6 +306,51 @@ public class PredicatedHandlersTestCase {
         }
     }
 
+    @Test
+    public void testSamePathHandling() throws IOException {
+        DefaultServer.setRootHandler(new CanonicalPathHandler().setNext(
+                Handlers.predicates(
+                        PredicatedHandlersParser.parse(
+                                        "path('/myapp/upload')->response-code(403)\n" +
+                                        "regex(pattern='/myapp/(upload|download)/(.*?)[.]/',value=%U)->response-code(403)\n",
+                                        getClass().getClassLoader()), new HttpHandler() {
+                            @Override
+                            public void handleRequest(HttpServerExchange exchange) throws Exception {
+                                System.out.println("Relative path: " + exchange.getRelativePath() + " Request path: " + exchange.getRequestURI());
+                            }
+        })));
+
+        TestHttpClient client = new TestHttpClient();
+        try {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/myapp/upload");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/myapp/./upload");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/myapp/upload/whatever");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/myapp/upload/../whatever");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/myapp/./upload/../whatever");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
     @Test @ProxyIgnore
     public void testCustomTypeResponse() throws IOException {
         DefaultServer.setRootHandler(
