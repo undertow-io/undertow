@@ -31,6 +31,7 @@ import io.undertow.util.ParserUtils;
 import io.undertow.util.HttpString;
 import io.undertow.util.LegacyCookieSupport;
 import io.undertow.util.ParameterLimitException;
+import io.undertow.util.Rfc6265CookieSupport;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.URLUtils;
 import io.undertow.connector.PooledByteBuffer;
@@ -153,16 +154,24 @@ public class Connectors {
     }
 
     private static String getCookieString(final Cookie cookie, boolean enableRfc6265Validation) {
-        if(enableRfc6265Validation) {
-            return addRfc6265ResponseCookieToExchange(cookie);
-        } else {
-            switch (LegacyCookieSupport.adjustedCookieVersion(cookie)) {
-                case 0:
-                    return addVersion0ResponseCookieToExchange(cookie);
-                case 1:
-                default:
-                    return addVersion1ResponseCookieToExchange(cookie);
+        if (enableRfc6265Validation) {
+            if (cookie.getValue() != null && !cookie.getValue().isEmpty()) {
+                Rfc6265CookieSupport.validateCookieValue(cookie.getValue());
             }
+            if (cookie.getPath() != null && !cookie.getPath().isEmpty()) {
+                Rfc6265CookieSupport.validatePath(cookie.getPath());
+            }
+            if (cookie.getDomain() != null && !cookie.getDomain().isEmpty()) {
+                Rfc6265CookieSupport.validateDomain(cookie.getDomain());
+            }
+        }
+
+        switch (LegacyCookieSupport.adjustedCookieVersion(cookie)) {
+            case 0:
+                return addRfc6265ResponseCookieToExchange(cookie);
+            case 1:
+            default:
+                return addVersion1ResponseCookieToExchange(cookie);
         }
     }
 
@@ -236,61 +245,6 @@ public class Connectors {
         }
         appendAttributes(cookie, header);
         return header.toString();
-    }
-
-    private static String addVersion0ResponseCookieToExchange(final Cookie cookie) {
-        final StringBuilder header = new StringBuilder(cookie.getName());
-        header.append("=");
-        if(cookie.getValue() != null) {
-            LegacyCookieSupport.maybeQuote(header, cookie.getValue());
-        }
-
-        if (cookie.getPath() != null) {
-            header.append("; path=");
-            LegacyCookieSupport.maybeQuote(header, cookie.getPath());
-        }
-        if (cookie.getDomain() != null) {
-            header.append("; domain=");
-            LegacyCookieSupport.maybeQuote(header, cookie.getDomain());
-        }
-        if (cookie.isSecure()) {
-            header.append("; secure");
-        }
-        if (cookie.isHttpOnly()) {
-            header.append("; HttpOnly");
-        }
-        if (cookie.getExpires() != null) {
-            header.append("; Expires=");
-            header.append(DateUtils.toOldCookieDateString(cookie.getExpires()));
-        } else if (cookie.getMaxAge() != null) {
-            // TODO (jrp) Per the TCK test "RFC 6265 - server should only send +ve values for Max-Age"
-            // TODO (jrp) This is possibly per https://datatracker.ietf.org/doc/html/rfc6265#section-5.2.2, however
-            // TODO (jrp) I'm not sure not adding the value is correct.
-            if (cookie.getMaxAge() > 0) {
-                header.append("; Max-Age=");
-                header.append(cookie.getMaxAge());
-            }
-            if (cookie.getMaxAge() == 0) {
-                Date expires = new Date();
-                expires.setTime(0);
-                header.append("; Expires=");
-                header.append(DateUtils.toOldCookieDateString(expires));
-            } else if (cookie.getMaxAge() > 0) {
-                Date expires = new Date();
-                expires.setTime(expires.getTime() + cookie.getMaxAge() * 1000L);
-                header.append("; Expires=");
-                header.append(DateUtils.toOldCookieDateString(expires));
-            }
-        }
-        if (cookie.isSameSite()) {
-            if (cookie.getSameSiteMode() != null && !cookie.getSameSiteMode().isEmpty()) {
-                header.append("; SameSite=");
-                header.append(cookie.getSameSiteMode());
-            }
-        }
-        appendAttributes(cookie, header);
-        return header.toString();
-
     }
 
     private static String addVersion1ResponseCookieToExchange(final Cookie cookie) {
