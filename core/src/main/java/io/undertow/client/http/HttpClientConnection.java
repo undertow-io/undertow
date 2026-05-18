@@ -571,7 +571,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
                     }
                     return;
                 }
-                final ResponseParseState state = builder.getParseState();
+                final ResponseState state = builder.getParseState();
                 int res;
                 do {
                     buffer.clear();
@@ -616,7 +616,7 @@ class HttpClientConnection extends AbstractAttachable implements Closeable, Clie
 
                     buffer.flip();
 
-                    HttpResponseParser.INSTANCE.handle(buffer, state, builder);
+                    ResponseParser.INSTANCE.handle(buffer, state, builder);
                     if (buffer.hasRemaining()) {
                         free = false;
                         pushBackStreamSourceConduit.pushBack(new PooledAdaptor(pooled));

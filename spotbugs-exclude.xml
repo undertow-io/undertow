@@ -16,9 +16,6 @@
 
     <Match>
         <Or>
-            <!-- Ignore checking for generated parser classes -->
-            <Class name="io.undertow.client.http.HttpResponseParser$$generated"/>
-            <Class name="io.undertow.server.protocol.http.HttpRequestParser$$generated"/>
             <!-- Ignore checking for generated JMH benchmarking classes -->
             <Package name="io.undertow.benchmarks.generated"/>
         </Or>
@@ -437,7 +434,7 @@
                 <Method name="parse"/>
             </And>
             <And>
-                <Class name="io.undertow.client.http.HttpResponseParser"/>
+                <Class name="io.undertow.client.http.ResponseParser"/>
                 <Method name="httpStrings"/>
             </And>
             <And>
@@ -579,7 +576,7 @@
                 <Method name="flushSenders"/>
             </And>
             <And>
-                <Class name="io.undertow.server.protocol.http.HttpRequestParser"/>
+                <Class name="io.undertow.server.protocol.http.RequestParser"/>
                 <Or>
                     <Method name="instance"/>
                     <Method name="handlePath"/>
@@ -797,7 +794,7 @@
             <And>
                 <Or>
                     <!-- TODO: figure out static{} block reference -->
-                    <Class name="io.undertow.client.http.HttpResponseParser"/>
+                    <Class name="io.undertow.client.http.ResponseParser"/>
                     <!-- TODO: figure constructor reference -->
                     <Class name="io.undertow.protocols.http2.Http2Channel"/>
                     <!-- TODO: figure constructor reference -->
@@ -809,7 +806,7 @@
                     <!-- TODO: figure constructor reference -->
                     <Class name="io.undertow.server.handlers.resource.PathResourceManager"/>
                     <!-- TODO: figure static reference -->
-                    <Class name="io.undertow.server.protocol.http.HttpRequestParser"/>
+                    <Class name="io.undertow.server.protocol.http.RequestParser"/>
                     <!-- TODO: figure static reference -->
                     <Class name="io.undertow.server.session.SecureRandomSessionIdGenerator"/>
                 </Or>

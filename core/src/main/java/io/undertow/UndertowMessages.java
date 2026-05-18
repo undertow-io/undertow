@@ -678,4 +678,7 @@ public interface UndertowMessages {
 
     @Message(id = 218, value = "Failed to schedule access message. Access logger is closing.")
     IllegalStateException failedToLogAccessOnClose();
+
+    @Message(id = 219, value = "Too many path parameters, cannot have more than %s path parameters")
+    BadRequestException tooManyPathParameters(int noParams);
 }
