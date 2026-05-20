@@ -29,14 +29,14 @@ import io.undertow.util.HttpString;
  */
 final class HttpResponseBuilder {
 
-    private final ResponseParseState parseState = new ResponseParseState();
+    private final ResponseState parseState = new ResponseState();
 
     private int statusCode;
     private HttpString protocol;
     private String reasonPhrase;
     private final HeaderMap responseHeaders = new HeaderMap();
 
-    public ResponseParseState getParseState() {
+    public ResponseState getParseState() {
         return parseState;
     }
 

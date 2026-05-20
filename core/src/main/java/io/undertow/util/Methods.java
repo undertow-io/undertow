@@ -25,8 +25,6 @@ import java.util.Map;
 import io.undertow.server.Connectors;
 
 /**
- * NOTE: If you add a new method here you must also add it to {@link io.undertow.server.protocol.http.HttpRequestParser}
- *
  * @author <a href="mailto:david.lloyd@redhat.com">David M. Lloyd</a>
  */
 public final class Methods {
@@ -35,6 +33,7 @@ public final class Methods {
     }
 
     public static final String OPTIONS_STRING = "OPTIONS";
+    public static final String PRI_STRING  = "PRI";
     public static final String GET_STRING = "GET";
     public static final String HEAD_STRING = "HEAD";
     public static final String POST_STRING = "POST";
@@ -66,6 +65,7 @@ public final class Methods {
 
 
     public static final HttpString OPTIONS = new HttpString(OPTIONS_STRING);
+    public static final HttpString PRI = new HttpString(PRI_STRING);
     public static final HttpString GET = new HttpString(GET_STRING);
     public static final HttpString HEAD = new HttpString(HEAD_STRING);
     public static final HttpString POST = new HttpString(POST_STRING);
@@ -100,6 +100,7 @@ public final class Methods {
     static {
         Map<String, HttpString> methods = new HashMap<>();
         putString(methods, OPTIONS);
+        putString(methods, PRI);
         putString(methods, GET);
         putString(methods, HEAD);
         putString(methods, POST);
