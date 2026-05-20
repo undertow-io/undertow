@@ -19,7 +19,6 @@
 package io.undertow.client.http;
 
 import io.undertow.testutils.category.UnitTest;
-import io.undertow.util.BadRequestException;
 import io.undertow.util.HttpString;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
@@ -37,14 +36,16 @@ import java.nio.ByteBuffer;
 @Category(UnitTest.class)
 public class ResponseParserResumeTestCase {
 
-    public static final String DATA = "HTTP/1.1 200 OK\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n \r\n value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
+    public static final String RESPONSE1 = "HTTP/1.1 200 OK\r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n \r\n value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
+    public static final String RESPONSE2 = "HTTP/1.1 200 \r\nHost:   www.somehost.net\r\nOtherHeader: some\r\n \r\n value\r\nHostee:another\r\nAccept-garbage:   a\r\n\r\ntttt";
+    public static final String RESPONSE3 = "HTTP/1.1 200 \r\n\r\ntttt";
 
     @Test
-    public void testMethodSplit() {
-        byte[] in = DATA.getBytes();
+    public void testMethodSplit_response1() {
+        byte[] in = RESPONSE1.getBytes();
         for (int i = 0; i < in.length - 4; ++i) {
             try {
-                testResume(i, in);
+                testResume(i, in, true, true);
             } catch (Throwable e) {
                 throw new RuntimeException("Test failed at split " + i, e);
             }
@@ -52,8 +53,8 @@ public class ResponseParserResumeTestCase {
     }
 
     @Test
-    public void testOneCharacterAtATime() throws BadRequestException {
-        byte[] in = DATA.getBytes();
+    public void testOneCharacterAtATime_response1() {
+        byte[] in = RESPONSE1.getBytes();
         final ResponseState context = new ResponseState();
         HttpResponseBuilder result = new HttpResponseBuilder();
         ByteBuffer buffer = ByteBuffer.wrap(in);
@@ -62,10 +63,38 @@ public class ResponseParserResumeTestCase {
             ResponseParser.INSTANCE.handle(buffer, context, result);
             buffer.limit(buffer.limit() + 1);
         }
-        runAssertions(result, context);
+        runAssertions(result, context, true, true);
     }
 
-    private void testResume(final int split, byte[] in) throws BadRequestException {
+    @Test
+    public void testOneCharacterAtATime_response2() {
+        byte[] in = RESPONSE2.getBytes();
+        final ResponseState context = new ResponseState();
+        HttpResponseBuilder result = new HttpResponseBuilder();
+        ByteBuffer buffer = ByteBuffer.wrap(in);
+        buffer.limit(1);
+        while (!context.isComplete()) {
+            ResponseParser.INSTANCE.handle(buffer, context, result);
+            buffer.limit(buffer.limit() + 1);
+        }
+        runAssertions(result, context, false, true);
+    }
+
+    @Test
+    public void testOneCharacterAtATime_response3() {
+        byte[] in = RESPONSE3.getBytes();
+        final ResponseState context = new ResponseState();
+        HttpResponseBuilder result = new HttpResponseBuilder();
+        ByteBuffer buffer = ByteBuffer.wrap(in);
+        buffer.limit(1);
+        while (!context.isComplete()) {
+            ResponseParser.INSTANCE.handle(buffer, context, result);
+            buffer.limit(buffer.limit() + 1);
+        }
+        runAssertions(result, context, false, false);
+    }
+
+    private void testResume(final int split, byte[] in, final boolean hasReasonPhrase, final boolean hasHeaders) {
         final ResponseState context = new ResponseState();
         HttpResponseBuilder result = new HttpResponseBuilder();
         ByteBuffer buffer = ByteBuffer.wrap(in);
@@ -74,20 +103,24 @@ public class ResponseParserResumeTestCase {
         Assert.assertEquals(0, buffer.remaining());
         buffer.limit(buffer.capacity());
         ResponseParser.INSTANCE.handle(buffer,context, result);
-        runAssertions(result, context);
+        runAssertions(result, context, hasReasonPhrase, hasHeaders);
         Assert.assertEquals(4, buffer.remaining());
     }
 
-    private void runAssertions(final HttpResponseBuilder result, final ResponseState context) {
+    private void runAssertions(final HttpResponseBuilder result, final ResponseState context, final boolean hasReasonPhrase, final boolean hasHeaders) {
         Assert.assertEquals(StatusCodes.OK, result.getStatusCode());
-        Assert.assertEquals("OK", result.getReasonPhrase());
+        Assert.assertEquals(hasReasonPhrase ? "OK" : null, result.getReasonPhrase());
         Assert.assertSame(Protocols.HTTP_1_1, result.getProtocol());
 
-        Assert.assertEquals("www.somehost.net", result.getResponseHeaders().getFirst(new HttpString("Host")));
-        Assert.assertEquals("some value", result.getResponseHeaders().getFirst(new HttpString("OtherHeader")));
-        Assert.assertEquals("another", result.getResponseHeaders().getFirst(new HttpString("Hostee")));
-        Assert.assertEquals("a", result.getResponseHeaders().getFirst(new HttpString("Accept-garbage")));
-        Assert.assertEquals(4, result.getResponseHeaders().getHeaderNames().size());
+        if (hasHeaders) {
+            Assert.assertEquals("www.somehost.net", result.getResponseHeaders().getFirst(new HttpString("Host")));
+            Assert.assertEquals("some value", result.getResponseHeaders().getFirst(new HttpString("OtherHeader")));
+            Assert.assertEquals("another", result.getResponseHeaders().getFirst(new HttpString("Hostee")));
+            Assert.assertEquals("a", result.getResponseHeaders().getFirst(new HttpString("Accept-garbage")));
+            Assert.assertEquals(4, result.getResponseHeaders().getHeaderNames().size());
+        } else {
+            Assert.assertEquals(0, result.getResponseHeaders().getHeaderNames().size());
+        }
 
         Assert.assertTrue(context.isComplete());
     }
