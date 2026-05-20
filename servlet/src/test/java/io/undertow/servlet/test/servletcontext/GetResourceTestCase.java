@@ -32,14 +32,15 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FileUtils;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import jakarta.servlet.ServletException;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
@@ -79,45 +80,40 @@ public class GetResourceTestCase {
 
     @Test
     public void testGetResource() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/file?file=/file.txt");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("File Contents", response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("File Contents", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testGetResourceSpecialCharacterInFileName() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/file?file=/" + URLEncoder.encode("1#2.txt", "UTF-8"));
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Hello!", response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Hello!", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testSpecialCharacterInFileURL() throws IOException {
         String tmp = System.getProperty("java.io.tmpdir");
-        PathResourceManager pathResourceManager = new PathResourceManager(Paths.get(tmp), 1);
-        Path file = Paths.get(tmp, "1#2.txt");
-        Files.write(file, "Hi".getBytes());
-        Resource res = pathResourceManager.getResource("1#2.txt");
-        try(InputStream in = res.getUrl().openStream()) {
-            Assert.assertEquals("Hi", FileUtils.readFile(in));
+        try (PathResourceManager pathResourceManager = new PathResourceManager(Paths.get(tmp), 1)) {
+            Path file = Paths.get(tmp, "1#2.txt");
+            Files.write(file, "Hi".getBytes());
+            Resource res = pathResourceManager.getResource("1#2.txt");
+            try (InputStream in = res.getUrl().openStream()) {
+                Assert.assertEquals("Hi", FileUtils.readFile(in));
+            }
         }
     }
-
-
 }

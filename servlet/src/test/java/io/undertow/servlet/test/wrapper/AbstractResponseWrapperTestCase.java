@@ -37,8 +37,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,7 +49,6 @@ import org.junit.runner.RunWith;
  * Tests wrapped requests and responses
  *
  * TODO: these tests should be expanded to add more functionality to the wrappers, and also test request dispatches
- *
  *
  * @author Stuart Douglas
  */
@@ -92,35 +91,28 @@ public abstract class AbstractResponseWrapperTestCase {
 
     @Test
     public void testNoWrapper() throws IOException, ServletException {
-
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(HttpServletRequestImpl.class.getName() + "\n" + HttpServletResponseImpl.class.getName(), response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(HttpServletRequestImpl.class.getName() + "\n" + HttpServletResponseImpl.class.getName(), response);
+                return null;
+            });
         }
     }
 
 
     @Test
     public void testStandardWrapper() throws IOException, ServletException {
-
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/standard");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(StandardRequestWrapper.class.getName() + "\n" + StandardResponseWrapper.class.getName(), response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(StandardRequestWrapper.class.getName() + "\n" + StandardResponseWrapper.class.getName(), response);
+                return null;
+            });
         }
     }
-
 }

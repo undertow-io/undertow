@@ -37,10 +37,10 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.FlexBase64;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.junit.Assert;
@@ -174,19 +174,18 @@ public class SecurityConstraintUrlMappingTestCase {
     public void testStartStar2() throws IOException {
         runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/star/starstar", "user1:password1", "user2:password2");
     }
+
     @Test
     public void testExtensionMatch() throws IOException {
         runSimpleUrlTest(DefaultServer.getDefaultServerURL() + "/servletContext/extension/a.html", "user1:password1", "user2:password2");
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/public/a.html");
             get.addHeader("ExpectedMechanism", "None");
             get.addHeader("ExpectedUser", "None");
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
 
@@ -198,90 +197,90 @@ public class SecurityConstraintUrlMappingTestCase {
 
     @Test
     public void testUnknown() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/unknown");
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.NOT_FOUND, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
 
     @Test
     public void testHttpMethod() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        final String url = DefaultServer.getDefaultServerURL() + "/servletContext/public/postSecured/a";
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            final String url = DefaultServer.getDefaultServerURL() + "/servletContext/public/postSecured/a";
             HttpGet initialGet = new HttpGet(url);
             initialGet.addHeader("ExpectedMechanism", "None");
             initialGet.addHeader("ExpectedUser", "None");
-            HttpResponse result = client.execute(initialGet);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(initialGet, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             HttpPost post = new HttpPost(url);
-            result = client.execute(post);
-            assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-            assertEquals(1, values.length);
-            assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
-            HttpClientUtils.readResponse(result);
+            client.execute(post, result -> {
+                assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+                Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+                assertEquals(1, values.length);
+                assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             post = new HttpPost(url);
             post.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user2:password2".getBytes(), false));
-            result = client.execute(post);
-            assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(post, result -> {
+                assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             post = new HttpPost(url);
             post.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("user1:password1".getBytes(), false));
             post.addHeader("ExpectedMechanism", "BASIC");
             post.addHeader("ExpectedUser", "user1");
-            result = client.execute(post);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(HELLO_WORLD, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(HELLO_WORLD, response);
+                return null;
+            });
         }
     }
 
     public void runSimpleUrlTest(final String url, final String badUser, final String goodUser) throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(url);
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-            assertEquals(1, values.length);
-            assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
-            HttpClientUtils.readResponse(result);
-            if(badUser != null) {
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+                Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+                assertEquals(1, values.length);
+                assertEquals(BASIC + " realm=\"Test Realm\"", values[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
+            if (badUser != null) {
                 get = new HttpGet(url);
                 get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString(badUser.getBytes(), false));
-                result = client.execute(get);
-                assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-                HttpClientUtils.readResponse(result);
+                client.execute(get, result -> {
+                    assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                    return HttpClientUtils.readResponse(result);
+                });
             }
             get = new HttpGet(url);
             get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString(goodUser.getBytes(), false));
             get.addHeader("ExpectedMechanism", "BASIC");
             get.addHeader("ExpectedUser", goodUser.substring(0, goodUser.indexOf(':')));
-            result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-            //make sure that caching is disabled
-            Assert.assertEquals("0", result.getHeaders("Expires")[0].getValue());
-            Assert.assertEquals("no-cache", result.getHeaders("Pragma")[0].getValue());
-            Assert.assertEquals("no-cache, no-store, must-revalidate", result.getHeaders("Cache-Control")[0].getValue());
+                //make sure that caching is disabled
+                Assert.assertEquals("0", result.getHeaders("Expires")[0].getValue());
+                Assert.assertEquals("no-cache", result.getHeaders("Pragma")[0].getValue());
+                Assert.assertEquals("no-cache, no-store, must-revalidate", result.getHeaders("Cache-Control")[0].getValue());
 
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(HELLO_WORLD, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(HELLO_WORLD, response);
+                return null;
+            });
         }
     }
 }

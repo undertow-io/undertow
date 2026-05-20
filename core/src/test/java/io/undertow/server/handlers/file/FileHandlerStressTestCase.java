@@ -18,6 +18,23 @@
 
 package io.undertow.server.handlers.file;
 
+import io.undertow.server.handlers.CanonicalPathHandler;
+import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.cache.CacheHandler;
+import io.undertow.server.handlers.cache.DirectBufferCache;
+import io.undertow.server.handlers.resource.PathResourceManager;
+import io.undertow.server.handlers.resource.ResourceHandler;
+import io.undertow.testutils.AjpIgnore;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.StatusCodes;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
@@ -28,23 +45,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import io.undertow.server.handlers.CanonicalPathHandler;
-import io.undertow.server.handlers.PathHandler;
-import io.undertow.server.handlers.cache.CacheHandler;
-import io.undertow.server.handlers.cache.DirectBufferCache;
-import io.undertow.server.handlers.resource.PathResourceManager;
-import io.undertow.server.handlers.resource.ResourceHandler;
-import io.undertow.testutils.AjpIgnore;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import io.undertow.testutils.TestHttpClient;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 
 /**
  * @author Stuart Douglas
@@ -72,23 +72,19 @@ public class FileHandlerStressTestCase {
             DefaultServer.setRootHandler(root);
             final List<Future<?>> futures = new ArrayList<>();
             for (int i = 0; i < NUM_THREADS; ++i) {
-                futures.add(executor.submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        TestHttpClient client = new TestHttpClient();
-                        try {
-                            for (int i = 0; i < NUM_REQUESTS; ++i) {
-                                HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
-                                HttpResponse result = client.execute(get);
-                                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                futures.add(executor.submit(() -> {
+                    try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+                        for (int i1 = 0; i1 < NUM_REQUESTS; ++i1) {
+                            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
+                            client.execute(get, result -> {
+                                Assert.assertEquals(StatusCodes.OK, result.getCode());
                                 final String response = HttpClientUtils.readResponse(result);
                                 Assert.assertTrue(response, response.contains("A web page"));
-                            }
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        } finally {
-                            client.getConnectionManager().shutdown();
+                                return null;
+                            });
                         }
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
                 }));
             }

@@ -30,13 +30,14 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import jakarta.servlet.ServletException;
-import java.io.IOException;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
 
 /**
  *
@@ -70,19 +71,19 @@ public class DefaultServletNoDirectoryListingTestCase {
 
     @Test
     public void testDirectoryListing() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
-            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path"))) {
-                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            }
-            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path?js"))) {
-                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            }
-            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path?css"))) {
-                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getStatusLine().getStatusCode());
-            }
-        } finally {
-            client.getConnectionManager().shutdown();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path"), result -> {
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return null;
+            });
+            client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path?js"), result -> {
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return null;
+            });
+            client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path?css"), result -> {
+                Assert.assertEquals(StatusCodes.FORBIDDEN, result.getCode());
+                return null;
+            });
         }
     }
 }

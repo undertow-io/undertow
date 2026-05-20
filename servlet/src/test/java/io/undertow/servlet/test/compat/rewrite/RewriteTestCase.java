@@ -18,10 +18,6 @@
 
 package io.undertow.servlet.test.compat.rewrite;
 
-import io.undertow.server.HandlerWrapper;
-import io.undertow.server.HttpHandler;
-import io.undertow.servlet.ServletExtension;
-import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.compat.rewrite.RewriteConfig;
 import io.undertow.servlet.compat.rewrite.RewriteConfigFactory;
@@ -32,15 +28,14 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import jakarta.servlet.ServletException;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 
@@ -52,21 +47,14 @@ public class RewriteTestCase {
 
     @BeforeClass
     public static void setup() throws ServletException {
-        DeploymentUtils.setupServlet(new ServletExtension() {
-                                         @Override
-                                         public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
-                                             deploymentInfo.addOuterHandlerChainWrapper(new HandlerWrapper() {
-                                                 @Override
-                                                 public HttpHandler wrap(HttpHandler handler) {
+        DeploymentUtils.setupServlet((deploymentInfo, servletContext) ->
+                        deploymentInfo.addOuterHandlerChainWrapper(handler -> {
 
-                                                     byte[] data = "RewriteRule /foo1 /bar1".getBytes(StandardCharsets.UTF_8);
-                                                     RewriteConfig config = RewriteConfigFactory.build(new ByteArrayInputStream(data));
+                            byte[] data = "RewriteRule /foo1 /bar1".getBytes(StandardCharsets.UTF_8);
+                            RewriteConfig config = RewriteConfigFactory.build(new ByteArrayInputStream(data));
 
-                                                     return new RewriteHandler(config, handler);
-                                                 }
-                                             });
-                                         }
-                                     },
+                            return new RewriteHandler(config, handler);
+                        }),
                 new ServletInfo("fooServlet", PathTestServlet.class).addMapping("/bar1")
         );
     }
@@ -74,16 +62,14 @@ public class RewriteTestCase {
     @Test
     public void testRewrite() throws Exception {
 
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo1");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:null queryString:null servletPath:/bar1 requestUri:/servletContext/bar1", response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("pathInfo:null queryString:null servletPath:/bar1 requestUri:/servletContext/bar1", response);
+                return null;
+            });
         }
     }
 }

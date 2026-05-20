@@ -18,16 +18,15 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import java.io.IOException;
-
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.IOException;
 
 /**
  * @author Emanuel Muckenhuber
@@ -79,16 +78,18 @@ public class BasicMCMPUnitTestCase extends AbstractModClusterTestBase {
 
         for (int i = 0; i < 10; i++) {
             HttpGet get = get("/name");
-            HttpResponse result = httpClient.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            httpClient.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         }
 
         for (int i = 0; i < 10; i++) {
             HttpGet get = get("/session");
-            HttpResponse result = httpClient.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            httpClient.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
 

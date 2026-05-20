@@ -23,8 +23,9 @@ import io.undertow.Undertow;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.HttpHostConnectException;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Test;
 
 import javax.net.ssl.SSLHandshakeException;
@@ -59,18 +60,18 @@ public class DelegatedTaskExecutorTestCase {
                 .setHandler(ResponseCodeHandler.HANDLE_200)
                 .build();
 
-        TestHttpClient client = new TestHttpClient();
-        client.setSSLContext(DefaultServer.getClientSSLContext());
         undertow.start();
         int port = port(undertow);
-        try(CloseableHttpResponse response = client.execute(new HttpGet("https://localhost:" + port))) {
-            assertEquals(200, response.getStatusLine().getStatusCode());
-            assertTrue("expected interactions with the delegated task executor", counter.get() > 0);
+        try (CloseableHttpClient client = TestHttpClient.withSSLContext(DefaultServer.getClientSSLContext()).build()) {
+            client.execute(new HttpGet("https://localhost:" + port), response -> {
+                assertEquals(200, response.getCode());
+                assertTrue("expected interactions with the delegated task executor", counter.get() > 0);
+                return null;
+            });
         } finally {
             undertow.stop();
-            client.getConnectionManager().shutdown();
             List<Runnable> tasks = delegatedTaskExecutor.shutdownNow();
-            for (Runnable task: tasks) {
+            for (Runnable task : tasks) {
                 task.run();
             }
             assertTrue(
@@ -80,7 +81,7 @@ public class DelegatedTaskExecutorTestCase {
     }
 
     @Test
-    public void testRejection() {
+    public void testRejection() throws IOException {
         Undertow undertow = Undertow.builder()
                 .addHttpsListener(0, null, DefaultServer.getServerSslContext())
                 .setSslEngineDelegatedTaskExecutor(ignoredTask -> {
@@ -89,36 +90,37 @@ public class DelegatedTaskExecutorTestCase {
                 .setHandler(ResponseCodeHandler.HANDLE_200)
                 .build();
 
-        TestHttpClient client = new TestHttpClient();
-        client.setSSLContext(DefaultServer.getClientSSLContext());
         undertow.start();
-        try {
+
+        try (CloseableHttpClient client = TestHttpClient.withSSLContext(DefaultServer.getClientSSLContext()).build()) {
             int port = port(undertow);
             HttpGet request = new HttpGet("https://localhost:" + port);
             try {
-                client.execute(request);
+                client.execute(request, r -> null);
                 fail("Expected an exception");
-            } catch (SSLHandshakeException handshakeException) {
+            } catch (SSLHandshakeException | HttpHostConnectException exception) {
                 // expected one of:
                 // - Remote host closed connection during handshake
                 // - Remote host terminated the handshake
+                // - Remote host refused connection (happens when client tries IPv6 after IPv4 failed)
                 // This exception comes from the jvm and may change in future
                 // releases so we don't verify an exact match.
-                String message = handshakeException.getMessage();
+                String message = exception.getMessage();
                 System.out.println(message);
                 assertTrue(
                         "message was: " + message,
-                        message != null && (message.contains("closed") || message.contains("terminated")));
+                        message != null && (message.contains("closed") || message.contains("terminated") ||
+                                message.contains("Connection refused")));
             } catch (IOException e) {
                 throw new AssertionError(e);
             }
         } finally {
             undertow.stop();
-            client.getConnectionManager().shutdown();
             // sleep 1 s to prevent BindException (Address already in use) when running the CI
             try {
                 Thread.sleep(1000);
-            } catch (InterruptedException ignore) {}
+            } catch (InterruptedException ignore) {
+            }
         }
     }
 

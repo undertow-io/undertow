@@ -38,8 +38,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -78,22 +78,18 @@ public class TransferTestCase {
     @Test
     public void testServletRequest() throws Exception {
         TestListener.init(2);
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final byte[] response = HttpClientUtils.readRawResponse(result);
+            final byte[] response = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readRawResponse(result);
+            });
             Path file = Paths.get(TXServlet.class.getResource(TXServlet.class.getSimpleName() + ".class").toURI());
             byte[] expected = new byte[(int) Files.size(file)];
             DataInputStream dataInputStream = new DataInputStream(Files.newInputStream(file));
             dataInputStream.readFully(expected);
             dataInputStream.close();
             Assert.assertArrayEquals(expected, response);
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
-
-
 }

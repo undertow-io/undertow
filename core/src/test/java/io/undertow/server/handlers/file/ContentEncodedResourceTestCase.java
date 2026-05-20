@@ -28,12 +28,10 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.FileUtils;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.entity.DecompressingEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.entity.compress.DecompressingEntity;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -57,8 +55,7 @@ public class ContentEncodedResourceTestCase {
 
 
     @BeforeClass
-    public static void setup() throws IOException{
-
+    public static void setup() throws IOException {
         tmpDir = Files.createTempDirectory(Paths.get(System.getProperty("java.io.tmpdir")), DIR_NAME);
 
         final PathResourceManager resourceManager = new PathResourceManager(tmpDir, 10485760);
@@ -78,27 +75,28 @@ public class ContentEncodedResourceTestCase {
         String fileName = "hello.html";
         Path f = tmpDir.resolve(fileName);
         Files.write(f, "hello world".getBytes());
-        try (CloseableHttpClient client = HttpClientBuilder.create().build()){
+        try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
             for (int i = 0; i < 3; ++i) {
                 HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/" + fileName);
-                CloseableHttpResponse result = client.execute(get);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                String response = HttpClientUtils.readResponse(result);
-                Assert.assertEquals("hello world", response);
-                assert result.getEntity() instanceof DecompressingEntity; //no other nice way to be sure we get back gzipped content
-                result.close();
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    String response = HttpClientUtils.readResponse(result);
+                    Assert.assertEquals("hello world", response);
+                    assert result.getEntity() instanceof DecompressingEntity; //no other nice way to be sure we get back gzipped content
+                    return null;
+                });
             }
             Files.write(f, "modified file".getBytes());
 
             //if it is serving a cached compressed version what is being served will not change
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/" + fileName);
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("hello world", response);
-            assert result.getEntity() instanceof DecompressingEntity; //no other nice way to be sure we get back gzipped content
-
-
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("hello world", response);
+                assert result.getEntity() instanceof DecompressingEntity; //no other nice way to be sure we get back gzipped content
+                return null;
+            });
         }
     }
 }

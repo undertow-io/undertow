@@ -37,10 +37,10 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.CookieStore;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.cookie.Cookie;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.cookie.Cookie;
+import org.apache.hc.client5.http.cookie.CookieStore;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -80,65 +80,64 @@ public class ServletSessionTestCase {
 
     @Test
     public void testSimpleSessionUsage() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("1", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("1", response);
+                return null;
+            });
 
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("2", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("2", response);
+                return null;
+            });
 
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("3", response);
-
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("3", response);
+                return null;
+            });
         }
     }
-
 
     @Test
     public void testSessionCookieConfig() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("1", response);
-            String cookieValue = result.getHeaders("Set-Cookie")[0].getValue();
-            Assert.assertTrue(cookieValue.contains("MySessionCookie"));
-            Assert.assertTrue(cookieValue.contains("/servletContext/aa/"));
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("1", response);
+                String cookieValue = result.getHeaders("Set-Cookie")[0].getValue();
+                Assert.assertTrue(cookieValue.contains("MySessionCookie"));
+                Assert.assertTrue(cookieValue.contains("/servletContext/aa/"));
+                return null;
+            });
 
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("2", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("2", response);
+                return null;
+            });
 
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("3", response);
-
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("3", response);
+                return null;
+            });
         }
     }
 
-
     @Test
     public void testSessionConfigNoCookies() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setCookieStore(new CookieStore() {
+        try (CloseableHttpClient client = TestHttpClient.custom().setDefaultCookieStore(new CookieStore() {
             @Override
             public void addCookie(Cookie cookie) {
 
@@ -158,29 +157,27 @@ public class ServletSessionTestCase {
             public void clear() {
 
             }
-        });
-        try {
-            HttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b;foo=bar"));
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("1", response);
-            String url = result.getHeaders("url")[0].getValue();
+        }).build()) {
+            String url = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b;foo=bar"), result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("1", response);
+                return result.getHeaders("url")[0].getValue();
+            });
 
-            result = client.execute(new HttpGet(url));
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            url = result.getHeaders("url")[0].getValue();
-            Assert.assertEquals("2", response);
+            url = client.execute(new HttpGet(url), result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("2", response);
+                return result.getHeaders("url")[0].getValue();
+            });
 
-            result = client.execute(new HttpGet(url));
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("3", response);
-
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(new HttpGet(url), result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("3", response);
+                return null;
+            });
         }
     }
-
 }

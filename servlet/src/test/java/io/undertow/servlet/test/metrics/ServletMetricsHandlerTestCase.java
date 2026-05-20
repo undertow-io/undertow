@@ -35,8 +35,8 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.CompletionLatchHandler;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -51,8 +51,6 @@ public class ServletMetricsHandlerTestCase {
 
     @Test
     public void testMetrics() throws Exception {
-
-
         final TestMetricsCollector metricsCollector = new TestMetricsCollector();
 
         CompletionLatchHandler completionLatchHandler;
@@ -80,11 +78,12 @@ public class ServletMetricsHandlerTestCase {
         DefaultServer.setRootHandler(completionLatchHandler = new CompletionLatchHandler(root));
 
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path/default");
-        TestHttpClient client = new TestHttpClient();
-        try {
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertTrue(HttpClientUtils.readResponse(result).contains("metric"));
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertTrue(HttpClientUtils.readResponse(result).contains("metric"));
+                return null;
+            });
             completionLatchHandler.await();
             completionLatchHandler.reset();
 
@@ -94,20 +93,16 @@ public class ServletMetricsHandlerTestCase {
             Assert.assertEquals(metrics.getMinRequestTime(), metrics.getMaxRequestTime());
             Assert.assertEquals(metrics.getMaxRequestTime(), metrics.getTotalRequestTime());
 
-
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertTrue(HttpClientUtils.readResponse(result).contains("metric"));
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertTrue(HttpClientUtils.readResponse(result).contains("metric"));
+                return null;
+            });
             completionLatchHandler.await();
             completionLatchHandler.reset();
 
-
             metrics = metricsCollector.getMetrics("MetricTestServlet");
             Assert.assertEquals(2, metrics.getTotalRequests());
-
-        } finally {
-
-            client.getConnectionManager().shutdown();
         }
     }
 }

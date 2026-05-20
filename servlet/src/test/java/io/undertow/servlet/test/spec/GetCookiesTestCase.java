@@ -21,8 +21,8 @@ package io.undertow.servlet.test.spec;
 import jakarta.servlet.ServletException;
 
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -72,52 +72,47 @@ public class GetCookiesTestCase {
 
     @Test
     public void testGetCookiesWithOnlyValidCookie() throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() +
-                                              "/servletContext/aaa");
+                    "/servletContext/aaa");
             get.setHeader(Headers.COOKIE_STRING, "testcookie=works");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Only one valid cookie", "name='testcookie'value='works'", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Only one valid cookie", "name='testcookie'value='works'", response);
+                return null;
+            });
         }
     }
 
 
     @Test
     public void testGetCookiesWithOnlyInvalidCookies() throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() +
-                                              "/servletContext/aaa");
+                    "/servletContext/aaa");
             get.setHeader(Headers.COOKIE_STRING, "ctx:123=456");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("No valid cookie", "", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("No valid cookie", "", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testGetCookiesWithInvalidCookieName() throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() +
-                                              "/servletContext/aaa");
+                    "/servletContext/aaa");
             get.setHeader(Headers.COOKIE_STRING, "testcookie=works; ctx:123=456");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Only one valid cookie", "name='testcookie'value='works'", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Only one valid cookie", "name='testcookie'value='works'", response);
+                return null;
+            });
         }
     }
-
-
 }

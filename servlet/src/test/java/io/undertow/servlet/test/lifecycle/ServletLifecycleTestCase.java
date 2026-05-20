@@ -29,8 +29,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -69,12 +69,12 @@ public class ServletLifecycleTestCase {
 
         DefaultServer.setRootHandler(root);
 
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             manager.stop();
             manager.undeploy();
@@ -83,9 +83,6 @@ public class ServletLifecycleTestCase {
             Assert.assertTrue(LifeCycleServlet.destroyCalled);
             Assert.assertTrue(LifecycleFilter.initCalled);
             Assert.assertTrue(LifecycleFilter.destroyCalled);
-
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 

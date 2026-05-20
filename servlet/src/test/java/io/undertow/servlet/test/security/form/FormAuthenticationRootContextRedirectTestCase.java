@@ -40,9 +40,9 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.protocol.HttpClientContext;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.protocol.HttpClientContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -53,72 +53,73 @@ import static org.junit.Assert.assertEquals;
 @RunWith(DefaultServer.class)
 public class FormAuthenticationRootContextRedirectTestCase {
 
-   @BeforeClass
-   public static void setup() throws ServletException {
-      final PathHandler path = new PathHandler();
-      final ServletContainer container = ServletContainer.Factory.newInstance();
+    @BeforeClass
+    public static void setup() throws ServletException {
+        final PathHandler path = new PathHandler();
+        final ServletContainer container = ServletContainer.Factory.newInstance();
 
-      ServletInfo securedIndexRequestDumper = new ServletInfo("SecuredIndexRequestDumperServlet", SaveOriginalPostRequestTestCase.RequestDumper.class)
-         .setServletSecurityInfo(new ServletSecurityInfo()
-                                    .addRoleAllowed("role1"))
-         .addMapping("/index.html");
+        ServletInfo securedIndexRequestDumper = new ServletInfo("SecuredIndexRequestDumperServlet", SaveOriginalPostRequestTestCase.RequestDumper.class)
+                .setServletSecurityInfo(new ServletSecurityInfo()
+                        .addRoleAllowed("role1"))
+                .addMapping("/index.html");
 
-      ServletInfo loginFormServlet = new ServletInfo("loginPage", FormLoginServlet.class)
-         .setServletSecurityInfo(new ServletSecurityInfo()
-                                    .addRoleAllowed("group1"))
-         .addMapping("/FormLoginServlet");
+        ServletInfo loginFormServlet = new ServletInfo("loginPage", FormLoginServlet.class)
+                .setServletSecurityInfo(new ServletSecurityInfo()
+                        .addRoleAllowed("group1"))
+                .addMapping("/FormLoginServlet");
 
-      ServletIdentityManager identityManager = new ServletIdentityManager();
+        ServletIdentityManager identityManager = new ServletIdentityManager();
 
-      identityManager.addUser("user1", "password1", "role1");
+        identityManager.addUser("user1", "password1", "role1");
 
-      SecurityConstraint securityConstraint = new SecurityConstraint();
-      WebResourceCollection webResourceCollection = new WebResourceCollection();
-      webResourceCollection.addUrlPattern("/*");
-      securityConstraint.addWebResourceCollection(webResourceCollection);
-      securityConstraint.addRoleAllowed("role1");
+        SecurityConstraint securityConstraint = new SecurityConstraint();
+        WebResourceCollection webResourceCollection = new WebResourceCollection();
+        webResourceCollection.addUrlPattern("/*");
+        securityConstraint.addWebResourceCollection(webResourceCollection);
+        securityConstraint.addRoleAllowed("role1");
 
-      DeploymentInfo builder = new DeploymentInfo()
-         .setClassLoader(SimpleServletTestCase.class.getClassLoader())
-         .setContextPath("/servletContext")
-         .setClassIntrospecter(TestClassIntrospector.INSTANCE)
-         .setDeploymentName("servletContext.war")
-         .setIdentityManager(identityManager)
-         .addWelcomePage("index.html")
-         .setResourceManager(new TestResourceLoader(SaveOriginalPostRequestTestCase.class))
-         .addSecurityConstraint(securityConstraint)
-         .setLoginConfig(new LoginConfig("FORM", "Test Realm", "/FormLoginServlet", "/error.html"))
-         .addServlets(loginFormServlet, securedIndexRequestDumper);
+        DeploymentInfo builder = new DeploymentInfo()
+                .setClassLoader(SimpleServletTestCase.class.getClassLoader())
+                .setContextPath("/servletContext")
+                .setClassIntrospecter(TestClassIntrospector.INSTANCE)
+                .setDeploymentName("servletContext.war")
+                .setIdentityManager(identityManager)
+                .addWelcomePage("index.html")
+                .setResourceManager(new TestResourceLoader(SaveOriginalPostRequestTestCase.class))
+                .addSecurityConstraint(securityConstraint)
+                .setLoginConfig(new LoginConfig("FORM", "Test Realm", "/FormLoginServlet", "/error.html"))
+                .addServlets(loginFormServlet, securedIndexRequestDumper);
 
-      DeploymentManager manager = container.addDeployment(builder);
+        DeploymentManager manager = container.addDeployment(builder);
 
-      manager.deploy();
+        manager.deploy();
 
-      path.addPrefixPath(builder.getContextPath(), manager.start());
+        path.addPrefixPath(builder.getContextPath(), manager.start());
 
-      DefaultServer.setRootHandler(path);
-   }
+        DefaultServer.setRootHandler(path);
+    }
 
-   @Test
-   public void test2() throws IOException {
-      TestHttpClient client = new TestHttpClient();
-      HttpClientContext context = HttpClientContext.create();
-      String uri = DefaultServer.getDefaultServerURL() + "/servletContext";
+    @Test
+    public void test2() throws IOException {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpClientContext context = HttpClientContext.create();
+            String uri = DefaultServer.getDefaultServerURL() + "/servletContext";
 
-      HttpGet request = new HttpGet(uri);
-      HttpResponse result = client.execute(request, context);
+            HttpGet request = new HttpGet(uri);
+            client.execute(request, context, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                assertEquals(DefaultServer.getDefaultServerURL() + "/servletContext/", requestedUri(context, uri));
+                Assert.assertTrue(HttpClientUtils.readResponse(result).startsWith("j_security_check"));
+                return null;
+            });
+        }
+    }
 
-      assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-      assertEquals(DefaultServer.getDefaultServerURL() + "/servletContext/", requestedUri(context, uri));
-      Assert.assertTrue(HttpClientUtils.readResponse(result).startsWith("j_security_check"));
-   }
-
-   private String requestedUri(HttpClientContext context, String original) {
-      if (context.getRedirectLocations() == null) {
-         return original;
-      }
-      URI uri = context.getRedirectLocations().get(context.getRedirectLocations().size() - 1);
-      return (uri == null)?original:uri.toString();
-
-   }
+    private String requestedUri(HttpClientContext context, String original) {
+        if (context.getRedirectLocations() == null) {
+            return original;
+        }
+        URI uri = context.getRedirectLocations().get(context.getRedirectLocations().size() - 1);
+        return (uri == null) ? original : uri.toString();
+    }
 }

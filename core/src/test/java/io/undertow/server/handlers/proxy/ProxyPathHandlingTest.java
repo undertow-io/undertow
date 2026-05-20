@@ -6,8 +6,8 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.testutils.TestHttpClient;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.After;
 import org.junit.Test;
 
@@ -153,19 +153,22 @@ public class ProxyPathHandlingTest {
 
 
     private void isProxied(String requestPath, String expectedTargetPath) throws IOException {
-        assertEquals(200, httpGet(requestPath));
+        assertCodeEquals(200, requestPath);
         assertEquals(expectedTargetPath, targetServer.gotRequest(true));
     }
 
     private void isNotProxied(String requestPath) throws IOException {
-        assertEquals(404, httpGet(requestPath));
+        assertCodeEquals(404, requestPath);
         assertNull(targetServer.gotRequest(false));
     }
 
-    private int httpGet(String path) throws IOException {
-        TestHttpClient http = new TestHttpClient();
-        HttpResponse response = http.execute(new HttpGet(proxyServer.uri + path));
-        return response.getStatusLine().getStatusCode();
+    private void assertCodeEquals(int code, String path) throws IOException {
+        try (CloseableHttpClient http = TestHttpClient.defaultClient()) {
+            http.execute(new HttpGet(proxyServer.uri + path), result -> {
+                assertEquals(code, result.getCode());
+                return null;
+            });
+        }
     }
 
     private static class ProxyServer {

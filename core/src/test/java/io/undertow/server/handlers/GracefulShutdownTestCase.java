@@ -19,15 +19,12 @@
 package io.undertow.server.handlers;
 
 import io.undertow.Handlers;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -52,17 +49,14 @@ public class GracefulShutdownTestCase {
     @BeforeClass
     public static void setup() {
 
-        shutdown = Handlers.gracefulShutdown(new HttpHandler() {
-            @Override
-            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                final CountDownLatch countDownLatch = latch2.get();
-                final CountDownLatch latch = latch1.get();
-                if (latch != null) {
-                    latch.countDown();
-                }
-                if (countDownLatch != null) {
-                    countDownLatch.await();
-                }
+        shutdown = Handlers.gracefulShutdown(exchange -> {
+            final CountDownLatch countDownLatch = latch2.get();
+            final CountDownLatch latch = latch1.get();
+            if (latch != null) {
+                latch.countDown();
+            }
+            if (countDownLatch != null) {
+                countDownLatch.await();
             }
         });
         DefaultServer.setRootHandler(shutdown);
@@ -78,26 +72,26 @@ public class GracefulShutdownTestCase {
 
     @Test
     public void simpleGracefulShutdownTestCase() throws IOException, InterruptedException {
-
-
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-        TestHttpClient client = new TestHttpClient();
-        try {
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             shutdown.shutdown();
 
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.SERVICE_UNAVAILABLE, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.SERVICE_UNAVAILABLE, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             shutdown.start();
 
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             CountDownLatch latch = new CountDownLatch(1);
             latch2.set(latch);
@@ -113,37 +107,31 @@ public class GracefulShutdownTestCase {
             latch.countDown();
 
             Assert.assertTrue(shutdown.awaitShutdown(10000));
-
-        } finally {
-            client.getConnectionManager().shutdown();
         }
-
     }
-
-
 
     @Test
     public void gracefulShutdownListenerTestCase() throws IOException, InterruptedException {
-
-
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-        TestHttpClient client = new TestHttpClient();
-        try {
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             shutdown.shutdown();
 
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.SERVICE_UNAVAILABLE, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.SERVICE_UNAVAILABLE, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             shutdown.start();
 
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             CountDownLatch latch = new CountDownLatch(1);
             latch2.set(latch);
@@ -165,10 +153,7 @@ public class GracefulShutdownTestCase {
                 Thread.sleep(10);
             }
             Assert.assertTrue(listener.invoked);
-        } finally {
-            client.getConnectionManager().shutdown();
         }
-
     }
 
     private class ShutdownListener implements GracefulShutdownHandler.ShutdownListener {
@@ -186,21 +171,15 @@ public class GracefulShutdownTestCase {
         @Override
         public void run() {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            TestHttpClient client = new TestHttpClient();
-            try {
-                HttpResponse result = client.execute(get);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                HttpClientUtils.readResponse(result);
-
-            } catch (ClientProtocolException e) {
-                e.printStackTrace();
+            try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+                client.execute(get, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    return HttpClientUtils.readResponse(result);
+                });
             } catch (IOException e) {
                 e.printStackTrace();
-            } finally {
-                client.getConnectionManager().shutdown();
             }
 
         }
     }
-
 }

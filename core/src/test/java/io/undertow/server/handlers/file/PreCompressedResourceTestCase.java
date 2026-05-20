@@ -18,26 +18,6 @@
 
 package io.undertow.server.handlers.file;
 
-import java.io.IOException;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.charset.StandardCharsets;
-import java.util.zip.GZIPOutputStream;
-
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.entity.DecompressingEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import io.undertow.predicate.Predicates;
 import io.undertow.server.handlers.CanonicalPathHandler;
 import io.undertow.server.handlers.PathHandler;
@@ -52,6 +32,26 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.entity.compress.DecompressingEntity;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.Header;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * @author Stuart Douglas
@@ -83,69 +83,63 @@ public class PreCompressedResourceTestCase {
     @Test
     public void testContentEncodedResource() throws IOException, URISyntaxException {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
-        TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
 
-        try (CloseableHttpClient compClient = HttpClientBuilder.create().build()){
+        try (CloseableHttpClient client = TestHttpClient.defaultClient();
+             CloseableHttpClient compClient = HttpClientBuilder.create().build()) {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PreCompressedResourceSupplier(new PathResourceManager(rootPath, 10485760)).addEncoding("gzip", ".gz"))
                                     .setDirectoryListingEnabled(true))));
 
             //assert response without compression
-            final String plainResponse = assertResponse(client.execute(get), false);
+            final String plainResponse = client.execute(get, result -> assertResponse(result, false));
 
             //assert compressed response, that doesn't exists, so returns plain
-            assertResponse(compClient.execute(get), false, plainResponse);
+            compClient.execute(get, result -> assertResponse(result, false, plainResponse));
 
             //generate compressed resource with extension .gz
             generatePreCompressedResource("gz");
 
             //assert compressed response that was pre compressed
-            assertResponse(compClient.execute(get), true, plainResponse, "gz", "text/html");
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            compClient.execute(get, result -> assertResponse(result, true, plainResponse, "gz", "text/html"));
         }
     }
 
     @Test
     public void testContentEncodedJsonResource() throws IOException, URISyntaxException {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/data1.json");
-        TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("data1.json").toURI()).getParent();
 
-        try (CloseableHttpClient compClient = HttpClientBuilder.create().build()){
+        try (CloseableHttpClient client = TestHttpClient.defaultClient();
+             CloseableHttpClient compClient = HttpClientBuilder.create().build()) {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PreCompressedResourceSupplier(new PathResourceManager(rootPath, 10485760)).addEncoding("gzip", ".gz"))
                                     .setDirectoryListingEnabled(true))));
 
             //assert response without compression
-            final String plainResponse = assertResponse(client.execute(get), false, null, "web", "application/json");
+            final String plainResponse = client.execute(get, result -> assertResponse(result, false, null, "web", "application/json"));
 
             //assert compressed response, that doesn't exists, so returns plain
-            assertResponse(compClient.execute(get), false, plainResponse, "web", "application/json");
+            compClient.execute(get, result -> assertResponse(result, false, plainResponse, "web", "application/json"));
 
             //generate compressed resource with extension .gz
             Path json = rootPath.resolve("data1.json");
             generateGZipFile(json, rootPath.resolve("data1.json.gz"));
 
             //assert compressed response that was pre compressed
-            assertResponse(compClient.execute(get), true, plainResponse, "gz", "application/json");
+            compClient.execute(get, result -> assertResponse(result, true, plainResponse, "gz", "application/json"));
 
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testContentEncodedJsonResourceWithoutUncompressed() throws IOException, URISyntaxException {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/data3.json");
-        TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("data2.json").toURI()).getParent();
 
-        try (CloseableHttpClient compClient = HttpClientBuilder.create().build()){
+        try (CloseableHttpClient compClient = HttpClientBuilder.create().build()) {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PreCompressedResourceSupplier(new PathResourceManager(rootPath, 10485760)).addEncoding("gzip", ".gz"))
@@ -160,34 +154,30 @@ public class PreCompressedResourceTestCase {
             Files.delete(jsonFileToBeZippedAndDeleted);
 
             //assert compressed response even with missing uncompressed
-            assertResponse(compClient.execute(get), true, null, "gz", "application/json");
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            compClient.execute(get, result -> assertResponse(result, true, null, "gz", "application/json"));
         }
     }
-
 
     @Test
     public void testCorrectResourceSelected() throws IOException, URISyntaxException {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/page.html");
-        TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
 
-        try (CloseableHttpClient compClient = HttpClientBuilder.create().build()){
+        try (CloseableHttpClient client = TestHttpClient.defaultClient();
+             CloseableHttpClient compClient = HttpClientBuilder.create().build()) {
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new EncodingHandler(new ContentEncodingRepository()
-                                            .addEncodingHandler("gzip", new GzipEncodingProvider(), 50, Predicates.truePredicate()))
+                                    .addEncodingHandler("gzip", new GzipEncodingProvider(), 50, Predicates.truePredicate()))
                                     .setNext(new ResourceHandler(new PreCompressedResourceSupplier(new PathResourceManager(rootPath, 10485760)).addEncoding("gzip", ".gzip"))
                                             .setDirectoryListingEnabled(true)))
                     ));
 
             //assert response without compression
-            final String plainResponse = assertResponse(client.execute(get), false);
+            final String plainResponse = client.execute(get, result -> assertResponse(result, true));
 
             //assert compressed response generated by filter
-            assertResponse(compClient.execute(get), true, plainResponse);
+            compClient.execute(get, result -> assertResponse(result, true, plainResponse));
 
             //generate resources
             generatePreCompressedResource("gzip");
@@ -195,10 +185,7 @@ public class PreCompressedResourceTestCase {
             generatePreCompressedResource("gzip.nonsense");
 
             //assert compressed response that was pre compressed
-            assertResponse(compClient.execute(get), true, plainResponse, "gzip", "text/html");
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            compClient.execute(get, result -> assertResponse(result, true, plainResponse, "gzip", "text/html"));
         }
     }
 
@@ -224,19 +211,19 @@ public class PreCompressedResourceTestCase {
         Files.write(file, content.getBytes(StandardCharsets.UTF_8));
     }
 
-    private String assertResponse(HttpResponse response, boolean encoding) throws IOException {
+    private String assertResponse(ClassicHttpResponse response, boolean encoding) throws IOException {
         return assertResponse(response, encoding, null, null, "text/html");
     }
 
-    private String assertResponse(HttpResponse response, boolean encoding, String compareWith) throws IOException {
+    private String assertResponse(ClassicHttpResponse response, boolean encoding, String compareWith) throws IOException {
         return assertResponse(response, encoding, compareWith, "web", "text/html");
     }
 
     /**
      * Series of assertions checking response code, headers and response content
      */
-    private String assertResponse(HttpResponse response, boolean encoding, String compareWith, String extension, String contentType) throws IOException {
-        Assert.assertEquals(StatusCodes.OK, response.getStatusLine().getStatusCode());
+    private String assertResponse(ClassicHttpResponse response, boolean encoding, String compareWith, String extension, String contentType) throws IOException {
+        Assert.assertEquals(StatusCodes.OK, response.getCode());
         String body = HttpClientUtils.readResponse(response);
         Header[] headers = response.getHeaders(Headers.CONTENT_TYPE_STRING);
         Assert.assertEquals(contentType, headers[0].getValue());
@@ -257,7 +244,7 @@ public class PreCompressedResourceTestCase {
      * Creates compressed resource made by compressing page.html which content is updated before with {@param extension}
      * and after compression returned to original content
      */
-    private void generatePreCompressedResource(String extension) throws IOException, URISyntaxException{
+    private void generatePreCompressedResource(String extension) throws IOException, URISyntaxException {
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
         Path html = rootPath.resolve("page.html");
 

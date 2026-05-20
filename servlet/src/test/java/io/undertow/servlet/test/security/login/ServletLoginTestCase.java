@@ -38,8 +38,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -88,32 +88,33 @@ public class ServletLoginTestCase {
 
     @Test
     public void testHttpMethod() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        final String url = DefaultServer.getDefaultServerURL() + "/servletContext/login";
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            final String url = DefaultServer.getDefaultServerURL() + "/servletContext/login";
             HttpGet get = new HttpGet(url);
             get.addHeader("username", "bob");
             get.addHeader("password", "bogus");
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(url);
             get.addHeader("username", "user1");
             get.addHeader("password", "password1");
-            result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("user1", response);
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("user1", response);
+                return null;
+            });
 
             get = new HttpGet(url);
-            result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("user1", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("user1", response);
+                return null;
+            });
         }
     }
-
 }

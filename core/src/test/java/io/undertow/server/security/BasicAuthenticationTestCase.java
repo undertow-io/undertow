@@ -26,9 +26,9 @@ import io.undertow.security.impl.BasicAuthenticationMechanism;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.FlexBase64;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import org.junit.Test;
@@ -65,24 +65,27 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
     }
 
     static void _testBasicSuccess() throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        String header = getAuthHeader(BASIC, values);
-        assertEquals(BASIC + " realm=\"Test Realm\"", header);
-        HttpClientUtils.readResponse(result);
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+                Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+                String header = getAuthHeader(BASIC, values);
+                assertEquals(BASIC + " realm=\"Test Realm\"", header);
+                return HttpClientUtils.readResponse(result);
+            });
 
-        get = new HttpGet(DefaultServer.getDefaultServerURL());
-        get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("userOne:passwordOne".getBytes(), false));
-        result = client.execute(get);
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            get = new HttpGet(DefaultServer.getDefaultServerURL());
+            get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("userOne:passwordOne".getBytes(), false));
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-        values = result.getHeaders("ProcessedBy");
-        assertEquals(1, values.length);
-        assertEquals("ResponseHandler", values[0].getValue());
-        HttpClientUtils.readResponse(result);
+                Header[] values = result.getHeaders("ProcessedBy");
+                assertEquals(1, values.length);
+                assertEquals("ResponseHandler", values[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
+        }
     }
 
     @Test
@@ -92,20 +95,22 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
     }
 
     static void _testBadUserName() throws Exception {
-        TestHttpClient client = new TestHttpClient();
+        CloseableHttpClient client = TestHttpClient.defaultClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        String header = getAuthHeader(BASIC, values);
-        assertEquals(BASIC + " realm=\"Test Realm\"", header);
-        HttpClientUtils.readResponse(result);
+        client.execute(get, result -> {
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+            String header = getAuthHeader(BASIC, values);
+            assertEquals(BASIC + " realm=\"Test Realm\"", header);
+            return HttpClientUtils.readResponse(result);
+        });
 
         get = new HttpGet(DefaultServer.getDefaultServerURL());
         get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("badUser:passwordOne".getBytes(), false));
-        result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        HttpClientUtils.readResponse(result);
+        client.execute(get, result -> {
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+            return HttpClientUtils.readResponse(result);
+        });
     }
 
     @Test
@@ -115,20 +120,22 @@ public class BasicAuthenticationTestCase extends AuthenticationTestBase {
     }
 
     static void _testBadPassword() throws Exception {
-        TestHttpClient client = new TestHttpClient();
+        CloseableHttpClient client = TestHttpClient.defaultClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        String header = getAuthHeader(BASIC, values);
-        assertEquals(BASIC + " realm=\"Test Realm\"", header);
-        HttpClientUtils.readResponse(result);
+        client.execute(get, result -> {
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+            String header = getAuthHeader(BASIC, values);
+            assertEquals(BASIC + " realm=\"Test Realm\"", header);
+            return HttpClientUtils.readResponse(result);
+        });
 
         get = new HttpGet(DefaultServer.getDefaultServerURL());
         get.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString("userOne:badPassword".getBytes(), false));
-        result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        HttpClientUtils.readResponse(result);
+        client.execute(get, result -> {
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+            return HttpClientUtils.readResponse(result);
+        });
     }
 
 }

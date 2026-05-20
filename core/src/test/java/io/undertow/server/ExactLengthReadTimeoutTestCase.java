@@ -28,10 +28,10 @@ import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.NoHttpResponseException;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.NoHttpResponseException;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,41 +61,38 @@ public class ExactLengthReadTimeoutTestCase {
     public static void setup() {
         final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
-        blockingHandler.setRootHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) {
+        blockingHandler.setRootHandler(exchange -> {
+            try {
+                final OutputStream outputStream = exchange.getOutputStream();
+                final InputStream inputStream = exchange.getInputStream();
+
+                long length = exchange.getRequestContentLength();
+                byte[] b = new byte[DATA_MULTIPLE * DATA.length()];
+                int i = 1;
+                StringBuilder builder = new StringBuilder();
+                // read exact content length
+                while (i > 0 && length > 0) {
+                    i = inputStream.read(b);
+                    if (i > 0) {
+                        length -= i;
+                        builder.append(new String(b, 0, i));
+                    }
+                }
+
+                // this shouldn't cause timeout after complete read
                 try {
-                    final OutputStream outputStream = exchange.getOutputStream();
-                    final InputStream inputStream =  exchange.getInputStream();
-
-                    long length = exchange.getRequestContentLength();
-                    byte[] b = new byte[DATA_MULTIPLE * DATA.length()];
-                    int i = 1;
-                    StringBuilder builder = new StringBuilder();
-                    // read exact content length
-                    while (i > 0 && length > 0) {
-                        i = inputStream.read(b);
-                        if (i > 0) {
-                           length -=i;
-                           builder.append(new String(b, 0, i));
-                        }
-                    }
-
-                    // this shouldn't cause timeout after complete read
-                    try {
-                        Thread.sleep(200);
-                    }  catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-
-                    Assert.assertEquals(message, builder.toString());
-                    inputStream.close();
-                    outputStream.close();
-                } catch (IOException e) {
-                    exchange.getResponseHeaders().put(Headers.CONNECTION, "close");
-                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
+
+                Assert.assertEquals(message, builder.toString());
+                inputStream.close();
+                outputStream.close();
+            } catch (IOException e) {
+                exchange.getResponseHeaders().put(Headers.CONNECTION, "close");
+                exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
+                throw new RuntimeException(e);
             }
         });
     }
@@ -123,21 +120,19 @@ public class ExactLengthReadTimeoutTestCase {
         }
 
         message = builder.toString();
-        final TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             post.setEntity(new StringEntity(message));
             post.addHeader(Headers.CONNECTION_STRING, "close");
-            boolean socketFailure = false;
             try {
                 // Request should succeed.
-                HttpResponse result = client.execute(post);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                client.execute(post, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    return null;
+                });
             } catch (NoHttpResponseException e) {
                 Assert.fail("No response was received, this was presumably caused by read-timeout closing the connection.");
             }
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 }

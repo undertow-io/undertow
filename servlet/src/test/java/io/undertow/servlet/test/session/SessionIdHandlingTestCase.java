@@ -29,15 +29,18 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.cookie.Cookie;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.cookie.BasicCookieStore;
+import org.apache.hc.client5.http.cookie.Cookie;
+import org.apache.hc.client5.http.cookie.CookieStore;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import jakarta.servlet.ServletException;
+
 import java.io.IOException;
 import java.util.List;
 
@@ -74,96 +77,99 @@ public class SessionIdHandlingTestCase {
 
     @Test
     public void testGetRequestedSessionId() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
-
+        CookieStore cookieStore = new BasicCookieStore();
+        try (CloseableHttpClient client = TestHttpClient.custom().setDefaultCookieStore(cookieStore).build()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=create");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("null", response);
-            String sessionId = getSession(client.getCookieStore().getCookies());
+            String sessionId = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("null", response);
+                return getSession(cookieStore.getCookies());
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=default");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(sessionId, response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(sessionId, response);
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=change");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(sessionId, response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(sessionId, response);
+                return null;
+            });
 
-            String newSessionId = getSession(client.getCookieStore().getCookies());
+            String newSessionId = getSession(cookieStore.getCookies());
             Assert.assertNotEquals(sessionId, newSessionId);
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=default");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(newSessionId, response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(newSessionId, response);
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=destroycreate");
-            result = client.execute(get);
-            final String createdSessionId = getSession(client.getCookieStore().getCookies());
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(newSessionId, response);
+            final String createdSessionId = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(newSessionId, response);
+                return getSession(cookieStore.getCookies());
+            });
             Assert.assertNotEquals(createdSessionId, newSessionId);
 
-
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=destroy");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(createdSessionId, response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(createdSessionId, response);
+                return null;
+            });
         }
     }
 
 
     @Test
     public void testIsRequestedSessionIdValid() throws IOException, InterruptedException {
-        TestHttpClient client = new TestHttpClient();
-        try {
-
+        CookieStore cookieStore = new BasicCookieStore();
+        try (CloseableHttpClient client = TestHttpClient.custom().setDefaultCookieStore(cookieStore).build()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=create");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("null", response);
-            String sessionId = getSession(client.getCookieStore().getCookies());
+            String sessionId = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("null", response);
+                return getSession(cookieStore.getCookies());
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=timeout");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(sessionId, response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(sessionId, response);
+                return null;
+            });
             Thread.sleep(2500);
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/session?action=isvalid");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("false", response);
-
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("false", response);
+                return null;
+            });
         }
     }
 
     private String getSession(List<Cookie> cookies) {
-        for(Cookie cookie : cookies) {
-            if(cookie.getName().equals("JSESSIONID")) {
+        for (Cookie cookie : cookies) {
+            if (cookie.getName().equals("JSESSIONID")) {
                 return cookie.getValue();
             }
         }
         return null;
     }
-
-
 }

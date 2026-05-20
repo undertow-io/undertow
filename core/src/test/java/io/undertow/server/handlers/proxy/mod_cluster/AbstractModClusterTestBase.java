@@ -18,16 +18,6 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
-import static io.undertow.Handlers.jvmRoute;
-import static io.undertow.Handlers.path;
-import static io.undertow.testutils.DefaultServer.getClientSSLContext;
-import static io.undertow.testutils.DefaultServer.getHostAddress;
-import static io.undertow.testutils.DefaultServer.getHostPort;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 import io.undertow.Undertow;
 import io.undertow.client.UndertowClient;
 import io.undertow.protocols.ssl.UndertowXnioSsl;
@@ -44,12 +34,14 @@ import io.undertow.server.session.SessionManager;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.cookie.Cookie;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.cookie.BasicClientCookie;
-import org.apache.http.message.BasicHeader;
+import io.undertow.testutils.TestHttpClient;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.cookie.BasicCookieStore;
+import org.apache.hc.client5.http.cookie.Cookie;
+import org.apache.hc.client5.http.cookie.CookieStore;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.cookie.BasicClientCookie;
+import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -58,6 +50,16 @@ import org.junit.runner.RunWith;
 import org.xnio.OptionMap;
 import org.xnio.Options;
 import org.xnio.ssl.XnioSsl;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import static io.undertow.Handlers.jvmRoute;
+import static io.undertow.Handlers.path;
+import static io.undertow.testutils.DefaultServer.getClientSSLContext;
+import static io.undertow.testutils.DefaultServer.getHostAddress;
+import static io.undertow.testutils.DefaultServer.getHostPort;
 
 /**
  * @author Emanuel Muckenhuber
@@ -70,7 +72,8 @@ public abstract class AbstractModClusterTestBase {
     protected static final MCMPTestClient.App SESSION = new MCMPTestClient.App("/session", "localhost");
 
     protected static Undertow[] servers;
-    protected static DefaultHttpClient httpClient;
+    protected static CookieStore cookieStore = new BasicCookieStore();
+    protected static CloseableHttpClient httpClient;
     protected static MCMPTestClient modClusterClient;
 
 
@@ -122,18 +125,18 @@ public abstract class AbstractModClusterTestBase {
         DefaultServer.setRootHandler(new LocalNameResolvingHandler(path(proxy).addPrefixPath("manager", mcmp)));
         modCluster.start();
 
-        httpClient = new DefaultHttpClient();
+        httpClient = TestHttpClient.custom().setDefaultCookieStore(cookieStore).build();
         modClusterClient = new MCMPTestClient(httpClient, DefaultServer.getDefaultServerURL() + "/manager");
     }
 
     @AfterClass
-    public static void stopModCluster() {
+    public static void stopModCluster() throws IOException {
         if (servers != null) {
             stopServers();
         }
         modCluster.stop();
         modCluster = null;
-        httpClient.getConnectionManager().shutdown();
+        modClusterClient.close();
     }
 
     /**
@@ -181,7 +184,7 @@ public abstract class AbstractModClusterTestBase {
         }
         nodes = null;
         // Clear all cookies after the test
-        httpClient.getCookieStore().clear();
+        cookieStore.clear();
     }
 
     static void stopServers() {
@@ -224,15 +227,16 @@ public abstract class AbstractModClusterTestBase {
         final HttpGet get = get(context);
         if (route != null && getSessionRoute() == null) {
             BasicClientCookie cookie = new BasicClientCookie("JSESSIONID", "randomSessionID."+route);
-            httpClient.getCookieStore().addCookie(cookie);
+            cookieStore.addCookie(cookie);
         }
-        final HttpResponse result = httpClient.execute(get);
-        final String response = HttpClientUtils.readResponse(result);
-        Assert.assertEquals(statusCode, result.getStatusLine().getStatusCode());
-        if (route != null) {
-            Assert.assertEquals(route, getSessionRoute());
-        }
-        return response;
+        return httpClient.execute(get, result -> {
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(statusCode, result.getCode());
+            if (route != null) {
+                Assert.assertEquals(route, getSessionRoute());
+            }
+            return response;
+        });
     }
 
     static HttpGet get(final String context) {
@@ -329,7 +333,7 @@ public abstract class AbstractModClusterTestBase {
     }
 
     static String getSessionRoute() {
-        for (Cookie cookie : httpClient.getCookieStore().getCookies()) {
+        for (Cookie cookie : cookieStore.getCookies()) {
             if ("JSESSIONID".equals(cookie.getName())) {
                 return getJVMRoute(cookie.getValue());
             }

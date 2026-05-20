@@ -21,9 +21,9 @@ package io.undertow.servlet.test.streams;
 import jakarta.servlet.ServletException;
 
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -67,26 +67,27 @@ public class ServletInputStreamDrainTestCase {
             }
         }
         String message = builder.toString();
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             String uri = DefaultServer.getDefaultServerURL() + "/servletContext/" + SERVLET;
             HttpPost post = new HttpPost(uri);
             post.setEntity(new StringEntity(message));
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("close",HttpClientUtils.readResponse(result));
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("close", HttpClientUtils.readResponse(result));
+                return null;
+            });
 
-            result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("close",HttpClientUtils.readResponse(result));
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("close", HttpClientUtils.readResponse(result));
+                return null;
+            });
 
-            result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("close",HttpClientUtils.readResponse(result));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("close", HttpClientUtils.readResponse(result));
+                return null;
+            });
         }
     }
-
-
 }

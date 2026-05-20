@@ -34,8 +34,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -77,13 +77,13 @@ public class ConfidentialityConstraintUrlMappingTestCase {
 
         info.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection()
-                .addUrlPattern("/integral"))
+                        .addUrlPattern("/integral"))
                 .setTransportGuaranteeType(TransportGuaranteeType.INTEGRAL)
                 .setEmptyRoleSemantic(EmptyRoleSemantic.PERMIT));
 
         info.addSecurityConstraint(new SecurityConstraint()
                 .addWebResourceCollection(new WebResourceCollection()
-                .addUrlPattern("/confidential"))
+                        .addUrlPattern("/confidential"))
                 .setTransportGuaranteeType(TransportGuaranteeType.CONFIDENTIAL)
                 .setEmptyRoleSemantic(EmptyRoleSemantic.PERMIT));
 
@@ -115,19 +115,15 @@ public class ConfidentialityConstraintUrlMappingTestCase {
     }
 
     private void internalTest(final String path, final String expectedScheme) throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setSSLContext(DefaultServer.getClientSSLContext());
-
-        final String url = DefaultServer.getDefaultServerURL() + "/servletContext" + path;
-        try {
+        try (CloseableHttpClient client = TestHttpClient.withSSLContext(DefaultServer.getClientSSLContext()).build()) {
+            final String url = DefaultServer.getDefaultServerURL() + "/servletContext" + path;
             HttpGet get = new HttpGet(url);
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(expectedScheme, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(expectedScheme, response);
+                return null;
+            });
         }
     }
-
 }

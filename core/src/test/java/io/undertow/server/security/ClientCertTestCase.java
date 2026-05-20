@@ -27,9 +27,9 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -70,21 +70,23 @@ public class ClientCertTestCase extends AuthenticationTestBase {
 
     @Test
     public void testClientCertSuccess() throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        client.setSSLContext(clientSSLContext);
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+        try (CloseableHttpClient client = TestHttpClient.withSSLContext(clientSSLContext).build()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-        Header[] values = result.getHeaders("ProcessedBy");
-        assertEquals("ProcessedBy Headers", 1, values.length);
-        assertEquals("ResponseHandler", values[0].getValue());
+                Header[] values = result.getHeaders("ProcessedBy");
+                assertEquals("ProcessedBy Headers", 1, values.length);
+                assertEquals("ResponseHandler", values[0].getValue());
 
-        values = result.getHeaders("AuthenticatedUser");
-        assertEquals("AuthenticatedUser Headers", 1, values.length);
-        assertEquals("CN=Test Client,OU=OU,O=Org,L=City,ST=State,C=GB", values[0].getValue());
-        HttpClientUtils.readResponse(result);
-        assertSingleNotificationType(EventType.AUTHENTICATED);
+                values = result.getHeaders("AuthenticatedUser");
+                assertEquals("AuthenticatedUser Headers", 1, values.length);
+                assertEquals("CN=Test Client,OU=OU,O=Org,L=City,ST=State,C=GB", values[0].getValue());
+                HttpClientUtils.readResponse(result);
+                assertSingleNotificationType(EventType.AUTHENTICATED);
+                return null;
+            });
+        }
     }
 
 }

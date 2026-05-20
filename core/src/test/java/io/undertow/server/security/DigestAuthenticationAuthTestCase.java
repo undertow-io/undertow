@@ -30,9 +30,9 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HexConverter;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -92,7 +92,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
      * @return The generated Hex encoded MD5 digest based response.
      */
     private static String createResponse(final String userName, final String realm, final String password, final String method,
-            final String uri, final String nonce, final String nonceCount, final String cnonce) throws Exception {
+                                         final String uri, final String nonce, final String nonceCount, final String cnonce) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("MD5");
         digest.update(userName.getBytes(UTF_8));
         digest.update((byte) ':');
@@ -125,7 +125,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
     }
 
     private static String createRspAuth(final String userName, final String realm, final String password, final String uri,
-            final String nonce, final String nonceCount, final String cnonce) throws Exception {
+                                        final String nonce, final String nonceCount, final String cnonce) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("MD5");
         digest.update(userName.getBytes(UTF_8));
         digest.update((byte) ':');
@@ -157,7 +157,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
     }
 
     private static String createAuthorizationLine(final String userName, final String password, final String method, final String uri,
-            final String nonce, final int nonceCount, final String cnonce, final String opaque) throws Exception {
+                                                  final String nonce, final int nonceCount, final String cnonce, final String opaque) throws Exception {
         StringBuilder sb = new StringBuilder(DIGEST.toString());
         sb.append(" ");
         sb.append(DigestAuthorizationToken.USERNAME.getName()).append("=").append("\"userOne\"").append(",");
@@ -185,7 +185,7 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
 
     /**
      * Test for a successful authentication.
-     *
+     * <p>
      * Also makes two additional calls to demonstrate nonce re-use with an incrementing nonce count.
      */
     @Test
@@ -194,58 +194,68 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
     }
 
     static void _testDigestSuccess() throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        String value = getAuthHeader(DIGEST, values);
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+            Map<DigestWWWAuthenticateToken, String> parsedHeader = client.execute(get, result -> {
+                assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+                Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+                String value = getAuthHeader(DIGEST, values);
 
-        Map<DigestWWWAuthenticateToken, String> parsedHeader = DigestWWWAuthenticateToken.parseHeader(value.substring(7));
-        assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
-        assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
-        assertEquals(DigestQop.AUTH.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.MESSAGE_QOP));
+                return DigestWWWAuthenticateToken.parseHeader(value.substring(7));
+            });
+            assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
+            assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
+            assertEquals(DigestQop.AUTH.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.MESSAGE_QOP));
 
-        String clientNonce = createNonce();
-        int nonceCount = 1;
-        String nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
-        String opaque = parsedHeader.get(DigestWWWAuthenticateToken.OPAQUE);
-        assertNotNull(opaque);
-        // Send 5 requests with an incrementing nonce count on each call.
-        for (int i = 0; i < 5; i++) {
-            client = new TestHttpClient();
-            get = new HttpGet(DefaultServer.getDefaultServerURL());
 
-            int thisNonceCount = nonceCount++;
-            String authorization = createAuthorizationLine("userOne", "passwordOne", "GET", "/", nonce, thisNonceCount,
-                    clientNonce, opaque);
+            String clientNonce = createNonce();
+            int nonceCount = 1;
+            String nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
+            String opaque = parsedHeader.get(DigestWWWAuthenticateToken.OPAQUE);
+            assertNotNull(opaque);
+            // Send 5 requests with an incrementing nonce count on each call.
+            for (int i = 0; i < 5; i++) {
+                try (CloseableHttpClient client2 = TestHttpClient.defaultClient()) {
+                    get = new HttpGet(DefaultServer.getDefaultServerURL());
 
-            get.addHeader(AUTHORIZATION.toString(), authorization);
-            result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                    int thisNonceCount = nonceCount++;
+                    String authorization = createAuthorizationLine("userOne", "passwordOne", "GET", "/", nonce, thisNonceCount,
+                            clientNonce, opaque);
 
-            values = result.getHeaders("ProcessedBy");
-            assertEquals(1, values.length);
-            assertEquals("ResponseHandler", values[0].getValue());
-            assertSingleNotificationType(EventType.AUTHENTICATED);
+                    get.addHeader(AUTHORIZATION.toString(), authorization);
+                    client2.execute(get, result -> {
+                        assertEquals(StatusCodes.OK, result.getCode());
 
-            values = result.getHeaders("Authentication-Info");
-            assertEquals(1, values.length);
-            Map<AuthenticationInfoToken, String> parsedAuthInfo = AuthenticationInfoToken.parseHeader(values[0].getValue());
+                        Header[] values = result.getHeaders("ProcessedBy");
+                        assertEquals(1, values.length);
+                        assertEquals("ResponseHandler", values[0].getValue());
+                        assertSingleNotificationType(EventType.AUTHENTICATED);
 
-            assertEquals("Didn't expect a new nonce.", nonce, parsedAuthInfo.get(AuthenticationInfoToken.NEXT_NONCE));
-            assertEquals(DigestQop.AUTH.getToken(), parsedAuthInfo.get(AuthenticationInfoToken.MESSAGE_QOP));
-            String nonceCountString = toHex(thisNonceCount);
-            assertEquals(createRspAuth("userOne", REALM_NAME, "passwordOne", "/", nonce, nonceCountString, clientNonce),
-                    parsedAuthInfo.get(AuthenticationInfoToken.RESPONSE_AUTH));
-            assertEquals(clientNonce, parsedAuthInfo.get(AuthenticationInfoToken.CNONCE));
-            assertEquals(nonceCountString, parsedAuthInfo.get(AuthenticationInfoToken.NONCE_COUNT));
+                        values = result.getHeaders("Authentication-Info");
+                        assertEquals(1, values.length);
+                        Map<AuthenticationInfoToken, String> parsedAuthInfo = AuthenticationInfoToken.parseHeader(values[0].getValue());
+
+                        assertEquals("Didn't expect a new nonce.", nonce, parsedAuthInfo.get(AuthenticationInfoToken.NEXT_NONCE));
+                        assertEquals(DigestQop.AUTH.getToken(), parsedAuthInfo.get(AuthenticationInfoToken.MESSAGE_QOP));
+                        String nonceCountString = toHex(thisNonceCount);
+                        try {
+                            assertEquals(createRspAuth("userOne", REALM_NAME, "passwordOne", "/", nonce, nonceCountString, clientNonce),
+                                    parsedAuthInfo.get(AuthenticationInfoToken.RESPONSE_AUTH));
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                        assertEquals(clientNonce, parsedAuthInfo.get(AuthenticationInfoToken.CNONCE));
+                        assertEquals(nonceCountString, parsedAuthInfo.get(AuthenticationInfoToken.NONCE_COUNT));
+                        return null;
+                    });
+                }
+            }
         }
     }
 
     /**
      * Test for a successful authentication.
-     *
+     * <p>
      * Also makes two additional calls to demonstrate nonce re-use with an incrementing nonce count.
      */
     @Test
@@ -254,38 +264,43 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
     }
 
     static void _testDigestBadUri() throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
-        String value = getAuthHeader(DIGEST, values);
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+            Map<DigestWWWAuthenticateToken, String> parsedHeader = client.execute(get, result -> {
+                assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+                Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+                String value = getAuthHeader(DIGEST, values);
 
-        Map<DigestWWWAuthenticateToken, String> parsedHeader = DigestWWWAuthenticateToken.parseHeader(value.substring(7));
-        assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
-        assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
-        assertEquals(DigestQop.AUTH.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.MESSAGE_QOP));
+                return DigestWWWAuthenticateToken.parseHeader(value.substring(7));
+            });
+            assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
+            assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
+            assertEquals(DigestQop.AUTH.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.MESSAGE_QOP));
 
-        String clientNonce = createNonce();
-        int nonceCount = 1;
-        String nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
-        String opaque = parsedHeader.get(DigestWWWAuthenticateToken.OPAQUE);
-        assertNotNull(opaque);
-        // Send 5 requests with an incrementing nonce count on each call.
-        for (int i = 0; i < 5; i++) {
-            client = new TestHttpClient();
-            get = new HttpGet(DefaultServer.getDefaultServerURL());
+            String clientNonce = createNonce();
+            int nonceCount = 1;
+            String nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
+            String opaque = parsedHeader.get(DigestWWWAuthenticateToken.OPAQUE);
+            assertNotNull(opaque);
+            // Send 5 requests with an incrementing nonce count on each call.
+            for (int i = 0; i < 5; i++) {
+                try (CloseableHttpClient client2 = TestHttpClient.defaultClient()) {
+                    get = new HttpGet(DefaultServer.getDefaultServerURL());
 
-            int thisNonceCount = nonceCount++;
-            String authorization = createAuthorizationLine("userOne", "passwordOne", "GET", "/badUri", nonce, thisNonceCount,
-                    clientNonce, opaque);
+                    int thisNonceCount = nonceCount++;
+                    String authorization = createAuthorizationLine("userOne", "passwordOne", "GET", "/badUri", nonce, thisNonceCount,
+                            clientNonce, opaque);
 
-            get.addHeader(AUTHORIZATION.toString(), authorization);
-            result = client.execute(get);
-            assertEquals(StatusCodes.BAD_REQUEST, result.getStatusLine().getStatusCode());
-
+                    get.addHeader(AUTHORIZATION.toString(), authorization);
+                    client2.execute(get, result -> {
+                        assertEquals(StatusCodes.BAD_REQUEST, result.getCode());
+                        return null;
+                    });
+                }
+            }
         }
     }
+
     /**
      * Test for a failed authentication where a bad username is provided.
      */
@@ -295,15 +310,16 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
     }
 
     static void _testBadUsername() throws Exception {
-        TestHttpClient client = new TestHttpClient();
+        CloseableHttpClient client = TestHttpClient.defaultClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+        Map<DigestWWWAuthenticateToken, String> parsedHeader = client.execute(get, result -> {
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
 
-        String value = getAuthHeader(DIGEST, values);
+            String value = getAuthHeader(DIGEST, values);
 
-        Map<DigestWWWAuthenticateToken, String> parsedHeader = DigestWWWAuthenticateToken.parseHeader(value.substring(7));
+            return DigestWWWAuthenticateToken.parseHeader(value.substring(7));
+        });
         assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
         assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
         assertEquals(DigestQop.AUTH.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.MESSAGE_QOP));
@@ -314,7 +330,8 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         String opaque = parsedHeader.get(DigestWWWAuthenticateToken.OPAQUE);
         assertNotNull(opaque);
 
-        client = new TestHttpClient();
+        client.close();
+        client = TestHttpClient.defaultClient();
         get = new HttpGet(DefaultServer.getDefaultServerURL());
 
         int thisNonceCount = nonceCount++;
@@ -322,9 +339,12 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
                 opaque);
 
         get.addHeader(AUTHORIZATION.toString(), authorization);
-        result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
+        client.execute(get, result -> {
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+            assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
+            return null;
+        });
+        client.close();
     }
 
     /**
@@ -336,15 +356,16 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
     }
 
     static void _testBadPassword() throws Exception {
-        TestHttpClient client = new TestHttpClient();
+        CloseableHttpClient client = TestHttpClient.defaultClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+        Map<DigestWWWAuthenticateToken, String> parsedHeader = client.execute(get, result -> {
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
 
-        String value = getAuthHeader(DIGEST, values);
+            String value = getAuthHeader(DIGEST, values);
 
-        Map<DigestWWWAuthenticateToken, String> parsedHeader = DigestWWWAuthenticateToken.parseHeader(value.substring(7));
+            return DigestWWWAuthenticateToken.parseHeader(value.substring(7));
+        });
         assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
         assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
         assertEquals(DigestQop.AUTH.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.MESSAGE_QOP));
@@ -355,7 +376,8 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         String opaque = parsedHeader.get(DigestWWWAuthenticateToken.OPAQUE);
         assertNotNull(opaque);
 
-        client = new TestHttpClient();
+        client.close();
+        client = TestHttpClient.defaultClient();
         get = new HttpGet(DefaultServer.getDefaultServerURL());
 
         int thisNonceCount = nonceCount++;
@@ -363,9 +385,12 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
                 clientNonce, opaque);
 
         get.addHeader(AUTHORIZATION.toString(), authorization);
-        result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
+        client.execute(get, result -> {
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+            assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
+            return null;
+        });
+        client.close();
     }
 
     /**
@@ -377,15 +402,16 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
     }
 
     static void _testBadNonce() throws Exception {
-        TestHttpClient client = new TestHttpClient();
+        CloseableHttpClient client = TestHttpClient.defaultClient();
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+        Map<DigestWWWAuthenticateToken, String> parsedHeader = client.execute(get, result -> {
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+            Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
 
-        String value = getAuthHeader(DIGEST, values);
+            String value = getAuthHeader(DIGEST, values);
 
-        Map<DigestWWWAuthenticateToken, String> parsedHeader = DigestWWWAuthenticateToken.parseHeader(value.substring(7));
+            return DigestWWWAuthenticateToken.parseHeader(value.substring(7));
+        });
         assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
         assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
         assertEquals(DigestQop.AUTH.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.MESSAGE_QOP));
@@ -396,7 +422,8 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
         String opaque = parsedHeader.get(DigestWWWAuthenticateToken.OPAQUE);
         assertNotNull(opaque);
 
-        client = new TestHttpClient();
+        client.close();
+        client = TestHttpClient.defaultClient();
         get = new HttpGet(DefaultServer.getDefaultServerURL());
 
         int thisNonceCount = nonceCount++;
@@ -404,14 +431,17 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
                 clientNonce, opaque);
 
         get.addHeader(AUTHORIZATION.toString(), authorization);
-        result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
+        client.execute(get, result -> {
+            assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+            assertSingleNotificationType(EventType.FAILED_AUTHENTICATION);
+            return null;
+        });
+        client.close();
     }
 
     /**
      * Test for a failed authentication where the nonce count is re-used.
-     *
+     * <p>
      * Where a nonce count is used the nonce can now be re-used, however each time the nonce count must be different.
      */
     @Test
@@ -420,59 +450,68 @@ public class DigestAuthenticationAuthTestCase extends AuthenticationTestBase {
     }
 
     static void _testNonceCountReUse() throws Exception {
-        TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
-        Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+            Map<DigestWWWAuthenticateToken, String> parsedHeader = client.execute(get, result -> {
+                assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+                Header[] values = result.getHeaders(WWW_AUTHENTICATE.toString());
 
-        String value = getAuthHeader(DIGEST, values);
+                String value = getAuthHeader(DIGEST, values);
 
-        Map<DigestWWWAuthenticateToken, String> parsedHeader = DigestWWWAuthenticateToken.parseHeader(value.substring(7));
-        assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
-        assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
-        assertEquals(DigestQop.AUTH.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.MESSAGE_QOP));
+                return DigestWWWAuthenticateToken.parseHeader(value.substring(7));
+            });
+            assertEquals(REALM_NAME, parsedHeader.get(DigestWWWAuthenticateToken.REALM));
+            assertEquals(DigestAlgorithm.MD5.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.ALGORITHM));
+            assertEquals(DigestQop.AUTH.getToken(), parsedHeader.get(DigestWWWAuthenticateToken.MESSAGE_QOP));
 
-        String clientNonce = createNonce();
-        int nonceCount = 1;
-        String nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
-        String opaque = parsedHeader.get(DigestWWWAuthenticateToken.OPAQUE);
-        assertNotNull(opaque);
-        // Send 5 requests with an incrementing nonce count on each call.
-        for (int i = 0; i < 2; i++) {
-            client = new TestHttpClient();
-            get = new HttpGet(DefaultServer.getDefaultServerURL());
+            String clientNonce = createNonce();
+            int nonceCount = 1;
+            String nonce = parsedHeader.get(DigestWWWAuthenticateToken.NONCE);
+            String opaque = parsedHeader.get(DigestWWWAuthenticateToken.OPAQUE);
+            assertNotNull(opaque);
+            // Send 5 requests with an incrementing nonce count on each call.
+            for (int i = 0; i < 2; i++) {
+                int index = i;
+                try (CloseableHttpClient client2 = TestHttpClient.defaultClient()) {
+                    get = new HttpGet(DefaultServer.getDefaultServerURL());
 
-            int thisNonceCount = nonceCount; // Note - No increment
-            String authorization = createAuthorizationLine("userOne", "passwordOne", "GET", "/", nonce, thisNonceCount,
-                    clientNonce, opaque);
+                    int thisNonceCount = nonceCount; // Note - No increment
+                    String authorization = createAuthorizationLine("userOne", "passwordOne", "GET", "/", nonce, thisNonceCount,
+                            clientNonce, opaque);
 
-            get.addHeader(AUTHORIZATION.toString(), authorization);
-            result = client.execute(get);
+                    get.addHeader(AUTHORIZATION.toString(), authorization);
+                    client2.execute(get, result -> {
 
-            if (i == 0) {
-                assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                assertSingleNotificationType(EventType.AUTHENTICATED);
+                        if (index == 0) {
+                            assertEquals(StatusCodes.OK, result.getCode());
+                            assertSingleNotificationType(EventType.AUTHENTICATED);
 
-                values = result.getHeaders("ProcessedBy");
-                assertEquals(1, values.length);
-                assertEquals("ResponseHandler", values[0].getValue());
+                            Header[] values = result.getHeaders("ProcessedBy");
+                            assertEquals(1, values.length);
+                            assertEquals("ResponseHandler", values[0].getValue());
 
-                values = result.getHeaders("Authentication-Info");
-                assertEquals(1, values.length);
-                Map<AuthenticationInfoToken, String> parsedAuthInfo = AuthenticationInfoToken.parseHeader(values[0].getValue());
+                            values = result.getHeaders("Authentication-Info");
+                            assertEquals(1, values.length);
+                            Map<AuthenticationInfoToken, String> parsedAuthInfo = AuthenticationInfoToken.parseHeader(values[0].getValue());
 
-                assertEquals("Didn't expect a new nonce.", nonce, parsedAuthInfo.get(AuthenticationInfoToken.NEXT_NONCE));
-                assertEquals(DigestQop.AUTH.getToken(), parsedAuthInfo.get(AuthenticationInfoToken.MESSAGE_QOP));
-                String nonceCountString = toHex(thisNonceCount);
-                assertEquals(createRspAuth("userOne", REALM_NAME, "passwordOne", "/", nonce, nonceCountString, clientNonce),
-                        parsedAuthInfo.get(AuthenticationInfoToken.RESPONSE_AUTH));
-                assertEquals(clientNonce, parsedAuthInfo.get(AuthenticationInfoToken.CNONCE));
-                assertEquals(nonceCountString, parsedAuthInfo.get(AuthenticationInfoToken.NONCE_COUNT));
-            } else {
-                assertEquals(StatusCodes.UNAUTHORIZED, result.getStatusLine().getStatusCode());
+                            assertEquals("Didn't expect a new nonce.", nonce, parsedAuthInfo.get(AuthenticationInfoToken.NEXT_NONCE));
+                            assertEquals(DigestQop.AUTH.getToken(), parsedAuthInfo.get(AuthenticationInfoToken.MESSAGE_QOP));
+                            String nonceCountString = toHex(thisNonceCount);
+                            try {
+                                assertEquals(createRspAuth("userOne", REALM_NAME, "passwordOne", "/", nonce, nonceCountString, clientNonce),
+                                        parsedAuthInfo.get(AuthenticationInfoToken.RESPONSE_AUTH));
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+                            assertEquals(clientNonce, parsedAuthInfo.get(AuthenticationInfoToken.CNONCE));
+                            assertEquals(nonceCountString, parsedAuthInfo.get(AuthenticationInfoToken.NONCE_COUNT));
+                        } else {
+                            assertEquals(StatusCodes.UNAUTHORIZED, result.getCode());
+                        }
+                        return null;
+                    });
+                }
             }
         }
     }
-
 }

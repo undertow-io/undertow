@@ -27,8 +27,8 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -42,6 +42,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -124,15 +125,15 @@ public class AsyncListenerExceptionTest {
     }
 
     private void doTest(String urlTail, boolean timeout) throws IOException, InterruptedException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + urlTail);
             if (timeout) {
                 get.addHeader("timeout", "true");
             }
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(timeout ? 500 : 200, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(timeout ? 500 : 200, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
             List<String> expected = new LinkedList<>();
             expected.add("onComplete");
             expected.add("onComplete");
@@ -146,13 +147,12 @@ public class AsyncListenerExceptionTest {
             }
             actual.sort(Comparator.naturalOrder());
             Assert.assertEquals(expected, actual);
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     public abstract static class AbstractAsyncServlet extends HttpServlet {
         static final BlockingQueue<String> QUEUE = new LinkedBlockingDeque<>();
+
         @Override
         protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
                 throws ServletException, IOException {

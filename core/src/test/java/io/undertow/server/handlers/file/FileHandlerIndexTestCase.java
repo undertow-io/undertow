@@ -34,9 +34,9 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -50,9 +50,8 @@ public class FileHandlerIndexTestCase {
 
     @Test
     public void testWelcomeFile() throws IOException, URISyntaxException {
-        TestHttpClient client = new TestHttpClient();
-        Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
             DefaultServer.setRootHandler(new CanonicalPathHandler()
                     .setNext(new PathHandler()
                             .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 10485760))
@@ -60,53 +59,54 @@ public class FileHandlerIndexTestCase {
                                     .addWelcomeFiles("page.html"))));
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Header[] headers = result.getHeaders("Content-Type");
-            Assert.assertEquals("text/html", headers[0].getValue());
-            Assert.assertTrue(response, response.contains("A web page"));
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Header[] headers = result.getHeaders("Content-Type");
+                Assert.assertEquals("text/html", headers[0].getValue());
+                Assert.assertTrue(response, response.contains("A web page"));
+                return null;
+            });
         }
     }
 
     @Test
     public void testDirectoryIndex() throws IOException, URISyntaxException {
-        TestHttpClient client = new TestHttpClient();
         Path rootPath = Paths.get(getClass().getResource("page.html").toURI()).getParent();
         Path badSymlink = null;
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             DefaultServer.setRootHandler(new PathHandler()
-                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 10485760))
-                                    .setDirectoryListingEnabled(true)));
+                    .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 10485760))
+                            .setDirectoryListingEnabled(true)));
 
             badSymlink = rootPath.resolve("tmp2");
             Path badSymlinkTarget = rootPath.resolve("/tmp2");
             Files.createSymbolicLink(badSymlink, badSymlinkTarget);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Header[] headers = result.getHeaders("Content-Type");
-            Assert.assertEquals("text/html; charset=UTF-8", headers[0].getValue());
-            Assert.assertTrue(response, response.contains("page.html"));
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Header[] headers = result.getHeaders("Content-Type");
+                Assert.assertEquals("text/html; charset=UTF-8", headers[0].getValue());
+                Assert.assertTrue(response, response.contains("page.html"));
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/.");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            headers = result.getHeaders("Content-Type");
-            Assert.assertEquals("text/html; charset=UTF-8", headers[0].getValue());
-            Assert.assertTrue(response, response.contains("page.html"));
-            Assert.assertTrue(response, response.contains("tmp2"));
-            // All invalid symlinks have their date set to "-"
-            SimpleDateFormat format = new SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.US);
-            Assert.assertTrue(response, response.contains("-"));
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Header[] headers = result.getHeaders("Content-Type");
+                Assert.assertEquals("text/html; charset=UTF-8", headers[0].getValue());
+                Assert.assertTrue(response, response.contains("page.html"));
+                Assert.assertTrue(response, response.contains("tmp2"));
+                // All invalid symlinks have their date set to "-"
+                SimpleDateFormat format = new SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.US);
+                Assert.assertTrue(response, response.contains("-"));
+                return null;
+            });
         } finally {
-            client.getConnectionManager().shutdown();
             if (badSymlink != null) {
                 Files.deleteIfExists(badSymlink);
             }

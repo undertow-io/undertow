@@ -18,6 +18,17 @@
 
 package io.undertow.server.handlers.proxy.mod_cluster;
 
+import io.undertow.testutils.HttpClientUtils;
+import io.undertow.util.StatusCodes;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
+import org.junit.Assert;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -27,17 +38,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-
-import io.undertow.testutils.HttpClientUtils;
-import io.undertow.util.StatusCodes;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.message.BasicNameValuePair;
-import org.junit.Assert;
 
 /**
  * Basic mod_cluster management client. This can be used to simulate management requests to the mod_cluster manager.
@@ -59,11 +59,11 @@ public class MCMPTestClient implements Closeable {
 
     private static final String[] YES_NO = new String[] { "Yes", "No" };
 
-    private final HttpClient client;
+    private final CloseableHttpClient client;
     private final String manager;
     private final String command;
 
-    public MCMPTestClient(HttpClient client, String manager) {
+    public MCMPTestClient(CloseableHttpClient client, String manager) {
         this.client = client;
         this.manager = manager;
         this.command = manager + "/*";
@@ -71,8 +71,7 @@ public class MCMPTestClient implements Closeable {
 
     public String info() throws IOException {
         final Request request = new Request(manager, INFO);
-        final HttpResponse result = client.execute(request);
-        return assertResponse(result);
+        return client.execute(request, MCMPTestClient::assertResponse);
     }
 
     public String registerNode(final NodeTestConfig config) throws IOException {
@@ -92,8 +91,7 @@ public class MCMPTestClient implements Closeable {
 
         request.setEntity(createEntity(pairs));
 
-        final HttpResponse result = client.execute(request);
-        return assertResponse(result);
+        return client.execute(request, MCMPTestClient::assertResponse);
     }
 
     static void addIfNotNull(final List<NameValuePair> pairs, final String key, final Boolean value, String[] inconsistentNames) {
@@ -117,16 +115,14 @@ public class MCMPTestClient implements Closeable {
     public String updateLoad(final String jvmRoute, int load) throws IOException {
         final Request request = new Request(manager, STATUS);
         request.setEntity(createEntity(new BasicNameValuePair("JVMRoute", jvmRoute), new BasicNameValuePair("Load", "" + load)));
-        final HttpResponse result = client.execute(request);
-        return assertResponse(result);
+        return client.execute(request, MCMPTestClient::assertResponse);
 
     }
 
     public String removeNode(String jvmRoute) throws IOException {
         final Request request = new Request(command, REMOVE_APP);
         request.setEntity(createEntity(new BasicNameValuePair("JVMRoute", jvmRoute)));
-        final HttpResponse response = client.execute(request);
-        return assertResponse(response);
+        return client.execute(request, MCMPTestClient::assertResponse);
     }
 
     public String enableApp(String jvmRoute, App app) throws IOException {
@@ -168,25 +164,23 @@ public class MCMPTestClient implements Closeable {
         addIfNotNull(pairs, MCMPConstants.HOST_STRING, hostname);
         addIfNotNull(pairs, MCMPConstants.PORT_STRING, port);
         request.setEntity(createEntity(pairs));
-        final HttpResponse response = client.execute(request);
-        return HttpClientUtils.readResponse(response);
+        return client.execute(request, HttpClientUtils::readResponse);
     }
 
     String executeAppCmd(final String command, final String jvmRoute, String webApp, String... hosts) throws IOException {
         final Request request = new Request(manager, command);
         request.setEntity(createEntity(new BasicNameValuePair("JVMRoute", jvmRoute), new BasicNameValuePair("context", webApp), new BasicNameValuePair("Alias", asString(Arrays.asList(hosts)))));
-        final HttpResponse result = client.execute(request);
-        return assertResponse(result);
+        return client.execute(request, MCMPTestClient::assertResponse);
     }
 
     @Override
     public void close() throws IOException {
-        client.getConnectionManager().shutdown();
+        client.close();
     }
 
-    static String assertResponse(final HttpResponse result) throws IOException {
+    static String assertResponse(final ClassicHttpResponse result) throws IOException {
         final String response = HttpClientUtils.readResponse(result);
-        Assert.assertEquals(response, StatusCodes.OK, result.getStatusLine().getStatusCode());
+        Assert.assertEquals(response, StatusCodes.OK, result.getCode());
         return response;
     }
 

@@ -18,10 +18,10 @@
 
 package io.undertow.servlet.test.upgrade;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
+import io.undertow.servlet.api.ServletInfo;
+import io.undertow.servlet.test.util.DeploymentUtils;
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.HttpOneOnly;
 import jakarta.servlet.ServletException;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -29,11 +29,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.undertow.servlet.api.ServletInfo;
-import io.undertow.servlet.test.util.DeploymentUtils;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.HttpOneOnly;
-import io.undertow.testutils.TestHttpClient;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
 
 /**
  * @author Stuart Douglas
@@ -69,32 +68,26 @@ public class SslUpgradeTestCase {
     }
 
     public void runTest(final String url) throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
-            final Socket socket = DefaultServer.getClientSSLContext().getSocketFactory().createSocket(new Socket(DefaultServer.getHostAddress("default"), DefaultServer.getHostSSLPort("default")), DefaultServer.getHostAddress("default"), DefaultServer.getHostSSLPort("default"), true);
+        final Socket socket = DefaultServer.getClientSSLContext().getSocketFactory().createSocket(new Socket(DefaultServer.getHostAddress("default"), DefaultServer.getHostSSLPort("default")), DefaultServer.getHostAddress("default"), DefaultServer.getHostSSLPort("default"), true);
 
-            InputStream in = socket.getInputStream();
-            OutputStream out = socket.getOutputStream();
-            out.write(("GET " + url + " HTTP/1.1\r\nHost: default\r\nConnection: upgrade\r\nUpgrade:servlet\r\n\r\n").getBytes());
-            out.flush();
-            String bytes = readBytes(in);
-            Assert.assertTrue(bytes, bytes.startsWith("HTTP/1.1 101 Switching Protocols\r\n"));
+        InputStream in = socket.getInputStream();
+        OutputStream out = socket.getOutputStream();
+        out.write(("GET " + url + " HTTP/1.1\r\nHost: default\r\nConnection: upgrade\r\nUpgrade:servlet\r\n\r\n").getBytes());
+        out.flush();
+        String bytes = readBytes(in);
+        Assert.assertTrue(bytes, bytes.startsWith("HTTP/1.1 101 Switching Protocols\r\n"));
 
-            out.write("Echo Messages\r\n\r\n".getBytes());
-            out.flush();
-            Assert.assertEquals("Echo Messages\r\n\r\n", readBytes(in));
+        out.write("Echo Messages\r\n\r\n".getBytes());
+        out.flush();
+        Assert.assertEquals("Echo Messages\r\n\r\n", readBytes(in));
 
-            out.write("Echo Messages2\r\n\r\n".getBytes());
-            out.flush();
-            Assert.assertEquals("Echo Messages2\r\n\r\n", readBytes(in));
+        out.write("Echo Messages2\r\n\r\n".getBytes());
+        out.flush();
+        Assert.assertEquals("Echo Messages2\r\n\r\n", readBytes(in));
 
-            out.write("exit\r\n\r\n".getBytes());
-            out.flush();
-            socket.close();
-
-        } finally {
-            client.getConnectionManager().shutdown();
-        }
+        out.write("exit\r\n\r\n".getBytes());
+        out.flush();
+        socket.close();
     }
 
     private String readBytes(final InputStream in) throws IOException {
@@ -106,5 +99,4 @@ public class SslUpgradeTestCase {
         }
         return builder.toString();
     }
-
 }

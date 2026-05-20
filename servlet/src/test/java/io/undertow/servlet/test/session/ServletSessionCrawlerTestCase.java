@@ -32,15 +32,16 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.CookieStore;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.cookie.Cookie;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.cookie.Cookie;
+import org.apache.hc.client5.http.cookie.CookieStore;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import jakarta.servlet.ServletException;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Date;
@@ -73,9 +74,7 @@ public class ServletSessionCrawlerTestCase {
             throw new RuntimeException(e);
         }
         DefaultServer.setRootHandler(pathHandler);
-        TestHttpClient client = new TestHttpClient();
-
-        client.setCookieStore(new CookieStore() {
+        try (CloseableHttpClient client = TestHttpClient.custom().setDefaultCookieStore(new CookieStore() {
             @Override
             public void addCookie(Cookie cookie) {
 
@@ -95,27 +94,29 @@ public class ServletSessionCrawlerTestCase {
             public void clear() {
 
             }
-        });
-        try {
+        }).build()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/aa/b");
             get.addHeader(Headers.USER_AGENT_STRING, "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("1", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("1", response);
+                return null;
+            });
 
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("2", response);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("2", response);
+                return null;
+            });
 
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("3", response);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("3", response);
+                return null;
+            });
         }
     }
 }

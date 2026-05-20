@@ -18,24 +18,22 @@
 
 package io.undertow.servlet.test.charset;
 
-import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.Servlets;
-import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -48,70 +46,69 @@ import java.util.regex.Pattern;
 @RunWith(DefaultServer.class)
 public class DefaultCharacterEncodingTestCase {
 
-    private void setup(final String defaultEncoding) throws ServletException {
-        DeploymentUtils.setupServlet(new ServletExtension() {
-                                         @Override
-                                         public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
-                                             if (defaultEncoding != null) {
-                                                 deploymentInfo.setDefaultEncoding(defaultEncoding);
-                                             }
-                                         }
-                                     },
+    private void setup(final Charset defaultEncoding) throws ServletException {
+        DeploymentUtils.setupServlet((deploymentInfo, servletContext) -> {
+                    if (defaultEncoding != null) {
+                        deploymentInfo.setDefaultEncoding(defaultEncoding.name());
+                    }
+                },
                 Servlets.servlet("servlet", DefaultCharacterEncodingServlet.class)
                         .addMapping("/"));
     }
 
-    private void testDefaultEncoding(String defaultCharacterEncoding,
+    private void testDefaultEncoding(Charset defaultCharacterEncoding,
                                      String expectedRequestCharacterEncoding,
                                      String expectedResponseCharacterEncoding) throws IOException, ServletException {
         setup(defaultCharacterEncoding);
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Unexpected request character encoding",
-                    expectedRequestCharacterEncoding, readParameter(response, "requestCharacterEncoding"));
-            Assert.assertEquals("Unexpected response character encoding",
-                    expectedResponseCharacterEncoding, readParameter(response, "responseCharacterEncoding"));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Unexpected request character encoding",
+                        expectedRequestCharacterEncoding, readParameter(response, "requestCharacterEncoding"));
+                Assert.assertEquals("Unexpected response character encoding",
+                        expectedResponseCharacterEncoding, readParameter(response, "responseCharacterEncoding"));
+                return null;
+            });
         }
     }
 
-    private void testServletContextCharacterEncoding(final String requestCharacterEncoding, final String responseCharacterEncoding,
-                                                     final String defaultContainerLevelEncoding, final String body)
+    private void testServletContextCharacterEncoding(final Charset requestCharacterEncoding, final Charset responseCharacterEncoding,
+                                                     final Charset defaultContainerLevelEncoding, final String body)
             throws IOException, ServletException {
-        DeploymentUtils.setupServlet(new ServletExtension() {
-                                         @Override
-                                         public void handleDeployment(final DeploymentInfo deploymentInfo, final ServletContext servletContext) {
-                                             servletContext.setRequestCharacterEncoding(requestCharacterEncoding);
-                                             servletContext.setResponseCharacterEncoding(responseCharacterEncoding);
-                                         }
-                                     },
+        DeploymentUtils.setupServlet((deploymentInfo, servletContext) -> {
+            if (defaultContainerLevelEncoding != null) {
+                deploymentInfo.setDefaultEncoding(defaultContainerLevelEncoding.name());
+            }
+            if (requestCharacterEncoding != null) {
+                servletContext.setRequestCharacterEncoding(requestCharacterEncoding);
+            }
+            if (responseCharacterEncoding != null) {
+                servletContext.setResponseCharacterEncoding(responseCharacterEncoding);
+            }
+        },
                 Servlets.servlet("servlet", DefaultCharacterEncodingServlet.class).addMapping("/"));
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             final HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/servletContext");
             if (body != null) {
                 post.setEntity(new StringEntity(body, requestCharacterEncoding));
             }
             // spec mandates "ISO-8859-1" as the default (see javadoc of ServletResponse#getCharacterEncoding())
-            final String expectedResponseCharEncoding = responseCharacterEncoding == null ? "ISO-8859-1" : responseCharacterEncoding;
-            final HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result, Charset.forName(expectedResponseCharEncoding));
-            final String expectedRequestCharEncoding = requestCharacterEncoding == null ? "null" : requestCharacterEncoding;
-            Assert.assertEquals("Unexpected request character encoding",
-                    expectedRequestCharEncoding, readParameter(response, "requestCharacterEncoding"));
-            Assert.assertEquals("Unexpected response character encoding",
-                    expectedResponseCharEncoding, readParameter(response, "responseCharacterEncoding"));
-            if (body != null) {
-                Assert.assertEquals("Unexpected response body", body, readParameter(response, "content"));
-            }
-        } finally {
-            client.getConnectionManager().shutdown();
+            final Charset expectedResponseCharEncoding = responseCharacterEncoding == null ? (defaultContainerLevelEncoding == null ? StandardCharsets.ISO_8859_1 : defaultContainerLevelEncoding) : responseCharacterEncoding;
+            final String expectedRequestCharEncodingName = requestCharacterEncoding == null ? (defaultContainerLevelEncoding == null ? "null" : defaultContainerLevelEncoding.name()) : requestCharacterEncoding.name();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result, expectedResponseCharEncoding);
+                Assert.assertEquals("Unexpected request character encoding",
+                        expectedRequestCharEncodingName, readParameter(response, "requestCharacterEncoding"));
+                Assert.assertEquals("Unexpected response character encoding",
+                        expectedResponseCharEncoding.name(), readParameter(response, "responseCharacterEncoding"));
+                if (body != null) {
+                    Assert.assertEquals("Unexpected response body", body, readParameter(response, "content"));
+                }
+                return null;
+            });
         }
 
     }
@@ -128,17 +125,17 @@ public class DefaultCharacterEncodingTestCase {
 
     @Test
     public void testDefaultEncodingNotSet() throws IOException, ServletException {
-        testDefaultEncoding(null, "null", "ISO-8859-1");
+        testDefaultEncoding(null, "null", StandardCharsets.ISO_8859_1.name());
     }
 
     @Test
     public void testDefaultEncodingSetEqualDefault() throws IOException, ServletException {
-        testDefaultEncoding("ISO-8859-1", "ISO-8859-1", "ISO-8859-1");
+        testDefaultEncoding(StandardCharsets.ISO_8859_1, StandardCharsets.ISO_8859_1.name(), StandardCharsets.ISO_8859_1.name());
     }
 
     @Test
     public void testDefaultEncodingSetNotEqualDefault() throws IOException, ServletException {
-        testDefaultEncoding("UTF-8", "UTF-8", "UTF-8");
+        testDefaultEncoding(StandardCharsets.UTF_8, StandardCharsets.UTF_8.name(), StandardCharsets.UTF_8.name());
     }
 
     /**
@@ -149,16 +146,15 @@ public class DefaultCharacterEncodingTestCase {
      */
     @Test
     public void testServletContextCharEncoding() throws Exception {
-        final String[] defaultContainerLevelEncodings = new String[]{null, StandardCharsets.ISO_8859_1.name(),
-                StandardCharsets.UTF_8.name(), StandardCharsets.UTF_16BE.name()};
-        for (final String defaultContainerLevelEncoding : defaultContainerLevelEncodings) {
+        final Charset[] defaultContainerLevelEncodings = new Charset[]{null, StandardCharsets.ISO_8859_1,
+                StandardCharsets.UTF_8, StandardCharsets.UTF_16BE};
+        for (final Charset defaultContainerLevelEncoding : defaultContainerLevelEncodings) {
             testServletContextCharacterEncoding(null, null, defaultContainerLevelEncoding, null);
-            testServletContextCharacterEncoding("UTF-8", null, defaultContainerLevelEncoding, null);
-            testServletContextCharacterEncoding(null, "UTF-8", defaultContainerLevelEncoding, null);
-            testServletContextCharacterEncoding(StandardCharsets.UTF_16BE.name(), "UTF-8", defaultContainerLevelEncoding, null);
+            testServletContextCharacterEncoding(StandardCharsets.UTF_8, null, defaultContainerLevelEncoding, null);
+            testServletContextCharacterEncoding(null, StandardCharsets.UTF_8, defaultContainerLevelEncoding, null);
+            testServletContextCharacterEncoding(StandardCharsets.UTF_16BE, StandardCharsets.UTF_8, defaultContainerLevelEncoding, null);
             // send a unicode string in body
-            testServletContextCharacterEncoding("UTF-8", "UTF-8", defaultContainerLevelEncoding, "\u3042");
-
+            testServletContextCharacterEncoding(StandardCharsets.UTF_8, StandardCharsets.UTF_8, defaultContainerLevelEncoding, "\u3042");
         }
     }
 }

@@ -26,9 +26,9 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -66,9 +66,6 @@ public class PredicatedHandlersProxyTestCase {
 
     @Test
     public void testProxy() throws Exception {
-
-        TestHttpClient client = new TestHttpClient();
-
         int port = getHostPort("default");
         String upstreamUrl = "http://" + NetworkUtils.formatPossibleIpv6Address(getHostAddress("default")) + ":" + (port + 1);
         DefaultServer.setRootHandler(
@@ -76,25 +73,28 @@ public class PredicatedHandlersProxyTestCase {
                         PredicatedHandlersParser.parse(
                                 String.format(
                                         "path-suffix['.html'] -> reverse-proxy[hosts={'%1$s'}, rewrite-host-header=true]\n" +
-                                        "path-suffix['.jsp'] -> reverse-proxy[hosts={'%1$s'}]", upstreamUrl
+                                                "path-suffix['.jsp'] -> reverse-proxy[hosts={'%1$s'}]", upstreamUrl
                                 ), getClass().getClassLoader()), ResponseCodeHandler.HANDLE_404));
 
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo.html");
-        get.addHeader("Host", "original-host");
-        HttpResponse result = client.execute(get);
-        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-        Header[] header = result.getHeaders("myHost");
-        Assert.assertEquals("upstream-host", header[0].getValue());
-        HttpClientUtils.readResponse(result);
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo.html");
+            get.addHeader("Host", "original-host");
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders("myHost");
+                Assert.assertEquals("upstream-host", header[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
-        get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo.jsp");
-        get.addHeader("Host", "original-host");
-        result = client.execute(get);
-        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-        header = result.getHeaders("myHost");
-        Assert.assertEquals("original-host", header[0].getValue());
-        HttpClientUtils.readResponse(result);
-
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/foo.jsp");
+            get.addHeader("Host", "original-host");
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders("myHost");
+                Assert.assertEquals("original-host", header[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
+        }
     }
 
     @AfterClass
@@ -103,7 +103,7 @@ public class PredicatedHandlersProxyTestCase {
         // sleep 1 s to prevent BindException (Address already in use) when running the CI
         try {
             Thread.sleep(1000);
-        } catch (InterruptedException ignore) {}
+        } catch (InterruptedException ignore) {
+        }
     }
-
 }

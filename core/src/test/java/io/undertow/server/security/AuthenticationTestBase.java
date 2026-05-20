@@ -43,9 +43,9 @@ import io.undertow.util.HeaderMap;
 import io.undertow.util.HexConverter;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
 import org.ietf.jgss.GSSException;
 import org.junit.Before;
 import org.junit.Test;
@@ -136,13 +136,7 @@ public abstract class AuthenticationTestBase {
                         if (gssApiUsers.contains(name)) {
                             return new Account() {
 
-                                private final Principal principal = new Principal() {
-
-                                    @Override
-                                    public String getName() {
-                                        return name;
-                                    }
-                                };
+                                private final Principal principal = () -> name;
 
                                 @Override
                                 public Principal getPrincipal() {
@@ -199,13 +193,7 @@ public abstract class AuthenticationTestBase {
                 if (passwordUsers.containsKey(id)) {
                     return new Account() {
 
-                        private final Principal principal = new Principal() {
-
-                            @Override
-                            public String getName() {
-                                return id;
-                            }
-                        };
+                        private final Principal principal = () -> id;
 
                         @Override
                         public Principal getPrincipal() {
@@ -228,7 +216,7 @@ public abstract class AuthenticationTestBase {
     @Before
     public void setAuthenticationChain() {
         List<AuthenticationMechanism> testMechanisms = getTestMechanisms();
-        if(testMechanisms == null) {
+        if (testMechanisms == null) {
             return;
         }
         HttpHandler current = new ResponseHandler();
@@ -237,9 +225,9 @@ public abstract class AuthenticationTestBase {
 
         current = new AuthenticationMechanismsHandler(current, testMechanisms);
         auditReceiver.takeNotifications(); // Ensure empty on initialisation.
-        current = new NotificationReceiverHandler(current, Collections.<NotificationReceiver> singleton(auditReceiver));
+        current = new NotificationReceiverHandler(current, Collections.<NotificationReceiver>singleton(auditReceiver));
 
-        if(cachingRequired()) {
+        if (cachingRequired()) {
             current = new CachedAuthenticatedSessionHandler(current);
         }
 
@@ -264,14 +252,17 @@ public abstract class AuthenticationTestBase {
     public void testNoMechanisms() throws Exception {
         DefaultServer.setRootHandler(new ResponseHandler());
 
-        TestHttpClient client = new TestHttpClient();
-        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-        HttpResponse result = client.execute(get);
-        assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-        Header[] values = result.getHeaders("ProcessedBy");
-        assertEquals(1, values.length);
-        assertEquals("ResponseHandler", values[0].getValue());
+                Header[] values = result.getHeaders("ProcessedBy");
+                assertEquals(1, values.length);
+                assertEquals("ResponseHandler", values[0].getValue());
+                return null;
+            });
+        }
     }
 
     protected static void assertSingleNotificationType(final SecurityNotification.EventType eventType) {
@@ -280,11 +271,11 @@ public abstract class AuthenticationTestBase {
         assertEquals("Expected EventType not matched.", eventType, notifications.get(0).getEventType());
     }
 
-    protected static void assertNotifiactions(final SecurityNotification.EventType ... eventTypes) {
+    protected static void assertNotifiactions(final SecurityNotification.EventType... eventTypes) {
         List<SecurityNotification> notifications = auditReceiver.takeNotifications();
         assertEquals("A single notification is expected.", eventTypes.length, notifications.size());
         final List<SecurityNotification.EventType> types = new ArrayList<>();
-        for(SecurityNotification i : notifications) {
+        for (SecurityNotification i : notifications) {
             types.add(i.getEventType());
         }
         assertEquals("Expected EventType not matched.", Arrays.asList(eventTypes), types);
@@ -333,7 +324,7 @@ public abstract class AuthenticationTestBase {
             if (user != null) {
                 responseHeader.add(AUTHENTICATED_USER, user);
             }
-            if(exchange.getQueryParameters().get("logout") != null) {
+            if (exchange.getQueryParameters().get("logout") != null) {
                 exchange.getSecurityContext().logout();
             }
 

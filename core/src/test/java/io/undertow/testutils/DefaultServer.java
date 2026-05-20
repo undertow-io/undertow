@@ -738,18 +738,14 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
                 return;
             }
         }
-        try {
-            if (runs > 1) {
-                Statement statement = methodBlock(method);
-                Description description = describeChild(method);
-                for (Description desc : description.getChildren()) {
-                    runLeaf(statement, desc, notifier);
-                }
-            } else {
-                super.runChild(method, notifier);
+        if (runs > 1) {
+            Statement statement = methodBlock(method);
+            Description description = describeChild(method);
+            for (Description desc : description.getChildren()) {
+                runLeaf(statement, desc, notifier);
             }
-        } finally {
-            TestHttpClient.afterTest();
+        } else {
+            super.runChild(method, notifier);
         }
     }
 

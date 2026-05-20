@@ -32,17 +32,16 @@ import io.undertow.servlet.test.util.TestClassIntrospector;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
- * @see UNDERTOW-80
- *
  * @author Jozef Hartinger
+ * @see UNDERTOW-80
  */
 @RunWith(DefaultServer.class)
 public class ServletSessionInvalidateWithListenerTestCase {
@@ -59,7 +58,7 @@ public class ServletSessionInvalidateWithListenerTestCase {
                 .setDeploymentName("listener.war")
                 .addListener(new ListenerInfo(SimpleSessionListener.class))
                 .addServlet(new ServletInfo("servlet", SessionServlet.class)
-                    .addMapping("/test"));
+                        .addMapping("/test"));
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -68,16 +67,14 @@ public class ServletSessionInvalidateWithListenerTestCase {
         DefaultServer.setRootHandler(path);
     }
 
-
     @Test
     public void testSimpleSessionUsage() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/listener/test");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return null;
+            });
         }
     }
 }

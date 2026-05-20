@@ -20,18 +20,15 @@ package io.undertow.server.handlers.encoding;
 
 import io.undertow.io.IoCallback;
 import io.undertow.predicate.Predicates;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.entity.DecompressingEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.entity.compress.DecompressingEntity;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.core5.http.Header;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -52,12 +49,9 @@ public class GzipContentEncodingTestCase {
     public static void setup() {
         final EncodingHandler handler = new EncodingHandler(new ContentEncodingRepository()
                 .addEncodingHandler("gzip", new GzipEncodingProvider(), 50, Predicates.parse("max-content-size[5]")))
-                .setNext(new HttpHandler() {
-                    @Override
-                    public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                        exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
-                        exchange.getResponseSender().send(message, IoCallback.END_EXCHANGE);
-                    }
+                .setNext(exchange -> {
+                    exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, message.length() + "");
+                    exchange.getResponseSender().send(message, IoCallback.END_EXCHANGE);
                 });
 
         DefaultServer.setRootHandler(handler);
@@ -81,16 +75,18 @@ public class GzipContentEncodingTestCase {
      */
     @Test
     public void testSmallMessagePredicateDoesNotCompress() throws IOException {
-        try (CloseableHttpClient client = HttpClientBuilder.create().build()){
+        try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
             message = "Hi";
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "gzip");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
-            Assert.assertEquals(0, header.length);
-            final String body = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Hi", body);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
+                Assert.assertEquals(0, header.length);
+                final String body = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Hi", body);
+                return null;
+            });
         }
     }
 
@@ -98,17 +94,19 @@ public class GzipContentEncodingTestCase {
     //UNDERTOW-331
     @Test
     public void testAcceptIdentity() throws IOException {
-        try (CloseableHttpClient client = HttpClientBuilder.create().build()){
+        try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
             message = "Hi";
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "identity;q=1, *;q=0");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
-            Assert.assertEquals(1, header.length);
-            Assert.assertEquals("identity", header[0].getValue());
-            final String body = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Hi", body);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(Headers.CONTENT_ENCODING_STRING);
+                Assert.assertEquals(1, header.length);
+                Assert.assertEquals("identity", header[0].getValue());
+                final String body = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Hi", body);
+                return null;
+            });
         }
     }
 
@@ -139,15 +137,17 @@ public class GzipContentEncodingTestCase {
     }
 
     public void runTest(final String theMessage) throws IOException {
-        try (CloseableHttpClient client = HttpClientBuilder.create().build()){
+        try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
             message = theMessage;
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.setHeader(Headers.ACCEPT_ENCODING_STRING, "gzip");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            assert result.getEntity() instanceof DecompressingEntity; //no other nice way to be sure we get back gzipped content
-            final String body = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(theMessage, body);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                assert result.getEntity() instanceof DecompressingEntity; //no other nice way to be sure we get back gzipped content
+                final String body = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(theMessage, body);
+                return null;
+            });
         }
     }
 }

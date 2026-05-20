@@ -36,14 +36,16 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import jakarta.servlet.RequestDispatcher;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.hamcrest.CoreMatchers;
 import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * @author Stuart Douglas
@@ -157,8 +159,7 @@ public class ErrorPageTestCase {
 
     @Test
     public void testErrorPages() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             runTest(1, client, StatusCodes.NOT_FOUND, null, "/404");
             runTest(1, client, StatusCodes.INTERNAL_SERVER_ERROR, null, "/defaultErrorPage");
             runTest(1, client, StatusCodes.NOT_IMPLEMENTED, null, "/defaultErrorPage");
@@ -169,15 +170,12 @@ public class ErrorPageTestCase {
             runTest(1, client, null, Exception.class, "/defaultErrorPage");
             runTest(1, client, null, IOException.class, "/defaultErrorPage");
             runTest(1, client, null, ServletException.class, "/defaultErrorPage");
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     @Test
     public void testErrorPagesWithNoDefaultErrorPage() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             runTest(2, client, StatusCodes.NOT_FOUND, null, "/404");
             runTest(2, client, StatusCodes.NOT_IMPLEMENTED, null, "/501");
             runTest(2, client, StatusCodes.INTERNAL_SERVER_ERROR, null, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>", false);
@@ -188,16 +186,13 @@ public class ErrorPageTestCase {
             runTest(2, client, null, Exception.class, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>", false);
             runTest(2, client, null, IOException.class, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>", false);
             runTest(2, client, null, ServletException.class, "<html><head><title>Error</title></head><body>Internal Server Error</body></html>", false);
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
     //see UNDERTOW-249
     @Test
     public void testErrorPagesWith500PageMapped() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             runTest(3, client, StatusCodes.NOT_FOUND, null, "/404");
             runTest(3, client, StatusCodes.INTERNAL_SERVER_ERROR, null, "/500");
             runTest(3, client, StatusCodes.NOT_IMPLEMENTED, null, "/defaultErrorPage");
@@ -208,52 +203,51 @@ public class ErrorPageTestCase {
             runTest(3, client, null, Exception.class, "/500");
             runTest(3, client, null, IOException.class, "/500");
             runTest(3, client, null, ServletException.class, "/500");
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
-    private void runTest(int deploymentNo, final TestHttpClient client, Integer statusCode,
-            Class<?> exception, String expected) throws IOException {
+    private void runTest(int deploymentNo, final CloseableHttpClient client, Integer statusCode,
+                         Class<?> exception, String expected) throws IOException {
         this.runTest(deploymentNo, client, statusCode, exception, expected, true);
     }
 
-    private void runTest(int deploymentNo, final TestHttpClient client, Integer statusCode, Class<?> exception,
-            String expected, boolean checkAttributes) throws IOException {
+    private void runTest(int deploymentNo, final CloseableHttpClient client, Integer statusCode, Class<?> exception,
+                         String expected, boolean checkAttributes) throws IOException {
         final HttpGet get;
-        final HttpResponse result;
-        final String response;
         get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext" + deploymentNo + "/error?" + (statusCode != null ? "statusCode=" + statusCode : "exception=" + exception.getName()));
-        result = client.execute(get);
-        Assert.assertEquals(statusCode == null ? StatusCodes.INTERNAL_SERVER_ERROR : statusCode, result.getStatusLine().getStatusCode());
-        response = HttpClientUtils.readResponse(result);
-        Assert.assertThat(response, CoreMatchers.startsWith(expected));
-        if (checkAttributes) {
-            // check error attributes
-            Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_REQUEST_URI + "=/servletContext" + deploymentNo + "/error"));
-            Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_SERVLET_NAME + "=error"));
-            if (statusCode == null) {
-                if (RuntimeException.class.isAssignableFrom(exception)) {
-                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION_TYPE + "=" + exception));
-                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION + "=" + exception.getName()));
-                    // RequestDispatcher.ERROR_MESSAGE is null
-                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=500"));
+        client.execute(get, result -> {
+            Assert.assertEquals(statusCode == null ? StatusCodes.INTERNAL_SERVER_ERROR : statusCode, result.getCode());
+            final String response = HttpClientUtils.readResponse(result);
+            assertThat(response, CoreMatchers.startsWith(expected));
+            assertThat(response, CoreMatchers.startsWith(expected));
+            if (checkAttributes) {
+                // check error attributes
+                assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_REQUEST_URI + "=/servletContext" + deploymentNo + "/error"));
+                assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_SERVLET_NAME + "=error"));
+                if (statusCode == null) {
+                    if (RuntimeException.class.isAssignableFrom(exception)) {
+                        assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION_TYPE + "=" + exception));
+                        assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION + "=" + exception.getName()));
+                        // RequestDispatcher.ERROR_MESSAGE is null
+                        assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=500"));
+                    } else {
+                        assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION_TYPE + "=" + exception));
+                        assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION + "=" + exception.getName()));
+                        assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_MESSAGE + "=" + exception.getName()));
+                        assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=500"));
+                    }
                 } else {
-                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION_TYPE + "=" + exception));
-                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_EXCEPTION + "=" + exception.getName()));
-                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_MESSAGE + "=" + exception.getName()));
-                    Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=500"));
+                    assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_MESSAGE + "=" + StatusCodes.getReason(statusCode)));
+                    assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=" + statusCode));
                 }
-            } else {
-                Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_MESSAGE + "=" + StatusCodes.getReason(statusCode)));
-                Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.ERROR_STATUS_CODE + "=" + statusCode));
+                // check forward attributes
+                assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_REQUEST_URI + "=/servletContext" + deploymentNo + "/error"));
+                assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_CONTEXT_PATH + "=/servletContext" + deploymentNo));
+                assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_QUERY_STRING + "=" + (statusCode != null ? "statusCode=" + statusCode : "exception=" + exception.getName())));
+                // RequestDispatcher.FORWARD_PATH_INFO is null
+                assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_SERVLET_PATH + "=/error"));
             }
-            // check forward attributes
-            Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_REQUEST_URI + "=/servletContext" + deploymentNo + "/error"));
-            Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_CONTEXT_PATH + "=/servletContext" + deploymentNo));
-            Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_QUERY_STRING + "=" + (statusCode != null ? "statusCode=" + statusCode : "exception=" + exception.getName())));
-            // RequestDispatcher.FORWARD_PATH_INFO is null
-            Assert.assertThat(response, CoreMatchers.containsString(RequestDispatcher.FORWARD_SERVLET_PATH + "=/error"));
-        }
+            return null;
+        });
     }
 }

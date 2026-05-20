@@ -42,12 +42,13 @@ import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.StringWriteChannelListener;
-import org.apache.http.NameValuePair;
-import org.apache.http.NoHttpResponseException;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.AbstractHttpEntity;
-import org.apache.http.message.BasicNameValuePair;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.NoHttpResponseException;
+import org.apache.hc.core5.http.io.entity.AbstractHttpEntity;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
 import org.jboss.logging.Logger;
 import org.junit.Assert;
 import org.junit.Test;
@@ -109,10 +110,13 @@ public class ReadTimeoutTestCase {
                 request.wakeupReads();
             });
 
-        final TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL());
-            post.setEntity(new AbstractHttpEntity() {
+            post.setEntity(new AbstractHttpEntity("", null, false) {
+
+                @Override
+                public void close() {
+                }
 
                 @Override
                 public InputStream getContent() throws IllegalStateException {
@@ -138,11 +142,6 @@ public class ReadTimeoutTestCase {
                 }
 
                 @Override
-                public boolean isRepeatable() {
-                    return false;
-                }
-
-                @Override
                 public long getContentLength() {
                     return 5;
                 }
@@ -150,7 +149,7 @@ public class ReadTimeoutTestCase {
             post.addHeader(Headers.CONNECTION_STRING, "close");
             boolean socketFailure = false;
             try {
-                client.execute(post);
+                client.execute(post, r -> null);
             } catch (SocketException e) {
                 Assert.assertTrue(e.getMessage(), e.getMessage().contains("Broken pipe")
                         || e.getMessage().contains("connection abort") || e.getMessage().contains("connection was aborted"));
@@ -169,8 +168,6 @@ public class ReadTimeoutTestCase {
                 // ignore if proxy, because when we're on proxy, we might not be able to see the exception
                 Assert.fail("Did not get ReadTimeoutException");
             }
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
@@ -211,7 +208,7 @@ public class ReadTimeoutTestCase {
             }
         }));
 
-        try (TestHttpClient client = new TestHttpClient()) {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL());
 
             // Generate 2 KB form param value.
@@ -224,7 +221,7 @@ public class ReadTimeoutTestCase {
             post.setEntity(new UrlEncodedFormEntity(nameValuePairs));
 
             // Request should succeed.
-            client.execute(post);
+            client.execute(post, r -> null);
         } catch (NoHttpResponseException e) {
             Assert.fail("No response was received, this was presumably caused by read-timeout closing the connection.");
         }

@@ -17,9 +17,6 @@
  */
 package io.undertow.server.ssl;
 
-import java.io.IOException;
-import javax.net.ssl.SSLContext;
-
 import io.undertow.attribute.ExchangeAttribute;
 import io.undertow.attribute.ExchangeAttributes;
 import io.undertow.attribute.SubstituteEmptyWrapper;
@@ -28,12 +25,15 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.CompletionLatchHandler;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import javax.net.ssl.SSLContext;
+import java.io.IOException;
 
 @RunWith(DefaultServer.class)
 public class SecureProtocolAttributeTestCase {
@@ -42,30 +42,30 @@ public class SecureProtocolAttributeTestCase {
     public void testTlsRequestViaLogging() throws IOException {
         if (
                 "true".equals(System.getProperty("test.ajp")) &&
-                "true".equals(System.getProperty("undertow.proxied"))
+                        "true".equals(System.getProperty("undertow.proxied"))
         ) {
             throw new AssumptionViolatedException("This test makes no sense in a proxied AJP environment");
         }
 
         final String formatString = "Secure Protocol is %{SECURE_PROTOCOL}.";
         CompletionLatchHandler latchHandler = new CompletionLatchHandler(
-            exchange -> {
-                ExchangeAttribute tokens = ExchangeAttributes.parser(SecureProtocolAttributeTestCase.class.getClassLoader(),
-                    new SubstituteEmptyWrapper("-")).parse(formatString);
-                exchange.getResponseSender().send(tokens.readAttribute(exchange));
-            });
+                exchange -> {
+                    ExchangeAttribute tokens = ExchangeAttributes.parser(SecureProtocolAttributeTestCase.class.getClassLoader(),
+                            new SubstituteEmptyWrapper("-")).parse(formatString);
+                    exchange.getResponseSender().send(tokens.readAttribute(exchange));
+                });
 
         DefaultServer.setRootHandler(latchHandler);
+        DefaultServer.startSSLServer();
+        SSLContext sslContext = DefaultServer.getClientSSLContext();
 
-        try (TestHttpClient client = new TestHttpClient()) {
-            DefaultServer.startSSLServer();
-            SSLContext sslContext = DefaultServer.getClientSSLContext();
-            client.setSSLContext(sslContext);
-
-            HttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerSSLAddress() + "/path"));
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(formatString.replaceAll("%\\{SECURE_PROTOCOL}", sslContext.getProtocol()),
-                HttpClientUtils.readResponse(result));
+        try (CloseableHttpClient client = TestHttpClient.withSSLContext(sslContext).build()) {
+            client.execute(new HttpGet(DefaultServer.getDefaultServerSSLAddress() + "/path"), result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals(formatString.replaceAll("%\\{SECURE_PROTOCOL}", sslContext.getProtocol()),
+                        HttpClientUtils.readResponse(result));
+                return null;
+            });
         } finally {
             DefaultServer.stopSSLServer();
         }

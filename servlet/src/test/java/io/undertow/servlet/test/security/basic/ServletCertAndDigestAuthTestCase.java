@@ -26,6 +26,7 @@ import static org.xnio.SslClientAuthMode.NOT_REQUESTED;
 
 import java.nio.charset.StandardCharsets;
 import javax.net.ssl.SSLContext;
+
 import jakarta.servlet.MultipartConfigElement;
 
 import io.undertow.server.handlers.PathHandler;
@@ -46,13 +47,13 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FlexBase64;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.ByteArrayBody;
-import org.apache.http.entity.mime.content.StringBody;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.entity.mime.ByteArrayBody;
+import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
+import org.apache.hc.client5.http.entity.mime.StringBody;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpEntity;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -125,21 +126,22 @@ public class ServletCertAndDigestAuthTestCase {
             sb.append("0123456789");
         }
 
-        try (TestHttpClient client = new TestHttpClient()) {
+        try (CloseableHttpClient client = TestHttpClient.withSSLContext(clientSSLContext).build()) {
             // create POST request
-            MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-            builder.addPart("part1", new ByteArrayBody(sb.toString().getBytes(), "file.txt"));
-            builder.addPart("part2", new StringBody("0123456789", ContentType.TEXT_HTML));
-            HttpEntity entity = builder.build();
+            HttpEntity entity = MultipartEntityBuilder.create()
+                    .addPart("part1", new ByteArrayBody(sb.toString().getBytes(), "file.txt"))
+                    .addPart("part2", new StringBody("0123456789", ContentType.TEXT_HTML))
+                    .build();
 
-            client.setSSLContext(clientSSLContext);
             String url = DefaultServer.getDefaultServerSSLAddress() + BASE_PATH + "multipart";
             HttpPost post = new HttpPost(url);
             post.setEntity(entity);
             post.addHeader(AUTHORIZATION.toString(), BASIC + " " + FlexBase64.encodeString(("user1" + ":" + "password1").getBytes(StandardCharsets.UTF_8), false));
 
-            HttpResponse result = client.execute(post);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(post, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                return null;
+            });
         }
     }
 }

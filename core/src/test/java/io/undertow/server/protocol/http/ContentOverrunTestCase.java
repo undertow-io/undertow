@@ -20,7 +20,6 @@ package io.undertow.server.protocol.http;
 
 import io.undertow.Handlers;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
@@ -28,8 +27,8 @@ import io.undertow.testutils.HttpOneOnly;
 import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -47,19 +46,13 @@ public class ContentOverrunTestCase {
 
     @BeforeClass
     public static void setup() {
-        HttpHandler overlyLong = new HttpHandler() {
-            @Override
-            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.setResponseContentLength(10);
-                exchange.getOutputStream().write("Overly long content".getBytes(StandardCharsets.UTF_8));
-            }
+        HttpHandler overlyLong = exchange -> {
+            exchange.setResponseContentLength(10);
+            exchange.getOutputStream().write("Overly long content".getBytes(StandardCharsets.UTF_8));
         };
-        HttpHandler responseNotAllowed = new HttpHandler() {
-            @Override
-            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                exchange.setStatusCode(204);
-                exchange.getOutputStream().write("Overly long content".getBytes(StandardCharsets.UTF_8));
-            }
+        HttpHandler responseNotAllowed = exchange -> {
+            exchange.setStatusCode(204);
+            exchange.getOutputStream().write("Overly long content".getBytes(StandardCharsets.UTF_8));
         };
 
         DefaultServer.setRootHandler(Handlers.path().addPrefixPath("/204", new BlockingHandler(responseNotAllowed)).addPrefixPath("/long", new BlockingHandler(overlyLong)));
@@ -67,31 +60,27 @@ public class ContentOverrunTestCase {
 
     @Test
     public void testContentOn204() throws Exception {
-
-        final TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/204");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.NO_CONTENT, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.NO_CONTENT, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testContentPastContentLength() throws Exception {
-
-        final TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/long");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("Overly lon", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("Overly lon", response);
+                return null;
+            });
         }
     }
 }

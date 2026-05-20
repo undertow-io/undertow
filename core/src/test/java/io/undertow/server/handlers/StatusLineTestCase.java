@@ -19,8 +19,6 @@
 package io.undertow.server.handlers;
 
 import io.undertow.io.Sender;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.ProxyIgnore;
@@ -28,9 +26,9 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.ProtocolVersion;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.ProtocolVersion;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,8 +53,8 @@ public class StatusLineTestCase {
     private static final String DEFAULT_PROTOCOL_MAJOR = "1";
     private static final String DEFAULT_PROTOCOL_MINOR = "1";
     private static final String PROTOCOL_NAME = "HTTP";
-    private static final String PROTOCOL_MAJOR = "3";
-    private static final String PROTOCOL_MINOR = "4";
+    private static final String PROTOCOL_MAJOR = "1";
+    private static final String PROTOCOL_MINOR = "19";
     private static final String PROTOCOL_STRING = PROTOCOL_NAME + "/" + PROTOCOL_MAJOR + "." + PROTOCOL_MINOR;
     private static final String REASON_PHRASE = "Reason-Phrase";
     private static final String MESSAGE = "My HTTP Request!";
@@ -65,77 +63,62 @@ public class StatusLineTestCase {
 
     @Test
     public void verifyStatusLine() throws IOException {
-        DefaultServer.setRootHandler(new HttpHandler() {
-
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                if (connection == null) {
-                    connection = exchange.getConnection();
-                } else if (!DefaultServer.isAjp()  && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
-                    Sender sender = exchange.getResponseSender();
-                    sender.send("Connection not persistent");
-                    return;
-                }
-                exchange.setProtocol(new HttpString(PROTOCOL_STRING));
-                exchange.setReasonPhrase(REASON_PHRASE);
-                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, MESSAGE.length() + "");
-                final Sender sender = exchange.getResponseSender();
-                sender.send(MESSAGE);
+        DefaultServer.setRootHandler(exchange -> {
+            if (connection == null) {
+                connection = exchange.getConnection();
+            } else if (!DefaultServer.isAjp() && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
+                Sender sender = exchange.getResponseSender();
+                sender.send("Connection not persistent");
+                return;
             }
+            exchange.setProtocol(new HttpString(PROTOCOL_STRING));
+            exchange.setReasonPhrase(REASON_PHRASE);
+            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, MESSAGE.length() + "");
+            final Sender sender = exchange.getResponseSender();
+            sender.send(MESSAGE);
         });
 
         connection = null;
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-        TestHttpClient client = new TestHttpClient();
-        try {
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-
-            ProtocolVersion protocolVersion = result.getStatusLine().getProtocolVersion();
-            Assert.assertEquals(PROTOCOL_NAME, protocolVersion.getProtocol());
-            Assert.assertEquals(Integer.parseInt(PROTOCOL_MAJOR), protocolVersion.getMajor());
-            Assert.assertEquals(Integer.parseInt(PROTOCOL_MINOR), protocolVersion.getMinor());
-
-            Assert.assertEquals(REASON_PHRASE, result.getStatusLine().getReasonPhrase());
-        } finally {
-            client.getConnectionManager().shutdown();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                ProtocolVersion protocolVersion = result.getVersion();
+                Assert.assertEquals(PROTOCOL_NAME, protocolVersion.getProtocol());
+                Assert.assertEquals(Integer.parseInt(PROTOCOL_MAJOR), protocolVersion.getMajor());
+                Assert.assertEquals(Integer.parseInt(PROTOCOL_MINOR), protocolVersion.getMinor());
+                Assert.assertEquals(REASON_PHRASE, result.getReasonPhrase());
+                return null;
+            });
         }
     }
 
     @Test
     public void verifyDefaultStatusLine() throws IOException {
-        DefaultServer.setRootHandler(new HttpHandler() {
-
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                if (connection == null) {
-                    connection = exchange.getConnection();
-                } else if (!DefaultServer.isAjp()  && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
-                    Sender sender = exchange.getResponseSender();
-                    sender.send("Connection not persistent");
-                    return;
-                }
-                exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, MESSAGE.length() + "");
-                final Sender sender = exchange.getResponseSender();
-                sender.send(MESSAGE);
+        DefaultServer.setRootHandler(exchange -> {
+            if (connection == null) {
+                connection = exchange.getConnection();
+            } else if (!DefaultServer.isAjp() && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
+                Sender sender = exchange.getResponseSender();
+                sender.send("Connection not persistent");
+                return;
             }
+            exchange.getResponseHeaders().put(Headers.CONTENT_LENGTH, MESSAGE.length() + "");
+            final Sender sender = exchange.getResponseSender();
+            sender.send(MESSAGE);
         });
 
         connection = null;
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-        TestHttpClient client = new TestHttpClient();
-        try {
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-
-            ProtocolVersion protocolVersion = result.getStatusLine().getProtocolVersion();
-            Assert.assertEquals(DEFAULT_PROTOCOL_NAME, protocolVersion.getProtocol());
-            Assert.assertEquals(Integer.parseInt(DEFAULT_PROTOCOL_MAJOR), protocolVersion.getMajor());
-            Assert.assertEquals(Integer.parseInt(DEFAULT_PROTOCOL_MINOR), protocolVersion.getMinor());
-
-        } finally {
-            client.getConnectionManager().shutdown();
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                ProtocolVersion protocolVersion = result.getVersion();
+                Assert.assertEquals(DEFAULT_PROTOCOL_NAME, protocolVersion.getProtocol());
+                Assert.assertEquals(Integer.parseInt(DEFAULT_PROTOCOL_MAJOR), protocolVersion.getMajor());
+                Assert.assertEquals(Integer.parseInt(DEFAULT_PROTOCOL_MINOR), protocolVersion.getMinor());
+                return null;
+            });
         }
     }
-
 }

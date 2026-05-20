@@ -22,11 +22,10 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Enumeration;
 
-import org.apache.http.StatusLine;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.BasicResponseHandler;
-import org.apache.http.message.BasicHeader;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.BasicHttpClientResponseHandler;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.message.BasicHeader;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -116,20 +115,17 @@ public class CookieAssemblyTestCase {
 
     @Test
     public void testBasicEncodingSelect() throws IOException {
-
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet request = new HttpGet(DefaultServer.getDefaultServerURL() + "/cookie-test1");
             request.addHeader(new BasicHeader("Cookie", "t1=munch"));
             request.addHeader(new BasicHeader("Cookie", "t2=nom"));
             request.addHeader(new BasicHeader("Cookie", "t3=gone"));
-            final CloseableHttpResponse response = client.execute(request);
-            final StatusLine status = response.getStatusLine();
-            if (status.getStatusCode() != 200) {
-                Assert.fail(new BasicResponseHandler().handleResponse(response));
-            }
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(request, response -> {
+                if (response.getCode() != 200) {
+                    Assert.fail(new BasicHttpClientResponseHandler().handleResponse(response));
+                }
+                return null;
+            });
         }
     }
 }

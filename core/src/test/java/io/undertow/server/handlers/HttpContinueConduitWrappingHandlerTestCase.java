@@ -18,29 +18,30 @@
 
 package io.undertow.server.handlers;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
 import io.undertow.server.protocol.http.HttpContinue;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpParams;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.config.Http1Config;
+import org.apache.hc.core5.http.impl.io.HttpRequestExecutor;
+import org.apache.hc.core5.http.io.entity.AbstractHttpEntity;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.util.Timeout;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
  * @author Stuart Douglas
@@ -55,27 +56,24 @@ public class HttpContinueConduitWrappingHandlerTestCase {
         final BlockingHandler blockingHandler = new BlockingHandler();
         final HttpContinueReadHandler handler = new HttpContinueReadHandler(blockingHandler);
         DefaultServer.setRootHandler(handler);
-        blockingHandler.setRootHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) {
-                try {
-                    if(!accept) {
-                        HttpContinue.rejectExchange(exchange);
-                        return;
-                    }
-                    byte[] buffer = new byte[1024];
-                    final ByteArrayOutputStream b = new ByteArrayOutputStream();
-                    int r = 0;
-                    final OutputStream outputStream = exchange.getOutputStream();
-                    final InputStream inputStream =  exchange.getInputStream();
-                    while ((r = inputStream.read(buffer)) > 0) {
-                        b.write(buffer, 0, r);
-                    }
-                    outputStream.write(b.toByteArray());
-                    outputStream.close();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+        blockingHandler.setRootHandler(exchange -> {
+            try {
+                if (!accept) {
+                    HttpContinue.rejectExchange(exchange);
+                    return;
                 }
+                byte[] buffer = new byte[1024];
+                final ByteArrayOutputStream b = new ByteArrayOutputStream();
+                int r = 0;
+                final OutputStream outputStream = exchange.getOutputStream();
+                final InputStream inputStream = exchange.getInputStream();
+                while ((r = inputStream.read(buffer)) > 0) {
+                    b.write(buffer, 0, r);
+                }
+                outputStream.write(b.toByteArray());
+                outputStream.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         });
     }
@@ -89,20 +87,20 @@ public class HttpContinueConduitWrappingHandlerTestCase {
     public void testHttpContinueRejected() throws IOException {
         accept = false;
         String message = "My HTTP Request!";
-        HttpParams httpParams = new BasicHttpParams();
-        httpParams.setParameter("http.protocol.wait-for-continue", Integer.MAX_VALUE);
-
-        TestHttpClient client = new TestHttpClient();
-        client.setParams(httpParams);
-        try {
+        try (CloseableHttpClient client = TestHttpClient.custom()
+                .setRequestExecutor(new HttpRequestExecutor(Http1Config.custom()
+                        .setWaitForContinueTimeout(Timeout.INFINITE)
+                        .build(),
+                        null,
+                        null)).build()) {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             post.addHeader("Expect", "100-continue");
             post.setEntity(new StringEntity(message));
 
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.EXPECTATION_FAILED, result.getStatusLine().getStatusCode());
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.EXPECTATION_FAILED, result.getCode());
+                return null;
+            });
         }
     }
 
@@ -110,21 +108,21 @@ public class HttpContinueConduitWrappingHandlerTestCase {
     public void testHttpContinueAccepted() throws IOException {
         accept = true;
         String message = "My HTTP Request!";
-        HttpParams httpParams = new BasicHttpParams();
-        httpParams.setParameter("http.protocol.wait-for-continue", Integer.MAX_VALUE);
-
-        TestHttpClient client = new TestHttpClient();
-        client.setParams(httpParams);
-        try {
+        try (CloseableHttpClient client = TestHttpClient.custom()
+                .setRequestExecutor(new HttpRequestExecutor(Http1Config.custom()
+                        .setWaitForContinueTimeout(Timeout.INFINITE)
+                        .build(),
+                        null,
+                        null)).build()) {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             post.addHeader("Expect", "100-continue");
             post.setEntity(new StringEntity(message));
 
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(message, HttpClientUtils.readResponse(result));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals(message, HttpClientUtils.readResponse(result));
+                return null;
+            });
         }
     }
 
@@ -133,27 +131,40 @@ public class HttpContinueConduitWrappingHandlerTestCase {
     public void testHttpContinueAcceptedWithChunkedRequest() throws IOException {
         accept = true;
         String message = "My HTTP Request!";
-        HttpParams httpParams = new BasicHttpParams();
-        httpParams.setParameter("http.protocol.wait-for-continue", Integer.MAX_VALUE);
-
-        TestHttpClient client = new TestHttpClient();
-        client.setParams(httpParams);
-        try {
+        try (CloseableHttpClient client = TestHttpClient.custom()
+                .setRequestExecutor(new HttpRequestExecutor(Http1Config.custom()
+                        .setWaitForContinueTimeout(Timeout.INFINITE)
+                        .build(),
+                        null,
+                        null)).build()) {
             HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
             post.addHeader("Expect", "100-continue");
-            post.setEntity(new StringEntity(message){
+            post.setEntity(new AbstractHttpEntity("", null, true) {
+                @Override
+                public void close() {
+                }
+
+                @Override
+                public InputStream getContent() throws UnsupportedOperationException {
+                    return new ByteArrayInputStream(message.getBytes());
+                }
+
+                @Override
+                public boolean isStreaming() {
+                    return false;
+                }
+
                 @Override
                 public long getContentLength() {
                     return -1;
                 }
             });
 
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals(message, HttpClientUtils.readResponse(result));
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals(message, HttpClientUtils.readResponse(result));
+                return null;
+            });
         }
     }
-
 }

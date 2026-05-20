@@ -25,8 +25,8 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -118,18 +118,17 @@ public class DispatcherErrorIncludeServletTestCase extends AttributeComparisonTe
         expectedParams.put("jakarta.servlet.error.message", "HEY");
         expectedParams.put("jakarta.servlet.error.status_code", "500");
         expectedParams.put("jakarta.servlet.error.method", "GET");
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/include");
             get.setHeader("include", TARGET);
             get.setHeader("throw", "true");
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            assertNotNull(response);
-            super.testAttributes(expectedParams, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                assertNotNull(response);
+                super.testAttributes(expectedParams, response);
+                return null;
+            });
         }
     }
 
@@ -149,17 +148,16 @@ public class DispatcherErrorIncludeServletTestCase extends AttributeComparisonTe
         expectedParams.put("jakarta.servlet.include.servlet_path", TARGET);
         expectedParams.put("jakarta.servlet.include.mapping",
                 "match_value=include,pattern=/include,servlet_name=inc,mapping_match=EXACT");
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/include");
             get.setHeader("include", TARGET);
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            assertNotNull(response);
-            super.testAttributes(expectedParams, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+            assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                assertNotNull(response);
+                super.testAttributes(expectedParams, response);
+                return null;
+            });
         }
     }
 }

@@ -18,19 +18,19 @@
 
 package io.undertow.server.handlers;
 
-import java.io.IOException;
-
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.NetworkUtils;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
 
 /**
  * @author Stuart Douglas
@@ -44,8 +44,7 @@ public class VirtualHostTestCase {
      */
     @Test
     public void testVirtualHost() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             final NameVirtualHostHandler handler = new NameVirtualHostHandler()
                     .addHost(NetworkUtils.formatPossibleIpv6Address(DefaultServer.getHostAddress("default")), new SetHeaderHandler(ResponseCodeHandler.HANDLE_200, "myHost", "localhost"))
                     .setDefaultHandler(new SetHeaderHandler(ResponseCodeHandler.HANDLE_200, "myHost", "default"));
@@ -54,26 +53,23 @@ public class VirtualHostTestCase {
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            HttpResponse result = client.execute(get);
-            //no origin header, we dny by default
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Header[] header = result.getHeaders("myHost");
-            Assert.assertEquals("localhost", header[0].getValue());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                //no origin header, we dny by default
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders("myHost");
+                Assert.assertEquals("localhost", header[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
             get.addHeader("Host", "otherHost");
-            result = client.execute(get);
-            //no origin header, we dny by default
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            header = result.getHeaders("myHost");
-            Assert.assertEquals("default", header[0].getValue());
-            HttpClientUtils.readResponse(result);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                //no origin header, we dny by default
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders("myHost");
+                Assert.assertEquals("default", header[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
-
-
 }

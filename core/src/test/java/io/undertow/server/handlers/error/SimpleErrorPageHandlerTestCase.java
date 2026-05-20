@@ -23,9 +23,9 @@ import java.io.IOException;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import io.undertow.testutils.TestHttpClient;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,24 +36,20 @@ import org.junit.runner.RunWith;
 @RunWith(DefaultServer.class)
 public class SimpleErrorPageHandlerTestCase {
 
-
     @Test
     public void testSimpleErrorPageIsGenerated() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             final SimpleErrorPageHandler handler = new SimpleErrorPageHandler();
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.NOT_FOUND, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
 
-            Assert.assertTrue(response, response.contains(StatusCodes.NOT_FOUND_STRING));
-
-        } finally {
-            client.getConnectionManager().shutdown();
+                Assert.assertTrue(response, response.contains(StatusCodes.NOT_FOUND_STRING));
+                return null;
+            });
         }
     }
-
 }

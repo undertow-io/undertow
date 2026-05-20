@@ -19,14 +19,12 @@
 package io.undertow.server.handlers;
 
 import io.undertow.Handlers;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -35,7 +33,6 @@ import org.junit.runner.RunWith;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -57,19 +54,16 @@ public class RequestLimitingHandlerTestCase {
 
     @BeforeClass
     public static void setup() {
-        DefaultServer.setRootHandler(new BlockingHandler(Handlers.requestLimitingHandler(2, N_THREADS, new HttpHandler() {
-            @Override
-            public void handleRequest(HttpServerExchange exchange) throws Exception {
-                int res = count.incrementAndGet();
-                try {
-                    if (!latch.await(20, TimeUnit.SECONDS)) {
-                        exchange.setStatusCode(500);
-                    } else {
-                        exchange.getOutputStream().write(("" + res).getBytes("US-ASCII"));
-                    }
-                } finally {
-                    count.decrementAndGet();
+        DefaultServer.setRootHandler(new BlockingHandler(Handlers.requestLimitingHandler(2, N_THREADS, exchange -> {
+            int res = count.incrementAndGet();
+            try {
+                if (!latch.await(20, TimeUnit.SECONDS)) {
+                    exchange.setStatusCode(500);
+                } else {
+                    exchange.getOutputStream().write(("" + res).getBytes("US-ASCII"));
                 }
+            } finally {
+                count.decrementAndGet();
             }
         })));
 
@@ -84,20 +78,15 @@ public class RequestLimitingHandlerTestCase {
         try {
             final List<Future<?>> futures = new ArrayList<>();
             for (int i = 0; i < N_THREADS; ++i) {
-                futures.add(executor.submit(new Callable<String>() {
-                    @Override
-                    public String call() {
-                        TestHttpClient client = new TestHttpClient();
-                        try {
-                            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-                            HttpResponse result = client.execute(get);
-                            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                futures.add(executor.submit(() -> {
+                    try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+                        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+                        return client.execute(get, result -> {
+                            Assert.assertEquals(StatusCodes.OK, result.getCode());
                             return HttpClientUtils.readResponse(result);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        } finally {
-                            client.getConnectionManager().shutdown();
-                        }
+                        });
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
                 }));
             }
@@ -122,23 +111,18 @@ public class RequestLimitingHandlerTestCase {
         try {
             final List<Future<?>> futures = new ArrayList<>();
             for (int i = 0; i < N_THREADS * 2; ++i) {
-                futures.add(executor.submit(new Callable<String>() {
-                    @Override
-                    public String call() {
-                        TestHttpClient client = new TestHttpClient();
-                        try {
-                            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-                            HttpResponse result = client.execute(get);
-                            if(result.getStatusLine().getStatusCode() == 503) {
+                futures.add(executor.submit(() -> {
+                    try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+                        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+                        return client.execute(get, result -> {
+                            if (result.getCode() == 503) {
                                 return "503";
                             }
-                            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                            Assert.assertEquals(StatusCodes.OK, result.getCode());
                             return HttpClientUtils.readResponse(result);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        } finally {
-                            client.getConnectionManager().shutdown();
-                        }
+                        });
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
                 }));
             }
@@ -150,20 +134,15 @@ public class RequestLimitingHandlerTestCase {
             }
             futures.clear();
             for (int i = 0; i < 2; ++i) {
-                futures.add(executor.submit(new Callable<String>() {
-                    @Override
-                    public String call() {
-                        TestHttpClient client = new TestHttpClient();
-                        try {
-                            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
-                            HttpResponse result = client.execute(get);
-                            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                futures.add(executor.submit(() -> {
+                    try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+                        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL());
+                        return client.execute(get, result -> {
+                            Assert.assertEquals(StatusCodes.OK, result.getCode());
                             return HttpClientUtils.readResponse(result);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        } finally {
-                            client.getConnectionManager().shutdown();
-                        }
+                        });
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
                 }));
             }
@@ -176,7 +155,5 @@ public class RequestLimitingHandlerTestCase {
         } finally {
             executor.shutdown();
         }
-
     }
-
 }

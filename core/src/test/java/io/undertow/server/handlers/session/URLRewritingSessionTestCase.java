@@ -18,12 +18,6 @@
 
 package io.undertow.server.handlers.session;
 
-import java.io.IOException;
-import java.util.Deque;
-import java.util.Map;
-
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.PathParameterSessionConfig;
 import io.undertow.server.session.Session;
@@ -34,14 +28,17 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.BasicCookieStore;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
+import java.util.Deque;
+import java.util.Map;
 
 /**
  * basic test of in memory session functionality
@@ -57,29 +54,26 @@ public class URLRewritingSessionTestCase {
     public static void setup() {
         final PathParameterSessionConfig sessionConfig = new PathParameterSessionConfig();
         final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(""), sessionConfig);
-        handler.setNext(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
-                Session session = manager.getSession(exchange, sessionConfig);
-                if (session == null) {
-                    session = manager.createSession(exchange, sessionConfig);
-                    session.setAttribute(COUNT, 0);
-                } else {
-                    Assert.assertEquals("/notamatchingpath;jsessionid=" + session.getId(), exchange.getRequestURI());
-                }
-                Integer count = (Integer) session.getAttribute(COUNT);
-                exchange.getResponseHeaders().add(new HttpString(COUNT), count.toString());
-                session.setAttribute(COUNT, ++count);
+        handler.setNext(exchange -> {
+            final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
+            Session session = manager.getSession(exchange, sessionConfig);
+            if (session == null) {
+                session = manager.createSession(exchange, sessionConfig);
+                session.setAttribute(COUNT, 0);
+            } else {
+                Assert.assertEquals("/notamatchingpath;jsessionid=" + session.getId(), exchange.getRequestURI());
+            }
+            Integer count = (Integer) session.getAttribute(COUNT);
+            exchange.getResponseHeaders().add(new HttpString(COUNT), count.toString());
+            session.setAttribute(COUNT, ++count);
 
-                for (Map.Entry<String, Deque<String>> qp : exchange.getQueryParameters().entrySet()) {
-                    exchange.getResponseHeaders().add(new HttpString(qp.getKey()), qp.getValue().getFirst());
-                }
-                if (exchange.getQueryString().isEmpty()) {
-                    exchange.getResponseSender().send(sessionConfig.rewriteUrl(DefaultServer.getDefaultServerURL() + "/notamatchingpath", session.getId()));
-                } else {
-                    exchange.getResponseSender().send(sessionConfig.rewriteUrl(DefaultServer.getDefaultServerURL() + "/notamatchingpath?" + exchange.getQueryString(), session.getId()));
-                }
+            for (Map.Entry<String, Deque<String>> qp : exchange.getQueryParameters().entrySet()) {
+                exchange.getResponseHeaders().add(new HttpString(qp.getKey()), qp.getValue().getFirst());
+            }
+            if (exchange.getQueryString().isEmpty()) {
+                exchange.getResponseSender().send(sessionConfig.rewriteUrl(DefaultServer.getDefaultServerURL() + "/notamatchingpath", session.getId()));
+            } else {
+                exchange.getResponseSender().send(sessionConfig.rewriteUrl(DefaultServer.getDefaultServerURL() + "/notamatchingpath?" + exchange.getQueryString(), session.getId()));
             }
         });
         DefaultServer.setRootHandler(handler);
@@ -87,71 +81,62 @@ public class URLRewritingSessionTestCase {
 
     @Test
     public void testURLRewriting() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setCookieStore(new BasicCookieStore());
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath;foo=bar");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String url = HttpClientUtils.readResponse(result);
-            Header[] header = result.getHeaders(COUNT);
-            Assert.assertEquals("0", header[0].getValue());
+            String url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("0", header[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(url);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            url = HttpClientUtils.readResponse(result);
-            header = result.getHeaders(COUNT);
-            Assert.assertEquals("1", header[0].getValue());
+            url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("1", header[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(url);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            url = HttpClientUtils.readResponse(result);
-            header = result.getHeaders(COUNT);
-            Assert.assertEquals("2", header[0].getValue());
-
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("2", header[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
 
     @Test
     public void testURLRewritingWithQueryParameters() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setCookieStore(new BasicCookieStore());
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath?a=b;c");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String url = HttpClientUtils.readResponse(result);
-            Header[] header = result.getHeaders(COUNT);
-            Assert.assertEquals("0", header[0].getValue());
-            Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
-
-
-            get = new HttpGet(url);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            url = HttpClientUtils.readResponse(result);
-            header = result.getHeaders(COUNT);
-            Assert.assertEquals("1", header[0].getValue());
-            Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
+            String url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("0", header[0].getValue());
+                Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(url);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            url = HttpClientUtils.readResponse(result);
-            header = result.getHeaders(COUNT);
-            Assert.assertEquals("2", header[0].getValue());
-            Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
+            url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("1", header[0].getValue());
+                Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            get = new HttpGet(url);
+            url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("2", header[0].getValue());
+                Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
-
-
 }

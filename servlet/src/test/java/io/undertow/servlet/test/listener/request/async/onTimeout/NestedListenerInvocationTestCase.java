@@ -33,8 +33,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -42,7 +42,6 @@ import org.junit.runner.RunWith;
 
 /**
  * @author Jozef Hartinger
- *
  * @see https://issues.jboss.org/browse/UNDERTOW-81
  */
 @RunWith(DefaultServer.class)
@@ -75,14 +74,13 @@ public class NestedListenerInvocationTestCase {
 
     @Test
     public void testSimpleHttpServlet() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/async");
-            HttpResponse response = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, response.getStatusLine().getStatusCode());
-            Assert.assertFalse(SimpleRequestListener.hasNestedInvocationOccured());
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, response -> {
+                Assert.assertEquals(StatusCodes.OK, response.getCode());
+                Assert.assertFalse(SimpleRequestListener.hasNestedInvocationOccured());
+                return null;
+            });
         }
     }
 }

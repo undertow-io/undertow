@@ -28,9 +28,11 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
 import jakarta.servlet.ServletException;
+
 import java.io.IOException;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -61,99 +63,92 @@ public class PathTestCase {
 
     @Test
     public void testNoEncoded() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/context/path/path-info?n1=v1&n2=v2");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:/path-info queryString:n1=v1&n2=v2 servletPath:/path requestUri:/context/path/path-info", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("pathInfo:/path-info queryString:n1=v1&n2=v2 servletPath:/path requestUri:/context/path/path-info", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testEncodedPath() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/context/path/path%25info?n1=v%251&n2=v%252");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:/path%info queryString:n1=v%251&n2=v%252 servletPath:/path requestUri:/context/path/path%25info", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("pathInfo:/path%info queryString:n1=v%251&n2=v%252 servletPath:/path requestUri:/context/path/path%25info", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testEncodedExtension() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/context/other/pa%25th.info?n1=v%251&n2=v%252");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:null queryString:n1=v%251&n2=v%252 servletPath:/other/pa%th.info requestUri:/context/other/pa%25th.info", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("pathInfo:null queryString:n1=v%251&n2=v%252 servletPath:/other/pa%th.info requestUri:/context/other/pa%25th.info", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testEncodedPathParams() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/context/path/path%25info;p1=v1;p2=v2?n1=v%251&n2=v%252");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:/path%info queryString:n1=v%251&n2=v%252 servletPath:/path requestUri:/context/path/path%25info;p1=v1;p2=v2", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("pathInfo:/path%info queryString:n1=v%251&n2=v%252 servletPath:/path requestUri:/context/path/path%25info;p1=v1;p2=v2", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testEncodedExtensionPathParams() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/context/other/pa%25th.info;p1=v1;p2=v2?n1=v%251&n2=v%252");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:null queryString:n1=v%251&n2=v%252 servletPath:/other/pa%th.info requestUri:/context/other/pa%25th.info;p1=v1;p2=v2", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("pathInfo:null queryString:n1=v%251&n2=v%252 servletPath:/other/pa%th.info requestUri:/context/other/pa%25th.info;p1=v1;p2=v2", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testEncodedPathParamsEncoded() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/context/path/path%25info;p1=v%251;p2=v2?n1=v%251&n2=v%252");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:/path%info queryString:n1=v%251&n2=v%252 servletPath:/path requestUri:/context/path/path%25info;p1=v%251;p2=v2", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("pathInfo:/path%info queryString:n1=v%251&n2=v%252 servletPath:/path requestUri:/context/path/path%25info;p1=v%251;p2=v2", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testEncodedExtensionPathParamsEncoded() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/context/other/pa%25th.info;p1=v%251;p2=v2?n1=v%251&n2=v%252");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("pathInfo:null queryString:n1=v%251&n2=v%252 servletPath:/other/pa%th.info requestUri:/context/other/pa%25th.info;p1=v%251;p2=v2", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("pathInfo:null queryString:n1=v%251&n2=v%252 servletPath:/other/pa%th.info requestUri:/context/other/pa%25th.info;p1=v%251;p2=v2", response);
+                return null;
+            });
         }
     }
 }

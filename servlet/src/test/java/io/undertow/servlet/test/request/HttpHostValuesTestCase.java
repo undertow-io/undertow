@@ -27,8 +27,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -40,6 +40,7 @@ import static io.undertow.servlet.Servlets.servlet;
 
 /**
  * Tests that ge get ip or host name depending on the method call
+ *
  * @author tmiyar
  *
  */
@@ -76,21 +77,19 @@ public class HttpHostValuesTestCase {
     @SuppressWarnings("removal")
     public void testRequestSpec() throws Exception {
         //test request values
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
 
-            if(System.getProperty("os.name").toLowerCase().contains("windows") || System.getSecurityManager() != null) {
-                Assert.assertTrue(String.format("hostName: %s , response: %s", DefaultServer.getDefaultServerAddress(), response), DefaultServer.getDefaultServerAddress().toString().contains(response));
-            } else {
-                Assert.assertTrue(String.format("hostName: %s , response: %s", DefaultServer.getHostAddress(), response), DefaultServer.getHostAddress().equals(response));
-            }
-
-        } finally {
-            client.close();
+                if (System.getProperty("os.name").toLowerCase().contains("windows") || System.getSecurityManager() != null) {
+                    Assert.assertTrue(String.format("hostName: %s , response: %s", DefaultServer.getDefaultServerAddress(), response), DefaultServer.getDefaultServerAddress().toString().contains(response));
+                } else {
+                    Assert.assertTrue(String.format("hostName: %s , response: %s", DefaultServer.getHostAddress(), response), DefaultServer.getHostAddress().equals(response));
+                }
+                return null;
+            });
         }
     }
 

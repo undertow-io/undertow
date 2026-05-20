@@ -18,34 +18,30 @@
 
 package io.undertow.servlet.test.session;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Map;
-import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.SessionTrackingMode;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.BasicCookieStore;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import io.undertow.servlet.ServletExtension;
 import io.undertow.servlet.Servlets;
-import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.ServletSessionConfig;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.SessionTrackingMode;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * basic test of in memory session functionality
@@ -59,163 +55,150 @@ public class ServletURLRewritingSessionTestCase {
 
     @BeforeClass
     public static void setup() {
-        DeploymentUtils.setupServlet(new ServletExtension() {
-            @Override
-            public void handleDeployment(DeploymentInfo deploymentInfo, ServletContext servletContext) {
-                deploymentInfo.setServletSessionConfig(new ServletSessionConfig().setSessionTrackingModes(Collections.singleton(SessionTrackingMode.URL)));
-            }
-        }, Servlets.servlet(URLRewritingServlet.class).addMapping("/foo"));
+        DeploymentUtils.setupServlet((deploymentInfo, servletContext) ->
+                deploymentInfo.setServletSessionConfig(new ServletSessionConfig()
+                        .setSessionTrackingModes(Collections.singleton(SessionTrackingMode.URL))), Servlets.servlet(URLRewritingServlet.class)
+                .addMapping("/foo"));
     }
 
     @Test
     public void testURLRewriting() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setCookieStore(new BasicCookieStore());
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo;foo=bar");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String url = HttpClientUtils.readResponse(result);
-            Header[] header = result.getHeaders(COUNT);
-            Assert.assertEquals("0", header[0].getValue());
+            String url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("0", header[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(url);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            url = HttpClientUtils.readResponse(result);
-            header = result.getHeaders(COUNT);
-            Assert.assertEquals("1", header[0].getValue());
+            url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("1", header[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(url);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            url = HttpClientUtils.readResponse(result);
-            header = result.getHeaders(COUNT);
-            Assert.assertEquals("2", header[0].getValue());
-
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("2", header[0].getValue());
+                return null;
+            });
         }
     }
 
     @Test
     public void testURLRewritingWithQueryParameters() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setCookieStore(new BasicCookieStore());
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo?a=b;c");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String url = HttpClientUtils.readResponse(result);
-            Header[] header = result.getHeaders(COUNT);
-            Assert.assertEquals("0", header[0].getValue());
-            Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
-
-
-            get = new HttpGet(url);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            url = HttpClientUtils.readResponse(result);
-            header = result.getHeaders(COUNT);
-            Assert.assertEquals("1", header[0].getValue());
-            Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
+            String url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("0", header[0].getValue());
+                Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(url);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            url = HttpClientUtils.readResponse(result);
-            header = result.getHeaders(COUNT);
-            Assert.assertEquals("2", header[0].getValue());
-            Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
+            url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("1", header[0].getValue());
+                Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            get = new HttpGet(url);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("2", header[0].getValue());
+                Assert.assertEquals("b;c", result.getHeaders("a")[0].getValue());
+                return null;
+            });
         }
     }
 
 
     @Test
     public void testURLRewritingWithExistingOldSessionId() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setCookieStore(new BasicCookieStore());
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo;jsessionid=foobar");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String url = HttpClientUtils.readResponse(result);
-            Header[] header = result.getHeaders(COUNT);
-            Assert.assertEquals("0", header[0].getValue());
+            String url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("0", header[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
 
             get = new HttpGet(url);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            url = HttpClientUtils.readResponse(result);
-            header = result.getHeaders(COUNT);
-            Assert.assertEquals("1", header[0].getValue());
+            url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("1", header[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(url);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            url = HttpClientUtils.readResponse(result);
-            header = result.getHeaders(COUNT);
-            Assert.assertEquals("2", header[0].getValue());
-
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("2", header[0].getValue());
+                return null;
+            });
         }
     }
 
     @Test
     public void testURLRewritingWithExistingOldSessionIdAndOtherPathParams() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setCookieStore(new BasicCookieStore());
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo;jsessionid=foobar&a=b");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String url = HttpClientUtils.readResponse(result);
-            Header[] header = result.getHeaders(COUNT);
-            Assert.assertEquals("0", header[0].getValue());
-
-
-            get = new HttpGet(url);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            url = HttpClientUtils.readResponse(result);
-            header = result.getHeaders(COUNT);
-            Assert.assertEquals("1", header[0].getValue());
+            String url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("0", header[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(url);
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            url = HttpClientUtils.readResponse(result);
-            header = result.getHeaders(COUNT);
-            Assert.assertEquals("2", header[0].getValue());
+            url = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("1", header[0].getValue());
+                return HttpClientUtils.readResponse(result);
+            });
 
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            get = new HttpGet(url);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Header[] header = result.getHeaders(COUNT);
+                Assert.assertEquals("2", header[0].getValue());
+                return null;
+            });
         }
     }
 
     @Test
     public void testGetRequestedSessionId() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/foo;jsessionid=test");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-        } finally {
-            client.close();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         }
     }
 
@@ -250,5 +233,4 @@ public class ServletURLRewritingSessionTestCase {
             }
         }
     }
-
 }

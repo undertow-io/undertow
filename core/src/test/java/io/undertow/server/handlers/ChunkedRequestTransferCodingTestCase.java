@@ -19,17 +19,15 @@
 package io.undertow.server.handlers;
 
 import io.undertow.UndertowOptions;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.server.ServerConnection;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpHeaders;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.HttpHeaders;
+import org.apache.hc.core5.http.io.entity.AbstractHttpEntity;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -58,30 +56,27 @@ public class ChunkedRequestTransferCodingTestCase {
     public static void setup() {
         final BlockingHandler blockingHandler = new BlockingHandler();
         DefaultServer.setRootHandler(blockingHandler);
-        blockingHandler.setRootHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) {
-                try {
-                    if (connection == null) {
-                        connection = exchange.getConnection();
-                    } else if (!DefaultServer.isAjp() && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
-                        exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
-                        final OutputStream outputStream = exchange.getOutputStream();
-                        outputStream.write("Connection not persistent".getBytes());
-                        outputStream.close();
-                        return;
-                    }
+        blockingHandler.setRootHandler(exchange -> {
+            try {
+                if (connection == null) {
+                    connection = exchange.getConnection();
+                } else if (!DefaultServer.isAjp() && !DefaultServer.isProxy() && connection != exchange.getConnection()) {
+                    exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
                     final OutputStream outputStream = exchange.getOutputStream();
-                    final InputStream inputStream = exchange.getInputStream();
-                    String m = HttpClientUtils.readResponse(inputStream);
-                    Assert.assertEquals(message.length(), m.length());
-                    Assert.assertEquals(message, m);
-                    inputStream.close();
+                    outputStream.write("Connection not persistent".getBytes());
                     outputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    throw new RuntimeException(e);
+                    return;
                 }
+                final OutputStream outputStream = exchange.getOutputStream();
+                final InputStream inputStream = exchange.getInputStream();
+                String m = HttpClientUtils.readResponse(inputStream);
+                Assert.assertEquals(message.length(), m.length());
+                Assert.assertEquals(message, m);
+                inputStream.close();
+                outputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new RuntimeException(e);
             }
         });
     }
@@ -90,36 +85,60 @@ public class ChunkedRequestTransferCodingTestCase {
     public void testChunkedRequest() throws IOException {
         connection = null;
         HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             generateMessage(1);
-            post.setEntity(new StringEntity(message) {
+            post.setEntity(new AbstractHttpEntity("", null, true) {
+                @Override
+                public void close() {
+                }
+
                 @Override
                 public long getContentLength() {
                     return -1;
                 }
+
+                @Override
+                public InputStream getContent() throws UnsupportedOperationException {
+                    return null;
+                }
+
+                @Override
+                public void writeTo(OutputStream outstream) throws IOException {
+                    outstream.write(message.getBytes());
+                    outstream.flush();
+                }
+
+                @Override
+                public boolean isStreaming() {
+                    return false;
+                }
             });
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             final Random random = new Random();
-            final int seed =  random.nextInt();
+            final int seed = random.nextInt();
             System.out.print("Using Seed " + seed);
             random.setSeed(seed);
 
 
             for (int i = 0; i < 10; ++i) {
                 generateMessage(100 * i);
-                post.setEntity(new StringEntity(message) {
+                post.setEntity(new AbstractHttpEntity("", null, true) {
+                    @Override
+                    public void close() {
+                    }
+
                     @Override
                     public long getContentLength() {
                         return -1;
                     }
 
                     @Override
-                    public boolean isChunked() {
-                        return true;
+                    public InputStream getContent() throws UnsupportedOperationException {
+                        return null;
                     }
 
                     @Override
@@ -134,14 +153,17 @@ public class ChunkedRequestTransferCodingTestCase {
                             ++i;
                         }
                     }
-                });
-                result = client.execute(post);
-                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-                HttpClientUtils.readResponse(result);
-            }
-        } finally {
 
-            client.getConnectionManager().shutdown();
+                    @Override
+                    public boolean isStreaming() {
+                        return false;
+                    }
+                });
+                client.execute(post, result -> {
+                    Assert.assertEquals(StatusCodes.OK, result.getCode());
+                    return HttpClientUtils.readResponse(result);
+                });
+            }
         }
     }
 
@@ -152,28 +174,47 @@ public class ChunkedRequestTransferCodingTestCase {
         OptionMap existing = DefaultServer.getUndertowOptions();
         HttpPost post = new HttpPost(DefaultServer.getDefaultServerURL() + "/path");
         post.setHeader(HttpHeaders.CONNECTION, "close");
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             generateMessage(1);
-            post.setEntity(new StringEntity(message) {
+            post.setEntity(new AbstractHttpEntity("", null, true) {
+                @Override
+                public void close() {
+                }
+
                 @Override
                 public long getContentLength() {
                     return -1;
                 }
+
+                @Override
+                public InputStream getContent() throws UnsupportedOperationException {
+                    return null;
+                }
+
+                @Override
+                public void writeTo(OutputStream outstream) throws IOException {
+                    outstream.write(message.getBytes());
+                    outstream.flush();
+                }
+
+                @Override
+                public boolean isStreaming() {
+                    return false;
+                }
             });
             DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, 3L));
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
             connection = null;
             DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, (long) message.length()));
-            result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
         } finally {
             DefaultServer.setUndertowOptions(existing);
-            client.getConnectionManager().shutdown();
         }
     }
 

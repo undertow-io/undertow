@@ -29,9 +29,9 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -53,7 +53,7 @@ public class ResponseCookiesTestCase {
                 new ServletInfo("add-cookies", AddCookiesServlet.class)
                         .addMapping("/add-cookies"),
                 new ServletInfo("duplicate-cookies", DuplicateCookiesServlet.class)
-                .addMapping("/duplicate-cookies"),
+                        .addMapping("/duplicate-cookies"),
                 new ServletInfo("overwrite-cookies", OverwriteCookiesServlet.class)
                         .addMapping("/overwrite-cookies"),
                 new ServletInfo("jsessionid-cookies", JSessionIDCookiesServlet.class)
@@ -62,95 +62,89 @@ public class ResponseCookiesTestCase {
 
     @Test
     public void addCookies() throws Exception {
-        final TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             final HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/add-cookies");
-            final HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-            final String response = HttpClientUtils.readResponse(result);
-            assertEquals("Served at: /servletContext", response);
+                final String response = HttpClientUtils.readResponse(result);
+                assertEquals("Served at: /servletContext", response);
 
-            final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
-            assertEquals(2, setCookieHeaders.length);
-            assertTrue(setCookieHeadersContainsValue("test1=test1; path=/test", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValue("test2=test2", setCookieHeaders));
-        } finally {
-            client.getConnectionManager().shutdown();
+                final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
+                assertEquals(2, setCookieHeaders.length);
+                assertTrue(setCookieHeadersContainsValue("test1=test1; path=/test", setCookieHeaders));
+                assertTrue(setCookieHeadersContainsValue("test2=test2", setCookieHeaders));
+                return null;
+            });
         }
     }
 
     @Test
     public void duplicateCookies() throws Exception {
-        final TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             final HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/duplicate-cookies");
-            final HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-            final String response = HttpClientUtils.readResponse(result);
-            assertEquals("Served at: /servletContext", response);
+                final String response = HttpClientUtils.readResponse(result);
+                assertEquals("Served at: /servletContext", response);
 
-            final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
-            assertEquals(7, setCookieHeaders.length);
-            Arrays.sort(setCookieHeaders, Comparator.comparing(Object::toString));
-            assertTrue(setCookieHeadersContainsValue("test1=test1; path=/test1_1", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValue("test1=test1; path=/test1_1", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValue("test1=test1; path=/test1_2", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValue("test2=test2; path=/test2", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValue("test2=test2; path=/test2; domain=www.domain2.com", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValue("test3=test3", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValue("test3=test3; domain=www.domain3-1.com", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValue("test3=test3; domain=www.domain3-2.com", setCookieHeaders));
-
-        } finally {
-            client.getConnectionManager().shutdown();
+                final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
+                assertEquals(7, setCookieHeaders.length);
+                Arrays.sort(setCookieHeaders, Comparator.comparing(Object::toString));
+                assertTrue(setCookieHeadersContainsValue("test1=test1; path=/test1_1", setCookieHeaders));
+                assertTrue(setCookieHeadersContainsValue("test1=test1; path=/test1_1", setCookieHeaders));
+                assertTrue(setCookieHeadersContainsValue("test1=test1; path=/test1_2", setCookieHeaders));
+                assertTrue(setCookieHeadersContainsValue("test2=test2; path=/test2", setCookieHeaders));
+                assertTrue(setCookieHeadersContainsValue("test2=test2; path=/test2; domain=www.domain2.com", setCookieHeaders));
+                assertTrue(setCookieHeadersContainsValue("test3=test3", setCookieHeaders));
+                assertTrue(setCookieHeadersContainsValue("test3=test3; domain=www.domain3-1.com", setCookieHeaders));
+                assertTrue(setCookieHeadersContainsValue("test3=test3; domain=www.domain3-2.com", setCookieHeaders));
+                return null;
+            });
         }
     }
 
     @Test
     public void overwriteCookies() throws Exception {
-        final TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             final HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/overwrite-cookies");
-            final HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-            final String response = HttpClientUtils.readResponse(result);
-            assertEquals("Served at: /servletContext", response);
+                final String response = HttpClientUtils.readResponse(result);
+                assertEquals("Served at: /servletContext", response);
 
-            final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
-            assertEquals(5, setCookieHeaders.length);
-            Arrays.sort(setCookieHeaders, Comparator.comparing(Object::toString));
-            assertTrue(setCookieHeadersMatchesValue("JSESSIONID=.*; Path=/servletContext", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValue("test=test10; domain=www.domain.com", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValue("test=test2; path=/test", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValue("test=test5", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValue("test=test8; path=/test; domain=www.domain.com", setCookieHeaders));
-
-        } finally {
-            client.getConnectionManager().shutdown();
+                final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
+                assertEquals(5, setCookieHeaders.length);
+                Arrays.sort(setCookieHeaders, Comparator.comparing(Object::toString));
+                assertTrue(setCookieHeadersMatchesValue("JSESSIONID=.*; Path=/servletContext", setCookieHeaders));
+                assertTrue(setCookieHeadersContainsValue("test=test10; domain=www.domain.com", setCookieHeaders));
+                assertTrue(setCookieHeadersContainsValue("test=test2; path=/test", setCookieHeaders));
+                assertTrue(setCookieHeadersContainsValue("test=test5", setCookieHeaders));
+                assertTrue(setCookieHeadersContainsValue("test=test8; path=/test; domain=www.domain.com", setCookieHeaders));
+                return null;
+            });
         }
     }
 
     @Test
     public void jsessionIdCookies() throws Exception {
-        final TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             final HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/jsessionid-cookies");
-            final HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-            final String response = HttpClientUtils.readResponse(result);
-            assertEquals("Served at: /servletContext", response);
+                final String response = HttpClientUtils.readResponse(result);
+                assertEquals("Served at: /servletContext", response);
 
-            final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
-            assertEquals(4, setCookieHeaders.length);
-            assertTrue(setCookieHeadersContainsValueStartingWithPrefix("JSESSIONID=_bug_fix; Path=/path3; Max-Age=500; Expires=", setCookieHeaders));
-            assertTrue(setCookieHeadersContainsValueStartingWithPrefix("JSESSIONID=_bug_fix; Path=/path4; Max-Age=1000; Expires=", setCookieHeaders));
-            assertTrue(setCookieHeadersMatchesValue("JSESSIONID=.*; Path=/servletContext", setCookieHeaders));
-        } finally {
-            client.getConnectionManager().shutdown();
+                final Header[] setCookieHeaders = result.getHeaders("Set-Cookie");
+                assertEquals(4, setCookieHeaders.length);
+                assertTrue(setCookieHeadersContainsValueStartingWithPrefix("JSESSIONID=_bug_fix; Path=/path3; Max-Age=500; Expires=", setCookieHeaders));
+                assertTrue(setCookieHeadersContainsValueStartingWithPrefix("JSESSIONID=_bug_fix; Path=/path4; Max-Age=1000; Expires=", setCookieHeaders));
+                assertTrue(setCookieHeadersMatchesValue("JSESSIONID=.*; Path=/servletContext", setCookieHeaders));
+                return null;
+            });
         }
     }
 

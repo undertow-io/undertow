@@ -37,24 +37,29 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
+
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import jakarta.servlet.ServletException;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.ProtocolException;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultRedirectStrategy;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.HttpContext;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.impl.DefaultRedirectStrategy;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.protocol.HttpClientContext;
+import org.apache.hc.core5.http.HttpRequest;
+import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.ProtocolException;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.http.message.BasicNameValuePair;
+import org.apache.hc.core5.http.protocol.HttpContext;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -67,7 +72,29 @@ import org.junit.runner.RunWith;
 public class ServletFormAuthDefaultPageTestCase {
 
     public static final String HELLO_WORLD = "Hello World";
-    private static final String DEFAULT_PAGE = "/main.html";
+    private static final String DEFAULT_PAGE = DefaultServer.getDefaultServerURL() + "/main.html";
+
+    private static CloseableHttpClient clientWithRedirectStrategy() {
+        return TestHttpClient.custom()
+                .setRedirectStrategy(new DefaultRedirectStrategy() {
+                    @Override
+                    public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
+                        if (response.getCode() == StatusCodes.FOUND) {
+                            return true;
+                        }
+                        try {
+                            if (((HttpClientContext) context).getRequest().getUri().toString().equals(DEFAULT_PAGE)) {
+                                response.setCode(StatusCodes.OK);
+                                // Skip redirecting, because the resource isn't available in this test
+                                return false;
+                            }
+                        } catch (URISyntaxException e) {
+                            Assert.fail("exception thrown");
+                        }
+                        return super.isRedirected(request, response, context);
+                    }
+                }).build();
+    }
 
     @BeforeClass
     public static void setup() throws ServletException {
@@ -114,7 +141,7 @@ public class ServletFormAuthDefaultPageTestCase {
                 .setAuthenticationMode(AuthenticationMode.CONSTRAINT_DRIVEN)
                 .setIdentityManager(identityManager)
                 .setLoginConfig(loginConfig)
-                .addServlets(s, s1, echo,echoParam);
+                .addServlets(s, s1, echo, echoParam);
 
         DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
@@ -125,28 +152,15 @@ public class ServletFormAuthDefaultPageTestCase {
 
     @Test
     public void testServletFormAuth() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setRedirectStrategy(new DefaultRedirectStrategy() {
-            @Override
-            public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
-                if (response.getStatusLine().getStatusCode() == StatusCodes.FOUND) {
-                    return true;
-                }
-                if (request.getRequestLine().getUri().equals(DEFAULT_PAGE)) {
-                    response.setStatusCode(StatusCodes.OK);
-                    // Skip redirecting, because the resource isn't available in this test
-                    return false;
-                }
-                return super.isRedirected(request, response, context);
-            }
-        });
-        try {
+        try (CloseableHttpClient client = clientWithRedirectStrategy()) {
             final String uri = DefaultServer.getDefaultServerURL() + "/servletContext/secured/test";
             HttpGet get = new HttpGet(uri);
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertTrue(response.startsWith("j_security_check"));
+            client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertTrue(response.startsWith("j_security_check"));
+                return null;
+            });
 
             BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
             final List<NameValuePair> data = new ArrayList<>();
@@ -155,41 +169,28 @@ public class ServletFormAuthDefaultPageTestCase {
 
             post.setEntity(new UrlEncodedFormEntity(data));
 
-            result = client.execute(post);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(post, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testServletFormAuthWithSavedPostBody() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setRedirectStrategy(new DefaultRedirectStrategy() {
-            @Override
-            public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
-                if (response.getStatusLine().getStatusCode() == StatusCodes.FOUND) {
-                    return true;
-                }
-                if (request.getRequestLine().getUri().equals(DEFAULT_PAGE)) {
-                    response.setStatusCode(StatusCodes.OK);
-                    // Skip redirecting, because the resource isn't available in this test
-                    return false;
-                }
-                return super.isRedirected(request, response, context);
-            }
-        });
-        try {
+        try (CloseableHttpClient client = clientWithRedirectStrategy()) {
             final String uri = DefaultServer.getDefaultServerURL() + "/servletContext/secured/echo";
             HttpPost post = new HttpPost(uri);
             post.setEntity(new StringEntity("String Entity"));
-            HttpResponse result = client.execute(post);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertTrue(response.startsWith("j_security_check"));
+            client.execute(post, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertTrue(response.startsWith("j_security_check"));
+                return null;
+            });
 
             BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
             final List<NameValuePair> data = new ArrayList<>();
@@ -198,36 +199,19 @@ public class ServletFormAuthDefaultPageTestCase {
 
             post.setEntity(new UrlEncodedFormEntity(data));
 
-            result = client.execute(post);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(post, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-            response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("", response);
+                return null;
+            });
         }
     }
 
     @Test
     public void testServletFormAuthWithoutSavedPostBody() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setRedirectStrategy(new DefaultRedirectStrategy() {
-            @Override
-            public boolean isRedirected(final HttpRequest request, final HttpResponse response, final HttpContext context) throws ProtocolException {
-                if (response.getStatusLine().getStatusCode() == StatusCodes.FOUND) {
-                    return true;
-                }
-                if (request.getRequestLine().getUri().equals(DEFAULT_PAGE)) {
-                    response.setStatusCode(StatusCodes.OK);
-                    // Skip redirecting, because the resource isn't available in this test
-                    return false;
-                }
-                // force the test to fail
-                response.setStatusCode(StatusCodes.EXPECTATION_FAILED);
-                return super.isRedirected(request, response, context);
-            }
-        });
-        try {
+        try (CloseableHttpClient client = clientWithRedirectStrategy()) {
             BasicNameValuePair[] pairs = new BasicNameValuePair[]{new BasicNameValuePair("j_username", "user1"), new BasicNameValuePair("j_password", "password1")};
             final List<NameValuePair> data = new ArrayList<>();
             data.addAll(Arrays.asList(pairs));
@@ -235,13 +219,13 @@ public class ServletFormAuthDefaultPageTestCase {
 
             post.setEntity(new UrlEncodedFormEntity(data));
 
-            HttpResponse result = client.execute(post);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(post, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
 
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals("", response);
-        } finally {
-            client.getConnectionManager().shutdown();
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals("", response);
+                return null;
+            });
         }
     }
 }

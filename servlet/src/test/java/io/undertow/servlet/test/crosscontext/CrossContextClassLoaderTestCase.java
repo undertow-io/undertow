@@ -28,8 +28,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -40,6 +40,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 
 /**
@@ -89,20 +90,19 @@ public class CrossContextClassLoaderTestCase {
 
     @Test
     public void testCrossContextRequest() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/includer/a");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(
-                    "Including Servlet Class Loader: IncluderClassLoader\r\n" +
-                            "Including Servlet Context Path: /includer\r\n" +
-                            "Included Servlet Class Loader: IncludedClassLoader\r\n" +
-                            "Including Servlet Context Path: /included\r\n",
-                    response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(
+                        "Including Servlet Class Loader: IncluderClassLoader\r\n" +
+                                "Including Servlet Context Path: /includer\r\n" +
+                                "Included Servlet Class Loader: IncludedClassLoader\r\n" +
+                                "Including Servlet Context Path: /included\r\n",
+                        response);
+                return null;
+            });
         }
     }
 

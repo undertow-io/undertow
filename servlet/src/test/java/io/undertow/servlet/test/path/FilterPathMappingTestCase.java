@@ -39,9 +39,10 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.HttpResponse;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -139,8 +140,7 @@ public class FilterPathMappingTestCase {
         DefaultServer.setRootHandler(root);
 
 
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             runTest(client, "test", "/test/* - /test - null", "/*", "*", "/test", "allByName");
             runTest(client, "test2", "/test2 - /test2 - null", "/*", "*", "/test2/*", "allByName");
             runTest(client, "aa", "/aa - /aa - null", "/*", "*", "/aa", "allByName");
@@ -157,16 +157,12 @@ public class FilterPathMappingTestCase {
             runTest(client, "otherservlet/myfilter/file.jsp", "*.jsp - /otherservlet/myfilter/file.jsp - null", "/*", "*", "allByName");
             runTest(client, "myfilter/file.jsp", "*.jsp - /myfilter/file.jsp - null", "/*", "*", "/myfilter/*", "allByName");
             runTest(client, "helloworld/index.html", "/ - /helloworld/index.html - null", "/*", "*", "/helloworld/index.html", "defaultName", "allByName");
-
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
 
     @Test
     public void testExtensionMatchServletWithGlobalFilter() throws IOException, ServletException {
-
         DeploymentInfo builder = new DeploymentInfo();
 
         final PathHandler root = new PathHandler();
@@ -186,23 +182,16 @@ public class FilterPathMappingTestCase {
         final DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         root.addPrefixPath(builder.getContextPath(), manager.start());
-
         DefaultServer.setRootHandler(root);
 
-
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             runTest(client, "aa.jsp", "*.jsp - /aa.jsp - null", "/*");
-
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
 
     @Test
     public void test_WFLY_1935() throws IOException, ServletException {
-
         DeploymentInfo builder = new DeploymentInfo();
 
         final PathHandler root = new PathHandler();
@@ -226,34 +215,28 @@ public class FilterPathMappingTestCase {
         final DeploymentManager manager = container.addDeployment(builder);
         manager.deploy();
         root.addPrefixPath(builder.getContextPath(), manager.start());
-
         DefaultServer.setRootHandler(root);
 
-
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             runTest(client, "SimpleServlet.a", "*.a - /SimpleServlet.a - null", "/*", "/SimpleServlet.a");
-
-        } finally {
-            client.getConnectionManager().shutdown();
         }
     }
 
 
-    private void runTest(final TestHttpClient client, final String path, final String expected, final String... headers) throws IOException {
+    private void runTest(final CloseableHttpClient client, final String path, final String expected, final String... headers) throws IOException {
         final HttpGet get;
-        final HttpResponse result;
-        final String response;
         get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/" + path);
-        result = client.execute(get);
-        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-        requireHeaders(result, headers);
-        response = HttpClientUtils.readResponse(result);
-        Assert.assertEquals(expected, response);
+        client.execute(get, result -> {
+            Assert.assertEquals(StatusCodes.OK, result.getCode());
+            requireHeaders(result, headers);
+            final String response = HttpClientUtils.readResponse(result);
+            Assert.assertEquals(expected, response);
+            return null;
+        });
     }
 
     private void requireHeaders(final HttpResponse result, final String... headers) {
-        final Header[] resultHeaders = result.getAllHeaders();
+        final Header[] resultHeaders = result.getHeaders();
         final List<Header> realResultHeaders = new ArrayList<>();
         for (Header header : resultHeaders) {
             if (header.getName().startsWith("filter")) {
@@ -270,5 +253,4 @@ public class FilterPathMappingTestCase {
             Assert.fail("header(s) not found " + found);
         }
     }
-
 }

@@ -28,8 +28,8 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -37,7 +37,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import java.io.IOException;
-import org.apache.http.Header;
+import org.apache.hc.core5.http.Header;
 
 import static org.junit.Assert.assertEquals;
 
@@ -120,21 +120,16 @@ public class SSLMetaDataTestCase {
     }
 
     protected String internalTest(final String path, Header... headers) throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        client.setSSLContext(DefaultServer.getClientSSLContext());
-
-        final String url = DefaultServer.getDefaultServerSSLAddress() + "/servletContext" + path;
-        try {
+        try (CloseableHttpClient client = TestHttpClient.withSSLContext(DefaultServer.getClientSSLContext()).build()) {
+            final String url = DefaultServer.getDefaultServerSSLAddress() + "/servletContext" + path;
             HttpGet get = new HttpGet(url);
             get.setHeaders(headers);
-            HttpResponse result = client.execute(get);
-            assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            String response = HttpClientUtils.readResponse(result);
-            Assert.assertTrue(response.length() > 0);
-            return response;
-        } finally {
-            client.getConnectionManager().shutdown();
+            return client.execute(get, result -> {
+                assertEquals(StatusCodes.OK, result.getCode());
+                String response = HttpClientUtils.readResponse(result);
+                Assert.assertFalse(response.isEmpty());
+                return response;
+            });
         }
     }
-
 }

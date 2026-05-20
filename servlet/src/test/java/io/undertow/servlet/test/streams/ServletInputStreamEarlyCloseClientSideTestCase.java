@@ -22,7 +22,6 @@ import io.undertow.UndertowOptions;
 import io.undertow.servlet.api.ServletInfo;
 import io.undertow.servlet.test.util.DeploymentUtils;
 import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.TestHttpClient;
 import jakarta.servlet.ServletException;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -66,31 +65,24 @@ public class ServletInputStreamEarlyCloseClientSideTestCase {
 
     @Test
     public void testServletInputStreamEarlyClose() throws Exception {
-        TestHttpClient client = new TestHttpClient();
         EarlyCloseClientServlet.reset();
         try (Socket socket = new Socket()) {
             socket.connect(DefaultServer.getDefaultServerAddress());
-            try {
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < 10000; ++i) {
-                    sb.append("hello world\r\n");
-                }
-                //send a large request that is too small, then kill the socket
-                String request = "POST /servletContext/" + SERVLET + " HTTP/1.1\r\nHost:localhost\r\nContent-Length:" + sb.length() + 100 + "\r\n\r\n" + sb.toString();
-                OutputStream outputStream = socket.getOutputStream();
-
-                outputStream.write(request.getBytes(StandardCharsets.US_ASCII));
-                outputStream.flush();
-                socket.close();
-
-                Assert.assertTrue(EarlyCloseClientServlet.getLatch().await(10, TimeUnit.SECONDS));
-                Assert.assertFalse(EarlyCloseClientServlet.isCompletedNormally());
-                Assert.assertTrue(EarlyCloseClientServlet.isExceptionThrown());
-            } finally {
-                client.getConnectionManager().shutdown();
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < 10000; ++i) {
+                sb.append("hello world\r\n");
             }
+            //send a large request that is too small, then kill the socket
+            String request = "POST /servletContext/" + SERVLET + " HTTP/1.1\r\nHost:localhost\r\nContent-Length:" + sb.length() + 100 + "\r\n\r\n" + sb.toString();
+            OutputStream outputStream = socket.getOutputStream();
+
+            outputStream.write(request.getBytes(StandardCharsets.US_ASCII));
+            outputStream.flush();
+            socket.close();
+
+            Assert.assertTrue(EarlyCloseClientServlet.getLatch().await(10, TimeUnit.SECONDS));
+            Assert.assertFalse(EarlyCloseClientServlet.isCompletedNormally());
+            Assert.assertTrue(EarlyCloseClientServlet.isExceptionThrown());
         }
     }
-
-
 }

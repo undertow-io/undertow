@@ -6,8 +6,8 @@ import static io.undertow.Handlers.path;
 import java.net.InetAddress;
 import java.net.URI;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -98,138 +98,119 @@ public class ProxyHandlerXForwardedForTestCase {
     @Test
     public void testXForwarded() throws Exception {
         setProxyHandler(false, false);
-        TestHttpClient client = new TestHttpClient();
-
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/x-forwarded");
 
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
 
-            Assert.assertEquals(port, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
-            Assert.assertEquals("http", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
-            Assert.assertEquals(DefaultServer.getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
-            Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
-
-        } finally {
-            client.getConnectionManager().shutdown();
+                Assert.assertEquals(port, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
+                Assert.assertEquals("http", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
+                Assert.assertEquals(DefaultServer.getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
+                Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
+                return null;
+            });
         }
     }
 
     @Test
     public void testXForwardedSsl() throws Exception {
         setProxyHandler(false, false);
-        TestHttpClient client = new TestHttpClient();
-
-        try {
-            client.setSSLContext(DefaultServer.getClientSSLContext());
+        try (CloseableHttpClient client = TestHttpClient.withSSLContext(DefaultServer.getClientSSLContext()).build()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress() + "/x-forwarded");
 
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
 
-            Assert.assertEquals(sslPort, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
-            Assert.assertEquals("https", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
-            Assert.assertEquals(DefaultServer.getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
-            Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
-
-        } finally {
-            client.getConnectionManager().shutdown();
+                Assert.assertEquals(sslPort, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
+                Assert.assertEquals("https", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
+                Assert.assertEquals(DefaultServer.getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
+                Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
+                return null;
+            });
         }
     }
 
     @Test
     public void testReuseXForwarded() throws Exception {
         setProxyHandler(false, true);
-        TestHttpClient client = new TestHttpClient();
-
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/x-forwarded");
             get.addHeader(Headers.X_FORWARDED_FOR.toString(), "50.168.245.32");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
 
-            Assert.assertEquals(port, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
-            Assert.assertEquals("http", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
-            Assert.assertEquals(DefaultServer.getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
-            Assert.assertEquals("50.168.245.32," + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
-
-        } finally {
-            client.getConnectionManager().shutdown();
+                Assert.assertEquals(port, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
+                Assert.assertEquals("http", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
+                Assert.assertEquals(DefaultServer.getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
+                Assert.assertEquals("50.168.245.32," + DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
+                return null;
+            });
         }
     }
 
     @Test
     public void testReuseXForwardedHeaderSanitization() throws Exception {
         setProxyHandler(false, true);
-        TestHttpClient client = new TestHttpClient();
-
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/x-forwarded");
             String testString = "1.1.1.1\r\nTest";
             get.addHeader(Headers.X_FORWARDED_FOR.toString(), testString);
-            HttpResponse result = client.execute(get);
+            client.execute(get, result -> {
+                if (result.getCode() == StatusCodes.OK) {
+                    String value = result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue();
 
-            if (result.getStatusLine().getStatusCode() == StatusCodes.OK) {
-                String value = result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue();
-
-                Assert.assertFalse("CRLF characters found in header",
-                    value.contains("\r") || value.contains("\n"));
-            } else {
-                Assert.assertEquals(StatusCodes.BAD_REQUEST, result.getStatusLine().getStatusCode());
-            }
-        } finally {
-            client.getConnectionManager().shutdown();
+                    Assert.assertFalse("CRLF characters found in header",
+                            value.contains("\r") || value.contains("\n"));
+                } else {
+                    Assert.assertEquals(StatusCodes.BAD_REQUEST, result.getCode());
+                }
+                return null;
+            });
         }
     }
 
     @Test
     public void testRewriteHostHeader() throws Exception {
         setProxyHandler(true, false);
-        TestHttpClient client = new TestHttpClient();
-
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/x-forwarded");
             get.addHeader(Headers.X_FORWARDED_FOR.toString(), "50.168.245.32");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
 
-            Assert.assertEquals(port, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
-            Assert.assertEquals("http", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
-            Assert.assertEquals(String.format("%s:%d", DefaultServer.getHostAddress(), port), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
-            Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
-            final String resultHostHeader = result.getFirstHeader(Headers.HOST_STRING).getValue();
-            final int lastInd = resultHostHeader.lastIndexOf(":"); //ipv6 will have more :, we cant split on it.
-            Assert.assertNotEquals(-1, lastInd);
-            final String[] parts = new String[] {resultHostHeader.substring(0,lastInd), resultHostHeader.substring(lastInd+1)};
-            final InetAddress resultAddress = InetAddress.getByName(parts[0]);
-            final InetAddress hostAddress = DefaultServer.getDefaultServerAddress().getAddress();
-            Assert.assertEquals(hostAddress.toString(), resultAddress.toString());
-            Assert.assertEquals(handlerPort+"", parts[1]);
-
-        } finally {
-            client.getConnectionManager().shutdown();
+                Assert.assertEquals(port, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
+                Assert.assertEquals("http", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
+                Assert.assertEquals(String.format("%s:%d", DefaultServer.getHostAddress(), port), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
+                Assert.assertEquals(DefaultServer.getDefaultServerAddress().getAddress().getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
+                final String resultHostHeader = result.getFirstHeader(Headers.HOST_STRING).getValue();
+                final int lastInd = resultHostHeader.lastIndexOf(":"); //ipv6 will have more :, we cant split on it.
+                Assert.assertNotEquals(-1, lastInd);
+                final String[] parts = new String[] {resultHostHeader.substring(0,lastInd), resultHostHeader.substring(lastInd+1)};
+                final InetAddress resultAddress = InetAddress.getByName(parts[0]);
+                final InetAddress hostAddress = DefaultServer.getDefaultServerAddress().getAddress();
+                Assert.assertEquals(hostAddress.toString(), resultAddress.toString());
+                Assert.assertEquals(handlerPort+"", parts[1]);
+                return null;
+            });
         }
     }
 
     @Test
     public void testWithProxyPeerAddressHandler() throws Exception {
         setProxyHandlerWithPeerAddressHandler(false, false);
-        TestHttpClient client = new TestHttpClient();
-
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/x-forwarded");
             get.addHeader(Headers.X_FORWARDED_FOR.toString(), "localhost");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
 
-            Assert.assertEquals(port, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
-            Assert.assertEquals("http", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
-            Assert.assertEquals(DefaultServer.getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
-            Assert.assertEquals("localhost", result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
-
-        } finally {
-            client.getConnectionManager().shutdown();
+                Assert.assertEquals(port, Integer.parseInt(result.getFirstHeader(Headers.X_FORWARDED_PORT.toString()).getValue()));
+                Assert.assertEquals("http", result.getFirstHeader(Headers.X_FORWARDED_PROTO.toString()).getValue());
+                Assert.assertEquals(DefaultServer.getHostAddress(), result.getFirstHeader(Headers.X_FORWARDED_HOST.toString()).getValue());
+                Assert.assertEquals("localhost", result.getFirstHeader(Headers.X_FORWARDED_FOR.toString()).getValue());
+                return null;
+            });
         }
     }
 

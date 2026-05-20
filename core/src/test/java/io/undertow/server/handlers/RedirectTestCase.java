@@ -20,14 +20,12 @@ package io.undertow.server.handlers;
 
 import io.undertow.Handlers;
 import io.undertow.predicate.Predicates;
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -51,12 +49,7 @@ public class RedirectTestCase {
     @BeforeClass
     public static void setup() {
         DefaultServer.setRootHandler(new PathHandler()
-                .addPrefixPath("/target", new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        message = exchange.getRequestURI();
-                    }
-                })
+                .addPrefixPath("/target", exchange -> message = exchange.getRequestURI())
                 .addPrefixPath("/", predicateContext(predicate(Predicates.regex("%{REQUEST_URL}", "/(aa.*?)c", RedirectTestCase.class.getClassLoader(), false),
                         Handlers.redirect("/target/matched/${1}"), Handlers.redirect("/target%U"))))
         );
@@ -64,28 +57,30 @@ public class RedirectTestCase {
 
     @Test
     public void testRedirectHandler() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/path/a");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/target/path/a", message );
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("/target/path/a", message);
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/aabc");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/target/matched/aab", message );
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("/target/matched/aab", message);
+                return null;
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/somePath/aabc");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-            Assert.assertEquals("/target/matched/aab", message );
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                HttpClientUtils.readResponse(result);
+                Assert.assertEquals("/target/matched/aab", message);
+                return null;
+            });
         }
     }
-
 }

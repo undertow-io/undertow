@@ -18,25 +18,25 @@
 
 package io.undertow.server.handlers.path;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.Map;
-
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
+import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import io.undertow.testutils.TestHttpClient;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.Map;
 
 /**
  * Tests that the path handler works as expected
@@ -51,17 +51,11 @@ public class PathTestCase {
 
     @Test
     public void testBasicPathHanding() throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             final PathHandler handler = new PathHandler();
             handler.addPrefixPath("a", new RemainingPathHandler("/a"));
             handler.addPrefixPath("/aa", new RemainingPathHandler("/aa"));
-            handler.addExactPath("/aa", new HttpHandler() {
-                @Override
-                public void handleRequest(HttpServerExchange exchange) throws Exception {
-                    exchange.getResponseSender().send("Exact /aa match:" + exchange.getRelativePath() + ":" + exchange.getResolvedPath());
-                }
-            });
+            handler.addExactPath("/aa", exchange -> exchange.getResponseSender().send("Exact /aa match:" + exchange.getRelativePath() + ":" + exchange.getResolvedPath()));
             handler.addPrefixPath("/aa/anotherSubPath", new RemainingPathHandler("/aa/anotherSubPath"));
 
             final PathHandler sub = new PathHandler();
@@ -73,15 +67,16 @@ public class PathTestCase {
             DefaultServer.setRootHandler(handler);
 
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
-
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.NOT_FOUND, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.NOT_FOUND, result.getStatusLine().getStatusCode());
-            HttpClientUtils.readResponse(result);
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.NOT_FOUND, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
 
             runPathTest(client, "/path", "/path", "");
             runPathTest(client, "/path/a", "/path", "/a");
@@ -96,32 +91,33 @@ public class PathTestCase {
 
             //now test the exact path match
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/aa");
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("Exact /aa match::/aa", HttpClientUtils.readResponse(result));
-
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("Exact /aa match::/aa", HttpClientUtils.readResponse(result));
+                return null;
+            });
         }
     }
 
-    private void runPathTest(TestHttpClient client, String path, String expectedMatch, String expectedRemaining) throws IOException {
+    private void runPathTest(CloseableHttpClient client, String path, String expectedMatch, String expectedRemaining) throws IOException {
         runPathTest(client, path, expectedMatch, expectedRemaining, Collections.<String, String>emptyMap());
     }
-    private void runPathTest(TestHttpClient client, String path, String expectedMatch, String expectedRemaining, Map<String, String> queryParams) throws IOException {
-        HttpResponse result;HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
-        result = client.execute(get);
-        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-        Header[] header = result.getHeaders(MATCHED);
-        Assert.assertEquals(expectedMatch, header[0].getValue());
-        header = result.getHeaders(PATH);
-        Assert.assertEquals(expectedRemaining, header[0].getValue());
-        HttpClientUtils.readResponse(result);
-        for(Map.Entry<String, String> entry : queryParams.entrySet()) {
-            header = result.getHeaders(entry.getKey());
-            Assert.assertEquals(entry.getValue(), header[0].getValue());
-        }
+
+    private void runPathTest(CloseableHttpClient client, String path, String expectedMatch, String expectedRemaining, Map<String, String> queryParams) throws IOException {
+        HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + path);
+        client.execute(get, result -> {
+            Assert.assertEquals(StatusCodes.OK, result.getCode());
+            Header[] header = result.getHeaders(MATCHED);
+            Assert.assertEquals(expectedMatch, header[0].getValue());
+            header = result.getHeaders(PATH);
+            Assert.assertEquals(expectedRemaining, header[0].getValue());
+            HttpClientUtils.readResponse(result);
+            for (Map.Entry<String, String> entry : queryParams.entrySet()) {
+                header = result.getHeaders(entry.getKey());
+                Assert.assertEquals(entry.getValue(), header[0].getValue());
+            }
+            return null;
+        });
     }
 
     private static class RemainingPathHandler implements HttpHandler {
@@ -136,11 +132,10 @@ public class PathTestCase {
         public void handleRequest(HttpServerExchange exchange) throws Exception {
             exchange.getResponseHeaders().add(new HttpString(MATCHED), matched);
             exchange.getResponseHeaders().add(new HttpString(PATH), exchange.getRelativePath());
-            for(Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
+            for (Map.Entry<String, Deque<String>> param : exchange.getQueryParameters().entrySet()) {
                 exchange.getResponseHeaders().put(new HttpString(param.getKey()), param.getValue().getFirst());
             }
             exchange.endExchange();
         }
     }
-
 }

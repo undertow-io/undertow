@@ -18,23 +18,19 @@
 
 package io.undertow.server.handlers;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-
+import io.undertow.testutils.DefaultServer;
+import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.FileUtils;
 import io.undertow.util.Headers;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import io.undertow.util.StatusCodes;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.Header;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.testutils.DefaultServer;
-import io.undertow.testutils.TestHttpClient;
-import io.undertow.util.FileUtils;
-import io.undertow.util.StatusCodes;
+import java.io.IOException;
 
 /**
  * @author Stuart Douglas
@@ -44,62 +40,48 @@ public class SecureCookieHandlerTestCase {
 
 
     @Test
-    public void testSecureCookieHandler() throws IOException, GeneralSecurityException {
-
-        DefaultServer.setRootHandler(new SecureCookieHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                exchange.setResponseCookie(new CookieImpl("foo", "bar"));
-            }
-        }));
+    public void testSecureCookieHandler() throws IOException {
+        DefaultServer.setRootHandler(new SecureCookieHandler(exchange ->
+                exchange.setResponseCookie(new CookieImpl("foo", "bar"))));
 
         DefaultServer.startSSLServer();
-        TestHttpClient client = new TestHttpClient();
-        client.setSSLContext(DefaultServer.getClientSSLContext());
-        try {
+        try (CloseableHttpClient client = TestHttpClient.withSSLContext(DefaultServer.getClientSSLContext()).build()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("foo=bar; Secure", header.getValue());
-            FileUtils.readFile(result.getEntity().getContent());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header header = result.getFirstHeader("set-cookie");
+                Assert.assertEquals("foo=bar; Secure", header.getValue());
+                return FileUtils.readFile(result.getEntity().getContent());
+            });
 
             get = new HttpGet(DefaultServer.getDefaultServerURL());
-            result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("foo=bar", header.getValue());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header header = result.getFirstHeader("set-cookie");
+                Assert.assertEquals("foo=bar", header.getValue());
+                return null;
+            });
         } finally {
-            client.getConnectionManager().shutdown();
             DefaultServer.stopSSLServer();
         }
     }
 
     @Test
-    public void testSecureCookieHandlerWithManuallySetCookie() throws IOException, GeneralSecurityException {
-
-        DefaultServer.setRootHandler(new SecureCookieHandler(new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                exchange.getResponseHeaders().put(Headers.SET_COOKIE, "cookie=value");
-            }
-        }));
+    public void testSecureCookieHandlerWithManuallySetCookie() throws IOException {
+        DefaultServer.setRootHandler(new SecureCookieHandler(exchange ->
+                exchange.getResponseHeaders().put(Headers.SET_COOKIE, "cookie=value")));
 
         DefaultServer.startSSLServer();
-        TestHttpClient client = new TestHttpClient();
-        client.setSSLContext(DefaultServer.getClientSSLContext());
-        try {
+        try (CloseableHttpClient client = TestHttpClient.withSSLContext(DefaultServer.getClientSSLContext()).build()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerSSLAddress());
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-
-            Header header = result.getFirstHeader("set-cookie");
-            Assert.assertEquals("cookie=value; Secure", header.getValue());
-            FileUtils.readFile(result.getEntity().getContent());
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Header header = result.getFirstHeader("set-cookie");
+                Assert.assertEquals("cookie=value; Secure", header.getValue());
+                return FileUtils.readFile(result.getEntity().getContent());
+            });
         } finally {
-            client.getConnectionManager().shutdown();
             DefaultServer.stopSSLServer();
         }
     }
-
 }

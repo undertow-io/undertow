@@ -28,9 +28,9 @@ import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -56,12 +56,9 @@ public class ReceiverTestCase {
     public static final String HELLO_WORLD = "Hello World";
 
     private static final LinkedBlockingDeque<IOException> EXCEPTIONS = new LinkedBlockingDeque<>();
-    public static final Receiver.ErrorCallback ERROR_CALLBACK = new Receiver.ErrorCallback() {
-        @Override
-        public void error(HttpServerExchange exchange, IOException e) {
-            EXCEPTIONS.add(e);
-            exchange.endExchange();
-        }
+    public static final Receiver.ErrorCallback ERROR_CALLBACK = (exchange, e) -> {
+        EXCEPTIONS.add(e);
+        exchange.endExchange();
     };
 
     @DefaultServer.BeforeServerStarts
@@ -77,46 +74,21 @@ public class ReceiverTestCase {
 
     @BeforeClass
     public static void setup() {
-        HttpHandler testFullString = new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
+        HttpHandler testFullString = exchange -> exchange.getRequestReceiver()
+                .receiveFullString((exchange1, message) -> exchange1.getResponseSender().send(message), ERROR_CALLBACK);
 
-                exchange.getRequestReceiver().receiveFullString(new Receiver.FullStringCallback() {
-                    @Override
-                    public void handle(HttpServerExchange exchange, String message) {
-                        exchange.getResponseSender().send(message);
-                    }
-                }, ERROR_CALLBACK);
-            }
+        HttpHandler testPartialString = exchange -> {
+            final StringBuilder sb = new StringBuilder();
+            exchange.getRequestReceiver().receivePartialString((exchange2, message, last) -> {
+                sb.append(message);
+                if (last) {
+                    exchange2.getResponseSender().send(sb.toString());
+                }
+            }, ERROR_CALLBACK);
         };
 
-        HttpHandler testPartialString = new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                final StringBuilder sb = new StringBuilder();
-                exchange.getRequestReceiver().receivePartialString(new Receiver.PartialStringCallback() {
-                    @Override
-                    public void handle(HttpServerExchange exchange, String message, boolean last) {
-                        sb.append(message);
-                        if(last) {
-                            exchange.getResponseSender().send(sb.toString());
-                        }
-                    }
-                }, ERROR_CALLBACK);
-            }
-        };
-
-        HttpHandler testFullBytes = new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) throws Exception {
-                exchange.getRequestReceiver().receiveFullBytes(new Receiver.FullBytesCallback() {
-                    @Override
-                    public void handle(HttpServerExchange exchange, byte[] message) {
-                        exchange.getResponseSender().send(ByteBuffer.wrap(message));
-                    }
-                }, ERROR_CALLBACK);
-            }
-        };
+        HttpHandler testFullBytes = exchange -> exchange.getRequestReceiver()
+                .receiveFullBytes((exchange3, message) -> exchange3.getResponseSender().send(ByteBuffer.wrap(message)), ERROR_CALLBACK);
 
         HttpHandler testPartialBytes = new HttpHandler() {
             @Override
@@ -162,7 +134,7 @@ public class ReceiverTestCase {
             @Override
             public void handleRequest(HttpServerExchange exchange) throws Exception {
                 Deque<String> block = exchange.getQueryParameters().get("blocking");
-                if(block != null) {
+                if (block != null) {
                     exchange.startBlocking();
                     exchange.dispatch(handler);
                     return;
@@ -187,7 +159,8 @@ public class ReceiverTestCase {
         doTest("/fullbytes");
     }
 
-    @Test @ProxyIgnore // FIXME UNDERTOW-1942 assertion of not null IOException fails sporadically (last line of this method)
+    @Test
+    @ProxyIgnore // FIXME UNDERTOW-1942 assertion of not null IOException fails sporadically (last line of this method)
     public void testAsyncReceiveWholeBytesFailed() throws Exception {
 
         EXCEPTIONS.clear();
@@ -236,6 +209,7 @@ public class ReceiverTestCase {
     public void testBlockingReceivePartialBytes() {
         doTest("/partialbytes?blocking");
     }
+
     public void doTest(String path) {
         StringBuilder builder = new StringBuilder(1000 * HELLO_WORLD.length());
         for (int i = 0; i < 10; ++i) {
@@ -252,19 +226,17 @@ public class ReceiverTestCase {
     }
 
     public void runTest(final String message, String url) throws IOException {
-        TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             String uri = DefaultServer.getDefaultServerURL() + url;
             HttpPost post = new HttpPost(uri);
             post.setEntity(new StringEntity(message));
-            HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            final String response = HttpClientUtils.readResponse(result);
-            Assert.assertEquals(message.length(), response.length());
-            Assert.assertEquals(message, response);
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(post, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                final String response = HttpClientUtils.readResponse(result);
+                Assert.assertEquals(message.length(), response.length());
+                Assert.assertEquals(message, response);
+                return null;
+            });
         }
     }
-
 }

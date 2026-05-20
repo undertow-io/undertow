@@ -18,8 +18,8 @@
 
 package io.undertow.server;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,35 +48,31 @@ public class EncodedEncodedSlashTestCase {
 
     @Test
     public void testSlashNotDecoded() throws Exception {
-
-        final TestHttpClient client = new TestHttpClient();
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/%2f%5c");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("/%2f%5c", HttpClientUtils.readResponse(result));
-
-        } finally {
-            client.getConnectionManager().shutdown();
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("/%2f%5c", HttpClientUtils.readResponse(result));
+                return null;
+            });
         }
     }
 
 
-    @Test @ProxyIgnore
+    @Test
+    @ProxyIgnore
     public void testSlashDecoded() throws Exception {
-
-        final TestHttpClient client = new TestHttpClient();
         OptionMap old = DefaultServer.getUndertowOptions();
         DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.ALLOW_ENCODED_SLASH, true));
-        try {
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
             HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/%2f%5c");
-            HttpResponse result = client.execute(get);
-            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-            Assert.assertEquals("//\\", HttpClientUtils.readResponse(result));
-
+            client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                Assert.assertEquals("//\\", HttpClientUtils.readResponse(result));
+                return null;
+            });
         } finally {
             DefaultServer.setUndertowOptions(old);
-            client.getConnectionManager().shutdown();
         }
     }
 }

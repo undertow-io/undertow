@@ -18,8 +18,6 @@
 
 package io.undertow.servlet.test.path;
 
-import jakarta.servlet.ServletException;
-
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -31,8 +29,9 @@ import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
+import jakarta.servlet.ServletException;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -74,19 +73,25 @@ public class RealPathTestCase {
     @Test
     public void testRealPath() throws Exception {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path/real-path");
-        HttpResponse result = new TestHttpClient().execute(get);
-        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-        String response = HttpClientUtils.readResponse(result);
-        Assert.assertEquals(Paths.get(RealPathTestCase.class.getResource("file.txt").toURI()).toString(), response);
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            final String response = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
+            Assert.assertEquals(Paths.get(RealPathTestCase.class.getResource("file.txt").toURI()).toString(), response);
+        }
     }
 
     @Test
     public void testPathTranslated() throws Exception {
         HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/servletContext/path/file.txt");
-        HttpResponse result = new TestHttpClient().execute(get);
-        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-        String response = HttpClientUtils.readResponse(result);
-        Assert.assertEquals(Paths.get(RealPathTestCase.class.getResource("file.txt").toURI()).toString(), response);
+        try (CloseableHttpClient client = TestHttpClient.defaultClient()) {
+            final String response = client.execute(get, result -> {
+                Assert.assertEquals(StatusCodes.OK, result.getCode());
+                return HttpClientUtils.readResponse(result);
+            });
+            Assert.assertEquals(Paths.get(RealPathTestCase.class.getResource("file.txt").toURI()).toString(), response);
+        }
     }
 
 }

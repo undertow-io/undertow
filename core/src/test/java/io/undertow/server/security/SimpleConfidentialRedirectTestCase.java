@@ -17,14 +17,8 @@
  */
 package io.undertow.server.security;
 
-import java.io.IOException;
-import java.net.Socket;
-import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
-
 import io.undertow.security.handlers.SinglePortConfidentialityHandler;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.HttpServerExchange;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.ProxyIgnore;
@@ -32,16 +26,21 @@ import io.undertow.testutils.TestHttpClient;
 import io.undertow.util.FileUtils;
 import io.undertow.util.HttpString;
 import io.undertow.util.StatusCodes;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.protocol.BasicHttpContext;
-import org.apache.http.protocol.HttpContext;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.protocol.BasicHttpContext;
+import org.apache.hc.core5.http.protocol.HttpContext;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+
+import java.io.IOException;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 
 /**
  * A simple test case to verify a redirect works.
@@ -59,15 +58,12 @@ public class SimpleConfidentialRedirectTestCase {
     public static void setup() throws IOException {
         DefaultServer.startSSLServer();
 
-        HttpHandler current = new HttpHandler() {
-            @Override
-            public void handleRequest(final HttpServerExchange exchange) {
-                exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
-                exchange.getResponseHeaders().put(HttpString.tryFromString("uri"), exchange.getRequestURI());
-                exchange.getResponseHeaders().put(HttpString.tryFromString("queryString"), exchange.getQueryString());
-                exchange.getResponseHeaders().put(HttpString.tryFromString("redirectedToPort"), exchange.getHostPort());
-                exchange.endExchange();
-            }
+        HttpHandler current = exchange -> {
+            exchange.getResponseHeaders().put(HttpString.tryFromString("scheme"), exchange.getRequestScheme());
+            exchange.getResponseHeaders().put(HttpString.tryFromString("uri"), exchange.getRequestURI());
+            exchange.getResponseHeaders().put(HttpString.tryFromString("queryString"), exchange.getQueryString());
+            exchange.getResponseHeaders().put(HttpString.tryFromString("redirectedToPort"), exchange.getHostPort());
+            exchange.endExchange();
         };
         redirectPort = DefaultServer.getHostSSLPort("default");
         current = new SinglePortConfidentialityHandler(current, redirectPort);
@@ -82,17 +78,17 @@ public class SimpleConfidentialRedirectTestCase {
 
     @Test
     public void simpleRedirectTestCase() throws IOException, GeneralSecurityException {
-        TestHttpClient client = new TestHttpClient();
         // create our own context to force http-request.config
         // notice that, if we just create http context, the config is ovewritten before request is sent
         // if we add the config to the HttpClient instead, it is ignored
         HttpContext httpContext = new BasicHttpContext() {
-            private final RequestConfig config = RequestConfig.copy(RequestConfig.DEFAULT).setNormalizeUri(false).build();
+            private final RequestConfig config = RequestConfig.copy(RequestConfig.DEFAULT)/*.setNormalizeUri(false)*/.build();
+
             @Override
-            public void setAttribute(final String id, final Object obj) {
+            public Object setAttribute(final String id, final Object obj) {
                 if ("http.request-config".equals(id))
-                    return;
-                super.setAttribute(id, obj);
+                    return config;
+                return super.setAttribute(id, obj);
             }
 
             @Override
@@ -102,15 +98,12 @@ public class SimpleConfidentialRedirectTestCase {
                 return super.getAttribute(id);
             }
         };
-        client.setSSLContext(DefaultServer.getClientSSLContext());
-        try {
-            sendRequest(client, httpContext,"/foo", null);
-            sendRequest(client,  httpContext,"/foo+bar", null);
-            sendRequest(client,  httpContext,"/foo+bar;aa", null);
-            sendRequest(client,  httpContext,"/foo+bar;aa", "x=y");
-            sendRequest(client,  httpContext,"/foo+bar%3Aaa", "x=%3Ablah");
-        } finally {
-            client.getConnectionManager().shutdown();
+        try (CloseableHttpClient client = TestHttpClient.withSSLContext(DefaultServer.getClientSSLContext()).build()) {
+            sendRequest(client, httpContext, "/foo", null);
+            sendRequest(client, httpContext, "/foo+bar", null);
+            sendRequest(client, httpContext, "/foo+bar;aa", null);
+            sendRequest(client, httpContext, "/foo+bar;aa", "x=y");
+            sendRequest(client, httpContext, "/foo+bar%3Aaa", "x=%3Ablah");
         }
     }
 
@@ -126,22 +119,23 @@ public class SimpleConfidentialRedirectTestCase {
         }
     }
 
-    private void sendRequest(final TestHttpClient client, HttpContext httpContext, final String uri, final String queryString) throws IOException {
+    private void sendRequest(final CloseableHttpClient client, HttpContext httpContext, final String uri, final String queryString) throws IOException {
         String targetURL = DefaultServer.getDefaultServerURL() + uri;
         if (queryString != null) {
             targetURL = targetURL + "?" + queryString;
         }
         final HttpGet get = new HttpGet(targetURL);
-        HttpResponse result = client.execute(get, httpContext);
-        Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
-        Assert.assertEquals("Unexpected scheme in redirected URI", "https", result.getFirstHeader("scheme").getValue());
-        Assert.assertEquals("Unexpected port in redirected URI", String.valueOf(redirectPort), result.getFirstHeader("redirectedToPort").getValue());
-        Assert.assertEquals("Unexpected path in redirected URI", uri, result.getFirstHeader("uri").getValue());
-        if (queryString != null) {
-            Assert.assertEquals("Unexpected query string in redirected URI", queryString,
-                    result.getFirstHeader("queryString").getValue());
-        }
-        HttpClientUtils.readResponse(result);
+        client.execute(get, httpContext, result -> {
+            Assert.assertEquals(StatusCodes.OK, result.getCode());
+            Assert.assertEquals("Unexpected scheme in redirected URI", "https", result.getFirstHeader("scheme").getValue());
+            Assert.assertEquals("Unexpected port in redirected URI", String.valueOf(redirectPort), result.getFirstHeader("redirectedToPort").getValue());
+            Assert.assertEquals("Unexpected path in redirected URI", uri, result.getFirstHeader("uri").getValue());
+            if (queryString != null) {
+                Assert.assertEquals("Unexpected query string in redirected URI", queryString,
+                        result.getFirstHeader("queryString").getValue());
+            }
+            return HttpClientUtils.readResponse(result);
+        });
     }
 
 }
