@@ -198,7 +198,7 @@ public class MultiPartTestCase {
 
             post.setEntity(entity);
             HttpResponse result = client.execute(post);
-            Assert.assertEquals(StatusCodes.INTERNAL_SERVER_ERROR, result.getStatusLine().getStatusCode());
+            Assert.assertEquals(StatusCodes.REQUEST_ENTITY_TOO_LARGE, result.getStatusLine().getStatusCode());
         } catch (IOException expected) {
             //in some environments the forced close of the read side will cause a connection reset
         }finally {
