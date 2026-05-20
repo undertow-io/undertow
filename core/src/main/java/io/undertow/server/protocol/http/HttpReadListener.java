@@ -67,8 +67,8 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     private static final String BAD_REQUEST = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
 
     private final HttpServerConnection connection;
-    private final ParseState state;
-    private final HttpRequestParser parser;
+    private final RequestState state = new RequestState();
+    private final RequestParser parser;
 
     private HttpServerExchange httpServerExchange;
 
@@ -89,7 +89,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
 
     private ParseTimeoutUpdater parseTimeoutUpdater;
 
-    HttpReadListener(final HttpServerConnection connection, final HttpRequestParser parser, ConnectorStatisticsImpl connectorStatistics) {
+    HttpReadListener(final HttpServerConnection connection, final RequestParser parser, ConnectorStatisticsImpl connectorStatistics) {
         this.connection = connection;
         this.parser = parser;
         this.connectorStatistics = connectorStatistics;
@@ -105,8 +105,6 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             this.parseTimeoutUpdater = new ParseTimeoutUpdater(connection, requestParseTimeout, requestIdleTimeout);
             connection.addCloseListener(parseTimeoutUpdater);
         }
-        state = new ParseState(connection.getUndertowOptions().get(UndertowOptions.HTTP_HEADERS_CACHE_SIZE, UndertowOptions.DEFAULT_HTTP_HEADERS_CACHE_SIZE));
-
         if (connection.getUndertowOptions().contains(UndertowOptions.REQUIRE_HOST_HTTP11)) {
             UndertowLogger.ROOT_LOGGER.configurationNotSupported("REQUIRE_HOST_HTTP11");
         }
@@ -195,6 +193,16 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                     httpServerExchange = new HttpServerExchange(connection, maxEntitySize);
                 }
                 parser.handle(buffer, state, httpServerExchange);
+                if (state.isComplete()) {
+                    // [UNDERTOW-2082] NOTE: this should be used only for HTTP1.x
+                    // keeping this out for now as this is not present in branch 2.2.x
+                    // leaving the code here as a commented out block in case we ever need it
+                    // it will be easier to spot it than simply deleting this block
+                    /*if(!Cookies.isCrumbsAssemplyDisabled()) {
+                        Cookies.assembleCrumbs(httpServerExchange.getRequestHeaders());
+                    }*/
+                    //TODO: list type headers?
+                }
                 if (buffer.hasRemaining()) {
                     free = false;
                     connection.setExtraBytes(pooled);
