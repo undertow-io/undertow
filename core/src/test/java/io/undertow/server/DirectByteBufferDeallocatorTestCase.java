@@ -18,6 +18,7 @@
 package io.undertow.server;
 
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.security.Permission;
@@ -34,6 +35,7 @@ public class DirectByteBufferDeallocatorTestCase {
     @Test
     @SuppressWarnings({"removal"})
     public void directByteBufferDeallocatorInstantiationTest() {
+        Assume.assumeTrue("Skipping on JDK " + Runtime.version().feature(), Runtime.version().feature() < 25);
         Exception exception = null;
         java.security.Policy.setPolicy(new java.security.Policy() {
             @Override

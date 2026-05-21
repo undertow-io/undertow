@@ -35,22 +35,22 @@ import io.undertow.util.HttpString;
 class AjpRequestParseState {
 
     //states
-    public static final int BEGIN = 0;
-    public static final int READING_MAGIC_NUMBER = 1;
-    public static final int READING_DATA_SIZE = 2;
-    public static final int READING_PREFIX_CODE = 3;
-    public static final int READING_METHOD = 4;
-    public static final int READING_PROTOCOL = 5;
-    public static final int READING_REQUEST_URI = 6;
-    public static final int READING_REMOTE_ADDR = 7;
-    public static final int READING_REMOTE_HOST = 8;
-    public static final int READING_SERVER_NAME = 9;
-    public static final int READING_SERVER_PORT = 10;
-    public static final int READING_IS_SSL = 11;
-    public static final int READING_NUM_HEADERS = 12;
-    public static final int READING_HEADERS = 13;
-    public static final int READING_ATTRIBUTES = 14;
-    public static final int DONE = 15;
+    static final int BEGIN = 0;
+    static final int READING_MAGIC_NUMBER = 1;
+    static final int READING_DATA_SIZE = 2;
+    static final int READING_PREFIX_CODE = 3;
+    static final int READING_METHOD = 4;
+    static final int READING_PROTOCOL = 5;
+    static final int READING_REQUEST_URI = 6;
+    static final int READING_REMOTE_ADDR = 7;
+    static final int READING_REMOTE_HOST = 8;
+    static final int READING_SERVER_NAME = 9;
+    static final int READING_SERVER_PORT = 10;
+    static final int READING_IS_SSL = 11;
+    static final int READING_NUM_HEADERS = 12;
+    static final int READING_HEADERS = 13;
+    static final int READING_ATTRIBUTES = 14;
+    static final int DONE = 15;
 
     int state;
 
@@ -75,7 +75,7 @@ class AjpRequestParseState {
     /**
      * The length of the string being read
      */
-    public int stringLength = -1;
+    int stringLength = -1;
 
     /**
      * The current string being read
@@ -86,18 +86,18 @@ class AjpRequestParseState {
      * when reading the first byte of an integer this stores the first value. It is set to -1 to signify that
      * the first byte has not been read yet.
      */
-    public int currentIntegerPart = -1;
+    int currentIntegerPart = -1;
 
     boolean containsUrlCharacters = false;
-    public int readHeaders = 0;
-    public String sslSessionId;
-    public String sslCipher;
-    public String sslCert;
-    public String sslKeySize;
+    int readHeaders;
+    String sslSessionId;
+    String sslCipher;
+    String sslCert;
+    String sslKeySize;
     boolean badRequest;
-    public boolean containsUnencodedUrlCharacters;
+    boolean containsUnencodedUrlCharacters;
 
-    public void reset() {
+    void reset() {
         stringLength = -1;
         currentIntegerPart = -1;
         readHeaders = 0;
@@ -105,7 +105,7 @@ class AjpRequestParseState {
         currentString.setLength(0);
         containsUnencodedUrlCharacters = false;
     }
-    public boolean isComplete() {
+    boolean isComplete() {
         return state == 15;
     }
 
@@ -153,17 +153,17 @@ class AjpRequestParseState {
         return InetSocketAddress.createUnresolved(serverAddress, serverPort);
     }
 
-    public void addStringByte(byte b) {
+    void addStringByte(byte b) {
         currentString.append((char)(b & 0xFF));
     }
 
-    public String getStringAndClear() throws UnsupportedEncodingException {
+    String getStringAndClear() throws UnsupportedEncodingException {
         String ret = currentString.toString();
         currentString.setLength(0);
         return ret;
     }
 
-    public int getCurrentStringLength() {
+    int getCurrentStringLength() {
         return currentString.length();
     }
 }
