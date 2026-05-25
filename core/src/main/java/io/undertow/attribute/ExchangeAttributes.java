@@ -123,6 +123,14 @@ public class ExchangeAttributes {
         return ThreadNameAttribute.INSTANCE;
     }
 
+    public static ExchangeAttribute requestSize() {
+        return RequestSizeAttribute.INSTANCE;
+    }
+
+    public static ExchangeAttribute responseSize() {
+        return ResponseSizeAttribute.INSTANCE;
+    }
+
     public static ExchangeAttribute constant(String value) {
         return new ConstantExchangeAttribute(value);
     }

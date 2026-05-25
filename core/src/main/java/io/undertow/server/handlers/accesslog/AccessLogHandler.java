@@ -67,6 +67,9 @@ import io.undertow.server.handlers.builder.HandlerBuilder;
  * <li><b>%D</b> - Time taken to process the request, in millis
  * <li><b>%T</b> - Time taken to process the request, in seconds
  * <li><b>%I</b> - current Request thread name (can compare later with stacktraces)
+ * <li><b>%E</b> - Size of request in bytes, including headers, cannot be zero
+ * <li><b>%O</b> - Size of response in bytes, including headers
+
  * </ul>
  * <p>In addition, the caller can specify one of the following aliases for
  * commonly utilized patterns:</p>
