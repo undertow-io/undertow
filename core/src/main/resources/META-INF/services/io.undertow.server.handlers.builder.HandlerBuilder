@@ -45,3 +45,4 @@ io.undertow.server.handlers.SameSiteCookieHandler$Builder
 io.undertow.server.handlers.SetErrorHandler$Builder
 io.undertow.server.handlers.builder.ReasonPhraseHandlerBuilder
 io.undertow.server.handlers.builder.ResponseHandlerBuilder
+io.undertow.server.handlers.resource.DirectoryListingEnableHandler$Builder
