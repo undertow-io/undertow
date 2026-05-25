@@ -37,8 +37,22 @@ public interface Receiver {
      * {@link RequestTooBigException}.
      *
      * @param maxBufferSize The maximum amount of data to be buffered
+     * @deprecated Use {@link #setMaxContentSize(long)} instead. This method now delegates to setMaxContentSize.
+     *             Both methods control the same limit - there is no separate buffer size limit.
      */
-    void setMaxBufferSize(int maxBufferSize);
+    @Deprecated(forRemoval = true)
+    default void setMaxBufferSize(int maxBufferSize) {
+        setMaxContentSize(maxBufferSize);
+    }
+
+    /**
+     * Sets the maximum amount of data that will be transferred. If you call receive* method and the request
+     * size is larger than this amount then the error callback with be invoked with a
+     * {@link RequestTooBigException}.
+     *
+     * @param maxContentSize The maximum amount of data to be transferred
+     */
+    void setMaxContentSize(long maxContentSize);
 
     /**
      *
