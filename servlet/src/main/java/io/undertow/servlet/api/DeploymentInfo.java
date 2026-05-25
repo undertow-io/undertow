@@ -413,9 +413,17 @@ public class DeploymentInfo implements Cloneable {
         return this;
     }
 
+    public List<FilterMappingInfo> getFilterUrlMappings(){
+        return filterUrlMappings;
+    }
+
     public DeploymentInfo addFilterServletNameMapping(final String filterName, final String mapping, DispatcherType dispatcher) {
         filterServletNameMappings.add(new FilterMappingInfo(filterName, FilterMappingInfo.MappingType.SERVLET, mapping, dispatcher));
         return this;
+    }
+
+    public List<FilterMappingInfo> getFilterServletNameMappings(){
+        return filterServletNameMappings;
     }
 
     public DeploymentInfo insertFilterUrlMapping(final int pos, final String filterName, final String mapping, DispatcherType dispatcher) {
