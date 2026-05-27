@@ -47,21 +47,11 @@ public class QuotingExchangeAttribute implements ExchangeAttribute {
 
         /* Wrap all quotes in double quotes. */
         StringBuilder buffer = new StringBuilder(svalue.length() + 2);
-        buffer.append('\'');
-        int i = 0;
-        while (i < svalue.length()) {
-            int j = svalue.indexOf('\'', i);
-            if (j == -1) {
-                buffer.append(svalue.substring(i));
-                i = svalue.length();
-            } else {
-                buffer.append(svalue.substring(i, j + 1));
-                buffer.append('"');
-                i = j + 2;
-            }
-        }
+        buffer
+            .append('\'')
+            .append(svalue.replaceAll("'", "\"\'\""))
+            .append('\'');
 
-        buffer.append('\'');
         return buffer.toString();
     }
 
