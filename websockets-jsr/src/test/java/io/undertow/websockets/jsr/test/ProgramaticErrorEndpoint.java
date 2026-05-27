@@ -48,17 +48,13 @@ public class ProgramaticErrorEndpoint extends Endpoint {
 
     @Override
     public void onOpen(Session session, EndpointConfig config) {
-        session.addMessageHandler(new MessageHandler.Whole<String>() {
+        session.addMessageHandler((MessageHandler.Whole<String>) message -> {
 
-            @Override
-            public void onMessage(String message) {
-
-                QUEUE.add(message);
-                if (message.equals("app-error")) {
-                    throw new RuntimeException("an error");
-                } else if (message.equals("io-error")) {
-                    throw new RuntimeException(new IOException());
-                }
+            QUEUE.add(message);
+            if (message.equals("app-error")) {
+                throw new RuntimeException("an error");
+            } else if (message.equals("io-error")) {
+                throw new RuntimeException(new IOException());
             }
         });
     }
