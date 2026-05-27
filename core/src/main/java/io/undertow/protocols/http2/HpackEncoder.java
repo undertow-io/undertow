@@ -95,7 +95,9 @@ public class HpackEncoder {
 
     private byte[] overflowData;
     private int overflowPos;
-    private int overflowLength;
+    private int overflowLength = -1;
+    // hold last iterator intex over values, its used in case of overflow to kickstart from next entry if there is more than one
+    private int headersValueIterator = -1;
 
     static {
         Map<HttpString, TableEntry[]> map = new HashMap<>();
@@ -151,6 +153,7 @@ public class HpackEncoder {
                 target.put(overflowData[i]);
             }
             overflowData = null;
+            overflowLength = -1;
         }
 
         long it = headersIterator;
@@ -163,7 +166,9 @@ public class HpackEncoder {
             if (headers != currentHeaders) {
                 throw new IllegalStateException();
             }
-            it = headers.fiNext(it);
+            if( this.headersValueIterator == -1) {
+                it = headers.fiNext(it);
+            }
         }
         while (it != -1) {
             HeaderValues values = headers.fiCurrent(it);
@@ -182,7 +187,10 @@ public class HpackEncoder {
                 skip = true;
             }
             if (!skip) {
-                for (int i = 0; i < values.size(); ++i) {
+                //this is done to restart after overflow.
+                int valuesStartIndex = this.headersValueIterator == -1 ? 0 : this.headersValueIterator + 1;
+                this.headersValueIterator = -1;
+                for (int i = valuesStartIndex; i < values.size(); ++i) {
 
                     HttpString headerName = values.getHeaderName();
                     int required = 11 + headerName.length(); //we use 11 to make sure we have enough room for the variable length itegers
@@ -242,6 +250,10 @@ public class HpackEncoder {
                     if(overflowing) {
                         this.headersIterator = it;
                         this.overflowLength = current.position();
+                        if(values.size() > 1 && values.size() > i) {
+                            this.headersValueIterator = i;
+                            //set this only in case we have more, otherwise single entry will be handled properly.
+                        }
                         return State.OVERFLOW;
                     }
 
