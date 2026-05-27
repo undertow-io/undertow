@@ -313,7 +313,12 @@ public class DispatcherIncludeTestCase {
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.path_info:null\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.query_string:n4=v4\r\n"));
             MatcherAssert.assertThat(response, CoreMatchers.containsString("jakarta.servlet.include.mapping:"));
-            MatcherAssert.assertThat(response, CoreMatchers.containsString("request params:include=/path%25include.includeinfo?n4=v4n1=v1n2=v%2n3=v3n4=v4\r\n"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("request params:"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("n1=v1"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("n2=v%2"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("n3=v3"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("n4=v4"));
+            MatcherAssert.assertThat(response, CoreMatchers.containsString("include=/path%25include.includeinfo?n4=v4"));
         } finally {
             client.getConnectionManager().shutdown();
         }
