@@ -141,6 +141,7 @@ public class BufferedTextMessage {
                                                 }
                                                 return;
                                             }
+                                            checkMaxSize(channel, res);
                                             if (!buffer.hasRemaining()) {
                                                 buffer.flip();
                                                 data.write(buffer);
