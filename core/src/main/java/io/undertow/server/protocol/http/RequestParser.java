@@ -530,7 +530,7 @@ final class RequestParser {
                 } else if (allowUnescapedCharactersInUrl && !isRequestTargetChar(nextByte)) {
                     // unescaped characters
                     sb.append(nextChar);
-                    state.urlDecodeRequired = true;
+                    state.urlDecodeRequired = decode;
                 } else throw new BadRequestException();
             } else if (state.targetType == AUTHORITY_FORM) {
                 if (state.previousByte == 0 && nextByte == SPACE) {
@@ -573,10 +573,10 @@ final class RequestParser {
             } else if (nextByte == PLUS) {
                 // encoded space
                 sb.append(nextChar);
-                state.urlDecodeRequired = decode;
+                state.paramDecodeRequired = state.urlDecodeRequired = decode;
             } else if (nextByte == EQUALS && state.paramName == null) {
                 // path parameter key read complete
-                state.paramName = decode(sb.substring(state.position), state.urlDecodeRequired, state, true, true);
+                state.paramName = decode(sb.substring(state.position), state.paramDecodeRequired, state, true, true);
                 sb.append(nextChar);
                 state.position = sb.length();
                 state.paramDecodeRequired = false;
@@ -622,7 +622,7 @@ final class RequestParser {
             } else if (allowUnescapedCharactersInUrl && !isRequestTargetChar(nextByte)) {
                 // unescaped characters
                 sb.append(nextChar);
-                state.urlDecodeRequired = true;
+                state.paramDecodeRequired = state.urlDecodeRequired = decode;
             } else throw new BadRequestException();
         }
     }
@@ -647,7 +647,7 @@ final class RequestParser {
                 state.paramDecodeRequired = state.urlDecodeRequired = decode;
             } else if (nextByte == EQUALS && state.paramName == null) {
                 // query parameter key read complete
-                state.paramName = decode(sb.substring(state.position), state.urlDecodeRequired, state, true, true);
+                state.paramName = decode(sb.substring(state.position), state.paramDecodeRequired, state, true, true);
                 sb.append(nextChar);
                 state.position = sb.length();
                 state.paramDecodeRequired = false;
@@ -671,7 +671,7 @@ final class RequestParser {
             } else if (allowUnescapedCharactersInUrl && !isRequestTargetChar(nextByte)) {
                 // unescaped characters
                 sb.append(nextChar);
-                state.urlDecodeRequired = true;
+                state.paramDecodeRequired = state.urlDecodeRequired = decode;
             } else throw new BadRequestException();
         }
     }
