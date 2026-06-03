@@ -54,7 +54,6 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
      */
     @Deprecated
     public static final AttachmentKey<HeaderMap> TRAILERS = HttpAttachments.REQUEST_TRAILERS;
-
     private final BufferWrapper bufferWrapper;
     private final ConduitListener<? super ChunkedStreamSourceConduit> finishListener;
     private final HttpServerExchange exchange;
@@ -63,7 +62,6 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
     private boolean closed;
     private boolean finishListenerInvoked;
 
-    private long remainingAllowed;
     private final ChunkReader chunkReader;
     private final PushBackStreamSourceConduit channel;
 
@@ -99,11 +97,39 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         super(next);
         this.bufferWrapper = bufferWrapper;
         this.finishListener = finishListener;
-        this.remainingAllowed = Long.MIN_VALUE;
-        this.chunkReader = new ChunkReader<>(attachable, HttpAttachments.REQUEST_TRAILERS, this);
+        this.chunkReader = new ChunkReader(attachable, HttpAttachments.REQUEST_TRAILERS, new MaxEntitySizeChecker(getMaxEntitySize(exchange)));
         this.exchange = exchange;
         this.closeable = closeable;
         this.channel = channel;
+    }
+
+    private class MaxEntitySizeChecker implements BytesCounter<IOException> {
+
+        private long remainingAllowed;
+
+        private MaxEntitySizeChecker(final long maxEntitySize) {
+            this.remainingAllowed = maxEntitySize;
+        }
+
+        @Override
+        public void increment() throws IOException {
+            add(1L);
+        }
+
+        @Override
+        public void add(final long bytesRead) throws IOException {
+            if (remainingAllowed < 0) return; // not configured for checking
+            if (remainingAllowed < bytesRead) {
+                Connectors.terminateRequest(exchange);
+                closed = true;
+                exchange.setPersistent(false);
+                finishListener.handleEvent(ChunkedStreamSourceConduit.this);
+                IOException e = UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getMaxEntitySize());
+                e.printStackTrace(System.err);
+                throw e;
+            }
+            remainingAllowed -= bytesRead;
+        }
     }
 
     public long transferTo(final long position, final long count, final FileChannel target) throws IOException {
@@ -115,27 +141,9 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
         }
     }
 
-    private void updateRemainingAllowed(final int written) throws IOException {
-        if (remainingAllowed == Long.MIN_VALUE) {
-            if (exchange == null) {
-                return;
-            } else {
-                long maxEntitySize = exchange.getMaxEntitySize();
-                if (maxEntitySize <= 0) {
-                    return;
-                }
-                remainingAllowed = maxEntitySize;
-            }
-        }
-        remainingAllowed -= written;
-        if (remainingAllowed < 0) {
-            //max entity size is exceeded
-            Connectors.terminateRequest(exchange);
-            closed = true;
-            exchange.setPersistent(false);
-            finishListener.handleEvent(this);
-            throw UndertowMessages.MESSAGES.requestEntityWasTooLarge(exchange.getMaxEntitySize());
-        }
+    private long getMaxEntitySize(final HttpServerExchange exchange) {
+        final long maxEntitySize = exchange != null ? exchange.getMaxEntitySize() : -1;
+        return maxEntitySize > 0 ? maxEntitySize : -1;
     }
 
     @Override
@@ -228,7 +236,6 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                         dst.put(buf);
                         buf.limit(orig);
                         chunkRemaining -= remaining;
-                        updateRemainingAllowed(remaining);
                         free = false;
                         return remaining;
                     } else if (buf.hasRemaining()) {
@@ -268,7 +275,6 @@ public class ChunkedStreamSourceConduit extends AbstractStreamSourceConduit<Stre
                     } else {
                         free = false;
                     }
-                    updateRemainingAllowed(read);
                     return read;
 
                 } finally {

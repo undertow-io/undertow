@@ -25,7 +25,6 @@ import static org.xnio.Bits.longBitMask;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.xnio.conduits.Conduit;
 import io.undertow.UndertowMessages;
 import io.undertow.util.Attachable;
 import io.undertow.util.AttachmentKey;
@@ -37,7 +36,7 @@ import io.undertow.util.HttpString;
  *
  * @author Stuart Douglas
  */
-class ChunkReader<T extends Conduit> {
+class ChunkReader {
 
     private static final long FLAG_FINISHED = 1L << 62L;
     private static final long FLAG_READING_LENGTH = 1L << 61L;
@@ -50,6 +49,7 @@ class ChunkReader<T extends Conduit> {
     private static final long LIMIT = Long.MAX_VALUE >> 4;
 
     private long state;
+    private final BytesCounter<? extends IOException> maxEntitySizeChecker;
     private final Attachable attachable;
     private final AttachmentKey<HeaderMap> trailerAttachmentKey;
     /**
@@ -58,12 +58,10 @@ class ChunkReader<T extends Conduit> {
      */
     private TrailerParser trailerParser;
 
-    private final T conduit;
-
-    ChunkReader(final Attachable attachable, final AttachmentKey<HeaderMap> trailerAttachmentKey, T conduit) {
+    ChunkReader(final Attachable attachable, final AttachmentKey<HeaderMap> trailerAttachmentKey, BytesCounter<? extends IOException> maxEntitySizeChecker) {
         this.attachable = attachable;
         this.trailerAttachmentKey = trailerAttachmentKey;
-        this.conduit = conduit;
+        this.maxEntitySizeChecker = maxEntitySizeChecker;
         this.state = FLAG_READING_LENGTH;
     }
 
@@ -88,6 +86,7 @@ class ChunkReader<T extends Conduit> {
             while (anyAreSet(newVal, FLAG_READING_NEWLINE)) {
                 while (buf.hasRemaining()) {
                     byte b = buf.get();
+                    maxEntitySizeChecker.increment();
                     if (b == '\n') {
                         newVal = newVal & ~FLAG_READING_NEWLINE | FLAG_READING_LENGTH;
                         break;
@@ -101,6 +100,7 @@ class ChunkReader<T extends Conduit> {
             while (anyAreSet(newVal, FLAG_READING_LENGTH)) {
                 while (buf.hasRemaining()) {
                     byte b = buf.get();
+                    maxEntitySizeChecker.increment();
                     if ((b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F')) {
                         if (chunkRemaining > LIMIT) {
                             throw UndertowMessages.MESSAGES.chunkSizeTooLarge();
@@ -108,6 +108,7 @@ class ChunkReader<T extends Conduit> {
                         chunkRemaining <<= 4; //shift it 4 bytes and then add the next value to the end
                         chunkRemaining += Character.digit((char) b, 16);
                     } else {
+                        maxEntitySizeChecker.add(chunkRemaining);
                         if (b == '\n') {
                             newVal = newVal & ~FLAG_READING_LENGTH;
                         } else {
@@ -122,6 +123,7 @@ class ChunkReader<T extends Conduit> {
             }
             while (anyAreSet(newVal, FLAG_READING_TILL_END_OF_LINE)) {
                 while (buf.hasRemaining()) {
+                    maxEntitySizeChecker.increment();
                     if (buf.get() == '\n') {
                         newVal = newVal & ~FLAG_READING_TILL_END_OF_LINE;
                         break;
@@ -179,11 +181,14 @@ class ChunkReader<T extends Conduit> {
         while (buffer.hasRemaining()) {
             byte b = buffer.get();
             if (b == '\n') {
+                maxEntitySizeChecker.increment();
                 return -1;
             } else if (b != '\r') {
                 buffer.position(buffer.position() - 1);
                 trailerParser = new TrailerParser();
                 return trailerParser.handle(buffer);
+            } else {
+                maxEntitySizeChecker.increment();
             }
         }
         return 0;
@@ -208,6 +213,7 @@ class ChunkReader<T extends Conduit> {
         public int handle(ByteBuffer buf) throws IOException {
             while (buf.hasRemaining()) {
                 final byte b = buf.get();
+                maxEntitySizeChecker.increment();
                 if (state == STATE_TRAILER_NAME) {
                     if (b == '\r') {
                         if (builder.length() == 0) {
