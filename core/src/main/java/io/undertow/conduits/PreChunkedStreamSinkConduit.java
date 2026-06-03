@@ -53,7 +53,7 @@ public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<Strea
     private static final int FLAG_FINISHED = 1 << 2;
 
     int state = 0;
-    final ChunkReader<PreChunkedStreamSinkConduit> chunkReader;
+    final ChunkReader chunkReader;
 
     /**
      * Construct a new instance.
@@ -65,7 +65,7 @@ public class PreChunkedStreamSinkConduit extends AbstractStreamSinkConduit<Strea
     public PreChunkedStreamSinkConduit(final StreamSinkConduit next, final ConduitListener<? super PreChunkedStreamSinkConduit> finishListener, final Attachable attachable) {
         super(next);
         //we don't want the reader to call the finish listener, so we pass null
-        this.chunkReader = new ChunkReader<>(attachable, HttpAttachments.RESPONSE_TRAILERS, this);
+        this.chunkReader = new ChunkReader(attachable, HttpAttachments.RESPONSE_TRAILERS, BytesCounter.NULL);
         this.finishListener = finishListener;
     }
 
