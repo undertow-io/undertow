@@ -527,8 +527,13 @@ final class RequestParser {
                     // prepare for next parsing phase
                     state.setNext(VERSION);
                     return;
-                } else if (allowUnescapedCharactersInUrl && !isRequestTargetChar(nextByte)) {
-                    // unescaped characters
+                } else if (isRequestTargetChar(nextByte)) {
+                    // RFC 3986, 2.2 Reserved Characters
+                    // If a reserved character is found in a URI component and no delimiting role is known for that character, then
+                    // it must be interpreted as representing the data octet corresponding to that character's encoding in US-ASCII.
+                    sb.append(nextChar);
+                } else if (allowUnescapedCharactersInUrl) {
+                    // unescaped characters - violating HTTP 1.1 specification
                     sb.append(nextChar);
                     state.urlDecodeRequired = decode;
                 } else throw new BadRequestException();
@@ -619,8 +624,13 @@ final class RequestParser {
                 // prepare for next parsing phase
                 state.setNext(VERSION);
                 return;
-            } else if (allowUnescapedCharactersInUrl && !isRequestTargetChar(nextByte)) {
-                // unescaped characters
+            } else if (isRequestTargetChar(nextByte)) {
+                // RFC 3986, 2.2 Reserved Characters
+                // If a reserved character is found in a URI component and no delimiting role is known for that character, then
+                // it must be interpreted as representing the data octet corresponding to that character's encoding in US-ASCII.
+                sb.append(nextChar);
+            } else if (allowUnescapedCharactersInUrl) {
+                // unescaped characters - violating HTTP 1.1 specification
                 sb.append(nextChar);
                 state.paramDecodeRequired = state.urlDecodeRequired = decode;
             } else throw new BadRequestException();
@@ -668,8 +678,13 @@ final class RequestParser {
                 // prepare for next parsing phase
                 state.setNext(VERSION);
                 return;
-            } else if (allowUnescapedCharactersInUrl && !isRequestTargetChar(nextByte)) {
-                // unescaped characters
+            } else if (isRequestTargetChar(nextByte)) {
+                // RFC 3986, 2.2 Reserved Characters
+                // If a reserved character is found in a URI component and no delimiting role is known for that character, then
+                // it must be interpreted as representing the data octet corresponding to that character's encoding in US-ASCII.
+                sb.append(nextChar);
+            } else if (allowUnescapedCharactersInUrl) {
+                // unescaped characters - violating HTTP 1.1 specification
                 sb.append(nextChar);
                 state.paramDecodeRequired = state.urlDecodeRequired = decode;
             } else throw new BadRequestException();
@@ -755,7 +770,7 @@ final class RequestParser {
     private void addQuery(final RequestState state, final HttpServerExchange exchange) throws BadRequestException {
         String queryString = state.parsedData.toString();
         exchange.setQueryString(queryString);
-        if (state.urlDecodeRequired && this.allowUnescapedCharactersInUrl) {
+        if (state.urlDecodeRequired && allowUnescapedCharactersInUrl) {
             queryString = decode(queryString, state.urlDecodeRequired, state, slashDecodingFlag, false);
             exchange.setDecodedQueryString(queryString);
         }
