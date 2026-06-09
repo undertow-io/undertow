@@ -33,6 +33,7 @@ import org.xnio.OptionMap;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Basic test of the HTTP parser functionality.
@@ -745,6 +746,18 @@ public class SimpleParserTestCase {
         Assert.assertEquals("44", result.getQueryParameters().get(";?").getFirst());
     }
 
+    @Test
+    public void testNonEncodedDelimiterAsciiCharacters() throws UnsupportedEncodingException, BadRequestException {
+        byte[] in = "GET /b[]=ab HTTP/1.1\r\n\r\n".getBytes("ISO-8859-1");
+
+        final RequestState context = new RequestState();
+        HttpServerExchange result = new HttpServerExchange(null);
+        RequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("/b[]=ab", result.getRequestPath());
+        Assert.assertEquals("/b[]=ab", result.getRequestURI());
+    }
+
     @Test(expected = BadRequestException.class)
     public void testNonEncodedAsciiCharacters() throws UnsupportedEncodingException, BadRequestException {
         byte[] in = "GET /bÃ¥r HTTP/1.1\r\n\r\n".getBytes("ISO-8859-1");
@@ -760,10 +773,10 @@ public class SimpleParserTestCase {
 
         final RequestState context = new RequestState();
         HttpServerExchange result = new HttpServerExchange(null);
-        RequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true)).handle(ByteBuffer.wrap(in), context, result);
+        RequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true, UndertowOptions.URL_CHARSET, StandardCharsets.ISO_8859_1.name())).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
-        Assert.assertEquals("/bår", result.getRequestPath());
-        Assert.assertEquals("/bår", result.getRequestURI()); //!not decoded
+        Assert.assertEquals("/bÃ¥r", result.getRequestPath());
+        Assert.assertEquals("/bÃ¥r", result.getRequestURI());
     }
 
     @Test
