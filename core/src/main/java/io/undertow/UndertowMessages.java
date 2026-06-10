@@ -681,4 +681,10 @@ public interface UndertowMessages {
 
     @Message(id = 219, value = "Too many path parameters, cannot have more than %s path parameters")
     BadRequestException tooManyPathParameters(int noParams);
+
+    @Message(id = 220, value = "HTTP response header value was too large for the buffer (%s).")
+    IOException responseHeaderValueTooLargeForBuffer(int size);
+
+    @Message(id = 221, value = "HTTP response header name was too large for the buffer (%s).")
+    IOException responseHeaderNameTooLargeForBuffer(int size);
 }
