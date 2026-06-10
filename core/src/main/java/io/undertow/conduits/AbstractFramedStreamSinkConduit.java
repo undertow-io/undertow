@@ -232,7 +232,7 @@ public class AbstractFramedStreamSinkConduit extends AbstractStreamSinkConduit<S
         return anyAreSet(state, FLAG_WRITES_TERMINATED);
     }
 
-    protected void queueCloseFrames() {
+    protected void queueCloseFrames() throws IOException {
 
     }
 

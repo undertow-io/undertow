@@ -175,7 +175,7 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
      *
      * No attempt is made to actually flush this, so a gathering write can be used to actually flush the data
      */
-    private void processAJPHeader() {
+    private void processAJPHeader() throws IOException {
         int oldState = this.state;
         if (anyAreSet(oldState, FLAG_START)) {
 
@@ -197,7 +197,8 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
                 reason = StatusCodes.getReason(exchange.getStatusCode());
             }
             if(reason.length() + 4 > buffer.remaining()) {
-                pooled.close();
+                // always close the allocated buffers before exception
+                closeBuffers(byteBuffers, pooled);
                 throw UndertowMessages.MESSAGES.reasonPhraseToLargeForBuffer(reason);
             }
             putString(buffer, reason);
@@ -210,7 +211,6 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
             }
 
             putInt(buffer, headers);
-
 
             for (final HttpString header : responseHeaders.getHeaderNames()) {
                 for (String headerValue : responseHeaders.get(header)) {
@@ -234,9 +234,27 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
                     if (headerCode != null) {
                         putInt(buffer, headerCode);
                     } else {
-                        putHttpString(buffer, header);
+                        // even though we might have already flipped the buffer,
+                        // a BufferOverflowException is still possible for large header values/names
+                        // so we should check again
+                        if (header.length() < buffer.remaining()) {
+                            putHttpString(buffer, header);
+                        } else {
+                            // always close the allocated buffers before exception
+                            closeBuffers(byteBuffers, pooled);
+                            throw UndertowMessages.MESSAGES.responseHeaderNameTooLargeForBuffer(header.length());
+                        }
                     }
-                    putString(buffer, headerValue);
+                    // even though we might have already flipped the buffer,
+                    // a BufferOverflowException is still possible for large header values/names
+                    // so we should check again
+                    if (headerValue.length() < buffer.remaining()) {
+                        putString(buffer, headerValue);
+                    } else {
+                        // always close the allocated buffers before exception
+                        closeBuffers(byteBuffers, pooled);
+                        throw UndertowMessages.MESSAGES.responseHeaderValueTooLargeForBuffer(headerValue.length());
+                    }
                 }
             }
             if(byteBuffers == null) {
@@ -260,9 +278,27 @@ final class AjpServerResponseConduit extends AbstractFramedStreamSinkConduit {
         }
     }
 
+    /**
+     * Closes all allocated buffers to prevent buffer leaks.
+     * If multiple buffers were allocated (byteBuffers != null), closes all buffers in the array.
+     * Otherwise, closes the single pooled buffer.
+     * This should be used as cleanup before throwing an exception, if any buffer(s) was/were alocated before.
+     *
+     * @param byteBuffers array of pooled buffers, or null if only a single buffer was allocated
+     * @param pooled the current pooled buffer (only closed if byteBuffers is null)
+     */
+    private void closeBuffers(PooledByteBuffer[] byteBuffers, PooledByteBuffer pooled) {
+        if (byteBuffers != null) {
+          for (PooledByteBuffer buf : byteBuffers) {
+              buf.close();
+          }
+        } else {
+            pooled.close();
+        }
+    }
 
     @Override
-    protected void queueCloseFrames() {
+    protected void queueCloseFrames() throws IOException {
         processAJPHeader();
         final ByteBuffer buffer = exchange.isPersistent() ? CLOSE_FRAME_PERSISTENT.duplicate() : CLOSE_FRAME_NON_PERSISTENT.duplicate();
         queueFrame(null, buffer);
