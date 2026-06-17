@@ -36,22 +36,22 @@ import static io.undertow.protocols.ajp.AjpConstants.FRAME_TYPE_SEND_HEADERS;
  */
 class AjpResponseParser {
 
-    public static final AjpResponseParser INSTANCE = new AjpResponseParser();
+    static final AjpResponseParser INSTANCE = new AjpResponseParser();
 
     private static final int AB = ('A' << 8) + 'B';
 
     //states
-    public static final int BEGIN = 0;
-    public static final int READING_MAGIC_NUMBER = 1;
-    public static final int READING_DATA_SIZE = 2;
-    public static final int READING_PREFIX_CODE = 3;
-    public static final int READING_STATUS_CODE = 4;
-    public static final int READING_REASON_PHRASE = 5;
-    public static final int READING_NUM_HEADERS = 6;
-    public static final int READING_HEADERS = 7;
-    public static final int READING_PERSISTENT_BOOLEAN = 8;
-    public static final int READING_BODY_CHUNK_LENGTH = 9;
-    public static final int DONE = 10;
+    static final int BEGIN = 0;
+    static final int READING_MAGIC_NUMBER = 1;
+    static final int READING_DATA_SIZE = 2;
+    static final int READING_PREFIX_CODE = 3;
+    static final int READING_STATUS_CODE = 4;
+    static final int READING_REASON_PHRASE = 5;
+    static final int READING_NUM_HEADERS = 6;
+    static final int READING_HEADERS = 7;
+    static final int READING_PERSISTENT_BOOLEAN = 8;
+    static final int READING_BODY_CHUNK_LENGTH = 9;
+    static final int DONE = 10;
 
     //parser states
     int state;
@@ -65,11 +65,11 @@ class AjpResponseParser {
     HeaderMap headers = new HeaderMap();
     int readBodyChunkSize;
 
-    public boolean isComplete() {
+    boolean isComplete() {
         return state == DONE;
     }
 
-    public void parse(final ByteBuffer buf) throws IOException {
+    void parse(final ByteBuffer buf) throws IOException {
         if (!buf.hasRemaining()) {
             return;
         }
@@ -201,43 +201,43 @@ class AjpResponseParser {
         return AjpConstants.HTTP_HEADERS_ARRAY[offset];
     }
 
-    public HeaderMap getHeaders() {
+    HeaderMap getHeaders() {
         return headers;
     }
 
-    public int getStatusCode() {
+    int getStatusCode() {
         return statusCode;
     }
 
-    public String getReasonPhrase() {
+    String getReasonPhrase() {
         return reasonPhrase;
     }
 
-    public int getReadBodyChunkSize() {
+    int getReadBodyChunkSize() {
         return readBodyChunkSize;
     }
 
-    public static final int STRING_LENGTH_MASK = 1 << 31;
+    static final int STRING_LENGTH_MASK = 1 << 31;
 
     /**
      * The length of the string being read
      */
-    public int stringLength = -1;
+    int stringLength = -1;
 
     /**
      * The current string being read
      */
-    public StringBuilder currentString;
+    StringBuilder currentString;
 
     /**
      * when reading the first byte of an integer this stores the first value. It is set to -1 to signify that
      * the first byte has not been read yet.
      */
-    public int currentIntegerPart = -1;
+    int currentIntegerPart = -1;
     boolean containsUrlCharacters = false;
-    public int readHeaders = 0;
+    int readHeaders;
 
-    public void reset() {
+    void reset() {
 
         state = 0;
         prefix = 0;
@@ -253,7 +253,7 @@ class AjpResponseParser {
         readHeaders = 0;
     }
 
-    protected IntegerHolder parse16BitInteger(ByteBuffer buf) {
+    IntegerHolder parse16BitInteger(ByteBuffer buf) {
         if (!buf.hasRemaining()) {
             return new IntegerHolder(-1, false);
         }
@@ -272,7 +272,7 @@ class AjpResponseParser {
         }
     }
 
-    protected StringHolder parseString(ByteBuffer buf, boolean header) {
+    StringHolder parseString(ByteBuffer buf, boolean header) {
         boolean containsUrlCharacters = this.containsUrlCharacters;
         if (!buf.hasRemaining()) {
             return new StringHolder(null, false, false);
@@ -334,9 +334,9 @@ class AjpResponseParser {
         }
     }
 
-    protected static class IntegerHolder {
-        public final int value;
-        public final boolean readComplete;
+    static class IntegerHolder {
+        final int value;
+        final boolean readComplete;
 
         private IntegerHolder(int value, boolean readComplete) {
             this.value = value;
@@ -344,11 +344,11 @@ class AjpResponseParser {
         }
     }
 
-    protected static class StringHolder {
-        public final String value;
-        public final HttpString header;
-        public final boolean readComplete;
-        public final boolean containsUrlCharacters;
+    static class StringHolder {
+        final String value;
+        final HttpString header;
+        final boolean readComplete;
+        final boolean containsUrlCharacters;
 
         private StringHolder(String value, boolean readComplete, boolean containsUrlCharacters) {
             this.value = value;

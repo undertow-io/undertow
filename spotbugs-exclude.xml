@@ -21,6 +21,64 @@
         </Or>
     </Match>
 
+    <!-- TODO: see UNDERTOW-2766 -->
+    <Match>
+        <Bug pattern="AT_NONATOMIC_64BIT_PRIMITIVE"/>
+    </Match>
+
+    <!-- TODO: see UNDERTOW-2766 -->
+    <Match>
+        <Bug pattern="AT_NONATOMIC_OPERATIONS_ON_SHARED_VARIABLE"/>
+    </Match>
+
+    <!-- TODO: see UNDERTOW-2766 -->
+    <Match>
+        <Bug pattern="AT_STALE_THREAD_WRITE_OF_PRIMITIVE"/>
+    </Match>
+
+    <Match>
+        <Bug pattern="SS_SHOULD_BE_STATIC"/>
+        <Or>
+            <And>
+                <!-- False positive - it is OK to have unread field - why should it be static? -->
+                <Class name="io.undertow.security.impl.FormAuthenticationMechanism"/>
+            </And>
+        </Or>
+    </Match>
+
+    <Match>
+        <Bug pattern="VSC_VULNERABLE_SECURITY_CHECK_METHODS"/>
+        <Or>
+            <And>
+                <!-- False positive - it is safe to call SecurityManager.checkPermission() from constructor -->
+                <Class name="io.undertow.security.impl.SecurityContextImpl"/>
+            </And>
+            <And>
+                <!-- False positive - it is safe to call SecurityManager.checkPermission() from constructor -->
+                <Class name="io.undertow.servlet.handlers.ServletInitialHandler"/>
+            </And>
+            <And>
+                <!-- False positive - it is safe to call SecurityManager.checkPermission() from static methods -->
+                <Class name="io.undertow.servlet.handlers.ServletRequestContext"/>
+            </And>
+            <And>
+                <!-- False positive - it is safe to call SecurityManager.checkPermission() from getSession() method.
+                     User cannot access private field session in other way except calling this method -->
+                <Class name="io.undertow.servlet.spec.HttpSessionImpl"/>
+                <Method name="getSession"/>
+            </And>
+            <And>
+                <!-- False positive - it is safe to call SecurityManager.checkPermission() from static methods -->
+                <Class name="io.undertow.websockets.jsr.UndertowContainerProvider"/>
+            </And>
+        </Or>
+    </Match>
+
+    <!-- False positive - it is safe to throw an exception from constructors -->
+    <Match>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+
     <!-- Ignore spotbugs reports from incomplete detectors -->
     <Match>
         <Bug pattern="TESTING"/>
