@@ -47,7 +47,6 @@ public class AsyncReceiverImpl implements Receiver {
     private static final ErrorCallback END_EXCHANGE = new ErrorCallback() {
         @Override
         public void error(HttpServerExchange exchange, IOException e) {
-            e.printStackTrace();
             exchange.setStatusCode(StatusCodes.INTERNAL_SERVER_ERROR);
             UndertowLogger.REQUEST_IO_LOGGER.ioException(e);
             exchange.endExchange();
