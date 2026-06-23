@@ -29,7 +29,10 @@ import java.util.Set;
 
 /**
  * @author <a href="mailto:bbaranow@redhat.com">Bartosz Baranowski</a>
+ * @see {@link ReasonPhraseHandler#Builder}
+ * @Deprecated(since = "2.5.0", forRemoval = true)
  */
+@Deprecated(since = "2.5.0", forRemoval = true)
 public class ReasonPhraseHandlerBuilder implements HandlerBuilder {
     @Override
     public String name() {
