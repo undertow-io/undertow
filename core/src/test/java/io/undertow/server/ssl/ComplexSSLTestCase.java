@@ -18,6 +18,8 @@
 
 package io.undertow.server.ssl;
 
+import static io.undertow.UndertowOptions.MAX_ENTITY_SIZE;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -45,9 +47,9 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.xnio.OptionMap;
 
 /**
  * @author Stuart Douglas
@@ -108,7 +110,6 @@ public class ComplexSSLTestCase {
     }
 
     @Test
-    @Ignore // FIXME UNDERTOW-1918
     public void testSslLotsOfData() throws IOException, GeneralSecurityException, URISyntaxException {
 
         DefaultServer.setRootHandler(new HttpHandler() {
@@ -166,5 +167,15 @@ public class ComplexSSLTestCase {
             builder.append(MESSAGE);
         }
         message = builder.toString();
+    }
+
+    @DefaultServer.BeforeServerStarts
+    public static void setupServer() {
+        DefaultServer.setServerOptions(OptionMap.create(MAX_ENTITY_SIZE, -1L));
+    }
+
+    @DefaultServer.AfterServerStops
+    public static void cleanup() {
+        DefaultServer.setServerOptions(OptionMap.EMPTY);
     }
 }
