@@ -40,3 +40,6 @@ io.undertow.attribute.NullAttribute$Builder
 io.undertow.attribute.StoredResponse$Builder
 io.undertow.attribute.ResponseReasonPhraseAttribute$Builder
 io.undertow.attribute.RemoteObfuscatedIPAttribute$Builder
+io.undertow.attribute.RequestSizeAttribute$Builder
+io.undertow.attribute.ResponseSizeAttribute$Builder
+
