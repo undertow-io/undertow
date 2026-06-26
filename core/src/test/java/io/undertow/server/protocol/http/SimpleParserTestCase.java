@@ -33,6 +33,7 @@ import org.xnio.OptionMap;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Basic test of the HTTP parser functionality.
@@ -46,6 +47,62 @@ import java.nio.ByteBuffer;
 public class SimpleParserTestCase {
 
     private final RequestState parseState = new RequestState();
+
+    @Test
+    public void testDecodingParamsDisabled() throws BadRequestException {
+        byte[] in = "GET /somepath/otherPath;napoj+verzia1=caj?napoj+verzia2=kava HTTP/1.1\r\n\r\n".getBytes();
+
+        OptionMap.Builder builder = OptionMap.builder();
+        builder.set(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true);
+        builder.set(UndertowOptions.DECODE_URL, false);
+
+        final RequestState context = new RequestState();
+        HttpServerExchange result = new HttpServerExchange(null);
+        RequestParser.instance(builder.getMap()).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+
+        Assert.assertEquals("/somepath/otherPath;napoj+verzia1=caj", result.getRequestURI());
+        Assert.assertEquals("/somepath/otherPath", result.getRequestPath());
+
+        Assert.assertEquals(1, result.getPathParameters().size());
+        Assert.assertEquals("napoj+verzia1", result.getPathParameters().keySet().iterator().next());
+        Assert.assertEquals("caj", result.getPathParameters().get("napoj+verzia1").getFirst());
+
+        Assert.assertEquals("napoj+verzia2=kava", result.getQueryString());
+        Assert.assertEquals("napoj+verzia2=kava", result.getDecodedQueryString());
+
+        Assert.assertEquals(1, result.getQueryParameters().size());
+        Assert.assertEquals("napoj+verzia2", result.getQueryParameters().keySet().iterator().next());
+        Assert.assertEquals("kava", result.getQueryParameters().get("napoj+verzia2").getFirst());
+    }
+
+    @Test
+    public void testDecodingParamsEnabled() throws BadRequestException {
+        byte[] in = "GET /somepath/otherPath;napoj+verzia1=caj?napoj+verzia2=kava HTTP/1.1\r\n\r\n".getBytes();
+
+        OptionMap.Builder builder = OptionMap.builder();
+        builder.set(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true);
+        builder.set(UndertowOptions.DECODE_URL, true);
+
+        final RequestState context = new RequestState();
+        HttpServerExchange result = new HttpServerExchange(null);
+        RequestParser.instance(builder.getMap()).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+
+        Assert.assertEquals("/somepath/otherPath;napoj+verzia1=caj", result.getRequestURI());
+        Assert.assertEquals("/somepath/otherPath", result.getRequestPath());
+
+        Assert.assertEquals(1, result.getPathParameters().size());
+        Assert.assertEquals("napoj verzia1", result.getPathParameters().keySet().iterator().next());
+        Assert.assertEquals("caj", result.getPathParameters().get("napoj verzia1").getFirst());
+
+        Assert.assertEquals("napoj+verzia2=kava", result.getQueryString());
+        Assert.assertEquals("napoj+verzia2=kava", result.getDecodedQueryString());
+
+        Assert.assertEquals(1, result.getQueryParameters().size());
+        Assert.assertEquals("napoj verzia2", result.getQueryParameters().keySet().iterator().next());
+        Assert.assertEquals("kava", result.getQueryParameters().get("napoj verzia2").getFirst());
+    }
 
     @Test
     public void testEncodedSlashDisallowed() throws BadRequestException {
@@ -669,6 +726,18 @@ public class SimpleParserTestCase {
         Assert.assertEquals("44", result.getQueryParameters().get(";?").getFirst());
     }
 
+    @Test
+    public void testNonEncodedDelimiterAsciiCharacters() throws UnsupportedEncodingException, BadRequestException {
+        byte[] in = "GET /b[]=ab HTTP/1.1\r\n\r\n".getBytes("ISO-8859-1");
+
+        final RequestState context = new RequestState();
+        HttpServerExchange result = new HttpServerExchange(null);
+        RequestParser.instance(OptionMap.EMPTY).handle(ByteBuffer.wrap(in), context, result);
+        Assert.assertSame(Methods.GET, result.getRequestMethod());
+        Assert.assertEquals("/b[]=ab", result.getRequestPath());
+        Assert.assertEquals("/b[]=ab", result.getRequestURI());
+    }
+
     @Test(expected = BadRequestException.class)
     public void testNonEncodedAsciiCharacters() throws UnsupportedEncodingException, BadRequestException {
         byte[] in = "GET /bÃ¥r HTTP/1.1\r\n\r\n".getBytes("ISO-8859-1");
@@ -684,10 +753,10 @@ public class SimpleParserTestCase {
 
         final RequestState context = new RequestState();
         HttpServerExchange result = new HttpServerExchange(null);
-        RequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true)).handle(ByteBuffer.wrap(in), context, result);
+        RequestParser.instance(OptionMap.create(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, true, UndertowOptions.URL_CHARSET, StandardCharsets.ISO_8859_1.name())).handle(ByteBuffer.wrap(in), context, result);
         Assert.assertSame(Methods.GET, result.getRequestMethod());
-        Assert.assertEquals("/bår", result.getRequestPath());
-        Assert.assertEquals("/bår", result.getRequestURI()); //!not decoded
+        Assert.assertEquals("/bÃ¥r", result.getRequestPath());
+        Assert.assertEquals("/bÃ¥r", result.getRequestURI());
     }
 
     @Test
