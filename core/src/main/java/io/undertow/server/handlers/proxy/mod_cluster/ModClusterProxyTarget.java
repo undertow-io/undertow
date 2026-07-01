@@ -27,7 +27,7 @@ import io.undertow.server.handlers.proxy.ProxyClient;
  * @author Emanuel Muckenhuber
  * @author Radoslav Husar
  */
-public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyClient.MaxRetriesProxyTarget {
+public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyClient.MaxRetriesProxyTarget, ProxyClient.TimeoutProxyTarget {
 
     /**
      * Resolve the responsible context handling this request.
@@ -105,6 +105,17 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
             }
             return balancer.getMaxRetries();
         }
+
+        @Override
+        public int getTimeout() {
+            resolveContextIfUnresolved();
+
+            if (resolvedContext == null) {
+                return 0;
+            }
+
+            return resolvedContext.getNode().getNodeConfig().getTimeout() * 1000;
+        }
     }
 
     class BasicTarget implements ModClusterProxyTarget {
@@ -131,6 +142,17 @@ public interface ModClusterProxyTarget extends ProxyClient.ProxyTarget, ProxyCli
                 return 0;
             }
             return balancer.getMaxRetries();
+        }
+
+        @Override
+        public int getTimeout() {
+            if(resolved == null) {
+                resolveNode();
+            }
+            if(resolved == null) {
+                return 0;
+            }
+            return resolved.getNode().getNodeConfig().getTimeout() * 1000;
         }
 
         @Override
