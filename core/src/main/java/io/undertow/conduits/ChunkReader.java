@@ -43,10 +43,8 @@ class ChunkReader {
     private static final long FLAG_READING_TILL_END_OF_LINE = 1L << 60L;
     private static final long FLAG_READING_NEWLINE = 1L << 59L;
     private static final long FLAG_READING_AFTER_LAST = 1L << 58L;
-
     private static final long MASK_COUNT = longBitMask(0, 56);
-
-    private static final long LIMIT = Long.MAX_VALUE >> 4;
+    private static final long LIMIT = Long.MAX_VALUE >> 6;
 
     private long state;
     private final BytesCounter<? extends IOException> maxEntitySizeChecker;
