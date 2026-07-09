@@ -46,7 +46,7 @@ class ChunkReader {
 
     private static final long MASK_COUNT = longBitMask(0, 56);
 
-    private static final long LIMIT = Long.MAX_VALUE >> 4;
+    private static final long LIMIT = Long.MAX_VALUE >> 6;//UNDERTOW-2781 - this has to be equal to MASK_COUNT?
 
     private long state;
     private final BytesCounter<? extends IOException> maxEntitySizeChecker;
