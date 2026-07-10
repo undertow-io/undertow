@@ -51,11 +51,22 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static io.undertow.UndertowOptions.DECODE_URL;
 import static io.undertow.UndertowOptions.URL_CHARSET;
+import static io.undertow.server.protocol.ajp.SecurityActions.getSystemProperty;
 
 /**
  * @author Stuart Douglas
  */
 public class AjpOpenListener implements OpenListener {
+
+    private static final String PROPERTY_AJP_REQUIRE_SECRET = "io.undertow.ajp.REQUIRE_AJP_SECRET";
+    private static final String PROPERTY_AJP_SECRET = "io.undertow.ajp.AJP_SECRET";
+    private static final boolean REQUIRE_AJP_SECRET;
+    private static final String AJP_SECRET;
+
+    static {
+        REQUIRE_AJP_SECRET = Boolean.parseBoolean(getSystemProperty(PROPERTY_AJP_REQUIRE_SECRET, "true"));
+        AJP_SECRET = getSystemProperty(PROPERTY_AJP_SECRET, "");
+    }
 
     private static final String DEFAULT_AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN = SecurityActions.getSystemProperty("io.undertow.ajp.allowedRequestAttributesPattern");
 
@@ -189,6 +200,11 @@ public class AjpOpenListener implements OpenListener {
      * @return A new AjpRequestParser instance
      */
     private AjpRequestParser createAjpRequestParser(final OptionMap undertowOptions) {
+        if (REQUIRE_AJP_SECRET) {
+            if (AJP_SECRET == null || AJP_SECRET.isEmpty()) {
+                throw UndertowMessages.MESSAGES.securedAjpListenerWithoutSecret();
+            }
+        }
         return new AjpRequestParser(
             undertowOptions.get(URL_CHARSET, StandardCharsets.UTF_8.name()),
             undertowOptions.get(DECODE_URL, true),
@@ -196,7 +212,8 @@ public class AjpOpenListener implements OpenListener {
             undertowOptions.get(UndertowOptions.MAX_HEADERS, UndertowOptions.DEFAULT_MAX_HEADERS),
             URLUtils.getSlashDecodingFlag(undertowOptions),
             undertowOptions.get(UndertowOptions.ALLOW_UNESCAPED_CHARACTERS_IN_URL, false),
-            undertowOptions.get(UndertowOptions.AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN, DEFAULT_AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN)
+            undertowOptions.get(UndertowOptions.AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN, DEFAULT_AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN),
+            AJP_SECRET
         );
     }
 
