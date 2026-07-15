@@ -134,7 +134,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     /**
      * {@inheritDoc}
      */
-    public void write(final byte[] b, final int off, final int len) throws IOException {
+    public synchronized void write(final byte[] b, final int off, final int len) throws IOException {
         if (anyAreSet(state, FLAG_CLOSED) || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
@@ -292,7 +292,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
 
     @Override
-    public void write(ByteBuffer[] buffers) throws IOException {
+    public synchronized void write(ByteBuffer[] buffers) throws IOException {
         if (anyAreSet(state, FLAG_CLOSED) || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
@@ -471,7 +471,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
      *
      * @return The underlying buffer
      */
-    ByteBuffer underlyingBuffer() {
+    synchronized ByteBuffer underlyingBuffer() {
         if (anyAreSet(state, FLAG_CLOSED)) {
             return null;
         }
@@ -508,7 +508,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         }
     }
 
-    public void flushInternal() throws IOException {
+    public synchronized void flushInternal() throws IOException {
         if (listener == null) {
             if (anyAreSet(state, FLAG_CLOSED)) {
                 //just return
@@ -552,7 +552,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     }
 
     @Override
-    public void transferFrom(FileChannel source) throws IOException {
+    public synchronized void transferFrom(FileChannel source) throws IOException {
         if (anyAreSet(state, FLAG_CLOSED) || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             throw UndertowServletMessages.MESSAGES.streamIsClosed();
         }
@@ -619,7 +619,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     /**
      * {@inheritDoc}
      */
-    public void close() throws IOException {
+    public synchronized void close() throws IOException {
         if (servletRequestContext.getOriginalRequest().getDispatcherType() == DispatcherType.INCLUDE ||
                 servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             return;
@@ -678,7 +678,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
      *
      * @throws IOException
      */
-    public void closeAsync() throws IOException {
+    public synchronized void closeAsync() throws IOException {
         if (anyAreSet(state, FLAG_CLOSED) || servletRequestContext.getOriginalResponse().isTreatAsCommitted()) {
             return;
         }
@@ -765,7 +765,7 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
         }
     }
 
-    public void resetBuffer() {
+    public synchronized void resetBuffer() {
         if (allAreClear(state, FLAG_WRITE_STARTED)) {
             if (pooledBuffer != null) {
                 pooledBuffer.close();
@@ -858,100 +858,102 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
         @Override
         public void handleEvent(final StreamSinkChannel aChannel) {
-            //flush the channel if it is closed
-            if (anyAreSet(state, FLAG_DELEGATE_SHUTDOWN)) {
-                try {
-                    //either it will work, and the channel is closed
-                    //or it won't, and we continue with writes resumed
-                    channel.flush();
-                    return;
-                } catch (Throwable t) {
-                    handleError(t);
-                    return;
+            synchronized (ServletOutputStreamImpl.this) {
+                //flush the channel if it is closed
+                if (anyAreSet(state, FLAG_DELEGATE_SHUTDOWN)) {
+                    try {
+                        //either it will work, and the channel is closed
+                        //or it won't, and we continue with writes resumed
+                        channel.flush();
+                        return;
+                    } catch (Throwable t) {
+                        handleError(t);
+                        return;
+                    }
                 }
-            }
-            //if there is data still to write
-            if (buffersToWrite != null) {
-                long toWrite = Buffers.remaining(buffersToWrite);
-                long written = 0;
-                long res;
-                if (toWrite > 0) { //should always be true, but just to be defensive
-                    do {
-                        try {
-                            res = channel.write(buffersToWrite);
-                            written += res;
-                            if (res == 0) {
+                //if there is data still to write
+                if (buffersToWrite != null) {
+                    long toWrite = Buffers.remaining(buffersToWrite);
+                    long written = 0;
+                    long res;
+                    if (toWrite > 0) { //should always be true, but just to be defensive
+                        do {
+                            try {
+                                res = channel.write(buffersToWrite);
+                                written += res;
+                                if (res == 0) {
+                                    return;
+                                }
+                            } catch (Throwable t) {
+                                handleError(t);
                                 return;
                             }
-                        } catch (Throwable t) {
-                            handleError(t);
-                            return;
-                        }
-                    } while (written < toWrite);
-                }
-                buffersToWrite = null;
-                buffer.clear();
-            }
-            if (pendingFile != null) {
-                try {
-                    long size = pendingFile.size();
-                    long pos = pendingFile.position();
-
-                    while (size - pos > 0) {
-                        long ret = channel.transferFrom(pendingFile, pos, size - pos);
-                        if (ret <= 0) {
-                            pendingFile.position(pos);
-                            return;
-                        }
-                        pos += ret;
+                        } while (written < toWrite);
                     }
-                    pendingFile = null;
-                } catch (Throwable t) {
-                    handleError(t);
-                    return;
+                    buffersToWrite = null;
+                    buffer.clear();
                 }
-            }
-            if (anyAreSet(state, FLAG_CLOSED)) {
-                try {
+                if (pendingFile != null) {
+                    try {
+                        long size = pendingFile.size();
+                        long pos = pendingFile.position();
 
-                    if (pooledBuffer != null) {
-                        pooledBuffer.close();
-                        buffer = null;
-                    } else {
-                        buffer = null;
+                        while (size - pos > 0) {
+                            long ret = channel.transferFrom(pendingFile, pos, size - pos);
+                            if (ret <= 0) {
+                                pendingFile.position(pos);
+                                return;
+                            }
+                            pos += ret;
+                        }
+                        pendingFile = null;
+                    } catch (Throwable t) {
+                        handleError(t);
+                        return;
                     }
-                    channel.shutdownWrites();
-                    setFlags(FLAG_DELEGATE_SHUTDOWN);
-                    channel.flush();
-                } catch (Throwable t) {
-                    handleError(t);
-                    return;
                 }
-            } else {
+                if (anyAreSet(state, FLAG_CLOSED)) {
+                    try {
 
-                if (asyncContext.isDispatched()) {
-                    //this is no longer an async request
-                    //we just return for now
-                    //TODO: what do we do here? Revert back to blocking mode?
-                    channel.suspendWrites();
-                    return;
-                }
+                        if (pooledBuffer != null) {
+                            pooledBuffer.close();
+                            buffer = null;
+                        } else {
+                            buffer = null;
+                        }
+                        channel.shutdownWrites();
+                        setFlags(FLAG_DELEGATE_SHUTDOWN);
+                        channel.flush();
+                    } catch (Throwable t) {
+                        handleError(t);
+                        return;
+                    }
+                } else {
 
-                setFlags(FLAG_READY);
-                try {
-                    setFlags(FLAG_IN_CALLBACK);
-
-                    //if the stream is still ready then we do not resume writes
-                    //this is per spec, we only call the listener once for each time
-                    //isReady returns true
-                    if (channel != null) {
+                    if (asyncContext.isDispatched()) {
+                        //this is no longer an async request
+                        //we just return for now
+                        //TODO: what do we do here? Revert back to blocking mode?
                         channel.suspendWrites();
+                        return;
                     }
-                    servletRequestContext.getCurrentServletContext().invokeOnWritePossible(servletRequestContext.getExchange(), listener);
-                } catch (Throwable e) {
-                    IoUtils.safeClose(channel);
-                } finally {
-                    clearFlags(FLAG_IN_CALLBACK);
+
+                    setFlags(FLAG_READY);
+                    try {
+                        setFlags(FLAG_IN_CALLBACK);
+
+                        //if the stream is still ready then we do not resume writes
+                        //this is per spec, we only call the listener once for each time
+                        //isReady returns true
+                        if (channel != null) {
+                            channel.suspendWrites();
+                        }
+                        servletRequestContext.getCurrentServletContext().invokeOnWritePossible(servletRequestContext.getExchange(), listener);
+                    } catch (Throwable e) {
+                        IoUtils.safeClose(channel);
+                    } finally {
+                        clearFlags(FLAG_IN_CALLBACK);
+                    }
                 }
             }
 
