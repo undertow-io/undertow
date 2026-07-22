@@ -114,8 +114,9 @@ public class CookieStore implements Iterable<Cookie> {
      * </p>
      *
      * <p>
-     * For cookies with the same name but different path/domain combinations, only one arbitrary cookie with that name
-     * is returned. To access all cookies with the same name, use {@link #get(String)} instead.
+     * For cookies with the same name but different path/domain combinations, only the first cookie with that name
+     * is returned. Per RFC 6265, the user agent sorts cookies by path specificity (longest first), so the first
+     * cookie is the most specific. To access all cookies with the same name, use {@link #get(String)} instead.
      * </p>
      *
      * @return a map where each cookie name maps to a single Cookie instance
@@ -230,7 +231,7 @@ public class CookieStore implements Iterable<Cookie> {
             }
             for (var entry : cookieStore.entrySet()) {
                 final Deque<Cookie> queue = entry.getValue();
-                if (value.equals(queue.peekLast())) {
+                if (value.equals(queue.peekFirst())) {
                     return true;
                 }
             }
@@ -240,13 +241,13 @@ public class CookieStore implements Iterable<Cookie> {
         @Override
         public Cookie get(final Object key) {
             final Deque<Cookie> queue = cookieStore.cookies.get(key);
-            return queue == null ? null : queue.peekLast();
+            return queue == null ? null : queue.peekFirst();
         }
 
         @Override
         public Cookie put(final String key, final Cookie value) {
             final Deque<Cookie> cookies = cookieStore.getOrCreate(key);
-            final Cookie result = cookies.peekLast();
+            final Cookie result = cookies.peekFirst();
             cookies.clear();
             cookies.add(value);
             return result;
@@ -255,7 +256,7 @@ public class CookieStore implements Iterable<Cookie> {
         @Override
         public Cookie remove(final Object key) {
             final Deque<Cookie> queue = cookieStore.cookies.remove(key);
-            return queue == null ? null : queue.peekLast();
+            return queue == null ? null : queue.peekFirst();
         }
 
         @Override
@@ -276,14 +277,14 @@ public class CookieStore implements Iterable<Cookie> {
         @Override
         public Collection<Cookie> values() {
             return cookieStore.cookies.values().stream()
-                    .map(Deque::getLast)
+                    .map(Deque::getFirst)
                     .collect(Collectors.toUnmodifiableList());
         }
 
         @Override
         public Set<Entry<String, Cookie>> entrySet() {
             return cookieStore.cookies.entrySet().stream()
-                    .map(e -> Map.entry(e.getKey(), e.getValue().getLast()))
+                    .map(e -> Map.entry(e.getKey(), e.getValue().getFirst()))
                     .collect(Collectors.toUnmodifiableSet());
         }
     }
