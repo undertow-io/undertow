@@ -80,6 +80,7 @@ public class AjpRequestParser {
     private final int maxHeaders;
     private final boolean allowUnescapedCharactersInUrl;
     private final Pattern allowedRequestAttributesPattern;
+    final String configuredSecret;
 
     private static final HttpString[] HTTP_HEADERS;
 
@@ -187,10 +188,14 @@ public class AjpRequestParser {
     }
 
     public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean slashDecodingFlag, boolean allowUnescapedCharactersInUrl) {
-        this(encoding, doDecode, maxParameters, maxHeaders, slashDecodingFlag, allowUnescapedCharactersInUrl, null);
+        this(encoding, doDecode, maxParameters, maxHeaders, slashDecodingFlag, allowUnescapedCharactersInUrl, null, null);
     }
 
     public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean slashDecodingFlag, boolean allowUnescapedCharactersInUrl, String allowedRequestAttributesPattern) {
+        this(encoding, doDecode, maxParameters, maxHeaders, slashDecodingFlag, allowUnescapedCharactersInUrl, allowedRequestAttributesPattern, null);
+    }
+
+    public AjpRequestParser(String encoding, boolean doDecode, int maxParameters, int maxHeaders, boolean slashDecodingFlag, boolean allowUnescapedCharactersInUrl, String allowedRequestAttributesPattern, String secret) {
         this.encoding = encoding;
         this.doDecode = doDecode;
         this.maxParameters = maxParameters;
@@ -202,8 +207,8 @@ public class AjpRequestParser {
         } else {
             this.allowedRequestAttributesPattern = null;
         }
+        this.configuredSecret = secret;
     }
-
 
     public void parse(final ByteBuffer buf, final AjpRequestParseState state, final HttpServerExchange exchange) throws IOException, BadRequestException {
         if (!buf.hasRemaining()) {
@@ -507,6 +512,13 @@ public class AjpRequestParser {
                         state.sslKeySize = finalResult;
                     } else if (state.currentAttribute.equals(AJP_SSL_PROTOCOL)) {
                         state.secureProtocol = finalResult;
+                    } else if (state.currentAttribute.equals(SECRET)) {
+                        // ensure user provided secret matches configured secret
+                        if (configuredSecret != null && !configuredSecret.isEmpty()) {
+                            if (configuredSecret.equals(finalResult)) {
+                                state.secretProvided = true;
+                            }
+                        }
                     } else {
                         // other attributes
                         if (state.attributes == null) {

@@ -97,6 +97,7 @@ class AjpRequestParseState {
     String secureProtocol;
     boolean badRequest;
     boolean containsUnencodedUrlCharacters;
+    boolean secretProvided;
 
     void reset() {
         stringLength = -1;
@@ -105,6 +106,7 @@ class AjpRequestParseState {
         badRequest = false;
         currentString.setLength(0);
         containsUnencodedUrlCharacters = false;
+        secretProvided = false;
     }
     boolean isComplete() {
         return state == 15;

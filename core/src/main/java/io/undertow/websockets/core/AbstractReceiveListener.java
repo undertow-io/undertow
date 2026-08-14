@@ -18,22 +18,162 @@
 
 package io.undertow.websockets.core;
 
+import static java.lang.System.getProperty;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.security.PrivilegedAction;
+
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.Pooled;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
+import io.undertow.UndertowOptions;
 
 /**
  * A receive listener that performs a callback when it receives a message
  *
  * @author Stuart Douglas
+ * @author baranowb
  */
 public abstract class AbstractReceiveListener implements ChannelListener<WebSocketChannel> {
+    public static final String WEB_SOCKETS_MAX_READ_FRAMES_PROPERTY = "io.undertow.websockets.core.WEB_SOCKETS_MAX_READ_FRAMES";
+    /**
+     * Default value for max read frames. -1 - unbounded.
+     */
+    public static final int DEFAULT_WEB_SOCKETS_MAX_READ_FRAMES = -1;
+
+    /**
+     * Default size of data frames. -1 - unbounded.
+     * https://datatracker.ietf.org/doc/html/rfc6455#section-5.6
+     */
+    public static final int DEFAULT_WEB_SOCKETS_MESSAGE_SIZE = -1;
+
+    /**
+     * Maximum control frame size: https://datatracker.ietf.org/doc/html/rfc6455#section-5.5
+     */
+    public static final int DEFAULT_WEB_SOCKETS_CONTROL_FRAME_SIZE = 125;
+    /**
+     * Maximum size of TEXT message.
+     */
+    public static final String WEB_SOCKETS_SIZE_TEXT_PROPERTY = "io.undertow.websockets.core.WEB_SOCKETS_SIZE_TEXT";
+
+
+    /**
+     * Maximum size of BINARY message.
+     */
+    public static final String WEB_SOCKETS_SIZE_BINARY_PROPERTY = "io.undertow.websockets.core.WEB_SOCKETS_SIZE_BINARY";
+    /**
+     * Default numbers of acceptable pings per window.
+     */
+    public static final int DEFAULT_WEB_SOCKETS_PING_MAX_PER_WINDOW = 300;
+
+    /**
+     * Option controlling max pings count during window; Defaults to {@link UndertowOptions#DEFAULT_WEB_SOCKETS_PING_MAX_PER_WINDOW}
+     */
+    public static final String WEB_SOCKETS_PING_MAX_PER_WINDOW_PROPERTY = "io.undertow.websockets.core.WEB_SOCKETS_PING_MAX_PER_WINDOW";
+
+    /**
+     * Default length of websocket ping window in milliseconds.
+     */
+    public static final int DEFAULT_WEB_SOCKETS_PING_WINDOW = 60 * 1000;
+
+    /**
+     * Option controlling ping window duration. Defaults to {@link UndertowOptions#DEFAULT_WEB_SOCKETS_PING_WINDOW}
+    */
+    public static final String WEB_SOCKETS_PING_WINDOW_PROPERTY = "io.undertow.websockets.core.WEB_SOCKETS_PING_WINDOW";
+
+    static String getSystemProperty(final String key, final String def) {
+        return System.getSecurityManager() == null ? getProperty(key,def) : java.security.AccessController.doPrivileged(
+                (PrivilegedAction<String>) () -> getProperty(key,def));
+    }
+
+    protected long windowLength;
+    protected int countInWindow;
+    protected int maxCountInWindow = -1;
+    protected long windowTStampThreshold = -1;
+
+    protected void countPing(final WebSocketChannel channel) throws IOException {
+        if (this.maxCountInWindow == -1) {
+            this.maxCountInWindow = getMaxPingsPerWindow();
+            this.windowLength = getPingWindowLength();
+        }
+
+        final long now = System.currentTimeMillis();
+        if (now > this.windowTStampThreshold) {
+            this.windowTStampThreshold = now + this.windowLength;
+            this.countInWindow = 1;
+            return;
+        } else if (this.countInWindow++ > this.maxCountInWindow) {
+            WebSockets.sendClose(
+                    new CloseMessage(CloseMessage.MSG_VIOLATES_POLICY, WebSocketMessages.MESSAGES.tooManyPings(this.countInWindow)),
+                    channel, null);
+            final IOException throwThis = new IOException(WebSocketMessages.MESSAGES.tooManyPings(this.countInWindow));
+            channel.markReadsBroken(throwThis);
+            AbstractReceiveListener.this.onError(channel, throwThis); //to trigger onError in favor of below throw.
+        }
+    }
+
+    protected long getMaxBinaryBufferSize( ) {
+        try {
+            return Long.parseLong(getSystemProperty(WEB_SOCKETS_SIZE_BINARY_PROPERTY, Long.toString(DEFAULT_WEB_SOCKETS_MESSAGE_SIZE)));
+        } catch(NumberFormatException nfe) {
+            return DEFAULT_WEB_SOCKETS_MESSAGE_SIZE;
+        }
+    }
+
+    protected final long getMaxPongBufferSize() {
+        return DEFAULT_WEB_SOCKETS_CONTROL_FRAME_SIZE;
+    }
+
+    protected final long getMaxCloseBufferSize() {
+        return DEFAULT_WEB_SOCKETS_CONTROL_FRAME_SIZE;
+    }
+
+    protected final long getMaxPingBufferSize() {
+        return DEFAULT_WEB_SOCKETS_CONTROL_FRAME_SIZE;
+    }
+
+    protected long getMaxTextBufferSize() {
+        try {
+            return Long.parseLong(getSystemProperty(WEB_SOCKETS_SIZE_TEXT_PROPERTY, Long.toString(DEFAULT_WEB_SOCKETS_MESSAGE_SIZE)));
+        } catch(NumberFormatException nfe) {
+            return DEFAULT_WEB_SOCKETS_MESSAGE_SIZE;
+        }
+    }
+
+    protected int getMaxPingsPerWindow() {
+        try {
+            return Integer.parseInt(getSystemProperty(WEB_SOCKETS_PING_MAX_PER_WINDOW_PROPERTY, Integer.toString(DEFAULT_WEB_SOCKETS_PING_MAX_PER_WINDOW)));
+        } catch(NumberFormatException nfe) {
+            return DEFAULT_WEB_SOCKETS_PING_MAX_PER_WINDOW;
+        }
+    }
+
+    /**
+     * REturn sliding window length in milliseconds.
+     * @return
+     */
+    protected long getPingWindowLength() {
+        try {
+            return Integer.parseInt(getSystemProperty(WEB_SOCKETS_PING_WINDOW_PROPERTY, Integer.toString(DEFAULT_WEB_SOCKETS_PING_WINDOW)));
+        } catch(NumberFormatException nfe) {
+            return DEFAULT_WEB_SOCKETS_PING_WINDOW;
+        }
+
+    }
+
+    static int getMaxReadFrames() {
+        try {
+            return Integer.parseInt(getSystemProperty(WEB_SOCKETS_MAX_READ_FRAMES_PROPERTY, Integer.toString(DEFAULT_WEB_SOCKETS_MAX_READ_FRAMES)));
+        } catch(NumberFormatException nfe) {
+            return DEFAULT_WEB_SOCKETS_MAX_READ_FRAMES;
+        }
+
+    }
 
     @Override
-    public void handleEvent(WebSocketChannel channel) {
+    public void handleEvent(final WebSocketChannel channel) {
         try {
             final StreamSourceFrameChannel result = channel.receive();
             if (result == null) {
@@ -45,6 +185,7 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
             } else if (result.getType() == WebSocketFrameType.PONG) {
                 onPong(channel, result);
             } else if (result.getType() == WebSocketFrameType.PING) {
+                countPing(channel);
                 onPing(channel, result);
             } else if (result.getType() == WebSocketFrameType.CLOSE) {
                 onClose(channel, result);
@@ -97,26 +238,6 @@ public abstract class AbstractReceiveListener implements ChannelListener<WebSock
         } else if (messageChannel.getType() == WebSocketFrameType.CLOSE) {
             readBufferedBinary(messageChannel, true, new BufferedBinaryMessage(getMaxCloseBufferSize(), true));
         }
-    }
-
-    protected long getMaxBinaryBufferSize() {
-        return -1;
-    }
-
-    protected long getMaxPongBufferSize() {
-        return -1;
-    }
-
-    protected long getMaxCloseBufferSize() {
-        return -1;
-    }
-
-    protected long getMaxPingBufferSize() {
-        return -1;
-    }
-
-    protected long getMaxTextBufferSize() {
-        return -1;
     }
 
     private void readBufferedBinary(final StreamSourceFrameChannel messageChannel, final boolean controlFrame, final BufferedBinaryMessage buffer) {

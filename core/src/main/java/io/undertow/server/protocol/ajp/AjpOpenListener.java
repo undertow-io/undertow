@@ -51,11 +51,22 @@ import java.util.concurrent.ConcurrentHashMap;
 import static io.undertow.UndertowOptions.DECODE_URL;
 import static io.undertow.UndertowOptions.URL_CHARSET;
 import static io.undertow.UndertowOptions.DEFAULT_URL_CHARSET;
+import static io.undertow.server.protocol.ajp.SecurityActions.getSystemProperty;
 
 /**
  * @author Stuart Douglas
  */
 public class AjpOpenListener implements OpenListener {
+
+    private static final String PROPERTY_AJP_REQUIRE_SECRET = "io.undertow.ajp.REQUIRE_AJP_SECRET";
+    private static final String PROPERTY_AJP_SECRET = "io.undertow.ajp.AJP_SECRET";
+    private static final boolean REQUIRE_AJP_SECRET;
+    private static final String AJP_SECRET;
+
+    static {
+        REQUIRE_AJP_SECRET = Boolean.parseBoolean(getSystemProperty(PROPERTY_AJP_REQUIRE_SECRET, "true"));
+        AJP_SECRET = getSystemProperty(PROPERTY_AJP_SECRET, "");
+    }
 
     private static final String DEFAULT_AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN = SecurityActions.getSystemProperty("io.undertow.ajp.allowedRequestAttributesPattern");
 
@@ -189,6 +200,11 @@ public class AjpOpenListener implements OpenListener {
      * @return A new AjpRequestParser instance
      */
     private AjpRequestParser createAjpRequestParser(final OptionMap undertowOptions) {
+        if (REQUIRE_AJP_SECRET) {
+            if (AJP_SECRET == null || AJP_SECRET.isEmpty()) {
+                throw UndertowMessages.MESSAGES.securedAjpListenerWithoutSecret(PROPERTY_AJP_REQUIRE_SECRET, PROPERTY_AJP_SECRET);
+            }
+        }
         return new AjpRequestParser(
             undertowOptions.get(URL_CHARSET, DEFAULT_URL_CHARSET),
             undertowOptions.get(DECODE_URL, UndertowOptions.DEFAULT_DECODE_URL),
@@ -202,7 +218,8 @@ public class AjpOpenListener implements OpenListener {
             undertowOptions.get(
                 UndertowOptions.AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN,
                 DEFAULT_AJP_ALLOWED_REQUEST_ATTRIBUTES_PATTERN
-            )
+            ),
+            AJP_SECRET
         );
     }
 

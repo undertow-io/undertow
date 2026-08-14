@@ -170,6 +170,14 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 }
             } while (!state.isComplete());
 
+            // check if required secret was provided in user request
+            if (parser.configuredSecret != null && !parser.configuredSecret.isEmpty() && !state.secretProvided) {
+                httpServerExchange.setStatusCode(StatusCodes.FORBIDDEN);
+                httpServerExchange.endExchange();
+                safeClose(connection);
+                return;
+            }
+
             if(parseTimeoutUpdater != null) {
                 parseTimeoutUpdater.requestStarted();
             }
