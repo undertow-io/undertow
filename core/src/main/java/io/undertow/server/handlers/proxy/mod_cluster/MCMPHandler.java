@@ -539,7 +539,7 @@ class MCMPHandler implements HttpHandler {
                     try {
                         sendResponse(exchange, OK);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        UndertowLogger.PROXY_LOGGER.debug("Error sending ping response", e);
                     }
                 }
 
@@ -549,7 +549,7 @@ class MCMPHandler implements HttpHandler {
                         nodeConfig.markInError();
                         sendResponse(exchange, NOTOK);
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        UndertowLogger.PROXY_LOGGER.debug("Error sending failed ping response", e);
                     }
                 }
             };
