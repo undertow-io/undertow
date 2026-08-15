@@ -28,12 +28,6 @@ public class Certificates {
 
     public static final String END_CERT = "-----END CERTIFICATE-----";
 
-    @Deprecated (since = "2.3.0", forRemoval=true)
-    public static String toPem(final javax.security.cert.X509Certificate certificate)
-            throws javax.security.cert.CertificateEncodingException {
-        return toPem(certificate.getEncoded());
-    }
-
     /**
      * Converts a certificate to PEM format.
      * @param certificate the Certificate to recode

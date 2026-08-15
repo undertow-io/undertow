@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.security.cert.Certificate;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
-import javax.security.cert.X509Certificate;
 import org.xnio.Options;
 import org.xnio.SslClientAuthMode;
 
@@ -65,24 +64,6 @@ class Http2SslSessionInfo implements SSLSessionInfo {
                 }
             } catch (IOException e1) {
                 //ignore, will not actually happen
-            }
-            throw e;
-        }
-    }
-
-    @Override
-    public X509Certificate[] getPeerCertificateChain()
-        throws SSLPeerUnverifiedException, RenegotiationRequiredException {
-        try {
-            return channel.getSslSession().getPeerCertificateChain();
-        } catch (SSLPeerUnverifiedException e) {
-            try {
-                SslClientAuthMode sslClientAuthMode = channel.getOption(Options.SSL_CLIENT_AUTH_MODE);
-                if (sslClientAuthMode == SslClientAuthMode.NOT_REQUESTED) {
-                    throw new RenegotiationRequiredException();
-                }
-            } catch (IOException e1) {
-              // ignore, will not actually happen
             }
             throw e;
         }
