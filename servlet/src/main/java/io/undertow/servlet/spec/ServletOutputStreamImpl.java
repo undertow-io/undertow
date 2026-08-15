@@ -37,7 +37,6 @@ import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
 import org.xnio.channels.StreamSinkChannel;
-import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.io.BufferWritableOutputStream;
 import io.undertow.server.protocol.http.HttpAttachments;
@@ -96,9 +95,6 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
     private static final int FLAG_DELEGATE_SHUTDOWN = 1 << 3;
     private static final int FLAG_IN_CALLBACK = 1 << 4;
 
-    //TODO: should this be configurable?
-    private static final int MAX_BUFFERS_TO_ALLOCATE = 6;
-
     private static final AtomicIntegerFieldUpdater<ServletOutputStreamImpl> stateUpdater = AtomicIntegerFieldUpdater.newUpdater(ServletOutputStreamImpl.class, "state");
 
 
@@ -145,100 +141,20 @@ public class ServletOutputStreamImpl extends ServletOutputStream implements Buff
 
         if (listener == null) {
             ByteBuffer buffer = buffer();
-            if (buffer.remaining() < finalLength) {
-                writeTooLargeForBuffer(b, off, finalLength, buffer);
-            } else {
-                buffer.put(b, off, finalLength);
-                if (buffer.remaining() == 0) {
+            int currentOffset = off;
+            int currentLen = len;
+            while (currentLen > 0) {
+                int toWrite = Math.min(buffer.remaining(), currentLen);
+                buffer.put(b, currentOffset, toWrite);
+                if (!buffer.hasRemaining()) {
                     writeBufferBlocking(false);
                 }
+                currentOffset += toWrite;
+                currentLen -= toWrite;
             }
             updateWritten(finalLength);
         } else {
             writeAsync(b, off, finalLength);
-        }
-    }
-
-    private void writeTooLargeForBuffer(byte[] b, int off, int len, ByteBuffer buffer) throws IOException {
-        //so what we have will not fit.
-        //We allocate multiple buffers up to MAX_BUFFERS_TO_ALLOCATE
-        //and put it in them
-        //if it still dopes not fit we loop, re-using these buffers
-
-        StreamSinkChannel channel = this.channel;
-        if (channel == null) {
-            this.channel = channel = servletRequestContext.getExchange().getResponseChannel();
-        }
-        final ByteBufferPool bufferPool = servletRequestContext.getExchange().getConnection().getByteBufferPool();
-        ByteBuffer[] buffers = new ByteBuffer[MAX_BUFFERS_TO_ALLOCATE + 1];
-        PooledByteBuffer[] pooledBuffers = new PooledByteBuffer[MAX_BUFFERS_TO_ALLOCATE];
-        try {
-            buffers[0] = buffer;
-            int bytesWritten = 0;
-            int rem = buffer.remaining();
-            buffer.put(b, bytesWritten + off, rem);
-            buffer.flip();
-            try {
-                bytesWritten += rem;
-                int bufferCount = 1;
-                for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE; ++i) {
-                    PooledByteBuffer pooled = bufferPool.allocate();
-                    pooledBuffers[bufferCount - 1] = pooled;
-                    buffers[bufferCount++] = pooled.getBuffer();
-                    ByteBuffer cb = pooled.getBuffer();
-                    int toWrite = len - bytesWritten;
-                    if (toWrite > cb.remaining()) {
-                        rem = cb.remaining();
-                        cb.put(b, bytesWritten + off, rem);
-                        cb.flip();
-                        bytesWritten += rem;
-                    } else {
-                        cb.put(b, bytesWritten + off, toWrite);
-                        bytesWritten = len;
-                        cb.flip();
-                        break;
-                    }
-                }
-                writeBlocking(buffers, 0, bufferCount, bytesWritten);
-                // at this point, we know that all buffers[i] have 0 bytes remaining(), so it is safe to loop next just
-                // until we reach len, even if we stop before reaching the end of buffers array
-                while (bytesWritten < len) {
-                    int oldBytesWritten = bytesWritten;
-                    //ok, it did not fit, loop and loop and loop until it is done
-                    bufferCount = 0;
-                    for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE + 1; ++i) {
-                        ByteBuffer cb = buffers[i];
-                        cb.clear();
-                        bufferCount++;
-                        int toWrite = len - bytesWritten;
-                        if (toWrite > cb.remaining()) {
-                            rem = cb.remaining();
-                            cb.put(b, bytesWritten + off, rem);
-                            cb.flip();
-                            bytesWritten += rem;
-                        } else {
-                            cb.put(b, bytesWritten + off, toWrite);
-                            bytesWritten = len;
-                            cb.flip();
-                            // safe to break, all buffers that come next have zero remaining() bytes and hence
-                            // won't affect the next writeBlocking call
-                            break;
-                        }
-                    }
-                    writeBlocking(buffers, 0, bufferCount, bytesWritten - oldBytesWritten);
-                }
-            } finally {
-                if (buffer != null)
-                    buffer.compact();
-            }
-        } finally {
-            for (int i = 0; i < pooledBuffers.length; ++i) {
-                PooledByteBuffer p = pooledBuffers[i];
-                if (p == null) {
-                    break;
-                }
-                p.close();
-            }
         }
     }
 
