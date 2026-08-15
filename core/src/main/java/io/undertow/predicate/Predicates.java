@@ -66,37 +66,67 @@ public class Predicates {
      * Creates a predicate that returns true if the given path matches exactly.
      */
     public static Predicate path(final String path) {
-        return new PathMatchPredicate(path);
+        return path(true, path);
+    }
+
+    /**
+     * Creates a predicate that returns true if the given path matches exactly.
+     */
+    public static Predicate path(final boolean caseSensitive, final String path) {
+        return new PathMatchPredicate(true, path);
     }
 
     /**
      * Creates a predicate that returns true if any of the given paths match exactly.
      */
     public static Predicate paths(final String... paths) {
+        return paths(true, paths);
+    }
+
+    /**
+     * Creates a predicate that returns true if any of the given paths match exactly.
+     */
+    public static Predicate paths(final boolean caseSensitive, final String... paths) {
+        if(paths.length == 1) {
+            return path(caseSensitive, paths[0]);
+        }
         final PathMatchPredicate[] predicates = new PathMatchPredicate[paths.length];
         for (int i = 0; i < paths.length; ++i) {
-            predicates[i] = new PathMatchPredicate(paths[i]);
+            predicates[i] = new PathMatchPredicate(caseSensitive, paths[i]);
         }
         return or(predicates);
+    }
+    /**
+     * Creates a predicate that returns true if the request path ends with the provided suffix.
+     */
+    public static Predicate suffix(final String path) {
+        return suffix(true, path);
     }
 
     /**
      * Creates a predicate that returns true if the request path ends with the provided suffix.
      */
-    public static Predicate suffix(final String path) {
-        return new PathSuffixPredicate(path);
+    public static Predicate suffix(final boolean caseSensitive, final String path) {
+        return new PathSuffixPredicate(caseSensitive, path);
     }
 
     /**
      * Creates a predicate that returns true if the request path ends with any of the provided suffixes.
      */
     public static Predicate suffixes(final String... paths) {
+        return suffixes(true, paths);
+    }
+
+    /**
+     * Creates a predicate that returns true if the request path ends with any of the provided suffixes.
+     */
+    public static Predicate suffixes(final boolean caseSensitive, final String... paths) {
         if(paths.length == 1) {
-            return suffix(paths[0]);
+            return suffix(caseSensitive, paths[0]);
         }
         final PathSuffixPredicate[] predicates = new PathSuffixPredicate[paths.length];
         for (int i = 0; i < paths.length; ++i) {
-            predicates[i] = new PathSuffixPredicate(paths[i]);
+            predicates[i] = new PathSuffixPredicate(caseSensitive, paths[i]);
         }
         return or(predicates);
     }
@@ -105,14 +135,28 @@ public class Predicates {
      * Creates a predicate that returns true if the given relative path starts with the provided prefix.
      */
     public static Predicate prefix(final String path) {
-        return new PathPrefixPredicate(path);
+        return prefix(true, path);
+    }
+
+    /**
+     * Creates a predicate that returns true if the given relative path starts with the provided prefix.
+     */
+    public static Predicate prefix( final boolean caseSensitive, final String path) {
+        return new PathPrefixPredicate(caseSensitive, path);
     }
 
     /**
      * Creates a predicate that returns true if the relative request path matches any of the provided prefixes.
      */
     public static Predicate prefixes(final String... paths) {
-        return new PathPrefixPredicate(paths);
+        return prefixes(true, paths);
+    }
+
+    /**
+     * Creates a predicate that returns true if the relative request path matches any of the provided prefixes.
+     */
+    public static Predicate prefixes(final boolean caseSensitive, final String... paths) {
+        return new PathPrefixPredicate(caseSensitive, paths);
     }
 
     /**
