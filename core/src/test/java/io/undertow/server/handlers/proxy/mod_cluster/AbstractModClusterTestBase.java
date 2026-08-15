@@ -68,6 +68,7 @@ public abstract class AbstractModClusterTestBase {
 
     protected static final MCMPTestClient.App NAME = new MCMPTestClient.App("/name", "localhost");
     protected static final MCMPTestClient.App SESSION = new MCMPTestClient.App("/session", "localhost");
+    protected static final MCMPTestClient.App SLOW = new MCMPTestClient.App("/slow", "localhost");
 
     protected static Undertow[] servers;
     protected static DefaultHttpClient httpClient;
@@ -283,6 +284,21 @@ public abstract class AbstractModClusterTestBase {
         }
     }
 
+    protected static final class SlowResponseHandler implements HttpHandler {
+
+        private final int delay;
+
+        protected SlowResponseHandler(int delay) {
+            this.delay = delay;
+        }
+
+        @Override
+        public void handleRequest(final HttpServerExchange exchange) throws Exception {
+            Thread.sleep(delay);
+            exchange.getResponseSender().send("done");
+        }
+    }
+
     static Undertow createNode(final NodeTestConfig config) {
         final Undertow.Builder builder = Undertow.builder();
 
@@ -306,7 +322,8 @@ public abstract class AbstractModClusterTestBase {
         }
         final PathHandler pathHandler =  path(ResponseCodeHandler.HANDLE_200)
                 .addPrefixPath("/name", new StringSendHandler(config.getJvmRoute()))
-                .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(config.getJvmRoute(), sessionConfig), new InMemorySessionManager(""), sessionConfig));
+                .addPrefixPath("/session", new SessionAttachmentHandler(new SessionTestHandler(config.getJvmRoute(), sessionConfig), new InMemorySessionManager(""), sessionConfig))
+                .addPrefixPath("/slow", new SlowResponseHandler(1500));
 
         config.setupHandlers(pathHandler); // Setup test handlers
 
