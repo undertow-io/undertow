@@ -100,7 +100,7 @@ public class ServletErrorDispatchTestCase {
         }
     }
 
-    //NOTE: this is bad, tests depend on different handlers/servlets from undertow or jakarta, which have different behavior
+    //NOTE: this is bad, tests depend on different handlers/servlets from undertow or javax, which have different behavior
     public static class MimicServlet extends DefaultServlet{
 
         public static final String FAIL_IN_CORRECT_WAY = "Typhon cacoplasmus";
