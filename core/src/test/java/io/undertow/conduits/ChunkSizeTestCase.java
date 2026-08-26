@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -96,12 +97,15 @@ public class ChunkSizeTestCase {
 
     public byte[] readAvailable() throws IOException {
         byte[] buf = new byte[4096];
-        int read = clientInputStream.read(buf);
-        if (read <= 0)
+        try {
+            int read = clientInputStream.read(buf);
+            if (read <= 0) return new byte[0];
+            byte[] result = new byte[read];
+            System.arraycopy(buf, 0, result, 0, read);
+            return result;
+        } catch (SocketException expected) {
             return new byte[0];
-        byte[] result = new byte[read];
-        System.arraycopy(buf, 0, result, 0, read);
-        return result;
+        }
     }
 
 }
