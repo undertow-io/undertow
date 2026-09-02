@@ -79,8 +79,6 @@ import org.apache.directory.server.protocol.shared.transport.UdpTransport;
  */
 class KerberosKDCUtil {
 
-    private static final boolean IS_IBM = System.getProperty("java.vendor").contains("IBM");
-
     static final int LDAP_PORT = 11389;
     static final int KDC_PORT = 6088;
 
@@ -253,16 +251,9 @@ class KerberosKDCUtil {
                 Map<String, Object> options = new HashMap<>();
                 options.put("debug", "true");
                 options.put("refreshKrb5Config", "true");
-
-                if (IS_IBM) {
-                    options.put("noAddress", "true");
-                    options.put("credsType", "both");
-                    entries[0] = new AppConfigurationEntry("com.ibm.security.auth.module.Krb5LoginModule", REQUIRED, options);
-                } else {
-                    options.put("storeKey", "true");
-                    options.put("isInitiator", "true");
-                    entries[0] = new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule", REQUIRED, options);
-                }
+                options.put("storeKey", "true");
+                options.put("isInitiator", "true");
+                entries[0] = new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule", REQUIRED, options);
 
                 return entries;
             }
