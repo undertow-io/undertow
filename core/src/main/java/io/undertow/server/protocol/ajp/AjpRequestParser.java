@@ -297,7 +297,7 @@ public class AjpRequestParser {
                             } while (pathParamParsingIndex < result.value.length() && colon != -1);
                         } catch (ParameterLimitException e) {
                             UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
-                            state.badRequest = true;
+                            state.badRequest(e);
                         }
                         if (pathParamParsingIndex < result.value.length()) {
                             final String url = result.value.substring(pathParamParsingIndex);
@@ -372,8 +372,9 @@ public class AjpRequestParser {
                 } else {
                     state.numHeaders = result.value;
                     if(state.numHeaders > maxHeaders) {
-                        UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(new BadRequestException(UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders)));
-                        state.badRequest = true;
+                        final BadRequestException tooManyHeaders = new BadRequestException(UndertowMessages.MESSAGES.tooManyHeaders(maxHeaders));
+                        UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(tooManyHeaders);
+                        state.badRequest(tooManyHeaders);
                     }
                 }
             }
@@ -464,7 +465,7 @@ public class AjpRequestParser {
                                 decodedResult = decode(resultHolder.value, true);
                             } catch (UrlDecodeException | UnsupportedEncodingException e) {
                                 UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
-                                state.badRequest = true;
+                                state.badRequest(e);
                                 result = resultHolder.value;
                             }
                             decodingAlreadyDone = true;
@@ -489,7 +490,7 @@ public class AjpRequestParser {
                             }
                         } catch (ParameterLimitException | IllegalArgumentException e) {
                             UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
-                            state.badRequest = true;
+                            state.badRequest(e);
                         }
                     } else if (state.currentAttribute.equals(REMOTE_USER)) {
                         exchange.putAttachment(ExternalAuthenticationMechanism.EXTERNAL_PRINCIPAL, finalResult);
