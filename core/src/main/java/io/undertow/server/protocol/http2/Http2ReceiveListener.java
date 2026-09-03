@@ -31,7 +31,6 @@ import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.RequestParseErrorListener;
 import io.undertow.server.protocol.http.HttpAttachments;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.BadRequestException;
@@ -45,7 +44,6 @@ import io.undertow.util.ParameterLimitException;
 import io.undertow.util.Protocols;
 import io.undertow.util.StatusCodes;
 import io.undertow.util.URLUtils;
-import io.undertow.util.UrlDecodeException;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
@@ -89,17 +87,8 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
     private final ConnectorStatisticsImpl connectorStatistics;
 
-    private final RequestParseErrorListener requestParseErrorListener;
-
     public Http2ReceiveListener(HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize, ConnectorStatisticsImpl connectorStatistics) {
-        this(rootHandler, undertowOptions, bufferSize, connectorStatistics, RequestParseErrorListener.NO_OP);
-    }
-
-    public Http2ReceiveListener(HttpHandler rootHandler, OptionMap undertowOptions, int bufferSize, ConnectorStatisticsImpl connectorStatistics,
-                                RequestParseErrorListener requestParseErrorListener) {
         this.rootHandler = rootHandler;
-        this.requestParseErrorListener = requestParseErrorListener == null
-                ? RequestParseErrorListener.NO_OP : requestParseErrorListener;
         this.undertowOptions = undertowOptions;
         this.bufferSize = bufferSize;
         this.connectorStatistics = connectorStatistics;
@@ -203,11 +192,9 @@ public class Http2ReceiveListener implements ChannelListener<Http2Channel> {
 
         try {
             Connectors.setExchangeRequestPath(exchange, path, encoding, decode, slashDecodingFlag, decodeBuffer, maxParameters);
-        } catch (ParameterLimitException | BadRequestException | UrlDecodeException e) {
-            //this can happen if max parameters is exceeded, or if the path or query string
-            //contains an invalid percent encoded sequence
+        } catch (ParameterLimitException | BadRequestException e) {
+            //this can happen if max parameters is exceeded
             UndertowLogger.REQUEST_IO_LOGGER.debug("Failed to set request path", e);
-            Connectors.notifyRequestParseError(requestParseErrorListener, e, connection, exchange);
             exchange.setStatusCode(StatusCodes.BAD_REQUEST);
             exchange.endExchange();
             return;

@@ -45,7 +45,6 @@ import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.RequestParseErrorListener;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.XnioByteBufferPool;
 
@@ -70,8 +69,6 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
 
     private volatile boolean statisticsEnabled;
     private final ConnectorStatisticsImpl connectorStatistics;
-
-    private volatile RequestParseErrorListener requestParseErrorListener = RequestParseErrorListener.NO_OP;
 
     @Deprecated
     public HttpOpenListener(final Pool<ByteBuffer> pool) {
@@ -138,7 +135,7 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
         }
 
         HttpServerConnection connection = new HttpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize, statisticsEnabled ? connectorStatistics : null);
-        HttpReadListener readListener = new HttpReadListener(connection, parser, statisticsEnabled ? connectorStatistics : null, requestParseErrorListener);
+        HttpReadListener readListener = new HttpReadListener(connection, parser, statisticsEnabled ? connectorStatistics : null);
 
 
         if (buffer != null) {
@@ -173,17 +170,6 @@ public final class HttpOpenListener implements ChannelListener<StreamConnection>
     @Override
     public void setRootHandler(final HttpHandler rootHandler) {
         this.rootHandler = rootHandler;
-    }
-
-    @Override
-    public RequestParseErrorListener getRequestParseErrorListener() {
-        return requestParseErrorListener;
-    }
-
-    @Override
-    public void setRequestParseErrorListener(final RequestParseErrorListener requestParseErrorListener) {
-        this.requestParseErrorListener = requestParseErrorListener == null
-                ? RequestParseErrorListener.NO_OP : requestParseErrorListener;
     }
 
     @Override

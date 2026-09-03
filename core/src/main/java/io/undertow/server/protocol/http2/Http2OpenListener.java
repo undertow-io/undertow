@@ -30,7 +30,6 @@ import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
-import io.undertow.server.RequestParseErrorListener;
 import io.undertow.server.XnioByteBufferPool;
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -77,8 +76,6 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
 
     private volatile OptionMap undertowOptions;
     private volatile boolean statisticsEnabled;
-
-    private volatile RequestParseErrorListener requestParseErrorListener = RequestParseErrorListener.NO_OP;
     private final ConnectorStatisticsImpl connectorStatistics;
     private final String protocol;
 
@@ -157,7 +154,7 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
                 connections.remove(channel);
             }
         });
-        http2Channel.getReceiveSetter().set(new Http2ReceiveListener(rootHandler, getUndertowOptions(), bufferSize, connectorStatistics, requestParseErrorListener));
+        http2Channel.getReceiveSetter().set(new Http2ReceiveListener(rootHandler, getUndertowOptions(), bufferSize, connectorStatistics));
         http2Channel.resumeReceives();
 
     }
@@ -185,17 +182,6 @@ public final class Http2OpenListener implements ChannelListener<StreamConnection
     @Override
     public void setRootHandler(final HttpHandler rootHandler) {
         this.rootHandler = rootHandler;
-    }
-
-    @Override
-    public RequestParseErrorListener getRequestParseErrorListener() {
-        return requestParseErrorListener;
-    }
-
-    @Override
-    public void setRequestParseErrorListener(final RequestParseErrorListener requestParseErrorListener) {
-        this.requestParseErrorListener = requestParseErrorListener == null
-                ? RequestParseErrorListener.NO_OP : requestParseErrorListener;
     }
 
     @Override

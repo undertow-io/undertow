@@ -38,7 +38,6 @@ import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.RequestParseErrorListener;
 import io.undertow.server.HttpUpgradeListener;
 import io.undertow.server.protocol.http.HttpContinue;
 import io.undertow.util.FlexBase64;
@@ -61,23 +60,14 @@ public class Http2UpgradeHandler implements HttpHandler {
 
     private final Set<String> upgradeStrings;
 
-    private final RequestParseErrorListener requestParseErrorListener;
-
     public Http2UpgradeHandler(HttpHandler next) {
-        this(next, RequestParseErrorListener.NO_OP);
-    }
-
-    public Http2UpgradeHandler(HttpHandler next, RequestParseErrorListener requestParseErrorListener) {
         this.next = next;
         this.upgradeStrings = Collections.singleton(Http2Channel.CLEARTEXT_UPGRADE_STRING);
-        this.requestParseErrorListener = requestParseErrorListener == null
-                ? RequestParseErrorListener.NO_OP : requestParseErrorListener;
     }
 
     public Http2UpgradeHandler(HttpHandler next, String... upgradeStrings) {
         this.next = next;
         this.upgradeStrings = new HashSet<>(Arrays.asList(upgradeStrings));
-        this.requestParseErrorListener = RequestParseErrorListener.NO_OP;
     }
 
     @Override
@@ -183,7 +173,7 @@ public class Http2UpgradeHandler implements HttpHandler {
                         exchange.setProtocol(Protocols.HTTP_2_0);
                         next.handleRequest(exchange);
                     }
-                }, undertowOptions, exchange.getConnection().getBufferSize(), null, requestParseErrorListener);
+                }, undertowOptions, exchange.getConnection().getBufferSize(), null);
                 channel.getReceiveSetter().set(receiveListener);
                 // don't decode requests from upgrade, they are already decoded by the parser for protocol HTTP 1.1 (RequestParser)
                 receiveListener.handleInitialRequest(exchange, channel, data);

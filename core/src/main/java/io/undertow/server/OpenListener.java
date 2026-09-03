@@ -73,24 +73,4 @@ public interface OpenListener extends ChannelListener<StreamConnection> {
     default void closeConnections() {
         //nnop by default
     }
-
-    /**
-     *
-     * @return The listener notified when a request on this connector is rejected while being
-     *         parsed, never {@code null}
-     */
-    default RequestParseErrorListener getRequestParseErrorListener() {
-        return RequestParseErrorListener.NO_OP;
-    }
-
-    /**
-     * Sets the listener notified when a request on this connector is rejected while being parsed.
-     * <p>
-     * Connectors that do not report parse errors ignore this.
-     *
-     * @param requestParseErrorListener The new listener, or {@code null} to remove the current one
-     */
-    default void setRequestParseErrorListener(RequestParseErrorListener requestParseErrorListener) {
-        //noop by default
-    }
 }

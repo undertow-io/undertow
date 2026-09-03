@@ -30,7 +30,6 @@ import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
-import io.undertow.server.RequestParseErrorListener;
 import io.undertow.server.ServerConnection;
 import io.undertow.server.XnioByteBufferPool;
 import io.undertow.util.URLUtils;
@@ -85,8 +84,6 @@ public class AjpOpenListener implements OpenListener {
     private volatile AjpRequestParser parser;
 
     private volatile boolean statisticsEnabled;
-
-    private volatile RequestParseErrorListener requestParseErrorListener = RequestParseErrorListener.NO_OP;
     private final ConnectorStatisticsImpl connectorStatistics;
 
     private final ServerConnection.CloseListener closeListener = new ServerConnection.CloseListener() {
@@ -152,7 +149,7 @@ public class AjpOpenListener implements OpenListener {
         }
 
         AjpServerConnection connection = new AjpServerConnection(channel, bufferPool, rootHandler, undertowOptions, bufferSize);
-        AjpReadListener readListener = new AjpReadListener(connection, scheme, parser, statisticsEnabled ? connectorStatistics : null, requestParseErrorListener);
+        AjpReadListener readListener = new AjpReadListener(connection, scheme, parser, statisticsEnabled ? connectorStatistics : null);
         if(statisticsEnabled) {
             connection.addCloseListener(closeListener);
         }
@@ -180,17 +177,6 @@ public class AjpOpenListener implements OpenListener {
     @Override
     public void setRootHandler(final HttpHandler rootHandler) {
         this.rootHandler = rootHandler;
-    }
-
-    @Override
-    public RequestParseErrorListener getRequestParseErrorListener() {
-        return requestParseErrorListener;
-    }
-
-    @Override
-    public void setRequestParseErrorListener(final RequestParseErrorListener requestParseErrorListener) {
-        this.requestParseErrorListener = requestParseErrorListener == null
-                ? RequestParseErrorListener.NO_OP : requestParseErrorListener;
     }
 
     @Override

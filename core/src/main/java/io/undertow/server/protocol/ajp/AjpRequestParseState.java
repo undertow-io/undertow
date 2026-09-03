@@ -96,28 +96,14 @@ class AjpRequestParseState {
     String sslKeySize;
     String secureProtocol;
     boolean badRequest;
-    /**
-     * The failure that caused {@link #badRequest} to be set, kept so that it can be reported to a
-     * {@link io.undertow.server.RequestParseErrorListener}. The AJP parser records a flag rather than
-     * throwing, so this is the only place the original exception survives. First cause wins.
-     */
-    Throwable badRequestCause;
     boolean containsUnencodedUrlCharacters;
     boolean secretProvided;
-
-    void badRequest(final Throwable cause) {
-        badRequest = true;
-        if (badRequestCause == null) {
-            badRequestCause = cause;
-        }
-    }
 
     void reset() {
         stringLength = -1;
         currentIntegerPart = -1;
         readHeaders = 0;
         badRequest = false;
-        badRequestCause = null;
         currentString.setLength(0);
         containsUnencodedUrlCharacters = false;
         secretProvided = false;

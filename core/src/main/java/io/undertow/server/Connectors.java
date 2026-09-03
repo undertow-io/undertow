@@ -645,33 +645,6 @@ public class Connectors {
         return true;
     }
 
-    /**
-     * Notifies a {@link RequestParseErrorListener} that a request was rejected while it was being
-     * parsed, so that it can be reported to an application's own logging or monitoring.
-     * <p>
-     * This is best effort and purely observational. The listener cannot influence the response, and
-     * any exception it throws is caught and logged rather than propagated, so that a faulty listener
-     * cannot break the connector or leak out of a connector error path that is already unwinding.
-     *
-     * @param listener   the configured listener; a {@code null} listener or
-     *                   {@link RequestParseErrorListener#NO_OP} is ignored
-     * @param error      the failure that caused the request to be rejected
-     * @param connection the connection the malformed request arrived on
-     * @param exchange   the partially parsed exchange, or {@code null} if none is available
-     */
-    public static void notifyRequestParseError(final RequestParseErrorListener listener, final Throwable error,
-                                               final ServerConnection connection, final HttpServerExchange exchange) {
-        if (listener == null || listener == RequestParseErrorListener.NO_OP || connection == null) {
-            return;
-        }
-        try {
-            listener.onParseError(error == null ? UndertowMessages.MESSAGES.badRequest() : error,
-                    new RequestParseErrorContext(connection, exchange));
-        } catch (Throwable t) {
-            UndertowLogger.REQUEST_LOGGER.requestParseErrorListenerFailed(listener, t);
-        }
-    }
-
     private static void appendAttributes(final Cookie cookie, final StringBuilder header) {
         for (Map.Entry<String, String> entry : cookie.getAttributes().entrySet()) {
             if (KNOWN_ATTRIBUTE_NAMES.contains(entry.getKey())) {

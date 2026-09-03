@@ -27,7 +27,6 @@ import io.undertow.protocols.http2.Http2Channel;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
-import io.undertow.server.RequestParseErrorListener;
 import io.undertow.server.handlers.HostHeaderHandler;
 import io.undertow.server.protocol.ParseTimeoutUpdater;
 import io.undertow.server.protocol.http2.Http2ReceiveListener;
@@ -89,17 +88,12 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
 
     private final ConnectorStatisticsImpl connectorStatistics;
 
-    private final RequestParseErrorListener requestParseErrorListener;
-
     private ParseTimeoutUpdater parseTimeoutUpdater;
 
-    HttpReadListener(final HttpServerConnection connection, final RequestParser parser, ConnectorStatisticsImpl connectorStatistics,
-                     final RequestParseErrorListener requestParseErrorListener) {
+    HttpReadListener(final HttpServerConnection connection, final RequestParser parser, ConnectorStatisticsImpl connectorStatistics) {
         this.connection = connection;
         this.parser = parser;
         this.connectorStatistics = connectorStatistics;
-        this.requestParseErrorListener = requestParseErrorListener == null
-                ? RequestParseErrorListener.NO_OP : requestParseErrorListener;
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.recordRequestStartTime = connection.getUndertowOptions().get(UndertowOptions.RECORD_REQUEST_START_TIME, false);
@@ -215,7 +209,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 read = total;
                 if (read > maxRequestSize) {
                     UndertowLogger.REQUEST_LOGGER.requestHeaderWasTooLarge(connection.getPeerAddress(), maxRequestSize);
-                    sendBadRequestAndClose(connection.getChannel(), UndertowMessages.MESSAGES.badRequest());
+                    sendBadRequestAndClose(connection.getChannel(), null);
                     return;
                 }
             } while (!state.isComplete());
@@ -242,7 +236,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
                 HttpString protocol = httpServerExchange.getProtocol();
                 if(protocol != Protocols.HTTP_1_1 && protocol != Protocols.HTTP_1_0 && protocol != Protocols.HTTP_0_9) {
                     UndertowLogger.REQUEST_IO_LOGGER.debugf("Closing connection from %s due to unknown protocol %s", connection.getChannel().getPeerAddress(), protocol);
-                    sendBadRequestAndClose(connection.getChannel(), new IOException(), httpServerExchange);
+                    sendBadRequestAndClose(connection.getChannel(), new IOException());
                     return;
                 }
             }
@@ -261,7 +255,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             }
 
             if(!Connectors.areRequestHeadersValid(httpServerExchange.getRequestHeaders())) {
-                sendBadRequestAndClose(connection.getChannel(), UndertowMessages.MESSAGES.invalidHeaders(), httpServerExchange);
+                sendBadRequestAndClose(connection.getChannel(), UndertowMessages.MESSAGES.invalidHeaders());
                 return;
             }
 
@@ -280,7 +274,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
             handleHttp2PriorKnowledge(connection.getChannel(), connection, pooled);
             return false;
         } else {
-            sendBadRequestAndClose(connection.getChannel(), new IOException(), httpServerExchange);
+            sendBadRequestAndClose(connection.getChannel(), new IOException());
             return true;
         }
     }
@@ -295,14 +289,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
     }
 
     private void sendBadRequestAndClose(final StreamConnection connection, final Throwable exception) {
-        sendBadRequestAndClose(connection, exception, this.httpServerExchange);
-    }
-
-    private void sendBadRequestAndClose(final StreamConnection connection, final Throwable exception, final HttpServerExchange exchange) {
         UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(exception);
-        //the exchange, where there is one, is only partially parsed and has no response conduit;
-        //it is handed to the listener for diagnostics only
-        Connectors.notifyRequestParseError(requestParseErrorListener, exception, this.connection, exchange);
         connection.getSourceChannel().suspendReads();
         new StringWriteChannelListener(BAD_REQUEST) {
             @Override
@@ -483,7 +470,7 @@ final class HttpReadListener implements ChannelListener<ConduitStreamSourceChann
         }
 
         Http2Channel channel = new Http2Channel(connection, null, serverConnection.getByteBufferPool(), extraData, false, false, false, serverConnection.getUndertowOptions());
-        Http2ReceiveListener receiveListener = new Http2ReceiveListener(serverConnection.getRootHandler(), serverConnection.getUndertowOptions(), serverConnection.getBufferSize(), null, requestParseErrorListener);
+        Http2ReceiveListener receiveListener = new Http2ReceiveListener(serverConnection.getRootHandler(), serverConnection.getUndertowOptions(), serverConnection.getBufferSize(), null);
         channel.getReceiveSetter().set(receiveListener);
         channel.resumeReceives();
         return true;
