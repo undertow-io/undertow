@@ -28,6 +28,7 @@ import io.undertow.server.AbstractServerConnection;
 import io.undertow.server.ConnectorStatisticsImpl;
 import io.undertow.server.Connectors;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.RequestParseErrorListener;
 import io.undertow.server.protocol.ParseTimeoutUpdater;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.Headers;
@@ -72,15 +73,19 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
     private final long maxEntitySize;
     private final AjpRequestParser parser;
     private final ConnectorStatisticsImpl connectorStatistics;
+    private final RequestParseErrorListener requestParseErrorListener;
     private WriteReadyHandler.ChannelListenerHandler<ConduitStreamSinkChannel> writeReadyHandler;
 
     private ParseTimeoutUpdater parseTimeoutUpdater;
 
-    AjpReadListener(final AjpServerConnection connection, final String scheme, AjpRequestParser parser, ConnectorStatisticsImpl connectorStatistics) {
+    AjpReadListener(final AjpServerConnection connection, final String scheme, AjpRequestParser parser, ConnectorStatisticsImpl connectorStatistics,
+                    final RequestParseErrorListener requestParseErrorListener) {
         this.connection = connection;
         this.scheme = scheme;
         this.parser = parser;
         this.connectorStatistics = connectorStatistics;
+        this.requestParseErrorListener = requestParseErrorListener == null
+                ? RequestParseErrorListener.NO_OP : requestParseErrorListener;
         this.maxRequestSize = connection.getUndertowOptions().get(UndertowOptions.MAX_HEADER_SIZE, UndertowOptions.DEFAULT_MAX_HEADER_SIZE);
         this.maxEntitySize = connection.getUndertowOptions().get(UndertowOptions.MAX_ENTITY_SIZE, UndertowOptions.DEFAULT_MAX_ENTITY_SIZE);
         this.writeReadyHandler = new WriteReadyHandler.ChannelListenerHandler<>(connection.getChannel().getSinkChannel());
@@ -236,11 +241,14 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
                 connectorStatistics.setup(httpServerExchange);
             }
             if(!Connectors.areRequestHeadersValid(httpServerExchange.getRequestHeaders())) {
-                oldState.badRequest = true;
+                oldState.badRequest(UndertowMessages.MESSAGES.invalidHeaders());
                 UndertowLogger.REQUEST_IO_LOGGER.debugf("Invalid AJP request from %s, request contained invalid headers", connection.getPeerAddress());
             }
 
             if(oldState.badRequest) {
+                //AjpRequestParser records decode and limit failures as a flag rather than throwing,
+                //but it keeps hold of the cause so that it can be reported here
+                Connectors.notifyRequestParseError(requestParseErrorListener, oldState.badRequestCause, connection, httpServerExchange);
                 httpServerExchange.setStatusCode(StatusCodes.BAD_REQUEST);
                 httpServerExchange.endExchange();
                 safeClose(connection);
@@ -249,6 +257,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             }
         } catch (BadRequestException e) {
             UndertowLogger.REQUEST_IO_LOGGER.failedToParseRequest(e);
+            Connectors.notifyRequestParseError(requestParseErrorListener, e, connection, httpServerExchange);
             handleBadRequest();
             safeClose(connection);
         } catch (IOException e) {
@@ -257,6 +266,7 @@ final class AjpReadListener implements ChannelListener<StreamSourceChannel> {
             safeClose(connection);
         } catch (Throwable t) {
             UndertowLogger.REQUEST_LOGGER.exceptionProcessingRequest(t);
+            Connectors.notifyRequestParseError(requestParseErrorListener, t, connection, httpServerExchange);
             handleInternalServerError();
             safeClose(connection);
         } finally {
