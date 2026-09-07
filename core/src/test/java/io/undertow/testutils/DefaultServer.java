@@ -58,6 +58,7 @@ import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.OpenListener;
+import io.undertow.server.RequestParseErrorListener;
 import io.undertow.server.handlers.ProxyPeerAddressHandler;
 import io.undertow.server.handlers.RequestDumpingHandler;
 import io.undertow.server.handlers.SSLHeaderHandler;
@@ -784,6 +785,27 @@ public class DefaultServer extends BlockJUnit4ClassRunner {
         }
     }
 
+
+    /**
+     * Sets the listener notified when a request is rejected while being parsed, on whichever
+     * connector the current test run is using.
+     * <p>
+     * Tests that call this should restore the previous value (see
+     * {@link #getRequestParseErrorListener()}) when they are done, as the open listener is shared by
+     * every test in a run.
+     *
+     * @param listener The listener to use, or {@code null} for none
+     */
+    public static void setRequestParseErrorListener(RequestParseErrorListener listener) {
+        openListener.setRequestParseErrorListener(listener);
+    }
+
+    /**
+     * @return The listener currently notified of request parse errors, never {@code null}
+     */
+    public static RequestParseErrorListener getRequestParseErrorListener() {
+        return openListener.getRequestParseErrorListener();
+    }
 
     /**
      * Sets the root handler for the default web server
