@@ -79,7 +79,8 @@ public class CookieStoreLegacyMapTestCase {
 
     /**
      * Tests that the legacy map will return the first cookie on a duplicate cookie name, but different paths. This
-     * is for RFC-2109.
+     * is for RFC-2109. Per RFC 6265, the user agent sends cookies sorted by path specificity (longest first), so
+     * the first cookie should be preferred.
      */
     @Test
     public void multipleRFC2109Cookies() {
@@ -98,9 +99,9 @@ public class CookieStoreLegacyMapTestCase {
 
         final Cookie result = legacyMap.get("CUSTOMER");
         Assert.assertNotNull("Should find CUSTOMER cookie", result);
-        // Should return the last one added
-        Assert.assertEquals("Should return last cookie", "MONICA", result.getValue());
-        Assert.assertEquals("Should have correct path", "/", result.getPath());
+        // Should return the first one added (most specific path per RFC 6265)
+        Assert.assertEquals("Should return first cookie", "JOE", result.getValue());
+        Assert.assertEquals("Should have correct path", "/acme", result.getPath());
         Assert.assertEquals("Values should have 2 entries", 2, legacyMap.values().size());
         Assert.assertEquals("EntrySet should have 2 entries", 2, legacyMap.entrySet().size());
     }
@@ -140,7 +141,7 @@ public class CookieStoreLegacyMapTestCase {
         final Cookie old = legacyMap.put("FOO", newCookie);
 
         Assert.assertNotNull("put() should return old value", old);
-        Assert.assertEquals("Should return last old cookie", "another", old.getValue());
+        Assert.assertEquals("Should return first old cookie", "original", old.getValue());
 
         // After put, only the new cookie should exist
         final Cookie result = legacyMap.get("FOO");
