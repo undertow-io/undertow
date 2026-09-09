@@ -18,18 +18,20 @@
 
 package io.undertow.websockets.jsr;
 
-import io.undertow.server.XnioByteBufferPool;
-import io.undertow.websockets.extensions.ExtensionHandshake;
-import io.undertow.connector.ByteBufferPool;
-import org.xnio.Pool;
-import org.xnio.XnioWorker;
-
-import jakarta.websocket.server.ServerEndpointConfig;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Supplier;
+
+import org.xnio.Pool;
+import org.xnio.XnioWorker;
+
+import io.undertow.UndertowOptions;
+import io.undertow.connector.ByteBufferPool;
+import io.undertow.server.XnioByteBufferPool;
+import io.undertow.websockets.extensions.ExtensionHandshake;
+import jakarta.websocket.server.ServerEndpointConfig;
 
 /**
  * Web socket deployment information
@@ -60,7 +62,10 @@ public class WebSocketDeploymentInfo implements Cloneable {
     private final List<ExtensionHandshake> extensions = new ArrayList<>();
     private String clientBindAddress = null;
     private WebSocketReconnectHandler reconnectHandler;
-
+    private long defaultAsyncSendTimeout = UndertowOptions.WEB_SOCKET_DEFAULT_ASYNC_SEND_TIMEOUT;
+    private long defaultMaxSessionIdleTimeout = UndertowOptions.WEB_SOCKET_DEFAULT_MAX_SESSION_IDLE; //WARNING: container has API contract in millis, but from user POV, seconds are something more tangible?
+    private int defaultMaxBinaryMessageBufferSize = UndertowOptions.WEB_SOCKET_DEFAULT_MAX_MESSAGE_SIZE_BINARY;
+    private int defaultMaxTextMessageBufferSize = UndertowOptions.WEB_SOCKET_DEFAULT_MAX_MESSAGE_SIZE_TEXT;
     public Supplier<XnioWorker> getWorker() {
         return worker;
     }
@@ -198,6 +203,79 @@ public class WebSocketDeploymentInfo implements Cloneable {
         return this;
     }
 
+
+    /**
+     * Get default web-socket async send timeout in milliseconds. Defaults to: 30000
+     * @return
+     */
+    public long getDefaultAsyncSendTimeout() {
+        return defaultAsyncSendTimeout;
+    }
+
+    /**
+     *
+     * @param defaultAsyncSendTimeout - defualt web-socket async send in milliseconds.
+     * @return
+     */
+    public WebSocketDeploymentInfo setDefaultAsyncSendTimeout(long defaultAsyncSendTimeout) {
+        this.defaultAsyncSendTimeout = defaultAsyncSendTimeout;
+        return this;
+    }
+
+    /**
+     * default web-socket idling timeout for session in seconds, defaults to 30 minutes.
+     * @return
+     */
+    public long getDefaultMaxSessionIdleTimeout() {
+        return defaultMaxSessionIdleTimeout;
+    }
+
+    /**
+     * Set default web-socket idling timeout in seconds.
+     * @param defaultMaxSessionIdleTimeout
+     * @return
+     */
+    public WebSocketDeploymentInfo setDefaultMaxSessionIdleTimeout(long defaultMaxSessionIdleTimeout) {
+        this.defaultMaxSessionIdleTimeout = defaultMaxSessionIdleTimeout;
+        return this;
+    }
+
+    /**
+     * Get default binary messages size in Byte, defaults to 128KB
+     * @return
+     */
+    public int getDefaultMaxBinaryMessageBufferSize() {
+        return defaultMaxBinaryMessageBufferSize;
+    }
+
+    /**
+     * Set default max binary size in Bytes.
+     * @param defaultMaxBinaryMessageBufferSize
+     * @return
+     */
+    public WebSocketDeploymentInfo setDefaultMaxBinaryMessageBufferSize(int defaultMaxBinaryMessageBufferSize) {
+        this.defaultMaxBinaryMessageBufferSize = defaultMaxBinaryMessageBufferSize;
+        return this;
+    }
+
+    /**
+     * Get default text messages size in Byte, defaults to 128KB
+     * @return
+     */
+    public int getDefaultMaxTextMessageBufferSize() {
+        return defaultMaxTextMessageBufferSize;
+    }
+
+    /**
+     * Set default max text size in Bytes.
+     * @param defaultMaxTextMessageBufferSize
+     * @return
+     */
+    public WebSocketDeploymentInfo setDefaultMaxTextMessageBufferSize(int defaultMaxTextMessageBufferSize) {
+        this.defaultMaxTextMessageBufferSize = defaultMaxTextMessageBufferSize;
+        return this;
+    }
+
     @Override
     public WebSocketDeploymentInfo clone() {
         return new WebSocketDeploymentInfo()
@@ -210,6 +288,10 @@ public class WebSocketDeploymentInfo implements Cloneable {
                 .addExtensions(this.extensions)
                 .setClientBindAddress(this.clientBindAddress)
                 .setReconnectHandler(this.reconnectHandler)
+                .setDefaultAsyncSendTimeout(this.defaultAsyncSendTimeout)
+                .setDefaultMaxSessionIdleTimeout(this.defaultMaxSessionIdleTimeout)
+                .setDefaultMaxBinaryMessageBufferSize(this.defaultMaxBinaryMessageBufferSize)
+                .setDefaultMaxTextMessageBufferSize(this.defaultMaxTextMessageBufferSize)
         ;
     }
 
