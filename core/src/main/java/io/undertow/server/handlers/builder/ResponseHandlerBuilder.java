@@ -25,11 +25,15 @@ import java.util.Set;
 
 import io.undertow.server.HandlerWrapper;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.server.handlers.ResponseHandler;
 
 /**
  * @author <a href="mailto:bbaranow@redhat.com">Bartosz Baranowski</a>
+ * @see {@link ResponseCodeHandler#Builder}
+ * @Deprecated(since = "2.5.0", forRemoval = true)
  */
+@Deprecated(since = "2.5.0", forRemoval = true)
 public class ResponseHandlerBuilder implements HandlerBuilder {
     @Override
     public String name() {
