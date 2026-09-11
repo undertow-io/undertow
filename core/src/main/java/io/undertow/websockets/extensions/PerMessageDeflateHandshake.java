@@ -45,6 +45,9 @@ public class PerMessageDeflateHandshake implements ExtensionHandshake {
     private static final String SERVER_MAX_WINDOW_BITS = "server_max_window_bits";
     private static final String CLIENT_MAX_WINDOW_BITS = "client_max_window_bits";
 
+    //10MB
+    public static final int DEFAULT_MAX_BUFFER_SIZE = 1048576;
+
     private final Set<String> incompatibleExtensions = new HashSet<>();
 
     private boolean compressContextTakeover;
@@ -52,6 +55,7 @@ public class PerMessageDeflateHandshake implements ExtensionHandshake {
 
     private final boolean client;
     private final int deflaterLevel;
+    private int maxBufferSize = DEFAULT_MAX_BUFFER_SIZE;
 
     /**
      * Default configuration for DEFLATE algorithm implementation
@@ -101,6 +105,19 @@ public class PerMessageDeflateHandshake implements ExtensionHandshake {
      * @param decompressContextTakeover flag for decompressor context takeover or without decompressor context
      */
     public PerMessageDeflateHandshake(final boolean client, final int deflaterLevel, boolean compressContextTakeover, boolean decompressContextTakeover) {
+        this(client, deflaterLevel, compressContextTakeover, decompressContextTakeover, DEFAULT_MAX_BUFFER_SIZE);
+    }
+
+    /**
+     * Create a new {@code PerMessageDeflateHandshake} instance.
+     *
+     * @param client                    flag for client ({@code true }) context or server ({@code false }) context
+     * @param deflaterLevel             the level of configuration of DEFLATE algorithm implementation
+     * @param compressContextTakeover   flag for compressor context takeover or without compressor context
+     * @param decompressContextTakeover flag for decompressor context takeover or without decompressor context
+     * @param maxBufferSize             maximum size of buffer used for read/write operations.
+     */
+    public PerMessageDeflateHandshake(final boolean client, final int deflaterLevel, boolean compressContextTakeover, boolean decompressContextTakeover, final int maxBufferSize) {
         this.client = client;
         this.deflaterLevel = deflaterLevel;
         /*
@@ -109,6 +126,7 @@ public class PerMessageDeflateHandshake implements ExtensionHandshake {
         incompatibleExtensions.add(PERMESSAGE_DEFLATE);
         this.compressContextTakeover = compressContextTakeover;
         this.decompressContextTakeover = decompressContextTakeover;
+        this.maxBufferSize = maxBufferSize;
     }
 
     @Override
@@ -167,6 +185,6 @@ public class PerMessageDeflateHandshake implements ExtensionHandshake {
 
     @Override
     public ExtensionFunction create() {
-        return new PerMessageDeflateFunction(deflaterLevel, compressContextTakeover, decompressContextTakeover);
+        return new PerMessageDeflateFunction(deflaterLevel, compressContextTakeover, decompressContextTakeover, this.maxBufferSize);
     }
 }

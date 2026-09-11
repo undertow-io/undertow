@@ -174,4 +174,13 @@ public interface WebSocketMessages {
 
     @Message(id = 2046, value = "Closing WebSocket, peer went away.")
     String messageCloseWebSocket();
+
+    @Message(id = 2047, value = "Buffer allocation exceed maximum size of %s")
+    String bufferExceedsMaximumSize(long maxMessageSize);
+
+    @Message(id = 2048, value = "Too many fragments: %s")
+    String tooManyFragments(long fragments);
+
+    @Message(id = 2049, value = "Too many pings, calm down: %s")
+    String tooManyPings(long pings);
 }

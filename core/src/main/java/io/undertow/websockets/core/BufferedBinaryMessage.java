@@ -85,11 +85,12 @@ public class BufferedBinaryMessage {
 
     public void read(final StreamSourceFrameChannel channel, final WebSocketCallback<BufferedBinaryMessage> callback) {
         try {
-            for (; ; ) {
+            for (;;) {
                 if (current == null) {
                     current = channel.getWebSocketChannel().getBufferPool().allocate();
                 }
                 int res = channel.read(current.getBuffer());
+                checkMaxSize(channel, res);
                 if (res == -1) {
                     this.complete = true;
                     callback.complete(channel.getWebSocketChannel(), this);
@@ -105,11 +106,12 @@ public class BufferedBinaryMessage {
                                 return;
                             }
                             try {
-                                for (; ; ) {
+                                for (;;) {
                                     if (current == null) {
                                         current = channel.getWebSocketChannel().getBufferPool().allocate();
                                     }
                                     int res = channel.read(current.getBuffer());
+                                    checkMaxSize(channel, res);
                                     if (res == -1) {
                                         complete = true;
                                         channel.suspendReads();
@@ -119,7 +121,6 @@ public class BufferedBinaryMessage {
                                         return;
                                     }
 
-                                    checkMaxSize(channel, res);
                                     if (bufferFullMessage) {
                                         dealWithFullBuffer(channel);
                                     } else if (!current.getBuffer().hasRemaining()) {
@@ -136,7 +137,6 @@ public class BufferedBinaryMessage {
                     return;
                 }
 
-                checkMaxSize(channel, res);
                 if (bufferFullMessage) {
                     dealWithFullBuffer(channel);
                 } else if (!current.getBuffer().hasRemaining()) {
