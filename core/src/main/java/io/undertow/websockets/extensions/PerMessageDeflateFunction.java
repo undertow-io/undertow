@@ -21,11 +21,14 @@ package io.undertow.websockets.extensions;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import io.undertow.util.ImmediatePooledByteBuffer;
+import io.undertow.websockets.core.CloseMessage;
 import io.undertow.websockets.core.StreamSinkFrameChannel;
 import io.undertow.websockets.core.StreamSourceFrameChannel;
 import io.undertow.websockets.core.WebSocketChannel;
 import io.undertow.websockets.core.WebSocketLogger;
 import io.undertow.websockets.core.WebSocketMessages;
+import io.undertow.websockets.core.WebSockets;
+
 import org.xnio.Buffers;
 import org.xnio.IoUtils;
 
@@ -56,6 +59,7 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
     private final boolean decompressContextTakeover;
     private final Inflater decompress;
     private final Deflater compress;
+    private final int maxBufferSize;
     private StreamSourceFrameChannel currentReadChannel;
 
     /**
@@ -66,11 +70,24 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
      * @param decompressContextTakeover flag for decompressor context takeover or without decompressor context
      */
     public PerMessageDeflateFunction(final int deflaterLevel, boolean compressContextTakeover, boolean decompressContextTakeover) {
+        this(deflaterLevel, compressContextTakeover, decompressContextTakeover, PerMessageDeflateHandshake.DEFAULT_MAX_BUFFER_SIZE);
+    }
+
+    /**
+     * Create a new {@code PerMessageDeflateExtension} instance.
+     *
+     * @param deflaterLevel             the level of configuration of DEFLATE algorithm implementation
+     * @param compressContextTakeover   flag for compressor context takeover or without compressor context
+     * @param decompressContextTakeover flag for decompressor context takeover or without decompressor context
+     * @param maxBufferSize             maximum size of buffer used for operations( ie decompression)
+     */
+    public PerMessageDeflateFunction(final int deflaterLevel, boolean compressContextTakeover, boolean decompressContextTakeover, final int maxBufferSize) {
         this.deflaterLevel = deflaterLevel;
         this.decompress = new Inflater(true);
         this.compress = new Deflater(this.deflaterLevel, true);
         this.compressContextTakeover = compressContextTakeover;
         this.decompressContextTakeover = decompressContextTakeover;
+        this.maxBufferSize = maxBufferSize;
     }
 
     @Override
@@ -103,7 +120,7 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
                 onceOnly = false;
                 //we need the hasRemaining check, because if the inflater fails to flush needsInput() will return false but it may have flushed an incomplete deflate block
                 if (!outputBuffer.hasRemaining()) {
-                    output = largerBuffer(output, channel.getWebSocketChannel(), outputBuffer.capacity() * 2);
+                    output = enlargeBuffer(output, channel.getWebSocketChannel(), outputBuffer.capacity());
                     outputBuffer = output.getBuffer();
                 }
 
@@ -138,7 +155,9 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
         return newBuf;
     }
 
-    private PooledByteBuffer largerBuffer(PooledByteBuffer smaller, WebSocketChannel channel, int newSize) {
+    private PooledByteBuffer enlargeBuffer(PooledByteBuffer smaller, WebSocketChannel channel, int currentSize) throws IOException {
+        final int newSize = calculateBufferSize(currentSize, channel);
+
         ByteBuffer smallerBuffer = smaller.getBuffer();
 
         smallerBuffer.flip();
@@ -150,15 +169,41 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
         return larger;
     }
 
-    private PooledByteBuffer allocateBufferWithArray(WebSocketChannel channel, int size) {
+    private PooledByteBuffer allocateBufferWithArray(WebSocketChannel channel, int size) throws IOException {
+        if(size > this.maxBufferSize) {
+            //JIC
+            WebSockets.sendClose(new CloseMessage(CloseMessage.MSG_TOO_BIG, WebSocketMessages.MESSAGES.bufferExceedsMaximumSize(this.maxBufferSize)), channel, null);
+            throw new IOException(WebSocketMessages.MESSAGES.bufferExceedsMaximumSize(this.maxBufferSize));
+        }
+
         if (size > 0) {
             if(size > channel.getBufferPool().getBufferSize()) {
                 // TODO use newer XNIO sized pool thingies smartly
                 return new ImmediatePooledByteBuffer(ByteBuffer.allocate(size));
             }
         }
+        PooledByteBuffer pool = channel.getBufferPool().getArrayBackedPool().allocate();
+        return pool;
+    }
 
-        return channel.getBufferPool().getArrayBackedPool().allocate();
+    /**
+     * size up requested size. If
+     * @param requestedSize
+     * @return
+     */
+    private int calculateBufferSize(final int currentSize, final WebSocketChannel channel) throws IOException {
+        int bumpSize = currentSize * 2;
+        if (bumpSize > this.maxBufferSize) {
+            if (currentSize < this.maxBufferSize) {
+                bumpSize = this.maxBufferSize;
+            } else {
+                WebSockets.sendClose(new CloseMessage(CloseMessage.MSG_TOO_BIG,
+                        WebSocketMessages.MESSAGES.bufferExceedsMaximumSize(this.maxBufferSize)), channel, null);
+                throw new IOException(WebSocketMessages.MESSAGES.bufferExceedsMaximumSize(this.maxBufferSize));
+            }
+        }
+
+        return bumpSize;
     }
 
     @Override
@@ -207,7 +252,7 @@ public class PerMessageDeflateFunction implements ExtensionFunction {
 
         while (!decompress.needsInput() && !decompress.finished()) {
             if (!buffer.hasRemaining()) {
-                pooled = largerBuffer(pooled, channel, buffer.capacity() * 2);
+                pooled = enlargeBuffer(pooled, channel, buffer.capacity());
                 buffer = pooled.getBuffer();
             }
 

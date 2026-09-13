@@ -26,11 +26,21 @@ import io.undertow.connector.PooledByteBuffer;
  */
 class WebSocket07TextFrameSourceChannel extends StreamSourceFrameChannel {
 
+    @Deprecated
     WebSocket07TextFrameSourceChannel(WebSocket07Channel wsChannel, int rsv, boolean finalFragment, Masker masker, UTF8Checker checker, PooledByteBuffer pooled, long frameLength) {
         super(wsChannel, WebSocketFrameType.TEXT, rsv, finalFragment, pooled, frameLength, masker, checker);
     }
 
+    @Deprecated
     WebSocket07TextFrameSourceChannel(WebSocket07Channel wsChannel, int rsv, boolean finalFragment, UTF8Checker checker, PooledByteBuffer pooled, long frameLength) {
         super(wsChannel, WebSocketFrameType.TEXT, rsv, finalFragment, pooled, frameLength, null, checker);
+    }
+
+    WebSocket07TextFrameSourceChannel(WebSocket07Channel wsChannel, int rsv, boolean finalFragment, Masker masker, UTF8Checker checker, PooledByteBuffer pooled, long frameLength, final int maxReadFrameCount) {
+        super(wsChannel, WebSocketFrameType.TEXT, rsv, finalFragment, pooled, frameLength, masker, maxReadFrameCount, checker);
+    }
+
+    WebSocket07TextFrameSourceChannel(final WebSocket07Channel wsChannel, final int rsv, final boolean finalFragment, final UTF8Checker checker, final PooledByteBuffer pooled, final long frameLength, final int maxReadFrameCount) {
+        super(wsChannel, WebSocketFrameType.TEXT, rsv, finalFragment, pooled, frameLength, null, maxReadFrameCount, checker);
     }
 }

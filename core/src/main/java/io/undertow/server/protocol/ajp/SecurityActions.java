@@ -35,4 +35,8 @@ final class SecurityActions {
     static String getSystemProperty(final String key) {
         return System.getSecurityManager() == null ? getProperty(key) : java.security.AccessController.doPrivileged((PrivilegedAction<String>) () -> getProperty(key));
     }
+
+    static String getSystemProperty(final String key, final String def) {
+        return System.getSecurityManager() == null ? getProperty(key, def) : java.security.AccessController.doPrivileged((PrivilegedAction<String>) () -> getProperty(key, def));
+    }
 }

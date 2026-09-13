@@ -42,6 +42,7 @@ import io.undertow.server.protocol.framed.FrameHeaderData;
  */
 public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourceChannel<WebSocketChannel, StreamSourceFrameChannel, StreamSinkFrameChannel> {
 
+    public static final int MAX_READ_FRAME_COUNT_UNBOUND = -1;
     protected final WebSocketFrameType type;
 
     private boolean finalFragment;
@@ -50,12 +51,17 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
     private final ExtensionFunction extensionFunction;
     private Masker masker;
     private UTF8Checker checker;
+    private int maxReadFrameCount = MAX_READ_FRAME_COUNT_UNBOUND;
 
     protected StreamSourceFrameChannel(WebSocketChannel wsChannel, WebSocketFrameType type, PooledByteBuffer pooled, long frameLength) {
         this(wsChannel, type, 0, true, pooled, frameLength, null);
     }
 
     protected StreamSourceFrameChannel(WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment, PooledByteBuffer pooled, long frameLength, Masker masker, ChannelFunction... functions) {
+        this(wsChannel, type, rsv, finalFragment, pooled, frameLength, masker, MAX_READ_FRAME_COUNT_UNBOUND, functions);
+    }
+
+    protected StreamSourceFrameChannel(WebSocketChannel wsChannel, WebSocketFrameType type, int rsv, boolean finalFragment, PooledByteBuffer pooled, long frameLength, Masker masker, final int maxReadFrameCount, ChannelFunction... functions) {
         super(wsChannel, pooled, frameLength);
         this.type = type;
         this.finalFragment = finalFragment;
@@ -74,6 +80,8 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
         } else {
             this.extensionFunction = NoopExtensionFunction.INSTANCE;
         }
+
+        this.maxReadFrameCount = maxReadFrameCount;
     }
 
     /**
@@ -118,16 +126,23 @@ public abstract class StreamSourceFrameChannel extends AbstractFramedStreamSourc
 
     @Override
     protected void handleHeaderData(FrameHeaderData headerData) {
-        super.handleHeaderData(headerData);
-        if (((WebSocketFrame) headerData).isFinalFragment()) {
-            finalFrame();
-        }
-        if(masker != null) {
-            masker.newFrame(headerData);
-        }
-        if(functions != null) {
-            for(ChannelFunction func : functions) {
-                func.newFrame(headerData);
+        try {
+            super.handleHeaderData(headerData);
+            if (((WebSocketFrame) headerData).isFinalFragment()) {
+                finalFrame();
+            }
+            if(masker != null) {
+                masker.newFrame(headerData);
+            }
+            if(functions != null) {
+                for(ChannelFunction func : functions) {
+                    func.newFrame(headerData);
+                }
+            }
+        } finally {
+            if(this.maxReadFrameCount != MAX_READ_FRAME_COUNT_UNBOUND && getReadFrameCount() >= this.maxReadFrameCount) {
+                WebSockets.sendClose(new CloseMessage(CloseMessage.MSG_TOO_BIG, WebSocketMessages.MESSAGES.tooManyFragments(getReadFrameCount())), getFramedChannel(), null);
+                markStreamBroken();
             }
         }
     }
