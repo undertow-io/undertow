@@ -200,6 +200,7 @@
                     <failIfNoTests>true</failIfNoTests>
                     <systemPropertyVariables>
                         <test.ajp>${ajp}</test.ajp>
+                        <io.undertow.ajp.REQUIRE_AJP_SECRET>false</io.undertow.ajp.REQUIRE_AJP_SECRET>
                         <test.proxy>${proxy}</test.proxy>
                         <openssl>false</openssl>
                         <test.openssl>${openssl}</test.openssl>
@@ -286,6 +287,7 @@
                                     <runOrder>reversealphabetical</runOrder>
                                     <systemPropertyVariables>
                                         <test.ajp>true</test.ajp>
+                                        <io.undertow.ajp.REQUIRE_AJP_SECRET>false</io.undertow.ajp.REQUIRE_AJP_SECRET>
                                         <test.dump>${dump}</test.dump>
                                         <test.bufferSize>${bufferSize}</test.bufferSize>
                                         <default.server.address>localhost</default.server.address>

@@ -674,4 +674,19 @@ public interface UndertowMessages {
 
     @Message(id = 219, value = "Too many path parameters, cannot have more than %s path parameters")
     BadRequestException tooManyPathParameters(int noParams);
+
+    // 214 placeholder
+
+    // 215 placeholder
+
+    // 216 placeholder
+
+    // 217 placeholder
+
+    // 218 placeholder
+
+    // 219 placeholder
+
+    @Message(id = 220, value = "The AJP listener is configured to require secret but the secret is either null or empty string. This combination is not allowed.")
+    IllegalArgumentException securedAjpListenerWithoutSecret();
 }

@@ -168,7 +168,7 @@ class FrameHandler extends AbstractReceiveListener {
         }
         final HandlerWrapper handler = getHandler(FrameType.TEXT);
         if (handler != null && handler.isPartialHandler()) {
-            BufferedTextMessage data = new BufferedTextMessage(false);
+            BufferedTextMessage data = new BufferedTextMessage(session.getMaxTextMessageBufferSize(), false);
             data.read(messageChannel, new WebSocketCallback<BufferedTextMessage>() {
                 @Override
                 public void complete(WebSocketChannel channel, BufferedTextMessage context) {
