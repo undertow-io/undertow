@@ -41,7 +41,7 @@ public class RequestLineAttribute implements ExchangeAttribute {
         StringBuilder sb = new StringBuilder()
                 .append(exchange.getRequestMethod().toString())
                 .append(' ')
-                .append(exchange.getRequestURI());
+                .append(exchange.getResolvedPath() + exchange.getRelativePath());
         if (!exchange.getDecodedQueryString().isEmpty()) {
             sb.append('?');
             sb.append(exchange.getDecodedQueryString());
