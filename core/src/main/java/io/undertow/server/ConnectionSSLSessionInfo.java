@@ -25,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
-import javax.security.cert.X509Certificate;
 
 import org.xnio.ChannelListener;
 import org.xnio.IoUtils;
@@ -93,32 +92,6 @@ public class ConnectionSSLSessionInfo implements SSLSessionInfo {
             } catch (IOException e1) {
                 //ignore, will not actually happen
             }
-            unverified = PEER_UNVERIFIED_EXCEPTION;
-            throw unverified;
-        }
-    }
-
-    @Override
-    @Deprecated(since="2.2.3", forRemoval=false)
-    public X509Certificate[] getPeerCertificateChain() throws SSLPeerUnverifiedException, RenegotiationRequiredException {
-        if (unverified != null) {
-            throw unverified;
-        }
-        if (renegotiationRequiredException != null) {
-            throw renegotiationRequiredException;
-        }
-        try {
-            return channel.getSslSession().getPeerCertificateChain();
-        } catch (SSLPeerUnverifiedException e) {
-          try {
-              SslClientAuthMode sslClientAuthMode = channel.getOption(Options.SSL_CLIENT_AUTH_MODE);
-              if (sslClientAuthMode == SslClientAuthMode.NOT_REQUESTED) {
-                  renegotiationRequiredException = RENEGOTIATION_REQUIRED_EXCEPTION;
-                  throw renegotiationRequiredException;
-              }
-          } catch (IOException ioe) {
-              // ignore, will not actually happen
-          }
             unverified = PEER_UNVERIFIED_EXCEPTION;
             throw unverified;
         }
