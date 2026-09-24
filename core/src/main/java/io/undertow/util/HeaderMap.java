@@ -20,6 +20,7 @@ package io.undertow.util;
 
 import static org.wildfly.common.Assert.checkNotNullParam;
 
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractCollection;
 import java.util.Arrays;
 import java.util.Collection;
@@ -832,6 +833,22 @@ public final class HeaderMap implements Iterable<HeaderValues> {
             }
         }
         return false;
+    }
+
+    public long getHeadersBytes() {
+        long headersSize = 0;
+        long cookie = this.fastIterateNonEmpty();
+        while (cookie != -1L) {
+            HeaderValues header = this.fiCurrent(cookie);
+            headersSize += header.getHeaderName().length(); // Size of the header name
+            for (String value : header) {
+                headersSize += value.getBytes(StandardCharsets.UTF_8).length; // Size of each header value
+            }
+
+            // Get the next non-empty header cookie
+            cookie = this.fiNextNonEmpty(cookie);
+        }
+        return headersSize;
     }
 
     // compare

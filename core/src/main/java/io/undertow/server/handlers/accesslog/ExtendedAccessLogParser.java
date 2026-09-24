@@ -39,9 +39,11 @@ import io.undertow.attribute.RequestHeaderAttribute;
 import io.undertow.attribute.RequestMethodAttribute;
 import io.undertow.attribute.RequestProtocolAttribute;
 import io.undertow.attribute.RequestSchemeAttribute;
+import io.undertow.attribute.RequestSizeAttribute;
 import io.undertow.attribute.RequestURLAttribute;
 import io.undertow.attribute.ResponseCodeAttribute;
 import io.undertow.attribute.ResponseHeaderAttribute;
+import io.undertow.attribute.ResponseSizeAttribute;
 import io.undertow.attribute.ResponseTimeAttribute;
 import io.undertow.attribute.SecureExchangeAttribute;
 import io.undertow.attribute.SubstituteEmptyWrapper;
@@ -249,6 +251,10 @@ public class ExtendedAccessLogParser {
             }
         } else if ("bytes".equals(token)) {
             return new BytesSentAttribute(true);
+        } else if ("responseSize".equals(token)) {
+            return ResponseSizeAttribute.INSTANCE;
+        } else if ("requestSize".equals(token)) {
+            return RequestSizeAttribute.INSTANCE;
         } else if ("cached".equals(token)) {
             /* I don't know how to evaluate this! */
             return new ConstantExchangeAttribute("-");
