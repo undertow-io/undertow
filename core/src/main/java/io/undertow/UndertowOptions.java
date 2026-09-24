@@ -20,6 +20,8 @@ package io.undertow;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import java.time.Duration;
+
 import org.xnio.Option;
 import org.xnio.Options;
 import org.xnio.channels.ReadTimeoutException;
@@ -578,6 +580,13 @@ public class UndertowOptions {
     @Deprecated
     public static final boolean DEFAULT_ALLOW_ID_LESS_MATRIX_PARAMETERS = false;
 
+    public static final long WEB_SOCKET_DEFAULT_ASYNC_SEND_TIMEOUT = Duration.ofSeconds(30).toMillis();
+
+    public static final long WEB_SOCKET_DEFAULT_MAX_SESSION_IDLE = Duration.ofMinutes(30).toSeconds();
+
+    public static final int WEB_SOCKET_DEFAULT_MAX_MESSAGE_SIZE_BINARY =  128 * 1024; // 128 KB; //int is derived from websocket API.
+
+    public static final int WEB_SOCKET_DEFAULT_MAX_MESSAGE_SIZE_TEXT =  128 * 1024; // 128 KB;
 
     private UndertowOptions() {
 

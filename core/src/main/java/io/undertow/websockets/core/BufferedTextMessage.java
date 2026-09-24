@@ -156,6 +156,7 @@ public class BufferedTextMessage {
                                             }
                                         }
                                     } catch (IOException e) {
+                                        channel.suspendReads();
                                         callback.onError(channel.getWebSocketChannel(), BufferedTextMessage.this, e);
                                     }
                                 } finally {

@@ -43,6 +43,7 @@ import static java.lang.System.getProperty;
 
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -87,8 +88,14 @@ public class Bootstrap implements ServletExtension {
             extensions.add(new ExtensionImpl(e.getName(), Collections.emptyList()));
         }
         ServerWebSocketContainer container = new ServerWebSocketContainer(deploymentInfo.getClassIntrospecter(), servletContext.getClassLoader(), worker, buffers, setup, info.isDispatchToWorkerThread(), bind, info.getReconnectHandler(), extensions);
-        container.setDefaultMaxTextMessageBufferSize(this.getMaxTextBufferSize());
-        container.setDefaultMaxBinaryMessageBufferSize(this.getMaxBinaryBufferSize());
+
+        container.setAsyncSendTimeout(info.getDefaultAsyncSendTimeout());
+        container.setDefaultMaxSessionIdleTimeout(Duration.ofSeconds(info.getDefaultMaxSessionIdleTimeout()).toMillis());//NOTE: conversion
+        int bufferSize = this.getMaxBinaryBufferSize();
+        container.setDefaultMaxBinaryMessageBufferSize(bufferSize == -1 ? info.getDefaultMaxBinaryMessageBufferSize() : bufferSize);
+        bufferSize = this.getMaxTextBufferSize();
+        container.setDefaultMaxTextMessageBufferSize(bufferSize == -1 ? info.getDefaultMaxTextMessageBufferSize() : bufferSize);
+
         try {
             for (Class<?> annotation : info.getAnnotatedEndpoints()) {
                 container.addEndpoint(annotation);

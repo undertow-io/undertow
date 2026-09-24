@@ -39,6 +39,12 @@ public final class BinaryPartialEndpoint extends Endpoint {
 
     }
 
+    @Override
+    public void onError(Session session, Throwable thr) {
+        // TODO Auto-generated method stub
+        super.onError(session, thr);
+    }
+
     private static class BinaryPartialMessageHandler implements MessageHandler.Partial<byte[]> {
 
         private final Session session;

@@ -21,6 +21,7 @@ package io.undertow.servlet.api;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -86,7 +87,7 @@ public class DeploymentInfo implements Cloneable {
     private ConfidentialPortManager confidentialPortManager;
     private boolean allowNonStandardWrappers = false;
     private int defaultSessionTimeout = 60 * 30;
-    private long defaultAsyncContextTimeout = 30000;
+    private long defaultAsyncContextTimeout = Duration.ofSeconds(30).toMillis();
     private ConcurrentMap<String, Object> servletContextAttributeBackingMap;
     private ServletSessionConfig servletSessionConfig;
     private String hostName = "localhost";
