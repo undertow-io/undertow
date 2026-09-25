@@ -379,6 +379,7 @@ public class Cookies {
                     } else if (c == ';' || (commaIsSeperator && c == ',')) {
                         cookieJar.state = 0;
                         cookieJar.start = i + 1;
+                        cookieJar.inQuotes = false;
                     } else if (c == '\\' && (i + 1 < cookie.length()) && cookie.charAt(i + 1) == '"') {
                         // Skip the next double quote char '"' when it is escaped by backslash '\' (i.e. \") inside the quoted value
                         // But..., do not skip at the following conditions
