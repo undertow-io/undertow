@@ -1,7 +1,7 @@
-io.undertow.server.handlers.builder.RewriteHandlerBuilder
+io.undertow.server.handlers.RewriteHandler$Builder
 io.undertow.server.handlers.SetAttributeHandler$Builder
 io.undertow.server.handlers.SetAttributeHandler$ClearBuilder
-io.undertow.server.handlers.builder.ResponseCodeHandlerBuilder
+io.undertow.server.handlers.ResponseCodeHandler$Builder
 io.undertow.server.handlers.DisableCacheHandler$Builder
 io.undertow.server.handlers.ProxyPeerAddressHandler$Builder
 io.undertow.server.handlers.proxy.ProxyHandlerBuilder
@@ -43,5 +43,5 @@ io.undertow.server.handlers.HttpContinueAcceptingHandler$Builder
 io.undertow.server.handlers.form.EagerFormParsingHandler$Builder
 io.undertow.server.handlers.SameSiteCookieHandler$Builder
 io.undertow.server.handlers.SetErrorHandler$Builder
-io.undertow.server.handlers.builder.ReasonPhraseHandlerBuilder
-io.undertow.server.handlers.builder.ResponseHandlerBuilder
+io.undertow.server.handlers.ReasonPhraseHandler$Builder
+io.undertow.server.handlers.ResponseHandler$Builder
