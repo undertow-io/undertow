@@ -36,7 +36,7 @@ public class Version {
             props.load(versionPropsStream);
             version = props.getProperty("undertow.version");
         } catch (Exception e) {
-            e.printStackTrace();
+            UndertowLogger.ROOT_LOGGER.error("Failed to load version properties", e);
         }
         versionString = version;
         fullVersionString = SERVER_NAME + " - "+ versionString;
