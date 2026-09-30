@@ -203,7 +203,7 @@ public class CookieImpl implements Cookie {
             this.sameSiteMode = m;
             setAttribute(COOKIE_SAME_SITE_ATTR, mode, false);
         } else {
-            UndertowLogger.REQUEST_LOGGER.warnf(UndertowMessages.MESSAGES.invalidSameSiteMode(mode, Arrays.toString(CookieSameSiteMode.values())), "Ignoring specified SameSite mode [%s] for cookie [%s]", mode, this.name);
+            UndertowLogger.REQUEST_LOGGER.ignoreSameSiteCookieMode(UndertowMessages.MESSAGES.invalidSameSiteMode(mode, Arrays.toString(CookieSameSiteMode.values())), mode, this.name);
         }
         return this;
     }
