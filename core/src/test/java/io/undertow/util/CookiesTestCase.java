@@ -568,9 +568,24 @@ public class CookiesTestCase {
         cookie = cookies.get("BAD");
         Assert.assertNull(cookie);
         cookie = cookies.get("SHIPPING");
+        Assert.assertNotNull(cookie);
         Assert.assertEquals("SHIPPING", cookie.getName());
         Assert.assertEquals("FEDEX", cookie.getValue());
+    }
+
+    @Test
+    public void testNoDoubleQuoteTerminationAndEmptyRFC2109CookieValue() {
+        OptionMap options = OptionMap.builder().set(UndertowOptions.MAX_COOKIES, 4)
+                .set(UndertowOptions.ENABLE_RFC6265_COOKIE_VALIDATION, true).getMap();
+        Map<String, Cookie> cookies = parseRequestCookies(Arrays.asList("$Version=1; BAD=\"X; EMPTY=; $Path=/"), options, true, LegacyCookieSupport.ALLOW_HTTP_SEPARATORS_IN_V0);
+        Assert.assertEquals(3, cookies.size());
+        Cookie cookie = cookies.get("BAD");
+        Assert.assertNull(cookie);
+        cookie = cookies.get("EMPTY");
         Assert.assertNotNull(cookie);
+        Assert.assertEquals("EMPTY", cookie.getName());
+        Assert.assertEquals("", cookie.getValue());
+        Assert.assertEquals("/", cookie.getPath());
     }
 
     // RFC6265 allows US-ASCII characters excluding CTLs, whitespace,

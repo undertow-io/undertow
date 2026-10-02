@@ -186,7 +186,9 @@ public abstract class WebSocketChannel extends AbstractFramedChannel<WebSocketCh
                 try {
                     abstractReceiveListener.onCloseMessage(CLOSE_MSG, this);
                 } catch(Exception e) {
-                    e.printStackTrace();
+                    if (WebSocketLogger.REQUEST_LOGGER.isDebugEnabled()) {
+                        WebSocketLogger.REQUEST_LOGGER.debug("Error processing close message", e);
+                    }
                 }
             }
         }
