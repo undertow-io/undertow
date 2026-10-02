@@ -92,6 +92,8 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     private static final int CONTENT_FULLY_WRITTEN_FLAG   = 1 << 0x04;
     //if a content type has been set either implicitly or implicitly
     private static final int CHARSET_SET_FLAG             = 1 << 0x05;
+    // sendRedirect() called inside a handler: headers set but bytes not yet flushed
+    private static final int PENDING_REDIRECT_FLAG        = 1 << 0x06;
 
     private Locale locale;
     private String contentType;
@@ -230,7 +232,12 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
             String loc = exchange.getRequestScheme() + "://" + exchange.getHostAndPort() + realPath;
             exchange.getResponseHeaders().put(Headers.LOCATION, loc);
         }
-        responseDone();
+        ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
+        if (src != null && src.isRunningInsideHandler()) {
+            flags |= PENDING_REDIRECT_FLAG;
+        } else {
+            responseDone();
+        }
     }
 
     @Override
@@ -452,7 +459,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
     }
 
     private boolean responseStarted() {
-        return exchange.isResponseStarted() || Bits.anyAreSet(flags, IGNORED_FLUSH_PERFORMED_FLAG | TREAT_AS_COMMITTED_FLAG);
+        return exchange.isResponseStarted() || Bits.anyAreSet(flags, IGNORED_FLUSH_PERFORMED_FLAG | TREAT_AS_COMMITTED_FLAG | PENDING_REDIRECT_FLAG);
     }
 
     @Override
@@ -495,6 +502,9 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
 
     @Override
     public void flushBuffer() throws IOException {
+        if (Bits.anyAreSet(flags, PENDING_REDIRECT_FLAG)) {
+            return;
+        }
         if (writer != null) {
             writer.flush();
         } else if (servletOutputStream != null) {
@@ -559,7 +569,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         responseState = ResponseState.NONE;
         exchange.getResponseHeaders().clear();
         exchange.setStatusCode(StatusCodes.OK);
-        flags &= ~(TREAT_AS_COMMITTED_FLAG | CONTENT_FULLY_WRITTEN_FLAG);
+        flags &= ~(TREAT_AS_COMMITTED_FLAG | CONTENT_FULLY_WRITTEN_FLAG | PENDING_REDIRECT_FLAG);
     }
 
     @Override
@@ -609,6 +619,7 @@ public final class HttpServletResponseImpl implements HttpServletResponse {
         if (Bits.anyAreSet(flags, RESPONSE_DONE_FLAG | TREAT_AS_COMMITTED_FLAG)) {
             return;
         }
+        flags &= ~PENDING_REDIRECT_FLAG;
         flags |= RESPONSE_DONE_FLAG;
         try {
             closeStreamAndWriter();

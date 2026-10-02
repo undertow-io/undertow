@@ -888,7 +888,7 @@ public class ServletContextImpl implements ServletContext {
                 exchange.putAttachment(sessionAttachmentKey, httpSession);
             } else if (create) {
 
-                if (exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY).getServletResponse().isCommitted()) {
+                if (exchange.isResponseStarted()) {
                     if (!this.deployment.getDeploymentInfo().isOrphanSessionAllowed()) {
                         throw UndertowServletMessages.MESSAGES.sessionCreationAfterResponseCommittedNotAllowed();
                     }
