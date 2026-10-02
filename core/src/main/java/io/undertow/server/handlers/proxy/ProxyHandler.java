@@ -197,6 +197,11 @@ public final class ProxyHandler implements HttpHandler {
             exchange.endExchange();
             return;
         }
+        int targetMaxRequestTime = 0;
+        if(target instanceof ProxyClient.TimeoutProxyTarget) {
+            targetMaxRequestTime = ((ProxyClient.TimeoutProxyTarget) target).getTimeout();
+        }
+        final int maxRequestTime = targetMaxRequestTime > 0 ? targetMaxRequestTime : this.maxRequestTime;
         final long timeout = maxRequestTime > 0 ? System.currentTimeMillis() + maxRequestTime : 0;
         int maxRetries = maxConnectionRetries;
         if(target instanceof ProxyClient.MaxRetriesProxyTarget) {
