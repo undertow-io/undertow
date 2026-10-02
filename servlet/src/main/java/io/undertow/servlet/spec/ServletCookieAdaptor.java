@@ -42,6 +42,7 @@ public class ServletCookieAdaptor implements Cookie {
 
     public ServletCookieAdaptor(final jakarta.servlet.http.Cookie cookie) {
         this.cookie = cookie;
+        this.sameSite = cookie.getAttribute(SAME_SITE) != null;
     }
 
     @Override
@@ -194,6 +195,9 @@ public class ServletCookieAdaptor implements Cookie {
     @Override
     public Cookie setAttribute(final String name, final String value) {
         cookie.setAttribute(name, value);
+        if (SAME_SITE.equals(name)) {
+            this.sameSite = value != null;
+        }
         return this;
     }
 
