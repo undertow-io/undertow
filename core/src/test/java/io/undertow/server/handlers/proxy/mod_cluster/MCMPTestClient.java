@@ -89,6 +89,7 @@ public class MCMPTestClient implements Closeable {
         addIfNotNull(pairs, MCMPConstants.TYPE_STRING, config.getType());
         addIfNotNull(pairs, MCMPConstants.HOST_STRING, config.getHostname());
         addIfNotNull(pairs, MCMPConstants.PORT_STRING, config.getPort());
+        addIfNotNull(pairs, MCMPConstants.TIMEOUT_STRING, config.getTimeout());
 
         request.setEntity(createEntity(pairs));
 
