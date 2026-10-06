@@ -9,24 +9,46 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * {@link DirectByteBufferDeallocator} Utility class used to free direct buffer memory.
+ *
+ * Striping logic was adapted from Guava's Striped
  */
 public final class DirectByteBufferDeallocator {
     private static final int DEALLOCATION_DELAY_MILLIS = 100;
     private static final boolean SUPPORTED;
     private static final Method cleaner;
     private static final Method cleanerClean;
-    private static final ThreadLocal<Queue<QueuedByteBuffer>> bufferQueue;
+
+    private static final List<ConcurrentLinkedQueue<QueuedByteBuffer>> queues;
+    private static final List<Lock> queueLocks;
+    private static final int queueCount;
+    private static final int queueMask;
 
     private static final Unsafe UNSAFE;
 
 
     static {
-        bufferQueue = ThreadLocal.withInitial(()-> new LinkedList());
+        // Round to nearest power of 2 for efficient bitwise operations
+        queueCount = roundToPowerOfTwo(Runtime.getRuntime().availableProcessors() * 2);
+        queueMask = queueCount - 1;
+
+        List<ConcurrentLinkedQueue<QueuedByteBuffer>> tmpQueues = new ArrayList<>(queueCount);
+        List<Lock> tmpLocks = new ArrayList<>(queueCount);
+        for (int i = 0; i < queueCount; i++) {
+            tmpQueues.add(new ConcurrentLinkedQueue<>());
+            tmpLocks.add(new ReentrantLock());
+        }
+        queues = Collections.unmodifiableList(tmpQueues);
+        queueLocks = Collections.unmodifiableList(tmpLocks);
+
         String versionString = System.getProperty("java.specification.version");
         if(versionString.equals("0.9")) {
             //android hardcoded
@@ -70,6 +92,37 @@ public final class DirectByteBufferDeallocator {
         // Utility Class
     }
 
+    private static int getQueueIndex() {
+        return getQueueIndex(Thread.currentThread().getId(), queueMask);
+    }
+
+    private static int getQueueIndex(long threadId, int mask) {
+        int threadHash = (int) threadId;
+        return smear(threadHash) & mask;
+    }
+
+    /**
+     * Smears the hash code to spread high-order bits into low-order bits, improving distribution.
+     * Based on Doug Lea's algorithm from OpenJDK HashMap.
+     */
+    private static int smear(int hashCode) {
+        int hash = hashCode;
+        hash ^= (hash >>> 20) ^ (hash >>> 12);
+        return hash ^ (hash >>> 7) ^ (hash >>> 4);
+    }
+
+    private static int roundToPowerOfTwo(int value) {
+        if (value <= 0) {
+            return 1;
+        }
+        // Cap at 2^30 (max safe power of 2 for positive int)
+        if (value > (1 << 30)) {
+            return 1 << 30;
+        }
+        // Round up to next power of 2
+        return 1 << (32 - Integer.numberOfLeadingZeros(value - 1));
+    }
+
     /**
      * Attempts to deallocate the underlying direct memory.
      * This is a no-op for buffers where {@link ByteBuffer#isDirect()} returns false.
@@ -79,30 +132,48 @@ public final class DirectByteBufferDeallocator {
     public static void free(ByteBuffer buffer) {
         if (SUPPORTED && buffer != null && buffer.isDirect()) {
             try {
-                // queue
-                final Queue<QueuedByteBuffer> queuedByteBuffers = bufferQueue.get();
-                // only clean buffers that have been returned DEALLOCATION_DELAY_MIILLIS ms ago
-                final long targetTimeMillis = System.currentTimeMillis() - DEALLOCATION_DELAY_MILLIS;
-                QueuedByteBuffer queuedByteBuffer = queuedByteBuffers.peek();
-                while (queuedByteBuffer != null) {
-                    if (queuedByteBuffer.timeStamp > targetTimeMillis) {
-                        break;
+                int queueIdx = getQueueIndex();
+                final ConcurrentLinkedQueue<QueuedByteBuffer> queue = queues.get(queueIdx);
+                final Lock lock = queueLocks.get(queueIdx);
+
+                // Try to clean old buffers if we can acquire the lock
+                // If another thread is already cleaning, skip it to avoid contention
+                if (lock.tryLock()) {
+                    try {
+                        cleanOldBuffersFromQueue(queue);
+                    } finally {
+                        lock.unlock();
                     }
-                    queuedByteBuffers.remove();
-                    cleanBuffer(queuedByteBuffer.byteBuffer);
-                    queuedByteBuffer = queuedByteBuffers.peek();
                 }
-                // put the buffer to be cleaned in the queue
-                // the goal here is to create a delay to make sure
+
+                // Put the buffer to be cleaned in the queue
+                // The goal here is to create a delay to make sure
                 // that the buffer is not immediately deallocated
                 // as there is a small window of time in which the
                 // buffer is still accessible via local variables;
                 // if a direct buffer is cleaned and then written to
                 // or read from, the behavior of the sdk is unpredictable
-                queuedByteBuffers.add(new QueuedByteBuffer(buffer));
+                queue.add(new QueuedByteBuffer(buffer));
             } catch (Throwable t) {
                 UndertowLogger.ROOT_LOGGER.directBufferDeallocationFailed(t);
             }
+        }
+    }
+
+    /**
+     * Cleans buffers from the queue that have been waiting at least DEALLOCATION_DELAY_MILLIS.
+     */
+    private static void cleanOldBuffersFromQueue(ConcurrentLinkedQueue<QueuedByteBuffer> queue)
+            throws InvocationTargetException, IllegalAccessException {
+        final long targetTimeMillis = System.currentTimeMillis() - DEALLOCATION_DELAY_MILLIS;
+        QueuedByteBuffer queuedByteBuffer = queue.peek();
+        while (queuedByteBuffer != null) {
+            if (queuedByteBuffer.timeStamp > targetTimeMillis) {
+                break;
+            }
+            queue.remove();
+            cleanBuffer(queuedByteBuffer.byteBuffer);
+            queuedByteBuffer = queue.peek();
         }
     }
 
