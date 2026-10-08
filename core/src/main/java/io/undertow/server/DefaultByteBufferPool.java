@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 // TODO: move this somewhere more appropriate
 public class DefaultByteBufferPool implements ByteBufferPool {
 
-    private final ThreadLocalCache threadLocalCache = new ThreadLocalCache();
+    private final ThreadLocalCache threadLocalCache;
     // Access requires synchronization on the threadLocalDataList instance
     private final List<WeakReference<ThreadLocalData>> threadLocalDataList = new ArrayList<>();
     private final ConcurrentLinkedQueue<ByteBuffer> queue = new ConcurrentLinkedQueue<>();
@@ -85,6 +85,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         this.bufferSize = bufferSize;
         this.maximumPoolSize = maximumPoolSize;
         this.threadLocalCacheSize = threadLocalCacheSize;
+        this.threadLocalCache = new ThreadLocalCache(threadLocalCacheSize > 0);
         this.leakDectionPercent = leakDecetionPercent;
         if(direct) {
             arrayBackedPool = new DefaultByteBufferPool(false, bufferSize, maximumPoolSize, 0, leakDecetionPercent);
@@ -301,6 +302,7 @@ public class DefaultByteBufferPool implements ByteBufferPool {
     private class ThreadLocalData {
         final ArrayDeque<ByteBuffer> buffers = new ArrayDeque<>(threadLocalCacheSize);
         int allocationDepth = 0;
+        int cacheAccesses;
 
         @Override
         protected void finalize() throws Throwable {
@@ -340,18 +342,34 @@ public class DefaultByteBufferPool implements ByteBufferPool {
         }
     }
 
-    // This is used instead of Java ThreadLocal class. Unlike in the ThreadLocal class, the remove() method in this
-    // class can be called by a different thread than the one that initialized the data.
+    // The registry permits cleanup from another thread.
     private static class ThreadLocalCache {
+
+        private final ThreadLocal<WeakReference<ThreadLocalData>> localReference;
 
         final Map<Thread, ThreadLocalData> localsByThread = Collections.synchronizedMap(new WeakHashMap<>());
 
+        ThreadLocalCache(boolean cachingEnabled) {
+            localReference = cachingEnabled ? new ThreadLocal<>() : null;
+        }
+
         ThreadLocalData get() {
-            return localsByThread.get(Thread.currentThread());
+            WeakReference<ThreadLocalData> reference = localReference == null ? null : localReference.get();
+            ThreadLocalData local = reference == null ? null : reference.get();
+            if (local == null) {
+                return localsByThread.get(Thread.currentThread());
+            }
+            // WeakHashMap only releases stale values when accessed; keep retiring dead threads' caches.
+            if ((++local.cacheAccesses & 255) == 0) {
+                localsByThread.size();
+            }
+            return local;
         }
 
         void set(ThreadLocalData threadLocalData) {
             localsByThread.put(Thread.currentThread(), threadLocalData);
+            // A long-lived thread must not keep this pool alive through ThreadLocalData.
+            localReference.set(new WeakReference<>(threadLocalData));
         }
 
         void remove(ThreadLocalData threadLocalData) {
