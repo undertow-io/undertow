@@ -55,6 +55,7 @@ import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.DelegateOpenListener;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
+import io.undertow.server.RequestParseErrorListener;
 import io.undertow.server.XnioByteBufferPool;
 
 /**
@@ -88,6 +89,7 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
     private volatile HttpHandler rootHandler;
     private volatile OptionMap undertowOptions;
     private volatile boolean statisticsEnabled;
+    private volatile RequestParseErrorListener requestParseErrorListener = RequestParseErrorListener.NO_OP;
 
     private volatile boolean providerLogged;
     private volatile boolean alpnFailLogged;
@@ -136,6 +138,20 @@ public class AlpnOpenListener implements ChannelListener<StreamConnection>, Open
         this.rootHandler = rootHandler;
         for (Map.Entry<String, ListenerEntry> delegate : listeners.entrySet()) {
             delegate.getValue().listener.setRootHandler(rootHandler);
+        }
+    }
+
+    @Override
+    public RequestParseErrorListener getRequestParseErrorListener() {
+        return requestParseErrorListener;
+    }
+
+    @Override
+    public void setRequestParseErrorListener(RequestParseErrorListener requestParseErrorListener) {
+        this.requestParseErrorListener = requestParseErrorListener == null
+                ? RequestParseErrorListener.NO_OP : requestParseErrorListener;
+        for (Map.Entry<String, ListenerEntry> delegate : listeners.entrySet()) {
+            delegate.getValue().listener.setRequestParseErrorListener(this.requestParseErrorListener);
         }
     }
 
