@@ -90,6 +90,8 @@ public class DateUtilsTestCase {
 
         long timestamp = System.currentTimeMillis();
         for (int i=0; i < 1000; i++) {
+            /*@SuppressWarnings("unused")
+            String result = */
             ie9Header.replaceAll(";.*$", "");
         }
         long ts1 = System.currentTimeMillis() - timestamp;
