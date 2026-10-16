@@ -17,7 +17,7 @@
     <Match>
         <Or>
             <!-- Ignore checking for generated JMH benchmarking classes -->
-            <Package name="io.undertow.benchmarks.generated"/>
+            <Package name="io.undertow.benchmarks.jmh_generated"/>
         </Or>
     </Match>
 
