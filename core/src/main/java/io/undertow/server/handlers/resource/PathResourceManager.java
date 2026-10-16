@@ -247,7 +247,7 @@ public class PathResourceManager implements ResourceManager  {
             UndertowLogger.REQUEST_LOGGER.debugf(e, "Invalid path %s", p);
             return null;
         } catch (SecurityException e) {
-            UndertowLogger.REQUEST_LOGGER.errorf(e, "Missing JSM permissions for path %s", p);
+            UndertowLogger.REQUEST_LOGGER.missingJSMPermissions(e, p);
             throw e;
         } catch (Exception e) {
             UndertowLogger.REQUEST_LOGGER.debugf(e, "Other issue for path %s", p);
