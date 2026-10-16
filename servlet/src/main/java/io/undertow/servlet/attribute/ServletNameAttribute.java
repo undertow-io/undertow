@@ -43,7 +43,11 @@ public class ServletNameAttribute implements ExchangeAttribute {
     @Override
     public String readAttribute(final HttpServerExchange exchange) {
         ServletRequestContext src = exchange.getAttachment(ServletRequestContext.ATTACHMENT_KEY);
-        return src.getCurrentServlet().getManagedServlet().getServletInfo().getName();
+        if (src != null) {
+            return src.getCurrentServlet().getManagedServlet().getServletInfo().getName();
+        } else {
+            return null;
+        }
     }
 
     @Override
