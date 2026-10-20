@@ -130,7 +130,7 @@ public class DirectoryUtils {
         }
 
         String newSortOrder = "asc".equals(currentSortOrder) ? "desc" : "asc";
-        String sortUrl = relative == null ? path : relative + path;
+        String sortUrl = escapeHtml(relative == null ? path : relative + path);
 
         StringBuilder builder = buildDirectoryListingTable(sortUrl, sortColumn, newSortOrder);
 
@@ -175,7 +175,7 @@ public class DirectoryUtils {
     }
 
     private static void appendParentDirectory(Resource resource, StringBuilder builder, String relative, String parent) {
-        builder.append("<tr class='odd'><td><a class='icon up' href='").append(relative == null ? parent : relative + parent).append(parent.endsWith("/") ? "" : "/").append("'>[..]</a></td><td>");
+        builder.append("<tr class='odd'><td><a class='icon up' href='").append(escapeHtml(relative == null ? parent : relative + parent)).append(parent.endsWith("/") ? "" : "/").append("'>[..]</a></td><td>");
         builder.append(formatLastModified(resource.getLastModified()))
                 .append("</td><td>--</td></tr>\n");
     }
@@ -206,8 +206,8 @@ public class DirectoryUtils {
     private static void appendFiles(List<Resource> files, StringBuilder builder, int i, String sortUrl) {
         for (Resource entry : files) {
             builder.append("<tr class='").append((++i & 1) == 1 ? "odd" : "even").append("'><td><a class='icon file' href='")
-                    .append(sortUrl).append(entry.getName()).append("'>")
-                    .append(entry.getName()).append("</a></td><td>")
+                    .append(sortUrl).append(escapeHtml(entry.getName())).append("'>")
+                    .append(escapeHtml(entry.getName())).append("</a></td><td>")
                     .append(formatLastModified(entry.getLastModified()))
                     .append("</td><td>");
             formatSize(builder, entry.getContentLength());
@@ -218,8 +218,8 @@ public class DirectoryUtils {
     private static void appendDirectories(List<Resource> directories, StringBuilder builder, int i, String sortUrl) {
         for (Resource entry : directories) {
             builder.append("<tr class='").append((++i & 1) == 1 ? "odd" : "even").append("'><td><a class='icon dir' href='")
-                    .append(sortUrl).append(entry.getName()).append("/'>")
-                    .append(entry.getName()).append("</a></td><td>")
+                    .append(sortUrl).append(escapeHtml(entry.getName())).append("/'>")
+                    .append(escapeHtml(entry.getName())).append("</a></td><td>")
                     .append(formatLastModified(entry.getLastModified()))
                     .append("</td><td>--</td></tr>\n");
         }
@@ -313,6 +313,30 @@ public class DirectoryUtils {
         exchange.endExchange();
     }
 
+
+    private static String escapeHtml(String value) {
+        StringBuilder builder = null;
+        for (int i = 0; i < value.length(); i++) {
+            String replacement;
+            switch (value.charAt(i)) {
+                case '&': replacement = "&amp;"; break;
+                case '<': replacement = "&lt;"; break;
+                case '>': replacement = "&gt;"; break;
+                case '"': replacement = "&quot;"; break;
+                case '\'': replacement = "&#39;"; break;
+                default: replacement = null;
+            }
+            if (replacement != null) {
+                if (builder == null) {
+                    builder = new StringBuilder(value.length() + 16).append(value, 0, i);
+                }
+                builder.append(replacement);
+            } else if (builder != null) {
+                builder.append(value.charAt(i));
+            }
+        }
+        return builder == null ? value : builder.toString();
+    }
 
     private static StringBuilder formatSize(StringBuilder builder, Long size) {
         if(size == null) {
