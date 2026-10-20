@@ -49,6 +49,8 @@ import static io.undertow.util.Methods.VERSION_CONTROL;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -515,7 +517,7 @@ public class AjpRequestParser {
                     } else if (state.currentAttribute.equals(SECRET)) {
                         // ensure user provided secret matches configured secret
                         if (configuredSecret != null && !configuredSecret.isEmpty()) {
-                            if (configuredSecret.equals(finalResult)) {
+                            if (finalResult != null && MessageDigest.isEqual(configuredSecret.getBytes(StandardCharsets.UTF_8), finalResult.getBytes(StandardCharsets.UTF_8))) {
                                 state.secretProvided = true;
                             }
                         }
