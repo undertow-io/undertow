@@ -35,6 +35,7 @@ import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpClientUtils;
 import io.undertow.testutils.TestHttpClient;
+import io.undertow.util.FileUtils;
 import io.undertow.util.Headers;
 import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
@@ -131,6 +132,32 @@ public class FileHandlerTestCase {
             }
         } finally {
             client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testDirectoryListingEscapesNames() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        Path rootPath = Files.createTempDirectory("undertow-listing");
+        Path dir = Files.createDirectory(rootPath.resolve("d'q"));
+        Files.createFile(dir.resolve("x' onmouseover='alert(1)&.txt"));
+        try {
+            DefaultServer.setRootHandler(new CanonicalPathHandler()
+                    .setNext(new PathHandler()
+                            .addPrefixPath("/path", new ResourceHandler(new PathResourceManager(rootPath, 1))
+                                    .setDirectoryListingEnabled(true))));
+
+            try (CloseableHttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/path/d%27q/"))) {
+                Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+                final String response = HttpClientUtils.readResponse(result);
+                MatcherAssert.assertThat(response, CoreMatchers.containsString("x&#39; onmouseover=&#39;alert(1)&amp;.txt"));
+                MatcherAssert.assertThat(response, CoreMatchers.containsString("/path/d&#39;q/"));
+                MatcherAssert.assertThat(response, CoreMatchers.not(CoreMatchers.containsString("'alert(1)")));
+                MatcherAssert.assertThat(response, CoreMatchers.not(CoreMatchers.containsString("d'q")));
+            }
+        } finally {
+            client.getConnectionManager().shutdown();
+            FileUtils.deleteRecursive(rootPath);
         }
     }
 
