@@ -977,9 +977,8 @@ public class SslConduit implements StreamSourceConduit, StreamSinkConduit {
                 return result.bytesConsumed();
             }
 
-            if (!handleHandshakeResult(result)) {
-                return 0;
-            }
+            handleHandshakeResult(result);
+
             if (result.getStatus() == SSLEngineResult.Status.CLOSED && userBuffers != null) {
                 notifyWriteClosed();
                 throw new ClosedChannelException();

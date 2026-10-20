@@ -67,19 +67,19 @@ public class BinaryEndpointTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-
         bytes = new byte[256 * 1024];
         new Random().nextBytes(bytes);
 
         final ServletContainer container = ServletContainer.Factory.newInstance();
-
+        final WebSocketDeploymentInfo webSocketInfo = new WebSocketDeploymentInfo();
+        webSocketInfo.setDefaultMaxBinaryMessageBufferSize(bytes.length+1);
         DeploymentInfo builder = new DeploymentInfo()
                 .setClassLoader(BinaryEndpointTest.class.getClassLoader())
                 .setContextPath("/")
                 .setClassIntrospecter(TestClassIntrospector.INSTANCE)
                 .addServlet(Servlets.servlet("bin", BinaryEndpointServlet.class).setLoadOnStartup(100))
                 .addServletContextAttribute(WebSocketDeploymentInfo.ATTRIBUTE_NAME,
-                        new WebSocketDeploymentInfo()
+                        webSocketInfo
                                 .setBuffers(DefaultServer.getBufferPool())
                                 .setWorker(DefaultServer.getWorkerSupplier())
                                 .addListener(serverContainer -> deployment = serverContainer)
