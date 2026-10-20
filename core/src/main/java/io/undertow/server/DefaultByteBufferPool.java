@@ -18,6 +18,7 @@
 
 package io.undertow.server;
 
+import io.undertow.UndertowLogger;
 import io.undertow.UndertowMessages;
 import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
@@ -323,9 +324,12 @@ public class DefaultByteBufferPool implements ByteBufferPool {
 
         @Override
         protected void finalize() throws Throwable {
-            super.finalize();
-            if(!closed) {
-                allocationPoint.printStackTrace();
+            try {
+                if(!closed) {
+                    UndertowLogger.ROOT_LOGGER.debug("Buffer pool closed without proper cleanup", allocationPoint);
+                }
+            } finally {
+                super.finalize();
             }
         }
     }
