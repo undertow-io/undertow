@@ -100,6 +100,7 @@ public class RedirectWithContentLengthTestCase {
         }
     }
 
+    @Test
     public void testServletRedirectHead() throws Exception {
         final String requestURL = DefaultServer.getDefaultServerURL() + "/servletContext/redirect/";
         final String expectedBody = "/servletContext/redirect/subpath";
