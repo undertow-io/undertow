@@ -238,27 +238,45 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     @Override
-    public synchronized void complete() {
-        if (complete) {
-            UndertowLogger.REQUEST_LOGGER.trace("Ignoring call to AsyncContext.complete() as it has already been called");
-            return;
+    public void complete() {
+        final Runnable completionTask;
+        final AsyncContextImpl previous;
+        synchronized (this) {
+            if (complete) {
+                UndertowLogger.REQUEST_LOGGER.trace("Ignoring call to AsyncContext.complete() as it has already been called");
+                return;
+            }
+            complete = true;
+            if (timeoutKey != null) {
+                timeoutKey.remove();
+                timeoutKey = null;
+            }
+            completionTask = dispatched ? this::onAsyncComplete : completeInternalTask(false);
+            previous = previousAsyncContext;
         }
-        complete = true;
-        if (timeoutKey != null) {
-            timeoutKey.remove();
-            timeoutKey = null;
+        // Listeners may wait for a writer that also needs to call complete().
+        // Publish the completion state before invoking them without the monitor.
+        if (completionTask != null) {
+            completionTask.run();
         }
-        if (!dispatched) {
-            completeInternal(false);
-        } else {
-            onAsyncComplete();
-        }
-        if (previousAsyncContext != null) {
-            previousAsyncContext.complete();
+        if (previous != null) {
+            previous.complete();
         }
     }
 
-    public synchronized void completeInternal(boolean forceComplete) {
+    public void completeInternal(boolean forceComplete) {
+        final Runnable completionTask;
+        synchronized (this) {
+            completionTask = completeInternalTask(forceComplete);
+        }
+        if (completionTask != null) {
+            completionTask.run();
+        }
+    }
+
+    // Called with this context's monitor held. Only synchronous completion is
+    // returned to the caller; dispatched completion keeps using the task queue.
+    private Runnable completeInternalTask(boolean forceComplete) {
         Thread currentThread = Thread.currentThread();
         if (!forceComplete && !initialRequestDone && currentThread == initiatingThread) {
             completedBeforeInitialRequestDone = true;
@@ -272,7 +290,7 @@ public class AsyncContextImpl implements AsyncContext {
                 //basically if we are doing async IO we can't do a dispatch here, as then the IO thread can be racing
                 //with the dispatch thread.
                 //at all other times the dispatch is desirable
-                onAsyncCompleteAndRespond();
+                return this::onAsyncCompleteAndRespond;
             } else {
                 servletRequestContext.getOriginalRequest().asyncRequestDispatched();
                 doDispatch(new Runnable() {
@@ -283,6 +301,7 @@ public class AsyncContextImpl implements AsyncContext {
                 });
             }
         }
+        return null;
     }
 
     @Override
