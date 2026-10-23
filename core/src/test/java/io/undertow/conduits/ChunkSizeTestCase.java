@@ -31,7 +31,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.IoUtils;
+import org.xnio.OptionMap;
 
+import io.undertow.UndertowOptions;
 import io.undertow.server.handlers.ResponseCodeHandler;
 import io.undertow.testutils.DefaultServer;
 import io.undertow.testutils.HttpOneOnly;
@@ -93,6 +95,38 @@ public class ChunkSizeTestCase {
         //if we fail, we will get two responses - 200 and 400 in this setup.
         Assert.assertEquals(new String(x), 0, x.length);
 
+    }
+
+    @Test
+    public void testForgedSmugglingWithoutEntityLimit() throws IOException, InterruptedException {
+        OptionMap existing = DefaultServer.getUndertowOptions();
+        try {
+            DefaultServer.setUndertowOptions(OptionMap.create(UndertowOptions.MAX_ENTITY_SIZE, -1L));
+            // 15 hex digits, value 1 << 59 lands on FLAG_READING_NEWLINE
+            final String msg = "POST /hello-servlet/greeting HTTP/1.1\r\n"
+                    + "Host: localhost\r\n"
+                    + "Content-Type: appication/x-www-form-urlencoded\r\n"
+                    + "Transfer-Encoding: chunked\r\n"
+                    + "Connection: keep-alive\r\n"
+                    + "\r\n"
+                    + "800000000000000\r\n";
+
+            clientOutputStream.write(msg.getBytes());
+            clientOutputStream.flush();
+            Thread.currentThread().sleep(300);
+            final String msg2 = "\r\n0\r\n\r\nGET /smuggled HTTP/1.1\r\n"
+                    + "Host: 127.0.0.1:8080\r\n"
+                    + "Connection: close"
+                    + "\r\n\r\n";
+            clientOutputStream.write(msg2.getBytes());
+            clientOutputStream.flush();
+            Thread.currentThread().sleep(3000);
+            byte[] x = readAvailable();
+            //if we fail, the smuggled request is answered with a second 200
+            Assert.assertEquals(new String(x), 0, x.length);
+        } finally {
+            DefaultServer.setUndertowOptions(existing);
+        }
     }
 
     public byte[] readAvailable() throws IOException {
