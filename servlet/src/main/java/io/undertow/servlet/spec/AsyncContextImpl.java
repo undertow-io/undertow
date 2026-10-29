@@ -275,7 +275,7 @@ public class AsyncContextImpl implements AsyncContext {
     }
 
     // Called with this context's monitor held. Only synchronous completion is
-    // returned to the caller; dispatched completion keeps using the task queue.
+    // returned to the caller; queued completion keeps using the task queue.
     private Runnable completeInternalTask(boolean forceComplete) {
         Thread currentThread = Thread.currentThread();
         if (!forceComplete && !initialRequestDone && currentThread == initiatingThread) {
