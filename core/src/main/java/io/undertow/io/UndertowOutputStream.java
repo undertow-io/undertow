@@ -28,7 +28,6 @@ import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import org.xnio.Buffers;
-import io.undertow.connector.ByteBufferPool;
 import io.undertow.connector.PooledByteBuffer;
 import org.xnio.IoUtils;
 import org.xnio.channels.Channels;
@@ -57,8 +56,6 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
 
     private static final int FLAG_CLOSED = 1;
     private static final int FLAG_WRITE_STARTED = 1 << 1;
-
-    private static final int MAX_BUFFERS_TO_ALLOCATE = 10;
 
     /**
      * Construct a new instance.  No write timeout is configured.
@@ -121,91 +118,17 @@ public class UndertowOutputStream extends OutputStream implements BufferWritable
         }
         //if this is the last of the content
         ByteBuffer buffer = buffer();
-        if (len == contentLength - written || buffer.remaining() < len) {
-            if (buffer.remaining() < len) {
 
-                //so what we have will not fit.
-                //We allocate multiple buffers up to MAX_BUFFERS_TO_ALLOCATE
-                //and put it in them
-                //if it still dopes not fit we loop, re-using these buffers
-
-                StreamSinkChannel channel = this.channel;
-                if (channel == null) {
-                    this.channel = channel = exchange.getResponseChannel();
-                }
-                final ByteBufferPool bufferPool = exchange.getConnection().getByteBufferPool();
-                ByteBuffer[] buffers = new ByteBuffer[MAX_BUFFERS_TO_ALLOCATE + 1];
-                PooledByteBuffer[] pooledBuffers = new PooledByteBuffer[MAX_BUFFERS_TO_ALLOCATE];
-                try {
-                    buffers[0] = buffer;
-                    int bytesWritten = 0;
-                    int rem = buffer.remaining();
-                    buffer.put(b, bytesWritten + off, rem);
-                    buffer.flip();
-                    bytesWritten += rem;
-                    int bufferCount = 1;
-                    for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE; ++i) {
-                        PooledByteBuffer pooled = bufferPool.allocate();
-                        pooledBuffers[bufferCount - 1] = pooled;
-                        buffers[bufferCount++] = pooled.getBuffer();
-                        ByteBuffer cb = pooled.getBuffer();
-                        int toWrite = len - bytesWritten;
-                        if (toWrite > cb.remaining()) {
-                            rem = cb.remaining();
-                            cb.put(b, bytesWritten + off, rem);
-                            cb.flip();
-                            bytesWritten += rem;
-                        } else {
-                            cb.put(b, bytesWritten + off, len - bytesWritten);
-                            bytesWritten = len;
-                            cb.flip();
-                            break;
-                        }
-                    }
-                    Channels.writeBlocking(channel, buffers, 0, bufferCount);
-                    while (bytesWritten < len) {
-                        //ok, it did not fit, loop and loop and loop until it is done
-                        bufferCount = 0;
-                        for (int i = 0; i < MAX_BUFFERS_TO_ALLOCATE + 1; ++i) {
-                            ByteBuffer cb = buffers[i];
-                            cb.clear();
-                            bufferCount++;
-                            int toWrite = len - bytesWritten;
-                            if (toWrite > cb.remaining()) {
-                                rem = cb.remaining();
-                                cb.put(b, bytesWritten + off, rem);
-                                cb.flip();
-                                bytesWritten += rem;
-                            } else {
-                                cb.put(b, bytesWritten + off, len - bytesWritten);
-                                bytesWritten = len;
-                                cb.flip();
-                                break;
-                            }
-                        }
-                        Channels.writeBlocking(channel, buffers, 0, bufferCount);
-                    }
-                    buffer.clear();
-                } finally {
-                    for (int i = 0; i < pooledBuffers.length; ++i) {
-                        PooledByteBuffer p = pooledBuffers[i];
-                        if (p == null) {
-                            break;
-                        }
-                        p.close();
-                    }
-                }
-            } else {
-                buffer.put(b, off, len);
-                if (buffer.remaining() == 0) {
-                    writeBufferBlocking(false);
-                }
-            }
-        } else {
-            buffer.put(b, off, len);
-            if (buffer.remaining() == 0) {
+        int currentOffset = off;
+        int currentLen = len;
+        while (currentLen > 0) {
+            int toWrite = Math.min(buffer.remaining(), currentLen);
+            buffer.put(b, currentOffset, toWrite);
+            if (!buffer.hasRemaining()) {
                 writeBufferBlocking(false);
             }
+            currentOffset += toWrite;
+            currentLen -= toWrite;
         }
         updateWritten(len);
     }
