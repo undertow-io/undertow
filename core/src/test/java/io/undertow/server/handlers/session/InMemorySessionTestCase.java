@@ -20,6 +20,7 @@ package io.undertow.server.handlers.session;
 
 import java.io.IOException;
 
+import io.undertow.UndertowMessages;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.session.InMemorySessionManager;
@@ -247,6 +248,39 @@ public class InMemorySessionTestCase {
             Assert.assertEquals("0", header[0].getValue());
         } finally {
             client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void inMemorySessionNoConfigTest() throws IOException {
+        try (TestHttpClient client = new TestHttpClient()) {
+            client.setCookieStore(new BasicCookieStore());
+
+            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(""), null);
+            final Throwable[] thrown = {null};
+            handler.setNext(new HttpHandler() {
+                @Override
+                public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                    final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
+                    try {
+                        manager.getSession(exchange, null);
+                    } catch (Throwable t) {
+                        thrown[0] = t;
+                    }
+                }
+            });
+            DefaultServer.setRootHandler(handler);
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
+            client.execute(get);
+
+            if (thrown[0] != null) {
+                Assert.assertTrue(thrown[0] instanceof IllegalStateException);
+                Assert.assertEquals(UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig().getCause(), thrown[0].getCause());
+                Assert.assertEquals(UndertowMessages.MESSAGES.couldNotFindSessionCookieConfig().getMessage(), thrown[0].getMessage());
+            } else {
+                Assert.fail("No exception was thrown.");
+            }
         }
     }
 }
