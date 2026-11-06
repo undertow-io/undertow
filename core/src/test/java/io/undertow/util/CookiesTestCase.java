@@ -202,7 +202,8 @@ public class CookiesTestCase {
         Assert.assertEquals("FEDEX", cookie.getValue());
         cookie = cookies.get("");
         Assert.assertNotNull(cookie);
-        Assert.assertEquals("bar", cookie.getValue());
+        // first cookie's value should be returned
+        Assert.assertEquals("foo", cookie.getValue());
     }
 
     @Test
@@ -613,10 +614,14 @@ public class CookiesTestCase {
         final MultiValueHashListStorage<String, Cookie> parsedCookies = new MultiValueHashListStorage<>();
         final List<String> toParse = Arrays.asList("CUSTOMER=JOE; CUSTOMER=MONICA");
         Cookies.parseRequestCookies(4, false, toParse,parsedCookies);
-        Assert.assertEquals(1, parsedCookies.size());
+        Assert.assertEquals(2, parsedCookies.size());
         List<Cookie> lst = parsedCookies.get("CUSTOMER");
-        Assert.assertEquals(1, lst.size());
+        Assert.assertEquals(2, lst.size());
         Cookie cookie = lst.get(0);
+        Assert.assertEquals(null, cookie.getPath());
+        Assert.assertEquals("CUSTOMER", cookie.getName());
+        Assert.assertEquals("JOE", cookie.getValue());
+        cookie = lst.get(1);
         Assert.assertEquals(null, cookie.getPath());
         Assert.assertEquals("CUSTOMER", cookie.getName());
         Assert.assertEquals("MONICA", cookie.getValue());
@@ -627,7 +632,7 @@ public class CookiesTestCase {
         final MultiValueHashListStorage<String, Cookie> parsedCookies = new MultiValueHashListStorage<>();
         final List<String> toParse = Arrays.asList("$Version=1; CUSTOMER=JOE; $Path=/acme; CUSTOMER=MONICA; $Path=/; $Domain=my_oh_my; NO=META");
         Cookies.parseRequestCookies(8, false, toParse,parsedCookies);
-        Assert.assertEquals(""+parsedCookies, 6, parsedCookies.size());
+        Assert.assertEquals(""+parsedCookies, 7, parsedCookies.size());
         List<Cookie> lst = parsedCookies.get("CUSTOMER");
         Assert.assertEquals(2, lst.size());
         Cookie cookie = lst.get(0);
