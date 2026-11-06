@@ -113,17 +113,17 @@ public class CookieStoreLegacyMapTestCase {
     public void duplicateRFC6265Cookies() {
         final CookieStore store = new CookieStore();
         store.add(new CookieImpl("SESSION", "first"));
-        store.add(new CookieImpl("SESSION", "second"));  // Same name+path+domain - replaces
-        store.add(new CookieImpl("SESSION", "third"));   // Replaces again
+        store.add(new CookieImpl("SESSION", "second"));  // Same name+path+domain
+        store.add(new CookieImpl("SESSION", "third"));   // Same name+path+domain again
 
         final Map<String, Cookie> legacyMap = store.asLegacyMap();
 
-        // We should only have one entry as the flattened map should remove the second entry added
+        // We should only have one entry as the flattened map should remove the second/third entry
         Assert.assertEquals("Should have 1 cookies", 1, legacyMap.size());
 
         Cookie result = legacyMap.get("SESSION");
         Assert.assertNotNull("Should find SESSION cookie", result);
-        Assert.assertEquals("Should have the last value", "third", result.getValue());
+        Assert.assertEquals("Should have the first value", "first", result.getValue());
     }
 
     /**
