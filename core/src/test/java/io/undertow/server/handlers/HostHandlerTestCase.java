@@ -71,6 +71,21 @@ public class HostHandlerTestCase {
     }
 
     @Test
+    public void testIPv4LikeRegNameHostHeader() throws Exception {
+        // not valid IPv4 addresses, but valid reg-names: accepted
+        test(new String[] { "256.1.1.1" }, null, 200, null);
+        test(new String[] { "1.2.3" }, null, 200, null);
+        test(new String[] { "01.02.03.04" }, null, 200, null);
+        test(new String[] { "1.2.3.4.5:80" }, null, 200, null);
+    }
+
+    @Test
+    public void testIPv4BadCharactersHostHeader() throws Exception {
+        test(new String[] { "1.2.3.4%zz" }, null, 400, null);
+        test(new String[] { "1.2.3.4<" }, null, 400, null);
+    }
+
+    @Test
     public void testIPv4AndPortHostHeader() throws Exception {
         test(new String[] { "212.138.1.1:80" }, null, 200, null);
     }

@@ -45,7 +45,6 @@ public class HostHeaderHandler implements HttpHandler {
     public static final String STATUS_MALFORMED_IP_LITERAL = "Host Header Malformed IP-Literal";
     public static final String STATUS_MALFORMED_IP_LITERAL_BAD_CHARS = "Host Header Bad Characters";
     public static final String STATUS_HOST_NO_MATCH = "URI Host Header NO MATCH";
-    private static final Pattern IP4_EXACT = Pattern.compile(NetworkUtils.IP4_EXACT);
     private static final Pattern IP6_EXACT = Pattern.compile(NetworkUtils.IP6_EXACT);
     private static final boolean[] ALLOWED_REGNAME_CHARACTERS = new boolean[256];
     private static final boolean[] HEX_CHARACTERS = new boolean[256];
@@ -229,12 +228,11 @@ public class HostHeaderHandler implements HttpHandler {
                 // TODO: as in case of IPv6 do we need to vet some weir daddresses?
             }
 
-        } else if (IP4_EXACT.matcher(hostHeaderURI).matches()) {
-            // IPv4
-            // NOTE: above will match only valid range 0-255, rest will fall through to reg-name, which is ok, since its
-            // essentially
-            // superset of IP, given DIGIT + "." ( unreserved )
         } else {
+            // IPv4address and reg-name: no separate IPv4 check. An IPv4 address is made of DIGIT and ".",
+            // which reg-name allows (unreserved), so the reg-name check below accepts every IPv4 address,
+            // and also the out of range ones (e.g. 256.1.1.1), which are valid reg-names.
+            // Matching IPv4 with a regex first gave the same result at the cost of a regex per request.
             // registered name can contain . and digits, so it technically overlap IPv4.
             // above wont cover -192.168.1.1/355.0.0.0, which technically is correct 'reg-name'
             // at this point we can really only check if its valid char or percent encoding.
