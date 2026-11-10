@@ -29,6 +29,7 @@ import io.undertow.util.WorkerUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DecompressingHttpClient;
+import org.apache.http.params.HttpConnectionParams;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,6 +41,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -49,6 +53,86 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 @RunWith(DefaultServer.class)
 public class ServerSentEventTestCase {
+
+    @Test
+    public void testSSEAtBufferBoundaries() throws IOException {
+        int bufferSize = DefaultServer.getBufferPool().getBufferSize();
+        for (int size : new int[]{bufferSize - 1, bufferSize, bufferSize + 1, bufferSize + 5,
+                2 * bufferSize - 1, 2 * bufferSize, 2 * bufferSize + 1}) {
+            assertSSEMessages(boundaryMessage(size));
+        }
+    }
+
+    @Test
+    public void testSSEQueuedAtBufferBoundary() throws IOException {
+        int bufferSize = DefaultServer.getBufferPool().getBufferSize();
+        // The second event exactly fills the space left by the first event.
+        assertSSEMessages(boundaryMessage(bufferSize / 2), boundaryMessage(bufferSize - bufferSize / 2), "tail");
+    }
+
+    @Test
+    public void testSSEConsecutiveBufferBoundaries() throws IOException {
+        int bufferSize = DefaultServer.getBufferPool().getBufferSize();
+        assertSSEMessages(boundaryMessage(bufferSize), boundaryMessage(bufferSize), "tail");
+    }
+
+    private String boundaryMessage(int frameSize) {
+        // Include both UTF-8 characters and the additional data: prefix for a newline.
+        String suffix = "\n你好😀";
+        int overhead = ("data:" + suffix.replace("\n", "\ndata:") + "\n\n").getBytes(StandardCharsets.UTF_8).length;
+        char[] padding = new char[frameSize - overhead];
+        Arrays.fill(padding, 'x');
+        return new String(padding) + suffix;
+    }
+
+    private void assertSSEMessages(final String... messages) throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        // A missing callback must fail the test rather than leave the response open indefinitely.
+        HttpConnectionParams.setSoTimeout(client.getParams(), 5000);
+        final List<String> completed = new CopyOnWriteArrayList<>();
+        final AtomicReference<IOException> failure = new AtomicReference<>();
+        final AtomicReference<ServerSentEventConnection> connectionReference = new AtomicReference<>();
+        try {
+            DefaultServer.setRootHandler(new ServerSentEventHandler(new ServerSentEventConnectionCallback() {
+                @Override
+                public void connected(ServerSentEventConnection connection, String lastEventId) {
+                    connectionReference.set(connection);
+                    ServerSentEventConnection.EventCallback callback = new ServerSentEventConnection.EventCallback() {
+                        @Override
+                        public void done(ServerSentEventConnection connection, String data, String event, String id) {
+                            completed.add(data);
+                            if (completed.size() == messages.length) {
+                                connection.shutdown();
+                            }
+                        }
+
+                        @Override
+                        public void failed(ServerSentEventConnection connection, String data, String event, String id, IOException e) {
+                            failure.compareAndSet(null, e);
+                            IoUtils.safeClose(connection);
+                        }
+                    };
+                    // Queue all events in the same IO task before the write listener runs.
+                    for (String message : messages) {
+                        connection.send(message, callback);
+                    }
+                }
+            }));
+
+            HttpResponse result = client.execute(new HttpGet(DefaultServer.getDefaultServerURL() + "/"));
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            StringBuilder expected = new StringBuilder();
+            for (String message : messages) {
+                expected.append("data:").append(message.replace("\n", "\ndata:")).append("\n\n");
+            }
+            Assert.assertEquals(expected.toString(), HttpClientUtils.readResponse(result));
+            Assert.assertNull(failure.get());
+            Assert.assertEquals(Arrays.asList(messages), completed);
+        } finally {
+            IoUtils.safeClose(connectionReference.get());
+            client.getConnectionManager().shutdown();
+        }
+    }
 
 
     @Test
