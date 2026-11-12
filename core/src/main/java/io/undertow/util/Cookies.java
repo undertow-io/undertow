@@ -419,8 +419,11 @@ public class Cookies {
 
     private static void storeCookie(final CookieJar cookieJar ) {
         if(cookieJar.currentCookie != null) {
-            cookieJar.parsedCookies.put(cookieJar.currentCookie.getName(), cookieJar.currentCookie);
-            cookieJar.currentCookie = null;
+            // UNDERTOW-2818 - only store first significant cookie for a given name
+            if (!cookieJar.parsedCookies.containsValue(cookieJar.currentCookie.getName(), cookieJar.currentCookie)) {
+                cookieJar.parsedCookies.put(cookieJar.currentCookie.getName(), cookieJar.currentCookie);
+                cookieJar.currentCookie = null;
+            }
         }
     }
 
