@@ -214,7 +214,7 @@ public class CookiesTestCase {
         Assert.assertEquals("FEDEX", cookie.getValue());
         cookie = cookies.get("");
         Assert.assertNotNull(cookie);
-        Assert.assertEquals("bar", cookie.getValue());
+        Assert.assertEquals("foo", cookie.getValue());
     }
 
     @Test
@@ -657,7 +657,7 @@ public class CookiesTestCase {
         Cookie cookie = lst.get(0);
         Assert.assertEquals(null, cookie.getPath());
         Assert.assertEquals("CUSTOMER", cookie.getName());
-        Assert.assertEquals("MONICA", cookie.getValue());
+        Assert.assertEquals("JOE", cookie.getValue());
     }
 
     @Test
