@@ -18,9 +18,14 @@
 
 package io.undertow.server;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -115,6 +120,32 @@ public class InvalidHtpRequestTestCase {
             Assert.assertEquals(StatusCodes.BAD_REQUEST, result.getStatusLine().getStatusCode());
         } finally {
             client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test
+    public void testOverflowingContentLength() throws IOException {
+        // 2^64 + 5 must not wrap around to a 5 byte body
+        String request = "POST / HTTP/1.1\r\nHost: localhost\r\nContent-Length: 18446744073709551621\r\n\r\n"
+                + "hello"
+                + "GET /smuggled HTTP/1.1\r\nHost: localhost\r\n\r\n";
+        try (Socket socket = new Socket(DefaultServer.getHostAddress(), DefaultServer.getHostPort())) {
+            socket.setSoTimeout(5000);
+            socket.getOutputStream().write(request.getBytes(StandardCharsets.US_ASCII));
+            socket.getOutputStream().flush();
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            InputStream in = socket.getInputStream();
+            byte[] buf = new byte[1024];
+            try {
+                int r;
+                while ((r = in.read(buf)) != -1) {
+                    out.write(buf, 0, r);
+                }
+            } catch (SocketTimeoutException ignore) {
+            }
+            String response = out.toString(StandardCharsets.US_ASCII);
+            Assert.assertTrue(response, response.startsWith("HTTP/1.1 400"));
+            Assert.assertFalse(response, response.contains("HTTP/1.1 200"));
         }
     }
 
