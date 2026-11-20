@@ -372,7 +372,7 @@ public class ServerSentEventConnection implements Channel, Attachable {
                 }
                 message.append('\n');
                 byte[] messageBytes = message.toString().getBytes(StandardCharsets.UTF_8);
-                if (messageBytes.length < buffer.remaining()) {
+                if (messageBytes.length <= buffer.remaining()) {
                     buffer.put(messageBytes);
                     data.endBufferPosition = buffer.position();
                 } else {
