@@ -178,6 +178,29 @@ public class AjpParsingUnitTestCase {
         assertPathParamValue(paramsMap, "path5", "param5");
     }
 
+    @Test
+    public void testSecret() throws Exception {
+        final AjpRequestParser parser = new AjpRequestParser("UTF-8", true, 100, 100, false, true, null, "s3cr3t");
+        Assert.assertTrue(parseSecret(parser, "s3cr3t"));
+        Assert.assertFalse(parseSecret(parser, "s3cr3x"));
+        Assert.assertFalse(parseSecret(parser, "s3cr3"));
+        Assert.assertFalse(parseSecret(parser, "s3cr3t1"));
+        Assert.assertFalse(parseSecret(parser, ""));
+        Assert.assertFalse(parseSecret(parser, null));
+        Assert.assertFalse(parseSecret(AJP_REQUEST_PARSER, "s3cr3t"));
+    }
+
+    private boolean parseSecret(AjpRequestParser parser, String secret) throws Exception {
+        ByteBuffer data = createAjpRequest("/hi".getBytes(StandardCharsets.UTF_8),
+                "param=value".getBytes(StandardCharsets.UTF_8), secret);
+        HttpServerExchange result = new HttpServerExchange(null);
+        AjpRequestParseState state = new AjpRequestParseState();
+        parser.parse(data, state, result);
+        Assert.assertTrue(state.isComplete());
+        Assert.assertFalse(state.badRequest);
+        return state.secretProvided;
+    }
+
     private void assertPathParamValue(Map<String, Deque<String>> pathParams, String pathParam, String pathParamValue) {
         final Deque<String> pathValue = pathParams.get(pathParam);
         Assert.assertNotNull(pathValue);
@@ -185,6 +208,10 @@ public class AjpParsingUnitTestCase {
     }
 
     protected ByteBuffer createAjpRequest(byte[] path, byte[] query) {
+        return createAjpRequest(path, query, null);
+    }
+
+    protected ByteBuffer createAjpRequest(byte[] path, byte[] query, String secret) {
         ByteBuffer data = ByteBuffer.allocate(1000);
         data.put((byte) 0x12);
         data.put((byte) 0x34);
@@ -201,6 +228,10 @@ public class AjpParsingUnitTestCase {
         data.put((byte) 0); //IS_SSL
         putInt(data, 0); //number of headers
         putQueryAttribute(data, query); // Attribute - query string
+        if (secret != null) {
+            data.put((byte) 0x0C); // Attribute - secret
+            putString(data, secret);
+        }
         data.put((byte) 0xFF);
         int dataLength = data.position() - 4;
         data.put(2, (byte) ((dataLength >> 8) & 0xFF));
