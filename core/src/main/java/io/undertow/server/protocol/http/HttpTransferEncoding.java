@@ -344,16 +344,17 @@ class HttpTransferEncoding {
             throw new NumberFormatException(str);
         }
 
-        long multiplier = 1;
-        for (int i = length - 1; i >= 0; --i) {
+        for (int i = 0; i < length; ++i) {
             char c = str.charAt(i);
 
             if (c < '0' || c > '9') {
                 throw new NumberFormatException(str);
             }
             long digit = c - '0';
-            value += digit * multiplier;
-            multiplier *= 10;
+            if (value > (Long.MAX_VALUE - digit) / 10) {
+                throw new NumberFormatException(str);
+            }
+            value = value * 10 + digit;
         }
         return value;
     }
