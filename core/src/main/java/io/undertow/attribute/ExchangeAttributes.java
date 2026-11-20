@@ -23,6 +23,7 @@ import io.undertow.util.HttpString;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Utility class for retrieving exchange attributes
@@ -45,6 +46,10 @@ public class ExchangeAttributes {
 
     public static ExchangeAttribute bytesSent(boolean dashIfZero) {
         return new BytesSentAttribute(dashIfZero);
+    }
+
+    public static ExchangeAttribute bytesRead(boolean dashIfZero) {
+        return new BytesReadAttribute(dashIfZero);
     }
 
     public static ExchangeAttribute dateTime() {
@@ -87,9 +92,14 @@ public class ExchangeAttributes {
         return new RequestHeaderAttribute(header);
     }
 
+    @Deprecated
     public static ExchangeAttribute requestList() {
         return RequestLineAttribute.INSTANCE;
     }
+
+    public static ExchangeAttribute requestLine() {
+        return RequestLineAttribute.INSTANCE;
+}
 
     public static ExchangeAttribute requestMethod() {
         return RequestMethodAttribute.INSTANCE;
@@ -125,6 +135,95 @@ public class ExchangeAttributes {
 
     public static ExchangeAttribute constant(String value) {
         return new ConstantExchangeAttribute(value);
+    }
+
+    public static ExchangeAttribute composite(final ExchangeAttribute[] atrs) {
+        return new CompositeExchangeAttribute(atrs);
+    }
+
+    public static ExchangeAttribute hostAndPort() {
+        return HostAndPortAttribute.INSTANCE;
+    }
+
+    public static ExchangeAttribute identUser() {
+        return IdentUsernameAttribute.INSTANCE;
+    }
+
+    public static ExchangeAttribute nullAttribute() {
+        return NullAttribute.INSTANCE;
+    }
+
+    public static ExchangeAttribute pathParameter(final String name) {
+        return new PathParameterAttribute(name);
+    }
+
+    public static ExchangeAttribute predicateContextAttribute(final String name) {
+        return new PredicateContextAttribute(name);
+    }
+
+    public static ExchangeAttribute queryParameter( final String name) {
+        return new QueryParameterAttribute(name);
+    }
+
+    public static ExchangeAttribute quoting(final ExchangeAttribute atr) {
+        return new QuotingExchangeAttribute(atr);
+    }
+
+    public static ExchangeAttribute remoteHost() {
+        return RemoteHostAttribute.INSTANCE;
+    }
+
+    public static ExchangeAttribute requestCookie(final String cookieName) {
+        return new RequestCookieAttribute(cookieName);
+    }
+
+    public static ExchangeAttribute requestPath() {
+        return RequestPathAttribute.INSTANCE;
+    }
+
+    public static ExchangeAttribute requestScheme() {
+        return RequestSchemeAttribute.INSTANCE;
+    }
+
+    public static ExchangeAttribute resolvedPath() {
+        return ResolvedPathAttribute.INSTANCE;
+    }
+
+    public static ExchangeAttribute responseCookie(final String cookieName) {
+        return new ResponseCookieAttribute(cookieName);
+    }
+
+    public static ExchangeAttribute responseTime(final TimeUnit tu) {
+        return new ResponseTimeAttribute(tu);
+    }
+
+    public static ExchangeAttribute secureExchange() {
+        return SecureExchangeAttribute.INSTANCE;
+    }
+
+    public static ExchangeAttribute secureProtocol() {
+        return SecureProtocolAttribute.INSTANCE;
+    }
+
+    public static ExchangeAttribute sslCipher() {
+        return SslCipherAttribute.INSTANCE;
+    }
+
+    public static ExchangeAttribute sslClientCert() {
+        return SslClientCertAttribute.INSTANCE;
+    }
+
+    public static ExchangeAttribute sslSessionId() {
+        return SslSessionIdAttribute.INSTANCE;
+    }
+
+    public static ExchangeAttribute storedResponse() {
+        //TODO: ?
+        return StoredResponse.INSTANCE;
+    }
+
+    public static ExchangeAttribute substitute(final ExchangeAttribute attribute, final String substitute) {
+        return new SubstituteEmptyWrapper.SubstituteEmptyAttribute( attribute, substitute);
     }
 
     public static String  resolve(final HttpServerExchange exchange, final ExchangeAttribute[] attributes) {
