@@ -276,13 +276,14 @@ public class ServletInitialHandler implements HttpHandler, ServletDispatcher {
         try {
             listeners.requestInitialized(request);
             next.handleRequest(exchange);
+            // the error is sent before the async listeners are told the request completed, and the error dispatch
+            // completes async processing that is still open, so completion is checked for once it has run
+            if(servletRequestContext.getErrorCode() > 0) {
+                servletRequestContext.getOriginalResponse().doErrorDispatch(servletRequestContext.getErrorCode(), servletRequestContext.getErrorMessage());
+            }
             AsyncContextImpl asyncContextInternal = servletRequestContext.getOriginalRequest().getAsyncContextInternal();
             if(asyncContextInternal != null && asyncContextInternal.isCompletedBeforeInitialRequestDone()) {
                 asyncContextInternal.handleCompletedBeforeInitialRequestDone();
-            }
-            //
-            if(servletRequestContext.getErrorCode() > 0) {
-                servletRequestContext.getOriginalResponse().doErrorDispatch(servletRequestContext.getErrorCode(), servletRequestContext.getErrorMessage());
             }
         } catch (Throwable t) {
 
