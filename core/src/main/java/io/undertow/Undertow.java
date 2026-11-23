@@ -117,7 +117,7 @@ public final class Undertow {
     }
 
     public synchronized void start() {
-        UndertowLogger.ROOT_LOGGER.infof("starting server: %s", Version.getFullVersionString());
+        UndertowLogger.ROOT_LOGGER.startingServer(Version.getFullVersionString());
         xnio = Xnio.getInstance(Undertow.class.getClassLoader());
         channels = new ArrayList<>();
         try {
@@ -256,7 +256,7 @@ public final class Undertow {
     }
 
     public synchronized void stop() {
-        UndertowLogger.ROOT_LOGGER.infof("stopping server: %s", Version.getFullVersionString());
+        UndertowLogger.ROOT_LOGGER.stoppingServer(Version.getFullVersionString());
         if (channels != null) {
             for (AcceptingChannel<? extends StreamConnection> channel : channels) {
                 IoUtils.safeClose(channel);
