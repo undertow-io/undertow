@@ -509,4 +509,8 @@ public interface UndertowLogger extends BasicLogger {
     @LogMessage(level = DEBUG)
     @Message(id = 5112, value = "Interruption in close()")
     void closeInterrupted(@Cause InterruptedException ie);
+
+    @LogMessage(level = WARN)
+    @Message(id = 5113, value = "Request parse error listener %s threw an exception")
+    void requestParseErrorListenerFailed(Object listener, @Cause Throwable t);
 }

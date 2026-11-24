@@ -24,6 +24,7 @@ import io.undertow.server.ConnectorStatistics;
 import io.undertow.server.DefaultByteBufferPool;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.OpenListener;
+import io.undertow.server.RequestParseErrorListener;
 import io.undertow.server.protocol.ajp.AjpOpenListener;
 import io.undertow.server.protocol.http.AlpnOpenListener;
 import io.undertow.server.protocol.http.HttpOpenListener;
@@ -90,6 +91,7 @@ public final class Undertow {
     private ByteBufferPool byteBufferPool;
     private XnioWorker worker;
     private Executor sslEngineDelegatedTaskExecutor;
+    private final RequestParseErrorListener requestParseErrorListener;
     private List<AcceptingChannel<? extends StreamConnection>> channels;
     private Xnio xnio;
 
@@ -103,6 +105,7 @@ public final class Undertow {
         this.rootHandler = builder.handler;
         this.worker = builder.worker;
         this.sslEngineDelegatedTaskExecutor = builder.sslEngineDelegatedTaskExecutor;
+        this.requestParseErrorListener = builder.requestParseErrorListener;
         this.internalWorker = builder.worker == null;
         this.workerOptions = builder.workerOptions.getMap();
         this.socketOptions = builder.socketOptions.getMap();
@@ -163,6 +166,7 @@ public final class Undertow {
                 if (listener.type == ListenerType.AJP) {
                     AjpOpenListener openListener = new AjpOpenListener(buffers, serverOptions);
                     openListener.setRootHandler(rootHandler);
+                    openListener.setRequestParseErrorListener(requestParseErrorListener);
 
                     final ChannelListener<StreamConnection> finalListener;
                     if (listener.useProxyProtocol) {
@@ -182,9 +186,10 @@ public final class Undertow {
                         HttpOpenListener openListener = new HttpOpenListener(buffers, undertowOptions);
                         HttpHandler handler = rootHandler;
                         if (http2 || listener.http2Enabled) {
-                            handler = new Http2UpgradeHandler(handler);
+                            handler = new Http2UpgradeHandler(handler, requestParseErrorListener);
                         }
                         openListener.setRootHandler(handler);
+                        openListener.setRequestParseErrorListener(requestParseErrorListener);
                         final ChannelListener<StreamConnection> finalListener;
                         if (listener.useProxyProtocol) {
                             finalListener = new ProxyProtocolOpenListener(openListener, null, buffers, OptionMap.EMPTY);
@@ -213,6 +218,7 @@ public final class Undertow {
                         } else {
                             openListener = httpOpenListener;
                         }
+                        openListener.setRequestParseErrorListener(requestParseErrorListener);
 
                         UndertowXnioSsl xnioSsl;
                         if (listener.sslContext != null) {
@@ -439,6 +445,7 @@ public final class Undertow {
         private XnioWorker worker;
         private Executor sslEngineDelegatedTaskExecutor;
         private ByteBufferPool byteBufferPool;
+        private RequestParseErrorListener requestParseErrorListener = RequestParseErrorListener.NO_OP;
 
         private final OptionMap.Builder workerOptions = OptionMap.builder();
         private final OptionMap.Builder socketOptions = OptionMap.builder();
@@ -596,6 +603,24 @@ public final class Undertow {
 
         public Builder setByteBufferPool(ByteBufferPool byteBufferPool) {
             this.byteBufferPool = byteBufferPool;
+            return this;
+        }
+
+        /**
+         * Sets a listener that is notified whenever a request on any of this server's listeners is
+         * rejected while it is being parsed, before it can reach the handler chain.
+         * <p>
+         * Such requests never produce an {@link HttpHandler} invocation, so without this listener the
+         * only record of them is an Undertow log message at {@code DEBUG}. The listener is purely an
+         * observer: it cannot alter the response, and any exception it throws is caught and logged.
+         *
+         * @param requestParseErrorListener the listener, or {@code null} for none
+         * @return this builder
+         * @see RequestParseErrorListener
+         */
+        public Builder setRequestParseErrorListener(RequestParseErrorListener requestParseErrorListener) {
+            this.requestParseErrorListener = requestParseErrorListener == null
+                    ? RequestParseErrorListener.NO_OP : requestParseErrorListener;
             return this;
         }
     }
