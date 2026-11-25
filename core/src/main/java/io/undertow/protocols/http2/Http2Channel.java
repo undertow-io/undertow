@@ -33,6 +33,7 @@ import io.undertow.util.AttachmentKey;
 import io.undertow.util.AttachmentList;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HttpString;
+import io.undertow.util.WorkerUtils;
 import org.xnio.Bits;
 import org.xnio.ChannelExceptionHandler;
 import org.xnio.ChannelListener;
@@ -40,6 +41,7 @@ import org.xnio.ChannelListeners;
 import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 import org.xnio.StreamConnection;
+import org.xnio.XnioIoThread;
 import org.xnio.channels.StreamSinkChannel;
 import org.xnio.ssl.SslConnection;
 
@@ -198,10 +200,14 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
     private boolean thisGoneAway = false;
     private boolean peerGoneAway = false;
     private boolean lastDataRead = false;
+    private boolean gracefulShutdownInitiated = false;
+
+    private XnioIoThread.Key sendGoAwayKey;
 
     private int streamIdCounter;
     private int lastGoodStreamId;
     private int lastAssignedStreamOtherSide;
+    private int lastStreamIdInGoAway = Integer.MAX_VALUE;
 
     private final HpackDecoder decoder;
     private final HpackEncoder encoder;
@@ -497,6 +503,12 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                     }
                     if(frameParser.streamId % 2 == (isClient() ? 1 : 0)) {
                         sendGoAway(ERROR_PROTOCOL_ERROR);
+                        frameData.close();
+                        return null;
+                    }
+                    if(frameParser.streamId > getLastStreamIdInGoAway()) {
+                        // RFC9113 6.8 - After sending a GOAWAY frame, the sender can discard frames for streams
+                        // initiated by the receiver with identifiers higher than the identified last stream.
                         frameData.close();
                         return null;
                     }
@@ -917,7 +929,7 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         if(UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
             UndertowLogger.REQUEST_IO_LOGGER.tracef(new ClosedChannelException(), "Sending goaway on channel %s", this);
         }
-        Http2GoAwayStreamSinkChannel goAway = new Http2GoAwayStreamSinkChannel(this, status, getLastGoodStreamId());
+        Http2GoAwayStreamSinkChannel goAway = new Http2GoAwayStreamSinkChannel(this, status, getLastGoodStreamId(), true);
         try {
             goAway.shutdownWrites();
             if (!goAway.flush()) {
@@ -930,6 +942,60 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
                 goAway.resumeWrites();
             } else {
                 IoUtils.safeClose(this);
+            }
+        } catch (IOException e) {
+            exceptionHandler.handleException(goAway, e);
+        } catch (Throwable t) {
+            exceptionHandler.handleException(goAway, new IOException(t));
+        }
+    }
+
+    public void initiateGracefulShutdown() {
+        if (gracefulShutdownInitiated) {
+            return;
+        }
+        gracefulShutdownInitiated = true;
+
+        // Send initial GOAWAY with last stream id set to 2^31-1
+        sendGracefulGoAway(Integer.MAX_VALUE);
+
+        // Send an updated GOAWAY after 1 second
+        sendGoAwayKey = WorkerUtils.executeAfter(getIoThread(), new Runnable() {
+                @Override
+                public void run() {
+                    sendGracefulGoAway(getLastGoodStreamId());
+
+                    // Force close if client has not already disconnected after 3 seconds
+                    sendGoAwayKey = WorkerUtils.executeAfter(getIoThread(), new Runnable() {
+                            @Override
+                            public void run() {
+                                IoUtils.safeClose(Http2Channel.this);
+                            }
+                        }, 3, TimeUnit.SECONDS);
+                }
+            }, 1, TimeUnit.SECONDS);
+
+        // Cancel task of sending the updated GOAWAY if channel closed
+        this.addCloseTask(new ChannelListener<Http2Channel>() {
+                @Override
+                public void handleEvent(Http2Channel channel) {
+                    sendGoAwayKey.remove();
+                }
+            });
+    }
+
+    private void sendGracefulGoAway(int streamId) {
+        if(UndertowLogger.REQUEST_IO_LOGGER.isTraceEnabled()) {
+            UndertowLogger.REQUEST_IO_LOGGER.tracef("Sending goaway(%d) for graceful shutdown on channel %s", streamId, this);
+        }
+
+        Http2GoAwayStreamSinkChannel goAway = new Http2GoAwayStreamSinkChannel(this, Http2Channel.ERROR_NO_ERROR, streamId, false /*isLastFrame*/);
+        Http2ControlMessageExceptionHandler exceptionHandler = new Http2ControlMessageExceptionHandler();
+        try {
+            goAway.shutdownWrites();
+            if (!goAway.flush()) {
+                goAway.getWriteSetter().set(ChannelListeners.flushingChannelListener(null, exceptionHandler));
+                goAway.resumeWrites();
             }
         } catch (IOException e) {
             exceptionHandler.handleException(goAway, e);
@@ -1031,8 +1097,14 @@ public class Http2Channel extends AbstractFramedChannel<Http2Channel, AbstractHt
         return lastAssignedStreamOtherSide;
     }
 
+    // Return last received stream ID which is to be used when sending a GOAWAY.
     private synchronized int getLastGoodStreamId() {
+        lastStreamIdInGoAway = lastGoodStreamId; // Keep last used Id
         return lastGoodStreamId;
+    }
+
+    private synchronized int getLastStreamIdInGoAway() {
+        return lastStreamIdInGoAway;
     }
 
     /**
