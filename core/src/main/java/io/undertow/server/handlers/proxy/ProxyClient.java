@@ -75,6 +75,10 @@ public interface ProxyClient {
         void setHost(Host host);
     }
 
+    interface TimeoutProxyTarget extends ProxyTarget {
+        int getTimeout();
+    }
+
     default List<ProxyTarget> getAllTargets(){
         return new ArrayList();
     }
