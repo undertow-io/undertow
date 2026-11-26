@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channel;
+import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -31,7 +32,6 @@ import io.undertow.testutils.TestHttpClient;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.xnio.ChannelListener;
@@ -47,7 +47,7 @@ import org.xnio.channels.WriteTimeoutException;
  */
 @RunWith(DefaultServer.class)
 @HttpOneOnly
-@Ignore("UNDERTOW-1859 this test freezes") //FIXME
+// @Ignore("UNDERTOW-1859 this test freezes") //FIXME
 public class WriteTimeoutTestCase {
 
     private volatile Exception exception;
@@ -92,12 +92,10 @@ public class WriteTimeoutTestCase {
                         do {
                             try {
                                 int res = response.write(buffer);
-                                if (res == 0) {
-                                    return;
-                                }
                             } catch (IOException e) {
                                 exception = e;
                                 errorLatch.countDown();
+                                break;
                             }
                             if(!buffer.hasRemaining()) {
                                 count++;
@@ -122,14 +120,20 @@ public class WriteTimeoutTestCase {
                 while ((r = content.read(buffer)) > 0) {
                     Thread.sleep(200);
                     if (exception != null) {
-                        Assert.assertEquals(WriteTimeoutException.class, exception.getClass());
+                        // Depending on whether the timeout is triggered inside XNIO or in the WriteTimeoutStreamSinkConduit,
+                        // we get either WriteTimeoutException or ClosedChannelException.
+                        Assert.assertTrue("Unexpected exception class: " + exception.getClass(),
+                                exception instanceof WriteTimeoutException || exception instanceof ClosedChannelException);
                         return;
                     }
                 }
                 Assert.fail("Write did not time out");
             } catch (IOException e) {
                 if (errorLatch.await(5, TimeUnit.SECONDS)) {
-                    Assert.assertEquals(WriteTimeoutException.class, exception.getClass());
+                    // Depending on whether the timeout is triggered inside XNIO or in the WriteTimeoutStreamSinkConduit,
+                    // we get either WriteTimeoutException or ClosedChannelException.
+                    Assert.assertTrue("Unexpected exception class: " + exception.getClass(),
+                            exception instanceof WriteTimeoutException || exception instanceof ClosedChannelException);
                 } else {
                     Assert.fail("Write did not time out");
                 }
