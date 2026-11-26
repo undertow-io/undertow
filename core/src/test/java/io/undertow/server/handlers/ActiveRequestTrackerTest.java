@@ -48,10 +48,8 @@ public class ActiveRequestTrackerTest {
             t.start();
 
             List<RequestStatistics> trackedRequests = handler.getTrackedRequests();
+            int attempts = 0;
 
-            // This test is somewhat time-sensitive in that an in-flight request is needed to verify that the handler
-            // is correctly tracking and returning active requests. To that end, the test submits a request in a
-            // Thread (above) to let the request be made in a background thread while the main thread attempts to
             // get the active request information. The delay handler waits for termination via latch and
             // meanwhile this thread tries to retrieve the request statistics. There is a max waiting time of 5 seconds.
             try {
