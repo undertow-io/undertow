@@ -22,6 +22,8 @@ import java.io.IOException;
 
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.JvmRouteHandler;
+import io.undertow.server.handlers.CookieImpl;
 import io.undertow.server.session.InMemorySessionManager;
 import io.undertow.server.session.Session;
 import io.undertow.server.session.SessionAttachmentHandler;
@@ -34,6 +36,8 @@ import io.undertow.util.StatusCodes;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.params.ClientPNames;
+import org.apache.http.client.params.CookiePolicy;
 import org.apache.http.impl.client.BasicCookieStore;
 import io.undertow.testutils.TestHttpClient;
 import org.junit.Assert;
@@ -49,6 +53,8 @@ import org.junit.runner.RunWith;
 public class InMemorySessionTestCase {
 
     public static final String COUNT = "count";
+
+    public static final String ROUTE = "foo:bar";
 
     @Test
     public void inMemorySessionTest() throws IOException {
@@ -88,6 +94,66 @@ public class InMemorySessionTestCase {
             Assert.assertEquals("1", header[0].getValue());
 
             get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+            header = result.getHeaders(COUNT);
+            Assert.assertEquals("2", header[0].getValue());
+
+
+        } finally {
+            client.getConnectionManager().shutdown();
+        }
+    }
+
+    @Test // https://redhat.atlassian.net/browse/UNDERTOW-2750
+    public void inMemorySessionTestWithRoute() throws IOException {
+        TestHttpClient client = new TestHttpClient();
+        client.getParams().setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
+        try {
+            final SessionCookieConfig sessionConfig = new SessionCookieConfig();
+            final SessionAttachmentHandler handler = new SessionAttachmentHandler(new InMemorySessionManager(""), sessionConfig);
+            handler.setNext(new HttpHandler() {
+                @Override
+                public void handleRequest(final HttpServerExchange exchange) throws Exception {
+                    final SessionManager manager = exchange.getAttachment(SessionManager.ATTACHMENT_KEY);
+                    Session session = manager.getSession(exchange, sessionConfig);
+                    if (session == null) {
+                        // clear jsessionid if present to avoid reuse
+                        exchange.setRequestCookie(new CookieImpl("JSESSIONID"));
+                        session = manager.createSession(exchange, sessionConfig);
+                        session.setAttribute(COUNT, 0);
+                    }
+                    Integer count = (Integer) session.getAttribute(COUNT);
+                    exchange.getResponseHeaders().add(new HttpString(COUNT), count.toString());
+                    session.setAttribute(COUNT, ++count);
+                }
+            });
+            JvmRouteHandler routeHandler = new JvmRouteHandler(handler, "JSESSIONID", ROUTE);
+            DefaultServer.setRootHandler(routeHandler);
+
+            HttpGet get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
+            HttpResponse result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+            Header[] header = result.getHeaders(COUNT);
+            Assert.assertEquals("0", header[0].getValue());
+            String cookie = result.getHeaders("Set-Cookie")[0].getValue();
+            String jsessionid = cookie.substring(cookie.indexOf('=') + 1, cookie.indexOf(';'));
+            // cookie should have been quoted with the added route
+            Assert.assertTrue(jsessionid.endsWith("." + ROUTE + "\""));
+
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
+            get.setHeader("Cookie", "JSESSIONID=" + jsessionid + ";");
+            result = client.execute(get);
+            Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
+            HttpClientUtils.readResponse(result);
+            header = result.getHeaders(COUNT);
+            Assert.assertEquals("1", header[0].getValue());
+
+            get = new HttpGet(DefaultServer.getDefaultServerURL() + "/notamatchingpath");
+            get.setHeader("Cookie", "JSESSIONID=" + jsessionid + ";");
             result = client.execute(get);
             Assert.assertEquals(StatusCodes.OK, result.getStatusLine().getStatusCode());
             HttpClientUtils.readResponse(result);
