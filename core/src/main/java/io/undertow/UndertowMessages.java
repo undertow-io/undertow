@@ -696,4 +696,10 @@ public interface UndertowMessages {
 
     @Message(id = 220, value = "The AJP listener is configured to require secret but the secret is either null or empty string. This combination is not allowed.")
     IllegalArgumentException securedAjpListenerWithoutSecret();
+
+    @Message(id = 221, value = "HTTP response header value was too large for the buffer (%s).")
+    IOException responseHeaderValueTooLargeForBuffer(int size);
+
+    @Message(id = 222, value = "HTTP response header name was too large for the buffer (%s).")
+    IOException responseHeaderNameTooLargeForBuffer(int size);
 }
